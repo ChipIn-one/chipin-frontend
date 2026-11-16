@@ -12,6 +12,7 @@ export {
     currencyCode,
     CurrencyMismatchError,
     displaySign,
+    divideHalfUp,
     fromUnits,
     isApprox,
     isZero,

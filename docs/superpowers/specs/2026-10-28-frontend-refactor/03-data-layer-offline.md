@@ -971,9 +971,13 @@ Shares are computed at scale 4 (10/3 → 3.3334/3.3333/3.3333), input is in curr
 - The settle-up request body is built by the mapper `toSettleUpWire(amount: Money)` → `moneyToWire`. Settle-up stays online-only (§2.9).
 - Done in 03-21: `resolveSettleAmount`, `oneMinor`, `settlePrefill` and `halfSettlePrefill` live in
   `entities/balance/model/settle.ts`; the settle-up modal reads the exact `Balance` (`net: Money`) of the friend
-  (`KnownUser.balances`) and of the group member (`selectGroupSettlementOptions` now gives `Balance[]`), parses the
-  field with `parseMoneyInput` (a zero amount, or text with more fraction digits than the currency has, sends
-  nothing: the field is `aria-invalid`, the button disabled) and submits a `SettlementDraft`
+  (`KnownUser.balances`) and of the group member (`selectGroupSettlementOptions` now gives `Balance[]`), limits the
+  field to the currency minor units as it is typed (`maxFractionDigits = minorUnits(c)`), parses it with
+  `parseMoneyInput` and submits a `SettlementDraft`. `resolveSettleAmount` returns `null` for an input that is not
+  positive, so a zero amount sends nothing (the button is disabled; zero is not marked `aria-invalid`, it is simply
+  not a payment); an amount above the debt by a minor unit or more is `aria-invalid` with the line
+  `friends:settleUp.amountAboveDebt` "The amount is more than the debt"; if the selected currency leaves the
+  balances after a refetch, the form sends nothing instead of the typed amount in the fallback currency. The draft is
   (declared next to its mapper in `entities/ledger/model/toSettleUpWire.ts`, not in `types.ts`: a write-only
   shape must not change `MODEL_SHAPE_HASH` and bust the persisted cache); `entities/ledger/api/legacySettlementWire.ts`, the unused legacy
   `api/ledgerApi.ts` `createSettlement` and the number `CreateSettlementParams`/`FriendBalance` are gone.
@@ -982,12 +986,13 @@ Shares are computed at scale 4 (10/3 → 3.3334/3.3333/3.3333), input is in curr
   through `moneyToWire`, the currency is the amount's), not a mapper of the bare amount; (2) the caption key is
   `friends:settleUp.fullSettlementHint` "Will be settled in full: {{amount}} {{currency}}" (the settle-up texts
   live in the `friends` namespace, there is no `settle` namespace); its amount is `moneyLedgerText(owed)` (new in
-  `shared/money`: all four ledger digits, "3.3350") and the currency code; (3) the modal shows amounts through
+  `shared/money`: all four ledger digits, "3.3350") and the currency code. This caption is a deliberate exception to
+  "display is only `Amount.tsx`" (AGENTS.md invariant 4): `Amount` cannot show exactly four ledger digits; (3) the modal shows amounts through
   `basics/numbers/amount/Amount.tsx` (fed by `legacyAmountFromMoney` until `Amount` takes `Money`), so a sub-minor
   debt reads "< 0.01 USD" as in the group and friend cards (03-3), not the `formatMoney` "< $0.01";
-  (4) "Half" is the larger half of `owed` (`split`), rounded like the prefill (at least one minor unit), so half
-  of a sub-minor debt settles it in full; (5) `shared/money` also exports `ledgerUnitsPerMinor` (used by
-  `oneMinor`).
+  (4) "Half" is half of `owed` (`divideHalfUp` at scale 4), rounded like the prefill (at least one minor unit), so
+  Half settles in full any debt below two minor units (owed 0.0150 → Half 0.01 → 0.0150 sent); (5) `shared/money`
+  also exports `ledgerUnitsPerMinor` (used by `oneMinor`) and `divideHalfUp` (used by Half).
 
 ### 5. Type generation from OpenAPI
 

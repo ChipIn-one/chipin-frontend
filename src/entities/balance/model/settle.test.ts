@@ -23,6 +23,21 @@ describe('resolveSettleAmount (spec 03 §4.5, §8)', () => {
         ['USD', '3.3333', '3.35', null],
         ['USD', '0.0001', '0.01', '0.0001'],
         ['JPY', '10.4000', '10', '10.4000'],
+        // Exactly one minor unit off: a partial payment below, refused above.
+        ['USD', '3.3400', '3.33', '3.3300'],
+        ['USD', '3.3300', '3.34', null],
+        ['JPY', '10.0000', '9', '9.0000'],
+        ['JPY', '9.0000', '10', null],
+        ['KWD', '1.2345', '1.235', '1.2345'],
+        ['KWD', '1.2345', '1.234', '1.2345'],
+        ['KWD', '1.2345', '1.233', '1.2330'],
+        ['KWD', '1.2345', '1.236', null],
+        ['KWD', '1.2340', '1.233', '1.2330'],
+        // Nothing to pay: a zero or negative input is never a payment.
+        ['USD', '0.0040', '0', null],
+        ['USD', '3.3333', '0', null],
+        ['USD', '3.3333', '-1', null],
+        ['USD', '0.0040', '-0.0040', null],
     ])('%s owed %s, input %s → %s', (currency, owed, input, expected) => {
         expect(text(resolveSettleAmount(money(input, currency), money(owed, currency)))).toBe(
             expected,
@@ -56,9 +71,10 @@ describe('resolveSettleAmount (spec 03 §4.5, §8)', () => {
             const result = resolveSettleAmount(input, owed);
 
             if (result === null) {
-                expect(input.minor > owed.minor).toBe(true);
+                expect(input.minor > owed.minor || input.minor === 0n).toBe(true);
                 continue;
             }
+            expect(input.minor > 0n).toBe(true);
             const remainder = owed.minor - result.minor;
 
             expect(remainder === 0n || remainder >= step).toBe(true);
@@ -99,7 +115,14 @@ describe('halfSettlePrefill', () => {
         ['BDT', '90', '45.0000'],
         ['USD', '0.0003', '0.0100'],
         ['JPY', '7', '4.0000'],
+        ['USD', '0.0150', '0.0100'],
     ])('%s owed %s → %s', (currency, owed, expected) => {
         expect(text(halfSettlePrefill(money(owed, currency)))).toBe(expected);
+    });
+
+    test('Half of a debt below two minor units settles it in full (0.0150 → 0.01 → 0.0150 sent)', () => {
+        const owed = money('0.0150');
+
+        expect(resolveSettleAmount(halfSettlePrefill(owed), owed)).toBe(owed);
     });
 });

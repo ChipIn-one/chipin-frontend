@@ -5,11 +5,12 @@ import type { CurrencyCode, Money } from 'shared/money';
 import {
     abs,
     compare,
+    divideHalfUp,
     fromUnits,
     isZero,
     ledgerUnitsPerMinor,
     roundToMinor,
-    split,
+    sign,
     sub,
 } from 'shared/money';
 
@@ -18,11 +19,15 @@ export const oneMinor = (currency: CurrencyCode): Money =>
     fromUnits(ledgerUnitsPerMinor(currency), currency);
 
 /**
- * The amount a settle-up sends for `input` against the debt `owed`: exactly `owed` when they differ
- * by less than one minor unit (settled in full), `null` when `input` is above that (not allowed),
- * otherwise `input` (a partial repayment that leaves at least one minor unit).
+ * The amount a settle-up sends for `input` against the debt `owed`: `null` for an input that is not
+ * positive (nothing to pay), exactly `owed` when they differ by less than one minor unit (settled in
+ * full), `null` when `input` is above that (not allowed), otherwise `input` (a partial repayment
+ * that leaves at least one minor unit).
  */
 export const resolveSettleAmount = (input: Money, owed: Money): Money | null => {
+    if (sign(input) <= 0) {
+        return null;
+    }
     if (compare(abs(sub(input, owed)), oneMinor(owed.currency)) < 0) {
         return owed;
     }
@@ -39,14 +44,9 @@ export const settlePrefill = (owed: Money): Money => {
     return isZero(rounded) ? oneMinor(owed.currency) : rounded;
 };
 
-const HALVES = [
-    { userId: 'first', weight: '1' },
-    { userId: 'second', weight: '1' },
-] as const;
-
-/** The "Half" quick pick: the larger half of `owed` (scale 4) as a prefill in minor units. */
-export const halfSettlePrefill = (owed: Money): Money => {
-    const [half = owed] = split(owed, HALVES);
-
-    return settlePrefill(half);
-};
+/**
+ * The "Half" quick pick: half of `owed` (half-up at scale 4) as a prefill in minor units. Half of a
+ * debt below two minor units rounds to one minor unit, which settles the debt in full.
+ */
+export const halfSettlePrefill = (owed: Money): Money =>
+    settlePrefill(fromUnits(divideHalfUp(owed.minor, 2n), owed));

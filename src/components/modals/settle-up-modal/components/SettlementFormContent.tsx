@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 import { toastLedgerWriteError, useIsLedgerEntryCreating } from 'hooks/useLedgerMutations';
 import { useSelfUser } from 'hooks/useSelfUser';
-import { moneyLedgerText } from 'shared/money';
+import { minorUnits, moneyLedgerText } from 'shared/money';
 
 import type { SelectItem } from 'components/Select';
 
@@ -64,9 +64,12 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
         setAmount(getSettlementAmount(nextBalance));
     };
 
-    const onFormSubmit = () => {
-        const draft = settlement.settlement;
+    // The selected currency left the balances (a refetch): the fallback balance is another
+    // currency, so the typed amount is never sent in it.
+    const isCurrencyStale = selectedBalance.net.currency !== currency;
+    const draft = isCurrencyStale ? null : settlement.settlement;
 
+    const onFormSubmit = () => {
         if (isSubmitInFlight.current || isSubmitting || !draft) {
             return;
         }
@@ -106,6 +109,10 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                         amount={amount}
                         currency={currency}
                         currencyItems={currencyItems}
+                        maxFractionDigits={minorUnits(settlement.owed.currency)}
+                        error={
+                            settlement.isAboveDebt ? t('friends:settleUp.amountAboveDebt') : null
+                        }
                         isAmountInvalid={settlement.isAmountInvalid}
                         hint={
                             settlement.fullSettlementAmount &&
@@ -146,7 +153,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                         type="button"
                         size="4"
                         color="grass"
-                        disabled={settlement.isSubmitDisabled || isSubmitting || isSubmitPending}
+                        disabled={!draft || isSubmitting || isSubmitPending}
                         loading={isSubmitting || isSubmitPending}
                         onClick={onFormSubmit}
                     >

@@ -43,6 +43,8 @@ export interface SettlementViewModel {
     isDebtSettled: boolean;
     /** The field holds text that is not an amount of the currency (too many fraction digits). */
     isAmountInvalid: boolean;
+    /** The amount is above the debt by at least one minor unit (it cannot be sent). */
+    isAboveDebt: boolean;
     /** The exact debt when the input differs from it by less than one minor unit, else `null`. */
     fullSettlementAmount: Money | null;
     debtColor: 'green' | 'red';
@@ -86,7 +88,7 @@ export const getSettlementViewModel = ({
     const owed = abs(balance.net);
     const isFriendPayer = displaySign(balance.net) > 0;
     const input = parseMoneyInput(amount, owed.currency);
-    const resolved = input && !isZero(input) ? resolveSettleAmount(input, owed) : null;
+    const resolved = input && resolveSettleAmount(input, owed);
     const remaining = resolved ? sub(owed, resolved) : owed;
     const isDebtSettled = resolved !== null && isZero(remaining);
 
@@ -102,6 +104,7 @@ export const getSettlementViewModel = ({
         isSubmitDisabled: resolved === null,
         isDebtSettled,
         isAmountInvalid: amount.trim() !== '' && input === null,
+        isAboveDebt: input !== null && resolved === null && compare(input, owed) > 0,
         fullSettlementAmount: isDebtSettled && input && compare(input, owed) !== 0 ? owed : null,
         debtColor: isFriendPayer ? 'green' : 'red',
         summaryUser: isFriendPayer ? friend : user,

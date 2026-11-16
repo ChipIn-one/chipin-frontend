@@ -18,7 +18,6 @@ export type {
     ApiActivityItemsResponse,
     ApiCreateLedgerResponse,
     ApiExpenseDetails,
-    ApiFriendBalance,
     ApiGroupResponse,
     ApiGroupsResponse,
     ApiOAuthTokenPairResponse,

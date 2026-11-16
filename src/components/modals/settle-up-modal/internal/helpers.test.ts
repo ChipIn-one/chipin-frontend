@@ -150,6 +150,30 @@ test.each(['', '0', '-1', '100.01', 'invalid', '0.0000001', '1.234'])(
 );
 
 test.each([
+    ['100.01', true],
+    ['100', false],
+    ['0', false],
+    ['1.234', false],
+])('flags %j as above the 100 debt: %s', (amount, isAboveDebt) => {
+    expect(
+        getSettlementViewModel({ user: currentUser, friend, balance: balance('-100'), amount })
+            .isAboveDebt,
+    ).toBe(isAboveDebt);
+});
+
+test('a zero amount is not a payment, even for a debt below one minor unit', () => {
+    const model = getSettlementViewModel({
+        user: currentUser,
+        friend,
+        balance: balance('-0.0040'),
+        amount: '0',
+    });
+
+    expect(model.settlement).toBeNull();
+    expect(model.isAmountInvalid).toBe(false);
+});
+
+test.each([
     ['0.0000001', true],
     ['1.234', true],
     ['abc', true],

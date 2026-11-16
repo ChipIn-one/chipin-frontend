@@ -709,6 +709,10 @@ test('SET-003 an input above the debt by a minor unit or more disables the payme
         .then(() => {
             expect(recordPayment()).toHaveProperty('disabled', true);
             expect(screen.queryByText(`${FULL_SETTLEMENT_HINT}:3.3333 USD`)).toBeNull();
+            const reason = screen.getByText('friends:settleUp.amountAboveDebt');
+
+            expect(input.getAttribute('aria-invalid')).toBe('true');
+            expect(input.getAttribute('aria-describedby')).toBe(reason.id);
             return user.click(recordPayment());
         })
         .then(() => {
@@ -716,7 +720,7 @@ test('SET-003 an input above the debt by a minor unit or more disables the payme
         });
 });
 
-test('an amount with more fraction digits than the currency has is invalid and never sent', () => {
+test('the field refuses more fraction digits than the currency has, so 0.0000001 is never sent', () => {
     const onSubmit = vi.fn<(params: SettlementDraft) => Promise<void>>();
     const user = userEvent.setup();
 
@@ -728,8 +732,55 @@ test('an amount with more fraction digits than the currency has is invalid and n
         .clear(input)
         .then(() => user.type(input, '0.0000001'))
         .then(() => {
-            expect(input).toHaveProperty('value', '0.0000001');
-            expect(input.getAttribute('aria-invalid')).toBe('true');
+            expect(input).toHaveProperty('value', '0.00');
+            expect(screen.queryByText('friends:settleUp.amountAboveDebt')).toBeNull();
+            expect(recordPayment()).toHaveProperty('disabled', true);
+            return user.click(recordPayment());
+        })
+        .then(() => {
+            expect(onSubmit).not.toHaveBeenCalled();
+        });
+});
+
+test('a JPY amount takes no fraction digits', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(undefined, [balance('-10.4000', 'JPY')]);
+
+    const input = screen.getByRole('textbox');
+
+    expect(input).toHaveProperty('value', '10');
+
+    return user
+        .clear(input)
+        .then(() => user.type(input, '9.5'))
+        .then(() => {
+            expect(input).toHaveProperty('value', '9.');
+            expect(recordPayment()).toHaveProperty('disabled', false);
+        });
+});
+
+test('never sends the typed amount in another currency when the selected one disappears', () => {
+    const onSubmit = vi.fn<(params: SettlementDraft) => Promise<void>>();
+    const user = userEvent.setup();
+    const props = {
+        source: 'friend' as const,
+        isOpened: true,
+        onOpenChange: vi.fn(),
+        friend,
+        initialCurrency: 'USD',
+        onSubmit,
+    };
+    const view = render(
+        <SettleUpModal {...props} balances={[balance('-100'), balance('-30', 'EUR')]} />,
+    );
+
+    return user
+        .clear(screen.getByRole('textbox'))
+        .then(() => user.type(screen.getByRole('textbox'), '20'))
+        .then(() => {
+            view.rerender(<SettleUpModal {...props} balances={[balance('-30', 'EUR')]} />);
+
             expect(recordPayment()).toHaveProperty('disabled', true);
             return user.click(recordPayment());
         })

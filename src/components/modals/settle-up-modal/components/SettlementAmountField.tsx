@@ -12,10 +12,14 @@ interface Props {
     amount: string;
     currency: string;
     currencyItems: SelectItem[];
+    /** The currency minor units: the field refuses more fraction digits as they are typed. */
+    maxFractionDigits: number;
     /** The amount text is not an amount of the currency (it cannot be sent). */
     isAmountInvalid: boolean;
     /** A caption under the field: what the payment settles in full. */
     hint: string | null;
+    /** Why the amount cannot be sent, shown under the field. */
+    error: string | null;
     onAmountChange: (amount: string) => void;
     onCurrencyChange: (currency: string) => void;
     onUseFullDebt: () => void;
@@ -27,8 +31,10 @@ const SettlementAmountField = ({
     amount,
     currency,
     currencyItems,
+    maxFractionDigits,
     isAmountInvalid,
     hint,
+    error,
     onAmountChange,
     onCurrencyChange,
     onUseFullDebt,
@@ -36,6 +42,8 @@ const SettlementAmountField = ({
 }: Props) => {
     const { t } = useTranslation('friends');
     const hintId = useId();
+    const errorId = useId();
+    const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(' ');
     // The first click after focus would otherwise move the caret and drop the focus selection.
     const isSelectOnClickPending = useRef(false);
 
@@ -78,9 +86,9 @@ const SettlementAmountField = ({
                         onClick={onAmountClick}
                         onKeyDown={onAmountKeyDown}
                         onBlur={onAmountBlur}
-                        maxFractionDigits={null}
-                        aria-invalid={isAmountInvalid}
-                        aria-describedby={hint ? hintId : undefined}
+                        maxFractionDigits={maxFractionDigits}
+                        aria-invalid={isAmountInvalid || Boolean(error)}
+                        aria-describedby={describedBy || undefined}
                         color="jade"
                         size="3"
                         variant="surface"
@@ -114,6 +122,12 @@ const SettlementAmountField = ({
             {hint && (
                 <Text id={hintId} size="2" color="gray">
                     {hint}
+                </Text>
+            )}
+
+            {error && (
+                <Text id={errorId} size="2" color="red">
+                    {error}
                 </Text>
             )}
 
