@@ -56,6 +56,9 @@ export const SMOKE_SHORT = {
         // service worker / PWA
         'src/helpers/pwa.ts',
         'src/helpers/serviceWorkerRecovery.ts',
+        'src/helpers/serviceWorkerHost.ts',
+        'public/sw-kill.js',
+        'scripts/sw-app-plugin.ts',
         'src/hooks/pwaHooks.tsx',
         'src/basics/PWABadge.tsx',
         'vite.config.ts',

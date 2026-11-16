@@ -1,15 +1,71 @@
 // Validate the final public HTML was actually scanned by Workbox after SSG.
+// Also checks the worker files of 04-4a1 (spec 04 §2.11 option (a)): the app worker is
+// `sw-app.js`, the legacy-host kill-switch `sw-kill.js` is not precached, and no file sits at
+// `sw.js` (vercel.json serves `/sw.js` by host).
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const outputRoot = path.resolve('dist');
 
+const verifyWorkerFiles = serviceWorker =>
+    Promise.all([
+        access(path.join(outputRoot, 'sw-kill.js')),
+        access(path.join(outputRoot, 'sw.js')).then(
+            () => {
+                throw new Error('dist/sw.js must not exist: /sw.js is rewritten by host.');
+            },
+            () => undefined,
+        ),
+    ]).then(() => {
+        if (serviceWorker.includes('sw-kill.js')) {
+            throw new Error('The kill-switch sw-kill.js must not be precached by the app worker.');
+        }
+    });
+
+// Both registrations (`virtual:pwa-register` through workbox-window, and the manual one) must
+// register `/sw.js` with scope `/` in the built bundle; the quote style is the minifier's. The
+// source scan `scripts/sw-registration-sites.test.mjs` forbids any other call site.
+const QUOTE = '["\'`]';
+const SW_ARGUMENTS = `${QUOTE}/sw\\.js${QUOTE},\\{scope:${QUOTE}/${QUOTE}`;
+const REQUIRED_REGISTRATIONS = [
+    ['virtual:pwa-register', new RegExp(`new [\\w$]+\\(${SW_ARGUMENTS}`)],
+    ['the manual registration', new RegExp(`serviceWorker\\.register\\(${SW_ARGUMENTS}\\}\\)`)],
+];
+
+const verifyRegistrationUrls = () => {
+    const assetsRoot = path.join(outputRoot, 'assets');
+
+    return readdir(assetsRoot)
+        .then(files =>
+            Promise.all(
+                files
+                    .filter(file => file.endsWith('.js'))
+                    .map(file => readFile(path.join(assetsRoot, file), 'utf8')),
+            ),
+        )
+        .then(bundles => {
+            const code = bundles.join('\n');
+
+            for (const [name, pattern] of REQUIRED_REGISTRATIONS) {
+                if (!pattern.test(code)) {
+                    throw new Error(name + ' must register /sw.js with scope / in the bundle.');
+                }
+            }
+        });
+};
+
 const verifyPublicPrecache = () => {
     return Promise.all([
         readFile(path.join(outputRoot, 'sitemap.xml'), 'utf8'),
-        readFile(path.join(outputRoot, 'sw.js'), 'utf8'),
+        readFile(path.join(outputRoot, 'sw-app.js'), 'utf8'),
     ])
+        .then(([sitemap, serviceWorker]) =>
+            Promise.all([verifyWorkerFiles(serviceWorker), verifyRegistrationUrls()]).then(() => [
+                sitemap,
+                serviceWorker,
+            ]),
+        )
         .then(([sitemap, serviceWorker]) => {
             const publicPaths = Array.from(
                 sitemap.matchAll(/<loc>https:\/\/chipin\.one([^<]*)<\/loc>/g),

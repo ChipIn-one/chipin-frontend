@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
     activateServiceWorker: vi.fn<() => Promise<void>>(),
     reloadCurrentPage: vi.fn(),
     setIsSwUpdateAvailable: vi.fn(),
+    shouldRegisterServiceWorker: vi.fn<(hostname: string) => boolean>(),
     toastCustom: vi.fn(),
     toastDismiss: vi.fn(),
 }));
@@ -11,6 +12,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('helpers/serviceWorkerRecovery', () => ({
     activateServiceWorker: mocks.activateServiceWorker,
     reloadCurrentPage: mocks.reloadCurrentPage,
+}));
+
+vi.mock('helpers/serviceWorkerHost', () => ({
+    shouldRegisterServiceWorker: mocks.shouldRegisterServiceWorker,
 }));
 
 vi.mock('i18n', () => ({
@@ -63,6 +68,7 @@ beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.activateServiceWorker.mockResolvedValue(undefined);
+    mocks.shouldRegisterServiceWorker.mockReturnValue(true);
 });
 
 // Each test imports a fresh module instance; remove its document listener and interval so a
@@ -118,4 +124,27 @@ test('re-checks the waiting worker on tab focus even when the update request fai
 
     await vi.waitFor(() => expect(mocks.setIsSwUpdateAvailable).toHaveBeenCalledWith(true));
     expect(registration.update).toHaveBeenCalledOnce();
+});
+
+// 04-4a1: the legacy hosts serve the kill-switch at /sw.js, so nothing registers there.
+test('registers /sw.js with scope / only when the host allows a worker', async () => {
+    installServiceWorkerRegistration();
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await initServiceWorkerUpdates();
+
+    expect(mocks.shouldRegisterServiceWorker).toHaveBeenCalledWith(window.location.hostname);
+    expect(navigator.serviceWorker.register).toHaveBeenCalledExactlyOnceWith('/sw.js', {
+        scope: '/',
+    });
+});
+
+test('does not register a worker on a legacy host', async () => {
+    installServiceWorkerRegistration();
+    mocks.shouldRegisterServiceWorker.mockReturnValue(false);
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await initServiceWorkerUpdates();
+
+    expect(navigator.serviceWorker.register).not.toHaveBeenCalled();
 });

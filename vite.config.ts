@@ -11,6 +11,7 @@ import {
 } from './scripts/prerender-before-workbox.mjs';
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
 import { shouldUploadSourcemaps } from './scripts/sentry-sourcemaps.ts';
+import { swAppPlugin } from './scripts/sw-app-plugin.ts';
 import { resolveAppVersionInfo } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
@@ -206,6 +207,9 @@ export default defineConfig(({ mode }) => {
                     // Only explicitly private SPA paths may use offline app.html.
                     // All public URLs use exact precache entries, and unknown URLs retain 404.
                     navigateFallbackAllowlist: PRIVATE_SPA_NAVIGATION_ALLOWLIST,
+                    // The legacy-host kill-switch is never precached (04-4a1); the first entry is
+                    // the Workbox default that an explicit list would otherwise drop.
+                    globIgnores: ['**/node_modules/**/*', 'sw-kill.js'],
                     sourcemap: false,
                     cleanupOutdatedCaches: true,
                     clientsClaim: true,
@@ -219,6 +223,8 @@ export default defineConfig(({ mode }) => {
                     type: 'module',
                 },
             }),
+            // After VitePWA: renames dist/sw.js to dist/sw-app.js once the worker is written (04-4a1).
+            swAppPlugin(),
             ...(sentryUploadConfig
                 ? [
                       sentryVitePlugin({

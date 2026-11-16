@@ -1,7 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
+
+import { LEGACY_SERVICE_WORKER_HOSTNAMES } from './src/helpers/serviceWorkerHost.ts';
 
 const API_SOURCE = '/api/:path*';
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
@@ -219,5 +221,116 @@ describe('Vercel redirects for removed public locales (#609)', () => {
         '/es//example.com',
     ])('leaves %s untouched', pathname => {
         expect(resolveRedirect(pathname)).toBeUndefined();
+    });
+});
+
+// 04-4a1 (spec 04 §2.11 option (a)): `dist` has no file at `/sw.js`, so the host decides which
+// worker script `/sw.js` serves. All routes (redirects, then rewrites after `handle: filesystem`)
+// come from `getTransformedRoutes`; a route applies when its `has` host condition holds. Routes
+// with `continue` (headers) do not end the match. The first matching route wins.
+const allRoutes = (() => {
+    const { routes, error } = getTransformedRoutes({
+        redirects: config.redirects ?? [],
+        rewrites: config.rewrites ?? [],
+    });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return (routes ?? []).filter(route => route.src && !route.continue);
+})();
+
+const hostMatches = (route, host) =>
+    (route.has ?? []).every(condition => {
+        if (condition.type !== 'host') {
+            return false;
+        }
+
+        if (typeof condition.value === 'string') {
+            return condition.value === host;
+        }
+
+        return typeof condition.value?.suf === 'string' && host.endsWith(condition.value.suf);
+    });
+
+const resolveRoute = (host, pathname) => {
+    const route = allRoutes.find(
+        candidate => hostMatches(candidate, host) && new RegExp(candidate.src).test(pathname),
+    );
+
+    if (!route) {
+        return undefined;
+    }
+
+    return route.status
+        ? { redirect: route.headers.Location, statusCode: route.status }
+        : { rewrite: route.dest.split('?')[0] };
+};
+
+const LEGACY_HOSTS = ['chipin.one', 'dev.chipin.one'];
+const APP_WORKER_HOSTS = [
+    'app.chipin.one',
+    'app-dev.chipin.one',
+    'chipin-git-feature-123.vercel.app',
+    'chipin-frontend.vercel.app',
+    'localhost',
+];
+
+describe('Vercel /sw.js by host (04-4a1)', () => {
+    test.each(APP_WORKER_HOSTS)('serves the app worker /sw-app.js at /sw.js on %s', host => {
+        expect(resolveRoute(host, '/sw.js')).toEqual({ rewrite: '/sw-app.js' });
+    });
+
+    test.each(LEGACY_HOSTS)('serves the kill-switch /sw-kill.js at /sw.js on %s', host => {
+        expect(resolveRoute(host, '/sw.js')).toEqual({ rewrite: '/sw-kill.js' });
+    });
+
+    test.each([...LEGACY_HOSTS, ...APP_WORKER_HOSTS])(
+        'leaves the worker files on %s to the filesystem (no redirect, no SPA rewrite)',
+        host => {
+            expect(resolveRoute(host, '/sw-app.js')).toBeUndefined();
+            expect(resolveRoute(host, '/sw-kill.js')).toBeUndefined();
+        },
+    );
+
+    test('serves the kill-switch on exactly the hosts the registration gate denies', () => {
+        const killSwitchHosts = [...LEGACY_HOSTS, ...APP_WORKER_HOSTS].filter(
+            host => resolveRoute(host, '/sw.js')?.rewrite === '/sw-kill.js',
+        );
+        const hostConditions = config.rewrites
+            .filter(rewrite => rewrite.destination === '/sw-kill.js')
+            .flatMap(rewrite => rewrite.has.map(condition => condition.value));
+
+        expect(killSwitchHosts.sort()).toEqual([...LEGACY_SERVICE_WORKER_HOSTNAMES].sort());
+        expect(hostConditions.sort()).toEqual([...LEGACY_SERVICE_WORKER_HOSTNAMES].sort());
+    });
+
+    test('places the /sw.js rewrites after the last /api rewrite and before the SPA rewrites', () => {
+        const indexes = config.rewrites.map((rewrite, index) => ({ ...rewrite, index }));
+        const lastApiIndex = Math.max(
+            ...indexes.filter(rewrite => rewrite.source === API_SOURCE).map(({ index }) => index),
+        );
+        const swIndexes = indexes
+            .filter(rewrite => rewrite.source === '/sw.js')
+            .map(({ index }) => index);
+        const firstSpaIndex = Math.min(
+            ...indexes
+                .filter(rewrite => rewrite.destination === '/app.html')
+                .map(({ index }) => index),
+        );
+
+        expect(swIndexes).toHaveLength(3);
+        expect(swIndexes.every(index => index > lastApiIndex && index < firstSpaIndex)).toBe(true);
+    });
+});
+
+// Runs against a built `dist` only (`npm run build` runs `verify:public-precache`, which checks
+// the same files on every build, including Vercel's).
+describe.runIf(existsSync('dist/index.html'))('built dist worker files (04-4a1)', () => {
+    test('has sw-app.js and sw-kill.js and no sw.js', () => {
+        expect(existsSync('dist/sw-app.js')).toBe(true);
+        expect(existsSync('dist/sw-kill.js')).toBe(true);
+        expect(existsSync('dist/sw.js')).toBe(false);
     });
 });

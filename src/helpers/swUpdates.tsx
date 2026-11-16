@@ -6,6 +6,7 @@ import { LS_KEY_SW_UPDATE_DISMISSED_AT } from 'constants/localstorage';
 import { HOUR } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 import { LocalStorage } from 'helpers/localStorage';
+import { shouldRegisterServiceWorker } from 'helpers/serviceWorkerHost';
 import { activateServiceWorker, reloadCurrentPage } from 'helpers/serviceWorkerRecovery';
 import i18n from 'i18n';
 import { usePwaStore } from 'store/pwaStore';
@@ -226,6 +227,11 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
     isInitialized = true;
 
     if (!('serviceWorker' in navigator)) {
+        return;
+    }
+
+    // The legacy hosts serve the kill-switch at /sw.js: register nothing there (04-4a1).
+    if (!shouldRegisterServiceWorker(window.location.hostname)) {
         return;
     }
 
