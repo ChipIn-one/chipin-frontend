@@ -20,10 +20,10 @@
 
 ## Offline Financial Mutations
 
-Today there are no offline financial writes: `shared/offline/outboxGate.ts` and `shared/offline/pendingOps.ts`
-are no-op stubs that callers may already be wired against, and a task does not build the outbox unless it asks
-for one (`AGENTS.md` "Applies now"). The rules below describe the target (spec 03 §2) and apply once the
-outbox lands.
+Today there are no offline financial writes in production: the expense outbox core (`shared/offline/outbox*.ts`,
+`entities/ledger/api/outbox.ts`, 03-15a) runs only behind `VITE_FEATURE_OFFLINE_WRITES`, which stays unset (off)
+until 03-17, and a task changes it only when it asks to (`AGENTS.md` "Applies now"). Settle-up and payments are
+online-only. The rules below describe the target (spec 03 §2) and bind the flag-on path.
 
 - Offline expense create/edit/delete goes only through the outbox with a client-generated UUID
   (spec 03 §2). Settle-up and payments are never offline.

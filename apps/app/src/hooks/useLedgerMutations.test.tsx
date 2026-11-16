@@ -866,4 +866,28 @@ describe('C1-10 two create paths', () => {
         });
         expect(sentWrites(sent)).toEqual([]);
     });
+
+    test('M2: a double submit on the outbox path queues one op; the repeat is refused as busy', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        const client = signIn();
+
+        client.setQueryData(capabilitiesQueryOptions().queryKey, [
+            'ledger.clientEntryId',
+            'ledger.entryVersion',
+            'client.minVersion',
+        ]);
+        serve();
+        onlineManager.setOnline(false);
+        const { result } = renderHook(useCreateExpense);
+        let first: Promise<void> = Promise.resolve();
+        let second: Promise<void> = Promise.resolve();
+
+        act(() => {
+            first = result.current.createExpense({ expense });
+            second = result.current.createExpense({ expense });
+        });
+        await expect(second).rejects.toEqual(new LedgerWriteRefusedError('busy'));
+        await act(() => first);
+        expect(mutationKeys(client)).toEqual([ledgerOutboxMutationKeys.createExpense]);
+    });
 });

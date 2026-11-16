@@ -69,6 +69,8 @@ const outboxVersions = new Map<string, string>();
 const pendingRemovals = new Set<string>();
 const cancelledOpIds = new Set<string>();
 const statusByOpId = new Map<string, OutboxStatus>();
+// Entries whose failed-list write is still pending: their block must stay (D29).
+const failureWrites = new Map<string, number>();
 
 const forgetMemory = (): void => {
     state = emptyState();
@@ -77,6 +79,7 @@ const forgetMemory = (): void => {
     pendingRemovals.clear();
     cancelledOpIds.clear();
     statusByOpId.clear();
+    failureWrites.clear();
 };
 
 /** The tab starts draining the outbox of `userId`; another user's queue is dropped from memory. */
@@ -109,6 +112,9 @@ export const stopOutbox = (): void => {
     running = false;
     wake();
     outboxGate.reset();
+    // Every waiting run has resolved: no cancellation is needed any more.
+    cancelledOpIds.clear();
+    state.cancelled.clear();
 };
 
 /** Tests only: no owner, an empty queue. */
@@ -154,8 +160,12 @@ export const outboxEntryIds = (): ReadonlySet<string> =>
 const hasOtherOpOf = (entryId: string, opId: string): boolean =>
     state.ops.some(op => op.entryId === entryId && op.opId !== opId);
 
+/** An unsent create of the entry (a sent one, still waiting for its removal, has a version). */
 export const hasPendingCreateOf = (entryId: string): boolean =>
-    state.ops.some(op => op.entryId === entryId && op.kind === 'createExpense');
+    state.ops.some(
+        op =>
+            op.entryId === entryId && op.kind === 'createExpense' && !pendingRemovals.has(op.opId),
+    );
 
 /** Our latest write of the entry, newer than any `baseVersion` (§2.1). */
 export const getOutboxVersion = (entryId: string): string | null =>
@@ -176,14 +186,32 @@ export const markPendingRemoval = (opId: string): void => {
 
 export const isPendingRemoval = (opId: string): boolean => pendingRemovals.has(opId);
 
-/** A sent op leaves the queue (and the failed list, after a Retry); true while its entry still has a failed op. */
-export const removeOutboxOp = (op: OutboxOpBase): Promise<boolean> =>
+/** A sent op leaves the queue (and the failed list, after a Retry). */
+export const removeOutboxOp = (op: OutboxOpBase): Promise<void> =>
     writeOutbox(draft => {
         draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
         draft.failed.delete(op.opId);
         pendingRemovals.delete(op.opId);
-        return [...draft.failed.values()].some(failed => failed.op.entryId === op.entryId);
     });
+
+/** Counts a failed-list write of the entry until it lands (or is given up). */
+export const trackFailureWrite = <T>(entryId: string, write: Promise<T>): Promise<T> => {
+    failureWrites.set(entryId, (failureWrites.get(entryId) ?? 0) + 1);
+    return write.finally(() => {
+        const left = (failureWrites.get(entryId) ?? 1) - 1;
+
+        if (left > 0) {
+            failureWrites.set(entryId, left);
+        } else {
+            failureWrites.delete(entryId);
+        }
+    });
+};
+
+/** No failed op of the entry, landed or still being written: its later ops may go. */
+export const hasNoFailureOf = (entryId: string): boolean =>
+    !failureWrites.has(entryId) &&
+    ![...state.failed.values()].some(({ op }) => op.entryId === entryId);
 
 /** A final answer: the op moves from the queue to the failed list (§2.5). */
 export const recordFailedOp = (op: OutboxOpBase, reason: FailedReason): Promise<void> =>
@@ -214,7 +242,7 @@ export const claimOutboxOp = (opId: string | null): void => {
 
 export interface DiscardResult {
     discarded: string[];
-    /** Already sending: the request completes normally. */
+    /** Being sent, or sent and waiting for its removal: the server has (or will have) it. */
     refused: string[];
 }
 
@@ -225,28 +253,32 @@ export interface DiscardResult {
  */
 export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
     writeOutbox(draft => {
-        const refused = opIds.filter(opId => opId === sendingOpId);
-        const discarded = opIds.filter(opId => opId !== sendingOpId);
+        const isSent = (opId: string): boolean => opId === sendingOpId || pendingRemovals.has(opId);
+        const refused = opIds.filter(isSent);
+        const discarded: string[] = [];
         const entries = new Set<string>();
 
-        discarded.forEach(opId => {
-            const op =
-                draft.ops.find(pending => pending.opId === opId) ?? draft.failed.get(opId)?.op;
+        opIds.forEach(opId => {
+            const pending = draft.ops.find(op => op.opId === opId);
+            const op = pending ?? draft.failed.get(opId)?.op;
 
-            if (op) {
-                entries.add(op.entryId);
+            if (!op || isSent(opId)) {
+                return;
             }
-            draft.cancelled.add(opId);
-            cancelledOpIds.add(opId);
+            discarded.push(opId);
+            entries.add(op.entryId);
             draft.failed.delete(opId);
+            // Only a pending op has a run that must resolve `CANCELLED`; it forgets the id.
+            if (pending) {
+                draft.cancelled.add(opId);
+                cancelledOpIds.add(opId);
+            }
         });
         draft.ops = draft.ops.filter(({ opId }) => !discarded.includes(opId));
         return { discarded, refused, entries };
     }).then(({ discarded, refused, entries }) => {
-        const failedEntries = new Set(failedOutboxOps().map(({ op }) => op.entryId));
-
         entries.forEach(entryId => {
-            if (!failedEntries.has(entryId)) {
+            if (hasNoFailureOf(entryId)) {
                 outboxGate.unblock(entryId);
             }
         });

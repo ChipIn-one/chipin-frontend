@@ -1,6 +1,7 @@
 import { onlineManager, QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { ApiResponseFormatError, AuthRequestCancelledError } from 'shared/api/client';
 import { ApiError } from 'shared/lib/apiError';
 
 import { outboxGate } from './outboxGate';
@@ -21,9 +22,12 @@ import {
     discardOps,
     failedOutboxOps,
     getOutboxVersion,
+    hasPendingCreateOf,
     type OutboxKind,
     type OutboxOpBase,
     pendingOutboxOps,
+    recordFailedOp,
+    removeOutboxOp,
     resetOutbox,
     startOutbox,
     stopOutbox,
@@ -31,6 +35,30 @@ import {
 import { isEntryWithPendingOp } from './pendingOps';
 
 vi.mock('./queryPersister', () => ({ reportPersistFailed: vi.fn() }));
+// The queue writes stay real; a test can make one fail or hang (the IndexedDB writes of 03-15b).
+vi.mock('./outboxStore', async importOriginal => {
+    const actual = await importOriginal<typeof import('./outboxStore')>();
+
+    return {
+        ...actual,
+        recordFailedOp: vi.fn(actual.recordFailedOp),
+        removeOutboxOp: vi.fn(actual.removeOutboxOp),
+    };
+});
+
+interface Deferred {
+    promise: Promise<void>;
+    resolve: () => void;
+}
+
+const deferred = (): Deferred => {
+    let resolve = (): void => undefined;
+    const promise = new Promise<void>(done => {
+        resolve = done;
+    });
+
+    return { promise, resolve };
+};
 
 const OWNER = 'user-1';
 
@@ -193,7 +221,7 @@ describe('03 §2.4 order and gate', () => {
         expect(pendingOutboxOps()).toEqual([ops[1]]);
     });
 
-    test('03 §2.5: 401 and 426 close the global gate: the op stays pending and no other entry goes out', async () => {
+    test('03 §2.5: 426 closes the global gate: the op stays pending and no other entry goes out', async () => {
         const ops = [await queue('entry-x'), await queue('entry-y')];
         const { deps, sent } = harness((op, attempt) =>
             op.opId === 'op-1' && attempt === 0 ? apiError(426, 'CLIENT.OUTDATED') : 'v',
@@ -210,6 +238,32 @@ describe('03 §2.4 order and gate', () => {
         expect(sent).toEqual(['op-1', 'op-1', 'op-2']);
         await expect(results).resolves.toMatchObject([{ kind: 'sent' }, { kind: 'sent' }]);
     });
+
+    test.each<[string, Error]>([
+        ['401 after a failed refresh', apiError(401, 'AUTH.UNAUTHORIZED')],
+        // H1: the interceptor found no token, another user's token, or a changed session.
+        ['an interceptor-cancelled request', new AuthRequestCancelledError(true)],
+    ])(
+        '03 §2.5 row 401: %s closes the auth gate, the op stays pending (not failed) and no other entry goes out',
+        async (_name, error) => {
+            const ops = [await queue('entry-x'), await queue('entry-y')];
+            const { deps, sent } = harness((op, attempt) =>
+                op.opId === 'op-1' && attempt === 0 ? error : 'v',
+            );
+            const results = Promise.all(runAll(ops, deps));
+
+            await tick(60_000);
+            expect(sent).toEqual(['op-1']);
+            expect(outboxGate.isClosed('auth')).toBe(true);
+            expect(failedOutboxOps()).toEqual([]);
+            expect(outboxGate.isBlocked('entry-x')).toBe(false);
+
+            recheckOutboxOwner(OWNER);
+            await tick();
+            expect(sent).toEqual(['op-1', 'op-1', 'op-2']);
+            await expect(results).resolves.toMatchObject([{ kind: 'sent' }, { kind: 'sent' }]);
+        },
+    );
 
     test('03 §2.4: an op of a blocked entry waits until the entry is unblocked, the others pass it', async () => {
         const ops = [await queue('entry-x'), await queue('entry-y')];
@@ -297,6 +351,37 @@ describe('03 §2.5 error classes', () => {
             { kind: 'transient' },
         ],
         ['401', apiError(401), 'updateExpense', { kind: 'auth' }],
+        [
+            'interceptor cancel (H1)',
+            new AuthRequestCancelledError(),
+            'createExpense',
+            { kind: 'auth' },
+        ],
+        ['429', apiError(429), 'updateExpense', { kind: 'transient' }],
+        [
+            '2xx with a non-JSON body',
+            new ApiResponseFormatError(201),
+            'createExpense',
+            { kind: 'transient' },
+        ],
+        [
+            'cancelled request',
+            Object.assign(new Error('canceled'), { __CANCEL__: true }),
+            'createExpense',
+            { kind: 'transient' },
+        ],
+        [
+            '410 with another code',
+            apiError(410, 'GONE'),
+            'createExpense',
+            { kind: 'final', reason: 'rejected' },
+        ],
+        [
+            '409 unknown code',
+            apiError(409, 'OTHER'),
+            'updateExpense',
+            { kind: 'final', reason: 'rejected' },
+        ],
         ['426', apiError(426, 'CLIENT.OUTDATED'), 'createExpense', { kind: 'outdated' }],
         ['400', apiError(400), 'createExpense', { kind: 'final', reason: 'validation' }],
         ['422', apiError(422), 'updateExpense', { kind: 'final', reason: 'validation' }],
@@ -348,28 +433,39 @@ describe('03 §2.5 error classes', () => {
         expect(failedOutboxOps()).toEqual([]);
     });
 
-    test('C3-05: a failed write of the failed list repeats only the write, the request goes out once', async () => {
+    test('C3-05: a failing write of the failed list repeats only the write; the op stays pending and keeps the turn', async () => {
+        const ops = [await queue('entry-x'), await queue('entry-y')];
+        const { deps, sent } = harness(op => (op.opId === 'op-1' ? apiError(422) : 'v'));
+
+        vi.mocked(recordFailedOp)
+            .mockRejectedValueOnce(new Error('quota'))
+            .mockRejectedValueOnce(new Error('quota'));
+        const [first, second] = runAll(ops, deps);
+
+        await tick(100);
+        expect(sent).toEqual(['op-1']);
+        expect(pendingOutboxOps()).toEqual(ops);
+        expect(failedOutboxOps()).toEqual([]);
+        await tick(1_000);
+        // Still writing (backoff): entry Y waits for the turn, nothing is resent.
+        expect(sent).toEqual(['op-1']);
+        await tick(10_000);
+        await expect(first).resolves.toEqual(new OutboxTerminalError('validation'));
+        await expect(second).resolves.toMatchObject({ kind: 'sent' });
+        expect(sent).toEqual(['op-1', 'op-2']);
+        expect(recordFailedOp).toHaveBeenCalledTimes(3);
+        expect(failedOutboxOps().map(({ op }) => op.opId)).toEqual(['op-1']);
+    });
+
+    test('03 §2.4: retryWrite gives up when the drain stops; the request is not repeated', async () => {
         const [op] = [await queue('entry-x')];
-        const { deps, sent } = harness(() => apiError(422));
-        const write = vi
-            .fn<() => Promise<void>>()
-            .mockRejectedValueOnce(new Error('quota'))
-            .mockRejectedValueOnce(new Error('quota'))
-            .mockResolvedValue(undefined);
+        const write = vi.fn<() => Promise<void>>().mockRejectedValue(new Error('quota'));
         const landed = retryWrite(op, write);
 
+        stopOutbox();
         await tick(10_000);
-        await expect(landed).resolves.toBe(true);
-        expect(write).toHaveBeenCalledTimes(3);
-        expect(sent).toEqual([]);
-
-        const failed = expect(runOutboxOp(op, deps)).rejects.toEqual(
-            new OutboxTerminalError('validation'),
-        );
-
-        await tick();
-        await failed;
-        expect(sent).toEqual(['op-1']);
+        await expect(landed).resolves.toBe(false);
+        expect(write).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -409,6 +505,41 @@ describe('C2-15/C3-04 discard', () => {
         await expect(result).resolves.toMatchObject({ kind: 'sent' });
     });
 
+    test('discarding during a backoff: no second request, the op resolves cancelled at once', async () => {
+        const [op] = [await queue('entry-a')];
+        const { deps, sent } = harness(() => apiError(503));
+        const result = runOutboxOp(op, deps);
+
+        await tick(100);
+        expect(sent).toEqual(['op-1']);
+        await expect(discardOps(['op-1'])).resolves.toEqual({ discarded: ['op-1'], refused: [] });
+        await tick(1);
+        await expect(result).resolves.toEqual({ kind: 'cancelled' });
+        expect(vi.getTimerCount()).toBe(0);
+        await tick(60_000);
+        expect(sent).toEqual(['op-1']);
+    });
+
+    test('M3: a sent op waiting for its removal is not discarded, and a sent create is no longer a pending create', async () => {
+        const removal = deferred();
+        const [op] = [await queue('entry-a', 'createExpense')];
+        const { deps } = harness();
+
+        vi.mocked(removeOutboxOp).mockImplementationOnce(target =>
+            removal.promise.then(() => vi.mocked(removeOutboxOp).getMockImplementation()?.(target)),
+        );
+        const result = runOutboxOp(op, deps);
+
+        await tick();
+        await expect(result).resolves.toMatchObject({ kind: 'sent' });
+        expect(pendingOutboxOps()).toEqual([op]);
+        expect(hasPendingCreateOf('entry-a')).toBe(false);
+        await expect(discardOps(['op-1'])).resolves.toEqual({ discarded: [], refused: ['op-1'] });
+        removal.resolve();
+        await tick();
+        expect(pendingOutboxOps()).toEqual([]);
+    });
+
     test('discarding a failed create with its edits: no request for the entry, the entry is unblocked', async () => {
         const ops = [
             await queue('entry-c', 'createExpense'),
@@ -432,7 +563,61 @@ describe('C2-15/C3-04 discard', () => {
     });
 });
 
+test('D29 M4: a success does not unblock its entry; only a Retry of the failed op does', async () => {
+    const removal = deferred();
+    const ops = [await queue('entry-x'), await queue('entry-x'), await queue('entry-x')];
+    const { deps, sent } = harness((op, attempt) =>
+        op.opId === 'op-2' && attempt === 0 ? apiError(422) : `v-${op.opId}`,
+    );
+
+    // The removal of op-1 lands only after op-2 failed.
+    vi.mocked(removeOutboxOp).mockImplementationOnce(target =>
+        removal.promise.then(() => vi.mocked(removeOutboxOp).getMockImplementation()?.(target)),
+    );
+    const [, second, third] = runAll(ops, deps);
+
+    await tick();
+    await expect(second).resolves.toEqual(new OutboxTerminalError('validation'));
+    removal.resolve();
+    await tick(60_000);
+    expect(sent).toEqual(['op-1', 'op-2']);
+    expect(outboxGate.isBlocked('entry-x')).toBe(true);
+
+    // Retry: the failed op takes its turn by seq, its success unblocks the entry, op-3 follows.
+    const [failed] = failedOutboxOps();
+    const retried = failed ? runOutboxOp(failed.op, deps, { ignoreEntryBlock: true }) : null;
+
+    await tick();
+    await expect(retried).resolves.toMatchObject({ kind: 'sent' });
+    await expect(third).resolves.toMatchObject({ kind: 'sent' });
+    expect(sent).toEqual(['op-1', 'op-2', 'op-2', 'op-3']);
+    expect(outboxGate.isBlocked('entry-x')).toBe(false);
+});
+
 describe('03 §2.3 owner check (C3-07)', () => {
+    test("M1: after an account switch the previous owner's runs stop without touching the new owner's queue", async () => {
+        let session: string | null = OWNER;
+        const [stale] = [await queue('entry-x')];
+        const { deps, sent } = harness(undefined, () => session);
+
+        onlineManager.setOnline(false);
+        const staleRun = runOutboxOp(stale, deps);
+
+        await tick();
+        session = 'user-2';
+        startOutbox('user-2');
+        const own = await queue('entry-y', 'createExpense', { owner: 'user-2' });
+        const ownRun = runOutboxOp(own, deps);
+
+        onlineManager.setOnline(true);
+        await tick();
+        await expect(staleRun).resolves.toEqual({ kind: 'stopped' });
+        await expect(ownRun).resolves.toMatchObject({ kind: 'sent' });
+        expect(sent).toEqual([own.opId]);
+        expect(outboxGate.isClosed('auth')).toBe(false);
+        expect(failedOutboxOps()).toEqual([]);
+    });
+
     test("an op is never sent with another user's token: the auth gate waits for the owner", async () => {
         let session: string | null = 'user-2';
         const ops = [await queue('entry-x'), await queue('entry-y')];

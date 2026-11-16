@@ -23,6 +23,7 @@ export type {
     LedgerOutboxOp,
     LedgerWritePath,
     LedgerWriteTarget,
+    QueueLedgerWrite,
     UpdateExpenseOp,
 } from './api/outbox';
 export {

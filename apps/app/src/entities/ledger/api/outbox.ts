@@ -48,9 +48,10 @@ export const ledgerOutboxMutationKeys = {
     deleteExpense: ['ledger', 'outbox', 'deleteExpense'],
 } as const;
 
-/** `groupId` on every kind: what is read again after the op settles. */
+/** On every kind: what is read again after the op settles (the group, the open history). */
 interface LedgerOpFields {
     readonly groupId: string | null;
+    readonly parentActivityId: string | null;
 }
 
 export type CreateExpenseOp = OutboxOpBase &
@@ -86,8 +87,12 @@ const resolveVersion = (
     if (version !== null) {
         return Promise.resolve(version);
     }
-    // §2.1: 200 → a version conflict with that `current`; 404 → failed `deletedRemotely`.
-    return api('get', '/ledger/entries/{id}', { params: { id: op.entryId } }).then(
+    // §2.1: 200 → a version conflict with that `current`; 404 → failed `deletedRemotely`, except
+    // for a delete: the entry is gone, which is what the delete wanted (a no-op, like DELETE 404).
+    return api('get', '/ledger/entries/{id}', {
+        params: { id: op.entryId },
+        expectedTokenSubject: op.owner,
+    }).then(
         current => {
             throw new ApiError({
                 status: 409,
@@ -97,7 +102,7 @@ const resolveVersion = (
             });
         },
         (error: unknown) => {
-            throw error instanceof ApiError && error.status === 404
+            throw error instanceof ApiError && error.status === 404 && op.kind === 'updateExpense'
                 ? new OutboxEntryGoneError()
                 : error;
         },
@@ -117,6 +122,7 @@ const sendLedgerOutboxOp = (
     switch (op.kind) {
         case 'createExpense':
             return api('post', '/ledger/entries', {
+                expectedTokenSubject: op.owner,
                 body: {
                     type: 'EXPENSE',
                     id: op.entryId,
@@ -129,6 +135,7 @@ const sendLedgerOutboxOp = (
                 .then(version =>
                     api('patch', '/ledger/entries/{id}', {
                         params: { id: op.entryId },
+                        expectedTokenSubject: op.owner,
                         headers: opHeaders(op, version),
                         body: { type: 'EXPENSE', expense: op.patch },
                     }),
@@ -139,6 +146,7 @@ const sendLedgerOutboxOp = (
                 .then(version =>
                     api('delete', '/ledger/entries/{id}', {
                         params: { id: op.entryId },
+                        expectedTokenSubject: op.owner,
                         headers: opHeaders(op, version),
                     }),
                 )
@@ -229,7 +237,10 @@ export const registerLedgerOutboxDefaults = (
                 if (!isLedgerOutboxOp(variables) || (!error && result?.kind !== 'sent')) {
                     return undefined;
                 }
-                const context = { groupId: variables.groupId ?? undefined };
+                const context = {
+                    groupId: variables.groupId ?? undefined,
+                    parentActivityId: variables.parentActivityId ?? undefined,
+                };
                 const refresh = error ? effects.onWriteFailed : effects.onEntryWritten;
 
                 return refresh(context, client).catch(() => undefined);
@@ -266,73 +277,84 @@ const enqueueLedgerOp = <Op extends LedgerOutboxOp>(
     });
 };
 
+/** Queues the write in the outbox; one call = one op (one client entry id for a create). */
+export type QueueLedgerWrite = () => Promise<void>;
+
 /** The outbox path of an expense create, or null for the online path. */
 export const createExpenseViaOutbox = (
     client: QueryClient,
     effects: LedgerWriteEffects,
-    { expense }: CreateExpenseParams,
-): Promise<void> | null => {
-    if (chooseLedgerWritePath(client, { kind: 'create' }) !== 'outbox') {
-        return null;
-    }
-    // §2.7: the client entry id (03-16a moves it to the form's opening, for a repeated submit).
-    const entryId = crypto.randomUUID();
+    { expense, parentActivityId }: CreateExpenseParams,
+): QueueLedgerWrite | null =>
+    chooseLedgerWritePath(client, { kind: 'create' }) !== 'outbox'
+        ? null
+        : () => {
+              // §2.7: the client entry id of this submit (03-16a moves it to the form's opening).
+              const entryId = crypto.randomUUID();
 
-    return Promise.resolve()
-        .then(() => toCreateLedgerEntryWire(expense, { clientEntryId: entryId }))
-        .then(wire =>
-            enqueueLedgerOp(client, effects, { kind: 'createExpense', entryId }, ({ base }) => ({
-                ...base,
-                kind: 'createExpense',
-                groupId: wire.groupId ?? null,
-                draft: wire.expense,
-            })),
-        );
-};
+              return Promise.resolve()
+                  .then(() => toCreateLedgerEntryWire(expense, { clientEntryId: entryId }))
+                  .then(wire =>
+                      enqueueLedgerOp(
+                          client,
+                          effects,
+                          { kind: 'createExpense', entryId },
+                          ({ base }) => ({
+                              ...base,
+                              kind: 'createExpense',
+                              groupId: wire.groupId ?? null,
+                              parentActivityId: parentActivityId ?? null,
+                              draft: wire.expense,
+                          }),
+                      ),
+                  );
+          };
 
 /** The outbox path of an expense edit, or null for the online path. */
 export const updateExpenseViaOutbox = (
     client: QueryClient,
     effects: LedgerWriteEffects,
-    { entryId, entry, groupId }: UpdateExpenseParams,
-): Promise<void> | null => {
-    if (chooseLedgerWritePath(client, { kind: 'update', entryId }) !== 'outbox') {
-        return null;
-    }
-    return Promise.resolve()
-        .then(() => toExpensePatchWire(entry))
-        .then(patch =>
-            enqueueLedgerOp(
-                client,
-                effects,
-                { kind: 'updateExpense', entryId },
-                ({ base, baseVersion }) => ({
-                    ...base,
-                    kind: 'updateExpense',
-                    groupId: groupId ?? null,
-                    baseVersion,
-                    patch,
-                }),
-            ),
-        );
-};
+    { entryId, entry, groupId, parentActivityId }: UpdateExpenseParams,
+): QueueLedgerWrite | null =>
+    chooseLedgerWritePath(client, { kind: 'update', entryId }) !== 'outbox'
+        ? null
+        : () =>
+              Promise.resolve()
+                  .then(() => toExpensePatchWire(entry))
+                  .then(patch =>
+                      enqueueLedgerOp(
+                          client,
+                          effects,
+                          { kind: 'updateExpense', entryId },
+                          ({ base, baseVersion }) => ({
+                              ...base,
+                              kind: 'updateExpense',
+                              groupId: groupId ?? null,
+                              parentActivityId: parentActivityId ?? null,
+                              baseVersion,
+                              patch,
+                          }),
+                      ),
+                  );
 
 /** The outbox path of an expense delete, or null (a settlement, or offline writes off). */
 export const deleteExpenseViaOutbox = (
     client: QueryClient,
     effects: LedgerWriteEffects,
-    { entryId, groupId }: DeleteLedgerEntryParams,
-): Promise<void> | null =>
-    chooseLedgerWritePath(client, { kind: 'delete', entryId }) === 'outbox'
-        ? enqueueLedgerOp(
-              client,
-              effects,
-              { kind: 'deleteExpense', entryId },
-              ({ base, baseVersion }) => ({
-                  ...base,
-                  kind: 'deleteExpense',
-                  groupId: groupId ?? null,
-                  baseVersion,
-              }),
-          )
-        : null;
+    { entryId, groupId, parentActivityId }: DeleteLedgerEntryParams,
+): QueueLedgerWrite | null =>
+    chooseLedgerWritePath(client, { kind: 'delete', entryId }) !== 'outbox'
+        ? null
+        : () =>
+              enqueueLedgerOp(
+                  client,
+                  effects,
+                  { kind: 'deleteExpense', entryId },
+                  ({ base, baseVersion }) => ({
+                      ...base,
+                      kind: 'deleteExpense',
+                      groupId: groupId ?? null,
+                      parentActivityId: parentActivityId ?? null,
+                      baseVersion,
+                  }),
+              );

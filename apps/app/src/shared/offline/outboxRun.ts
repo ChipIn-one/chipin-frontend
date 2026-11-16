@@ -4,17 +4,23 @@
 // inside it, holding the turn. It is the `mutationFn` of the outbox mutations (`retry: false`,
 // `networkMode: 'always'`: the wait is here, not in the TanStack retryer; owner item 35).
 import type { MutationKey, QueryClient } from '@tanstack/react-query';
+import { onlineManager } from '@tanstack/react-query';
 
-import { isNetworkError } from 'shared/api/client';
+import {
+    ApiResponseFormatError,
+    AuthRequestCancelledError,
+    isNetworkError,
+    isRequestCancelled,
+} from 'shared/api/client';
 import { ApiError } from 'shared/lib/apiError';
 
-import { waitForOnline } from './network';
 import { outboxGate } from './outboxGate';
 import {
     claimOutboxOp,
     type FailedReason,
     forgetCancelled,
     getOutboxVersion,
+    hasNoFailureOf,
     isOpCancelled,
     isOpFailed,
     isOutboxStopped,
@@ -29,6 +35,7 @@ import {
     recordFailedOp,
     removeOutboxOp,
     setOutboxStatus,
+    trackFailureWrite,
 } from './outboxStore';
 import { reportPersistFailed } from './queryPersister';
 
@@ -79,12 +86,12 @@ export type OutboxErrorClass =
 const final = (reason: FailedReason): OutboxErrorClass => ({ kind: 'final', reason });
 
 const classifyStatus = ({ status, code }: ApiError, opKind: OutboxKind): OutboxErrorClass => {
-    if (status >= 500 || (status === 409 && code === 'SYSTEM.CONFLICT')) {
+    if (status >= 500 || status === 429 || (status === 409 && code === 'SYSTEM.CONFLICT')) {
         return { kind: 'transient' };
     }
     if (
         (status === 404 && opKind === 'deleteExpense') ||
-        (status === 410 && opKind === 'createExpense')
+        (status === 410 && opKind === 'createExpense' && code === 'LEDGER.ENTRY_DELETED')
     ) {
         return { kind: 'noop' };
     }
@@ -101,7 +108,9 @@ const classifyStatus = ({ status, code }: ApiError, opKind: OutboxKind): OutboxE
         case 404:
             return final(opKind === 'updateExpense' ? 'deletedRemotely' : 'rejected');
         case 409:
-            return final(code === 'LEDGER.VERSION_CONFLICT' ? 'conflict' : 'idConflict');
+            return code === 'LEDGER.VERSION_CONFLICT'
+                ? final('conflict')
+                : final(code === 'LEDGER.ID_CONFLICT' ? 'idConflict' : 'rejected');
         default:
             return final('rejected');
     }
@@ -114,6 +123,15 @@ export const classifyOutboxError = (error: unknown, opKind: OutboxKind): OutboxE
     }
     if (error instanceof OutboxEntryGoneError) {
         return final('deletedRemotely');
+    }
+    // The interceptor refused the session (no token after a failed refresh, another user's token,
+    // a session that changed meanwhile): pending behind the `auth` gate; a resend is idempotent.
+    if (error instanceof AuthRequestCancelledError) {
+        return { kind: 'auth' };
+    }
+    // A 2xx whose body was not JSON (the write was probably applied) or a cancelled request: retry.
+    if (error instanceof ApiResponseFormatError || isRequestCancelled(error)) {
+        return { kind: 'transient' };
     }
     return isNetworkError(error) ? { kind: 'network' } : final('rejected');
 };
@@ -148,21 +166,36 @@ export const retryWrite = (
         },
     );
 
+// A run of a previous owner (the tab switched accounts) is stopped: it never touches the state or
+// the gate of the new owner (M1).
+const isStale = (op: OutboxOpBase): boolean => isOutboxStopped() || op.owner !== outboxOwner();
+
 const skipped = (op: OutboxOpBase): OutboxResult | null =>
-    isOutboxStopped() ? STOPPED : isOpCancelled(op.opId) ? CANCELLED : null;
+    isStale(op) ? STOPPED : isOpCancelled(op.opId) ? CANCELLED : null;
+
+const noop = (): void => undefined;
+
+type StartWait = (done: () => void) => () => void;
 
 // A wait for the network or a backoff ends early when the op is discarded or the drain stops
-// (§2.5: a cancelled op resolves at the nearest check, without a request).
-const untilSkippedOr = (op: OutboxOpBase, wait: Promise<void>): Promise<void> =>
+// (§2.5: a cancelled op resolves at the nearest check, without a request); either way the
+// subscription and the timer are released.
+const waitUnlessSkipped = (op: OutboxOpBase, start: StartWait): Promise<void> =>
     new Promise(resolve => {
-        let unsubscribe = (): void => undefined;
+        let settled = false;
+        let stopWait = noop;
+        let unsubscribe = noop;
         const finish = (): void => {
-            unsubscribe();
-            resolve();
+            if (!settled) {
+                settled = true;
+                stopWait();
+                unsubscribe();
+                resolve();
+            }
         };
 
         if (skipped(op)) {
-            resolve();
+            finish();
             return;
         }
         unsubscribe = onOutboxWake(() => {
@@ -170,59 +203,90 @@ const untilSkippedOr = (op: OutboxOpBase, wait: Promise<void>): Promise<void> =>
                 finish();
             }
         });
-        void wait.then(finish);
+        stopWait = start(finish);
+        if (settled) {
+            stopWait();
+        }
     });
 
+const online: StartWait = done => {
+    if (onlineManager.isOnline()) {
+        done();
+        return noop;
+    }
+    return onlineManager.subscribe(isOnline => {
+        if (isOnline) {
+            done();
+        }
+    });
+};
+
+const timeout =
+    (ms: number): StartWait =>
+    done => {
+        const timer = setTimeout(done, ms);
+
+        return () => clearTimeout(timer);
+    };
+
 // A 2xx or a no-op answer: our version first, then the slot goes to the next op. The removal
-// write needs no turn and keeps retrying after the drain stops, until the user changes.
+// write needs no turn and keeps retrying after the drain stops, until the user changes. Only a
+// Retry of a failed op (or a discard) unblocks an entry, never any other success (D29, M4).
 const onSent = <Op extends OutboxOpBase>(
     op: Op,
     deps: OutboxDeps<Op>,
     sent: OutboxSent,
+    isRetry: boolean,
 ): OutboxResult => {
-    let entryStillFailed = true;
-
+    if (isStale(op)) {
+        claimOutboxOp(null);
+        return STOPPED;
+    }
     noteOutboxVersion(op, sent.version);
     markPendingRemoval(op.opId);
+    claimOutboxOp(null);
     outboxGate.releaseTurn(op.opId);
     void retryWrite(
         op,
-        () =>
-            removeOutboxOp(op).then(stillFailed => {
-                entryStillFailed = stillFailed;
-            }),
+        () => removeOutboxOp(op),
         () => deps.sessionUserId() !== op.owner,
     ).then(landed => {
-        // A Retry of a failed op succeeded and no failed op of its entry is left.
-        if (landed && !entryStillFailed) {
+        if (landed && isRetry && !isStale(op) && hasNoFailureOf(op.entryId)) {
             outboxGate.unblock(op.entryId);
         }
     });
     return { kind: 'sent', entry: sent.entry };
 };
 
+// The claim is cleared before a backoff or a gate wait (a discard is allowed meanwhile) and only
+// after the failed-list write for a final answer (a discard never races it).
 const onSendError = async <Op extends OutboxOpBase>(
     op: Op,
     deps: OutboxDeps<Op>,
     error: unknown,
     retry: () => Promise<OutboxResult>,
-    attempt: number,
+    { attempt, isRetry }: { attempt: number; isRetry: boolean },
 ): Promise<OutboxResult> => {
-    if (isOutboxStopped()) {
+    if (isStale(op)) {
+        claimOutboxOp(null);
         return STOPPED;
     }
     const errorClass = classifyOutboxError(error, op.kind);
 
+    if (errorClass.kind === 'noop') {
+        return onSent(op, deps, NO_OP, isRetry);
+    }
+    if (errorClass.kind !== 'final') {
+        claimOutboxOp(null);
+    }
     switch (errorClass.kind) {
-        case 'noop':
-            return onSent(op, deps, NO_OP);
         case 'network':
         case 'transient':
             setOutboxStatus(
                 op.opId,
                 errorClass.kind === 'network' ? 'waiting-network' : 'server-unavailable',
             );
-            await untilSkippedOr(op, sleep(backoff(attempt)));
+            await waitUnlessSkipped(op, timeout(backoff(attempt)));
             return retry();
         case 'auth':
         case 'outdated':
@@ -232,14 +296,25 @@ const onSendError = async <Op extends OutboxOpBase>(
             );
             outboxGate.close(errorClass.kind);
             return retry();
-        case 'final':
+        case 'final': {
             // Synchronously, before the write: later ops of this entry are skipped from now on.
             // The server answered for good: only the write is repeated, never the request.
             outboxGate.block(op.entryId);
-            if (!(await retryWrite(op, () => recordFailedOp(op, errorClass.reason)))) {
+            const landed = await trackFailureWrite(
+                op.entryId,
+                retryWrite(
+                    op,
+                    () => recordFailedOp(op, errorClass.reason),
+                    () => isStale(op),
+                ),
+            );
+
+            claimOutboxOp(null);
+            if (!landed) {
                 return STOPPED;
             }
             throw new OutboxTerminalError(errorClass.reason);
+        }
     }
 };
 
@@ -252,13 +327,14 @@ const attempt = async <Op extends OutboxOpBase>(
     const retry = (): Promise<OutboxResult> => attempt(op, deps, ignoreEntryBlock, count + 1);
 
     await outboxGate.whenTurn(op, { ignoreEntryBlock, isSkipped: () => skipped(op) !== null });
-    await untilSkippedOr(op, waitForOnline());
+    await waitUnlessSkipped(op, online);
     const skip = skipped(op);
 
     if (skip) {
         return skip;
     }
-    // C3-07: X's op never goes out with Y's token; the `auth` gate waits for the owner check.
+    // C3-07, first check: the in-memory token. The interceptor repeats it against the token it
+    // attaches (`expectedTokenSubject`), which a refresh may have replaced.
     if (deps.sessionUserId() !== op.owner) {
         setOutboxStatus(op.opId, 'sign-in-required');
         outboxGate.close('auth');
@@ -270,10 +346,12 @@ const attempt = async <Op extends OutboxOpBase>(
         (error: unknown) => ({ error }),
     );
 
-    claimOutboxOp(null);
     return 'sent' in outcome
-        ? onSent(op, deps, outcome.sent)
-        : onSendError(op, deps, outcome.error, retry, count);
+        ? onSent(op, deps, outcome.sent, ignoreEntryBlock)
+        : onSendError(op, deps, outcome.error, retry, {
+              attempt: count,
+              isRetry: ignoreEntryBlock,
+          });
 };
 
 /**
@@ -364,7 +442,10 @@ export const adoptOutboxOps = (
             },
         );
 
-        // Like `resumePausedMutations`: a final error is handled by the defaults' `onError`.
-        void mutation.continue().catch(() => undefined);
+        // Like `resumePausedMutations`: a final error is handled by the defaults' `onError`. A
+        // mutation that failed before its run started must not hold the turn of the later ops (L4).
+        void mutation.continue().catch(() => {
+            outboxGate.releaseTurn(op.opId);
+        });
     });
 };

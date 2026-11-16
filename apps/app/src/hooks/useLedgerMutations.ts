@@ -25,6 +25,7 @@ import {
     ledgerOnlineMutationKeys,
     type LedgerWriteContext,
     type LedgerWriteEffects,
+    type QueueLedgerWrite,
     updateExpenseMutationOptions,
     type UpdateExpenseParams,
     updateExpenseViaOutbox,
@@ -146,7 +147,28 @@ type ViaOutbox<Params> = (
     client: QueryClient,
     effects: LedgerWriteEffects,
     params: Params,
-) => Promise<void> | null;
+) => QueueLedgerWrite | null;
+
+// The writes of a kind being queued on a client: a repeated submit while one is queued is refused
+// as busy, as on the online path, so one submit queues one op (one client entry id).
+const queuing = new WeakMap<QueryClient, Set<LedgerMutationKey>>();
+
+const queueOnce = (
+    client: QueryClient,
+    mutationKey: LedgerMutationKey,
+    queue: QueueLedgerWrite,
+): Promise<void> => {
+    const kinds = queuing.get(client) ?? new Set<LedgerMutationKey>();
+
+    if (kinds.has(mutationKey) || client.isMutating({ mutationKey }) > 0) {
+        return Promise.reject(new LedgerWriteRefusedError('busy'));
+    }
+    kinds.add(mutationKey);
+    queuing.set(client, kinds);
+    return queue().finally(() => {
+        kinds.delete(mutationKey);
+    });
+};
 
 // One write of a kind at a time on the user's client, bound to the session it was made in. An
 // expense may instead be queued in the outbox (it resolves once queued, and is sent later).
@@ -159,10 +181,10 @@ const useLedgerWrite = <Params>(
     const isEnabled = useIsUserWriteEnabled();
     const write = useCallback(
         (params: Params): Promise<void> => {
-            const queued = isEnabled ? viaOutbox?.(client, storeEffects, params) : null;
+            const queue = isEnabled ? viaOutbox?.(client, storeEffects, params) : null;
 
-            if (queued) {
-                return queued;
+            if (queue) {
+                return queueOnce(client, mutationKey, queue);
             }
             const refusal = refusalBeforeMutate(client, isEnabled, mutationKey);
 

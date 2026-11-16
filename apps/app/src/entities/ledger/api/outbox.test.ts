@@ -131,11 +131,11 @@ describe('C1-10 two create paths', () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         withCapabilities(client);
         const sent = serveLedger();
-        const queued = createExpenseViaOutbox(client, effects, { expense });
+        const queue = createExpenseViaOutbox(client, effects, { expense });
 
-        expect(queued).not.toBeNull();
+        expect(queue).not.toBeNull();
         expect(client.getMutationCache().getAll()).toEqual([]);
-        await queued;
+        await queue?.();
 
         const [mutation, ...others] = client.getMutationCache().getAll();
 
@@ -157,7 +157,10 @@ describe('C1-10 two create paths', () => {
             groupId: 'group-1',
             expense: { amount: 20, currency: 'USD' },
         });
-        expect(effects.onEntryWritten).toHaveBeenCalledWith({ groupId: 'group-1' }, client);
+        expect(effects.onEntryWritten).toHaveBeenCalledWith(
+            { groupId: 'group-1', parentActivityId: undefined },
+            client,
+        );
         expect(pendingOutboxOps()).toEqual([]);
     });
 });
@@ -172,8 +175,8 @@ test('03 §2.1: an edit and a delete go out with If-Match and X-Client-Op-Id, th
         entryId: 'entry-x',
         entry: { description: 'Lunch' },
         groupId: 'group-1',
-    });
-    await deleteExpenseViaOutbox(client, effects, { entryId: 'entry-x', groupId: 'group-1' });
+    })?.();
+    await deleteExpenseViaOutbox(client, effects, { entryId: 'entry-x', groupId: 'group-1' })?.();
     await vi.waitFor(() => expect(sent).toHaveLength(2));
 
     const opIds = sent.map(request => request.headers['X-Client-Op-Id']);
@@ -191,6 +194,40 @@ test('03 §2.1: an edit and a delete go out with If-Match and X-Client-Op-Id, th
         },
     ]);
     expect(new Set(opIds).size).toBe(2);
+});
+
+test('03 §2.1/§2.5 (N3, N4): a delete with an unknown version whose entry is gone is a success; the open history is read again', async () => {
+    vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+    withCapabilities(client);
+    // Cached without a version: the outbox asks the server for it.
+    client.setQueryData(ledgerEntryKey('entry-x'), { type: 'EXPENSE' });
+    const sent: string[] = [];
+
+    server.use(
+        http.get('*/ledger/entries/:id', () => {
+            sent.push('GET');
+            return HttpResponse.json({ code: 'LEDGER.NOT_FOUND' }, { status: 404 });
+        }),
+        http.delete('*/ledger/entries/:id', () => {
+            sent.push('DELETE');
+            return new HttpResponse(null, { status: 204 });
+        }),
+    );
+
+    await deleteExpenseViaOutbox(client, effects, {
+        entryId: 'entry-x',
+        groupId: 'group-1',
+        parentActivityId: 'activity-1',
+    })?.();
+    await vi.waitFor(() =>
+        expect(effects.onEntryWritten).toHaveBeenCalledWith(
+            { groupId: 'group-1', parentActivityId: 'activity-1' },
+            client,
+        ),
+    );
+    expect(sent).toEqual(['GET']);
+    expect(failedOutboxOps()).toEqual([]);
+    expect(pendingOutboxOps()).toEqual([]);
 });
 
 describe('C2-02 settlement guard', () => {
@@ -227,11 +264,12 @@ describe('C2-02 settlement guard', () => {
             kind: 'deleteExpense',
             entryId: 'entry-s',
             groupId: null,
+            parentActivityId: null,
             baseVersion: '3',
         }));
 
         client.setQueryData(ledgerEntryKey('entry-s'), { type: 'SETTLEMENT', version: '3' });
-        await createExpenseViaOutbox(client, effects, { expense });
+        await createExpenseViaOutbox(client, effects, { expense })?.();
         await vi.waitFor(() => expect(sent).toHaveLength(1));
 
         expect(sent.map(request => request.line)).toEqual(['POST /ledger/entries']);
