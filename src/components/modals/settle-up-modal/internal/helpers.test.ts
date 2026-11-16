@@ -1,13 +1,27 @@
 import { expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
+import type { Balance } from 'entities/balance';
+import { currencyCode, fromUnits, moneyLedgerText } from 'shared/money';
 
 import {
     getDebtOptions,
     getHalfSettlementAmount,
+    getSettlementAmount,
     getSettlementViewModel,
     selectSettlementBalance,
 } from './helpers';
+
+// The exact balance written as a ledger decimal of scale 4 ("-3.3333" → -33_333n).
+const balance = (decimal: string, currency = 'USD'): Balance => {
+    const [integer = '0', fraction = ''] = decimal.split('.');
+
+    return {
+        net: fromUnits(BigInt(`${integer}${fraction.padEnd(4, '0')}`), currencyCode(currency)),
+    };
+};
+
+const usd = (decimal: string) => balance(decimal).net;
 
 const currentUser = {
     id: 'user-1',
@@ -45,13 +59,10 @@ const friend = {
 };
 
 test('selects the requested balance and falls back to the first currency', () => {
-    const balances = [
-        { currency: 'USD', netAmount: -100 },
-        { currency: 'EUR', netAmount: 25 },
-    ];
+    const balances = [balance('-100'), balance('25', 'EUR')];
 
-    expect(selectSettlementBalance(balances, 'EUR')).toEqual(balances[1]);
-    expect(selectSettlementBalance(balances, 'BZD')).toEqual(balances[0]);
+    expect(selectSettlementBalance(balances, 'EUR')).toBe(balances[1]);
+    expect(selectSettlementBalance(balances, 'BZD')).toBe(balances[0]);
 });
 
 test('throws when there is no balance to settle', () => {
@@ -61,107 +72,113 @@ test('throws when there is no balance to settle', () => {
 });
 
 test('expands member balances into one selectable option per currency', () => {
-    expect(
-        getDebtOptions([
-            {
-                user: friend,
-                balances: [
-                    { currency: 'USD', netBalance: -100 },
-                    { currency: 'EUR', netBalance: -25 },
-                ],
-            },
-        ]),
-    ).toEqual([
-        {
-            user: friend,
-            balance: { currency: 'USD', netAmount: -100 },
-            balances: [
-                { currency: 'USD', netAmount: -100 },
-                { currency: 'EUR', netAmount: -25 },
-            ],
-        },
-        {
-            user: friend,
-            balance: { currency: 'EUR', netAmount: -25 },
-            balances: [
-                { currency: 'USD', netAmount: -100 },
-                { currency: 'EUR', netAmount: -25 },
-            ],
-        },
+    const balances = [balance('-100'), balance('-25', 'EUR')];
+
+    expect(getDebtOptions([{ user: friend, balances }])).toEqual([
+        { user: friend, balance: balances[0], balances },
+        { user: friend, balance: balances[1], balances },
     ]);
 });
 
-test('builds a partial payment model when the current user owes', () => {
-    expect(
-        getSettlementViewModel({
-            user: currentUser,
-            friend,
-            balance: { currency: 'USD', netAmount: -100 },
-            amount: '40',
-        }),
-    ).toMatchObject({
-        params: {
-            fromUserId: currentUser.id,
-            toUserId: friend.id,
-            amount: 40,
-            currency: 'USD',
-        },
-        maxAmount: 100,
-        remainingAmount: 60,
+test('builds a partial payment that sends the input and leaves the rest of the exact debt', () => {
+    const model = getSettlementViewModel({
+        user: currentUser,
+        friend,
+        balance: balance('-100'),
+        amount: '40',
+    });
+
+    expect(model).toMatchObject({
+        settlement: { fromUserId: currentUser.id, toUserId: friend.id, amount: usd('40') },
+        owed: usd('100'),
+        remaining: usd('60'),
         isFriendPayer: false,
         isSubmitDisabled: false,
         isDebtSettled: false,
+        fullSettlementAmount: null,
         debtColor: 'red',
         summaryUser: currentUser,
     });
 });
 
-test('builds a fully settled model when the friend owes', () => {
+test('builds a full settlement when the friend owes', () => {
+    const owed = balance('25', 'EUR');
+
     expect(
-        getSettlementViewModel({
-            user: currentUser,
-            friend,
-            balance: { currency: 'EUR', netAmount: 25 },
-            amount: '25',
-        }),
+        getSettlementViewModel({ user: currentUser, friend, balance: owed, amount: '25' }),
     ).toMatchObject({
-        params: {
-            fromUserId: friend.id,
-            toUserId: currentUser.id,
-            amount: 25,
-            currency: 'EUR',
-        },
-        remainingAmount: 0,
+        settlement: { fromUserId: friend.id, toUserId: currentUser.id, amount: owed.net },
         isFriendPayer: true,
         isSubmitDisabled: false,
         isDebtSettled: true,
+        fullSettlementAmount: null,
         debtColor: 'green',
         summaryUser: friend,
     });
 });
 
-test.each(['', '0', '-1', '100.01', 'invalid'])('disables invalid settlement amount %s', amount => {
+test('an input less than one minor unit from the debt sends exactly the debt, with the caption', () => {
     const model = getSettlementViewModel({
         user: currentUser,
         friend,
-        balance: { currency: 'USD', netAmount: -100 },
-        amount,
+        balance: balance('-3.3333'),
+        amount: '3.33',
     });
 
-    expect(model.isSubmitDisabled).toBe(true);
+    expect(model.settlement?.amount).toEqual(usd('3.3333'));
+    expect(model.isDebtSettled).toBe(true);
+    expect(model.remaining).toEqual(usd('0'));
+    expect(model.fullSettlementAmount && moneyLedgerText(model.fullSettlementAmount)).toBe(
+        '3.3333',
+    );
+});
+
+test.each(['', '0', '-1', '100.01', 'invalid', '0.0000001', '1.234'])(
+    'SET-003 disables the settlement amount %j (nothing to send)',
+    amount => {
+        const model = getSettlementViewModel({
+            user: currentUser,
+            friend,
+            balance: balance('-100'),
+            amount,
+        });
+
+        expect(model.isSubmitDisabled).toBe(true);
+        expect(model.settlement).toBeNull();
+        expect(model.remaining).toEqual(usd('100'));
+    },
+);
+
+test.each([
+    ['0.0000001', true],
+    ['1.234', true],
+    ['abc', true],
+    ['', false],
+    ['100.01', false],
+])('marks %j as not an amount of the currency: %s', (amount, isInvalid) => {
+    expect(
+        getSettlementViewModel({ user: currentUser, friend, balance: balance('-100'), amount })
+            .isAmountInvalid,
+    ).toBe(isInvalid);
 });
 
 test.each([
-    [-100, '50'],
-    [25, '12.5'],
-    [-30.1234, '15.0617'],
-    [-24.5678, '12.2839'],
-    [-0.0003, '0.0002'],
-    [-0.0001, '0.0001'],
-])('takes half of a %s debt within the API money precision', (netAmount, expected) => {
-    const half = getHalfSettlementAmount({ currency: 'USD', netAmount });
+    ['-100', '100'],
+    ['-24.5678', '24.57'],
+    ['-3.3350', '3.34'],
+    ['-0.0040', '0.01'],
+    ['0.0001', '0.01'],
+])('prefills the full %s debt rounded to minor units as %j', (net, expected) => {
+    expect(getSettlementAmount(balance(net))).toBe(expected);
+});
 
-    expect(half).toBe(expected);
-    expect(Number(half)).toBeGreaterThan(0);
-    expect(Number(half)).toBeLessThanOrEqual(Math.abs(netAmount));
+test.each([
+    ['-100', '50'],
+    ['25', '12.5'],
+    ['-30.1234', '15.06'],
+    ['-24.5678', '12.28'],
+    ['-0.0003', '0.01'],
+    ['-0.0001', '0.01'],
+])('takes half of a %s debt in minor units as %j', (net, expected) => {
+    expect(getHalfSettlementAmount(balance(net))).toBe(expected);
 });

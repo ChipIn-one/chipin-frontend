@@ -1,6 +1,5 @@
 import type {
     ApiActivityFeedItemResponse,
-    ApiFriendBalance,
     ApiGroupResponse,
     ApiSelfUserResponse,
     ApiUserResponse,
@@ -32,7 +31,6 @@ export type {
 
 // ─── Re-exports: call param types ─────────────────────────────────────────
 export type {
-    CreateSettlementParams,
     FetchActivitiesParams,
     FetchActivityChildrenParams,
     FetchGroupActivityPreviewsParams,
@@ -54,7 +52,6 @@ export type UserSex = ApiUserSex;
 export type ThemeName = ApiUserTheme;
 export type UserSummary = ApiUserSummary;
 export type FriendUser = UserSummary;
-export type FriendBalance = ApiFriendBalance;
 
 export type Group = ApiGroupResponse;
 export type GroupUser = UserSummary;

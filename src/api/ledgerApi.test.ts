@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
-import { createSettlement, fetchLedgerEntry, removeLedgerEntry } from './ledgerApi';
+import { fetchLedgerEntry, removeLedgerEntry } from './ledgerApi';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
@@ -15,28 +15,6 @@ vi.mock('./chipin.instance', () => ({
 describe('ledgerApi', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-    });
-
-    test('creates a settlement ledger entry', () => {
-        vi.mocked(apiInstance.post).mockResolvedValue({ data: { id: 'entry-2' } });
-
-        return createSettlement({
-            fromUserId: 'user-1',
-            toUserId: 'user-2',
-            amount: 20,
-            currency: 'EUR',
-        }).then(result => {
-            expect(apiInstance.post).toHaveBeenCalledWith('/ledger/entries', {
-                type: 'SETTLEMENT',
-                settlement: {
-                    fromUserId: 'user-1',
-                    toUserId: 'user-2',
-                    amount: 20,
-                    currency: 'EUR',
-                },
-            });
-            expect(result).toEqual({ id: 'entry-2' });
-        });
     });
 
     test('removes the requested ledger entry', () => {

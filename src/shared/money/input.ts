@@ -41,3 +41,9 @@ export const parseMoneyInput = (raw: string, currency: CurrencyCode): Money | nu
  */
 export const moneyInputText = (money: Money): string =>
     unitsToDecimal(money.minor, LEDGER_SCALE).replace(/\.?0+$/, '');
+
+/**
+ * An amount with all four ledger digits ("3.3350", "0.0040"): the exact amount a settle-up sends
+ * in full (spec 03 §4.5), shown in the caption under the amount field.
+ */
+export const moneyLedgerText = (money: Money): string => unitsToDecimal(money.minor, LEDGER_SCALE);

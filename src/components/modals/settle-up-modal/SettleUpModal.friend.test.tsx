@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { CreateSettlementParams, SelfUser } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
+import type { Balance } from 'entities/balance';
+import type { SettlementDraft } from 'entities/ledger';
+import { currencyCode, fromUnits, type Money } from 'shared/money';
 import { getOrThrow } from 'test/getOrThrow';
 import { seedSelfUser } from 'test/selfUserSeed';
 
@@ -11,10 +14,25 @@ import SettleUpModal from './SettleUpModal';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
-        t: (key: string, options?: { name?: string }) =>
-            options?.name ? `${key}:${options.name}` : key,
+        t: (key: string, options?: { name?: string; amount?: string; currency?: string }) => {
+            if (options?.amount) {
+                return `${key}:${options.amount} ${options.currency ?? ''}`;
+            }
+            return options?.name ? `${key}:${options.name}` : key;
+        },
     }),
 }));
+
+// An amount written as a ledger decimal of scale 4 ("-24.5678" → -245_678n).
+const money = (decimal: string, currency = 'USD'): Money => {
+    const [integer = '0', fraction = ''] = decimal.split('.');
+
+    return fromUnits(BigInt(`${integer}${fraction.padEnd(4, '0')}`), currencyCode(currency));
+};
+
+const balance = (net: string, currency = 'USD'): Balance => ({ net: money(net, currency) });
+
+const FULL_SETTLEMENT_HINT = 'friends:settleUp.fullSettlementHint';
 
 vi.mock('sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
@@ -67,7 +85,7 @@ test('provides an accessible dialog description', () => {
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={vi.fn()}
         />,
@@ -82,7 +100,7 @@ test('provides an accessible dialog description', () => {
     );
 });
 
-test('renders non-input amounts with two-digit precision and keeps the input exact', () => {
+test('renders amounts with two-digit precision and prefills the debt rounded to minor units', () => {
     const user = userEvent.setup();
 
     render(
@@ -91,7 +109,7 @@ test('renders non-input amounts with two-digit precision and keeps the input exa
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'BZD', netAmount: -24.5678 }]}
+            balances={[balance('-24.5678', 'BZD')]}
             initialCurrency="BZD"
             onSubmit={vi.fn()}
         />,
@@ -99,7 +117,7 @@ test('renders non-input amounts with two-digit precision and keeps the input exa
 
     const amountInput = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
-    expect(amountInput).toHaveProperty('value', '24.5678');
+    expect(amountInput).toHaveProperty('value', '24.57');
     expect(screen.getByText('24.57 BZD')).toBeTruthy();
 
     return user
@@ -110,7 +128,7 @@ test('renders non-input amounts with two-digit precision and keeps the input exa
         });
 });
 
-test('allows editing a prefilled amount with more than two decimal places', () => {
+test('allows editing the prefilled amount', () => {
     const user = userEvent.setup();
 
     render(
@@ -119,7 +137,7 @@ test('allows editing a prefilled amount with more than two decimal places', () =
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'EUR', netAmount: -30.1234 }]}
+            balances={[balance('-30.1234', 'EUR')]}
             initialCurrency="EUR"
             onSubmit={vi.fn()}
         />,
@@ -132,12 +150,12 @@ test('allows editing a prefilled amount with more than two decimal places', () =
         .then(() => user.click(amountInput))
         .then(() => user.keyboard('{End}{Backspace}'))
         .then(() => {
-            expect(amountInput).toHaveProperty('value', '30.123');
+            expect(amountInput).toHaveProperty('value', '30.1');
         });
 });
 
 test('SET-003 prevents submitting more than the selected backend balance', () => {
-    const onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>();
+    const onSubmit = vi.fn<(params: SettlementDraft) => Promise<void>>();
     const user = userEvent.setup();
 
     render(
@@ -146,7 +164,7 @@ test('SET-003 prevents submitting more than the selected backend balance', () =>
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={onSubmit}
         />,
@@ -173,7 +191,7 @@ test('shows compact debt context and the remaining amount for a partial payment'
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={vi.fn()}
         />,
@@ -207,7 +225,7 @@ test('shows that the debt will be settled when the full amount is entered', () =
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={vi.fn()}
         />,
@@ -228,10 +246,7 @@ test('updates the amount, context, and remaining debt when the currency changes'
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[
-                { currency: 'USD', netAmount: -100 },
-                { currency: 'EUR', netAmount: -30 },
-            ]}
+            balances={[balance('-100', 'USD'), balance('-30', 'EUR')]}
             initialCurrency="USD"
             onSubmit={vi.fn()}
         />,
@@ -252,7 +267,7 @@ test('updates the amount, context, and remaining debt when the currency changes'
 
 test('submits a partial payment through the provided action and closes after success', () => {
     const onSubmit = vi
-        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .fn<(params: SettlementDraft) => Promise<void>>()
         .mockResolvedValue(undefined);
     const onOpenChange = vi.fn<(isOpen: boolean) => void>();
     const user = userEvent.setup();
@@ -263,7 +278,7 @@ test('submits a partial payment through the provided action and closes after suc
             isOpened
             onOpenChange={onOpenChange}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={onSubmit}
         />,
@@ -281,8 +296,7 @@ test('submits a partial payment through the provided action and closes after suc
             expect(onSubmit).toHaveBeenCalledWith({
                 fromUserId: currentUser.id,
                 toUserId: friend.id,
-                amount: 40,
-                currency: 'USD',
+                amount: money('40'),
             });
             expect(onOpenChange).toHaveBeenCalledWith(false);
         });
@@ -290,7 +304,7 @@ test('submits a partial payment through the provided action and closes after suc
 
 test('closes and shows success when the backend mutation succeeds', () => {
     const onSubmit = vi
-        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .fn<(params: SettlementDraft) => Promise<void>>()
         .mockResolvedValue(undefined);
     const onOpenChange = vi.fn<(isOpen: boolean) => void>();
     const user = userEvent.setup();
@@ -301,7 +315,7 @@ test('closes and shows success when the backend mutation succeeds', () => {
             isOpened
             onOpenChange={onOpenChange}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={onSubmit}
         />,
@@ -318,7 +332,7 @@ test('closes and shows success when the backend mutation succeeds', () => {
 
 test('keeps the modal open when the provided action rejects', () => {
     const onSubmit = vi
-        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .fn<(params: SettlementDraft) => Promise<void>>()
         .mockRejectedValue(new Error('Settlement failed'));
     const onOpenChange = vi.fn<(isOpen: boolean) => void>();
     const user = userEvent.setup();
@@ -329,7 +343,7 @@ test('keeps the modal open when the provided action rejects', () => {
             isOpened
             onOpenChange={onOpenChange}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={onSubmit}
         />,
@@ -345,8 +359,8 @@ test('keeps the modal open when the provided action rejects', () => {
 });
 
 const renderFriendSettleUp = (
-    onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>(),
-    balances = [{ currency: 'BZD', netAmount: -24.5678 }],
+    onSubmit = vi.fn<(params: SettlementDraft) => Promise<void>>(),
+    balances = [balance('-24.5678', 'BZD')],
 ) =>
     render(
         <SettleUpModal
@@ -355,7 +369,7 @@ const renderFriendSettleUp = (
             onOpenChange={vi.fn()}
             friend={friend}
             balances={balances}
-            initialCurrency={getOrThrow(balances, 0).currency}
+            initialCurrency={getOrThrow(balances, 0).net.currency}
             onSubmit={onSubmit}
         />,
     );
@@ -365,7 +379,7 @@ test('labels the amount as an editable payment amount field', () => {
 
     const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
-    expect(input).toHaveProperty('value', '24.5678');
+    expect(input).toHaveProperty('value', '24.57');
     expect(screen.getByRole('button', { name: 'friends:settleUp.fullDebt' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'friends:settleUp.half' })).toBeTruthy();
 });
@@ -381,7 +395,7 @@ test('selects the amount on tap so typing replaces it', () => {
         .click(input)
         .then(() => {
             expect(input).toHaveProperty('selectionStart', 0);
-            expect(input).toHaveProperty('selectionEnd', '24.5678'.length);
+            expect(input).toHaveProperty('selectionEnd', '24.57'.length);
             return user.keyboard('5');
         })
         .then(() => {
@@ -437,7 +451,7 @@ test('keeps the debt summary amount as plain text', () => {
     expect(screen.queryByRole('button', { name: /24.57 BZD/ })).toBeNull();
 });
 
-test('restores the exact full debt with the Full debt quick pick', () => {
+test('restores the full debt with the Full debt quick pick', () => {
     const user = userEvent.setup();
 
     renderFriendSettleUp();
@@ -452,18 +466,19 @@ test('restores the exact full debt with the Full debt quick pick', () => {
             return user.click(screen.getByRole('button', { name: 'friends:settleUp.fullDebt' }));
         })
         .then(() => {
-            expect(input).toHaveProperty('value', '24.5678');
+            expect(input).toHaveProperty('value', '24.57');
             expect(screen.getByText('friends:settleUp.debtWillBeSettled')).toBeTruthy();
+            expect(screen.getByText(`${FULL_SETTLEMENT_HINT}:24.5678 BZD`)).toBeTruthy();
         });
 });
 
 test('submits half of the debt with the Half quick pick and shows the remaining debt', () => {
     const onSubmit = vi
-        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .fn<(params: SettlementDraft) => Promise<void>>()
         .mockResolvedValue(undefined);
     const user = userEvent.setup();
 
-    renderFriendSettleUp(onSubmit, [{ currency: 'USD', netAmount: -100 }]);
+    renderFriendSettleUp(onSubmit, [balance('-100', 'USD')]);
 
     const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
@@ -482,21 +497,21 @@ test('submits half of the debt with the Half quick pick and shows the remaining 
             expect(onSubmit).toHaveBeenCalledWith({
                 fromUserId: currentUser.id,
                 toUserId: friend.id,
-                amount: 50,
-                currency: 'USD',
+                amount: money('50'),
             });
         });
 });
 
-test('keeps Half within the API money precision and the debt', () => {
+test('Half of a debt below one minor unit is one minor unit, which settles it in full', () => {
     const user = userEvent.setup();
 
-    renderFriendSettleUp(undefined, [{ currency: 'BZD', netAmount: -0.0003 }]);
+    renderFriendSettleUp(undefined, [balance('-0.0003', 'BZD')]);
 
     const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
     return user.click(screen.getByRole('button', { name: 'friends:settleUp.half' })).then(() => {
-        expect(input).toHaveProperty('value', '0.0002');
+        expect(input).toHaveProperty('value', '0.01');
+        expect(screen.getByText(`${FULL_SETTLEMENT_HINT}:0.0003 BZD`)).toBeTruthy();
         expect(
             screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }),
         ).toHaveProperty('disabled', false);
@@ -506,10 +521,7 @@ test('keeps Half within the API money precision and the debt', () => {
 test('resets a quick-picked amount to the full debt when the currency changes', () => {
     const user = userEvent.setup();
 
-    renderFriendSettleUp(undefined, [
-        { currency: 'USD', netAmount: -100 },
-        { currency: 'EUR', netAmount: -30 },
-    ]);
+    renderFriendSettleUp(undefined, [balance('-100', 'USD'), balance('-30', 'EUR')]);
 
     const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
@@ -532,7 +544,7 @@ test('submits only once while an earlier settlement request is pending', () => {
         onResolve = resolve;
     });
     const onSubmit = vi
-        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .fn<(params: SettlementDraft) => Promise<void>>()
         .mockReturnValue(pendingRequest);
     const onOpenChange = vi.fn<(isOpen: boolean) => void>();
     const user = userEvent.setup();
@@ -543,7 +555,7 @@ test('submits only once while an earlier settlement request is pending', () => {
             isOpened
             onOpenChange={onOpenChange}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={onSubmit}
         />,
@@ -575,7 +587,7 @@ test('re-enables payment after rejection so the user can retry', () => {
         onReject = reject;
     });
     const onSubmit = vi
-        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .fn<(params: SettlementDraft) => Promise<void>>()
         .mockReturnValueOnce(pendingRequest)
         .mockResolvedValueOnce(undefined);
     const user = userEvent.setup();
@@ -586,7 +598,7 @@ test('re-enables payment after rejection so the user can retry', () => {
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'USD', netAmount: -100 }]}
+            balances={[balance('-100', 'USD')]}
             initialCurrency="USD"
             onSubmit={onSubmit}
         />,
@@ -606,5 +618,122 @@ test('re-enables payment after rejection so the user can retry', () => {
         .then(() => user.click(submit))
         .then(() => {
             expect(onSubmit).toHaveBeenCalledTimes(2);
+        });
+});
+
+const recordPayment = () => screen.getByRole('button', { name: 'friends:settleUp.recordPayment' });
+
+test('prefills the debt rounded to minor units and sends the exact debt (spec 03 §4.5)', () => {
+    const onSubmit = vi
+        .fn<(params: SettlementDraft) => Promise<void>>()
+        .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(onSubmit, [balance('-3.3333')]);
+
+    expect(screen.getByRole('textbox')).toHaveProperty('value', '3.33');
+    expect(screen.getByText(`${FULL_SETTLEMENT_HINT}:3.3333 USD`)).toBeTruthy();
+
+    return user.click(recordPayment()).then(() => {
+        expect(onSubmit).toHaveBeenCalledWith({
+            fromUserId: currentUser.id,
+            toUserId: friend.id,
+            amount: money('3.3333'),
+        });
+    });
+});
+
+test('the full-settlement caption disappears for a partial payment and for the exact debt', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(undefined, [balance('-3.3333')]);
+
+    const input = screen.getByRole('textbox');
+    const caption = `${FULL_SETTLEMENT_HINT}:3.3333 USD`;
+
+    expect(input.getAttribute('aria-describedby')).toBe(screen.getByText(caption).id);
+
+    return user
+        .clear(input)
+        .then(() => user.type(input, '3.32'))
+        .then(() => {
+            expect(screen.queryByText(caption)).toBeNull();
+            expect(input.getAttribute('aria-describedby')).toBeNull();
+            expect(
+                screen.getByText('friends:settleUp.remainingDebt').nextElementSibling?.textContent,
+            ).toContain('0.01 USD');
+            return user.clear(input);
+        })
+        .then(() => user.type(input, '3.34'))
+        .then(() => {
+            expect(screen.getByText(caption)).toBeTruthy();
+            expect(recordPayment()).toHaveProperty('disabled', false);
+        });
+});
+
+test('a debt below one minor unit shows "< 0.01", prefills 0.01 and sends exactly 0.0040', () => {
+    const onSubmit = vi
+        .fn<(params: SettlementDraft) => Promise<void>>()
+        .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(onSubmit, [balance('-0.0040')]);
+
+    expect(
+        screen.getByText('friends:settleUp.youOwe:Bob Builder').parentElement?.parentElement
+            ?.textContent,
+    ).toContain('< 0.01 USD');
+    expect(screen.getByRole('textbox')).toHaveProperty('value', '0.01');
+    expect(screen.getByText(`${FULL_SETTLEMENT_HINT}:0.0040 USD`)).toBeTruthy();
+
+    return user.click(recordPayment()).then(() => {
+        expect(onSubmit).toHaveBeenCalledWith({
+            fromUserId: currentUser.id,
+            toUserId: friend.id,
+            amount: money('0.0040'),
+        });
+    });
+});
+
+test('SET-003 an input above the debt by a minor unit or more disables the payment', () => {
+    const onSubmit = vi.fn<(params: SettlementDraft) => Promise<void>>();
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(onSubmit, [balance('-3.3333')]);
+
+    const input = screen.getByRole('textbox');
+
+    return user
+        .clear(input)
+        .then(() => user.type(input, '3.35'))
+        .then(() => {
+            expect(recordPayment()).toHaveProperty('disabled', true);
+            expect(screen.queryByText(`${FULL_SETTLEMENT_HINT}:3.3333 USD`)).toBeNull();
+            return user.click(recordPayment());
+        })
+        .then(() => {
+            expect(onSubmit).not.toHaveBeenCalled();
+        });
+});
+
+test('an amount with more fraction digits than the currency has is invalid and never sent', () => {
+    const onSubmit = vi.fn<(params: SettlementDraft) => Promise<void>>();
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(onSubmit, [balance('-100')]);
+
+    const input = screen.getByRole('textbox');
+
+    return user
+        .clear(input)
+        .then(() => user.type(input, '0.0000001'))
+        .then(() => {
+            expect(input).toHaveProperty('value', '0.0000001');
+            expect(input.getAttribute('aria-invalid')).toBe('true');
+            expect(recordPayment()).toHaveProperty('disabled', true);
+            return user.click(recordPayment());
+        })
+        .then(() => {
+            expect(onSubmit).not.toHaveBeenCalled();
         });
 });

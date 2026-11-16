@@ -53,7 +53,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
         ? (debts.find(
               debt =>
                   debt.user.id === selectedDebt.user.id &&
-                  debt.balance.currency === selectedDebt.balance.currency,
+                  debt.balance.net.currency === selectedDebt.balance.net.currency,
           ) ?? (isSettlementPending ? selectedDebt : undefined))
         : undefined;
 
@@ -112,15 +112,15 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             render: navigation =>
                 selectedOption ? (
                     <SettlementFormContent
-                        key={selectedOption.user.id + '-' + selectedOption.balance.currency}
+                        key={selectedOption.user.id + '-' + selectedOption.balance.net.currency}
                         friend={selectedOption.user}
                         balances={selectedOption.balances}
-                        initialCurrency={selectedOption.balance.currency}
-                        onSubmit={params => {
+                        initialCurrency={selectedOption.balance.net.currency}
+                        onSubmit={settlement => {
                             setIsSettlementPending(true);
 
                             return createSettlement({
-                                settlement: { ...params, groupId: group.id },
+                                settlement: { ...settlement, groupId: group.id },
                             }).finally(() => setIsSettlementPending(false));
                         }}
                         onClose={navigation.close}

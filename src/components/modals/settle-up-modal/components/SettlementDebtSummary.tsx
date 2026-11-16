@@ -2,6 +2,8 @@ import { Card, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import type { FriendUser } from 'api/chipin.types';
+import { legacyAmountFromMoney } from 'entities/balance';
+import type { Money } from 'shared/money';
 
 import { Amount, UserAvatar } from 'basics';
 
@@ -12,19 +14,12 @@ interface Props {
     friend: FriendUser;
     summaryUser: SettlementUser;
     isFriendPayer: boolean;
-    amount: number;
-    currency: string;
+    /** The exact debt; below one minor unit it shows as "< 0.01". */
+    amount: Money;
     color: 'green' | 'red';
 }
 
-const SettlementDebtSummary = ({
-    friend,
-    summaryUser,
-    isFriendPayer,
-    amount,
-    currency,
-    color,
-}: Props) => {
+const SettlementDebtSummary = ({ friend, summaryUser, isFriendPayer, amount, color }: Props) => {
     const { t } = useTranslation('friends');
 
     return (
@@ -42,7 +37,12 @@ const SettlementDebtSummary = ({
                     </ParticipantName>
                 </Flex>
                 <DebtAmount size="3" weight="bold" color={color}>
-                    <Amount value={amount} tokenCode={currency} precision={2} type="summary" />
+                    <Amount
+                        value={legacyAmountFromMoney(amount)}
+                        tokenCode={amount.currency}
+                        precision={2}
+                        type="summary"
+                    />
                 </DebtAmount>
             </Flex>
         </Card>

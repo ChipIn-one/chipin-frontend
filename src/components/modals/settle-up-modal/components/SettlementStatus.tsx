@@ -2,21 +2,19 @@ import { Card, Flex, Text } from '@radix-ui/themes';
 import { CircleCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { legacyAmountFromMoney } from 'entities/balance';
+import type { Money } from 'shared/money';
+
 import { Amount } from 'basics';
 
 interface SettlementStatusProps {
     isDebtSettled: boolean;
-    remainingAmount: number;
-    currency: string;
+    /** The debt left after the settlement: zero or at least one minor unit. */
+    remainingAmount: Money;
     color: 'green' | 'red';
 }
 
-const SettlementStatus = ({
-    isDebtSettled,
-    remainingAmount,
-    currency,
-    color,
-}: SettlementStatusProps) => {
+const SettlementStatus = ({ isDebtSettled, remainingAmount, color }: SettlementStatusProps) => {
     const { t } = useTranslation('friends');
 
     return (
@@ -37,7 +35,11 @@ const SettlementStatus = ({
                             {t('friends:settleUp.remainingDebt')}
                         </Text>
                         <Text size="3" weight="bold" color={color}>
-                            <Amount value={remainingAmount} tokenCode={currency} precision={2} />
+                            <Amount
+                                value={legacyAmountFromMoney(remainingAmount)}
+                                tokenCode={remainingAmount.currency}
+                                precision={2}
+                            />
                         </Text>
                     </>
                 )}

@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { activityKeys, selfActivityPreviewsQueryOptions } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
-import type { ExpenseDraft, ExpensePatch } from 'entities/ledger';
+import type { ExpenseDraft, ExpensePatch, SettlementDraft } from 'entities/ledger';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
@@ -397,11 +397,10 @@ test('a write made from the activity history marks that history (activity.childr
 });
 
 const patch: ExpensePatch = { description: 'Lunch' };
-const settlement = {
+const settlement: SettlementDraft = {
     fromUserId: 'user-1',
     toUserId: 'user-2',
-    amount: 12.5,
-    currency: 'USD',
+    amount: fromUnits(125_000n, currencyCode('USD')),
     groupId: 'group-1',
 };
 
@@ -765,7 +764,7 @@ test('the toast of a rejected write: offline is named, an ended session and a re
     ]);
 });
 
-test('a settlement is sent as the legacy client sent it and reloads the group, the dashboard and the feeds', async () => {
+test('a settlement is sent with its amount as a scale-4 literal and reloads the group, the dashboard and the feeds', async () => {
     const client = signIn();
     const sent = serve();
     const bodies: string[] = [];
@@ -781,11 +780,8 @@ test('a settlement is sent as the legacy client sent it and reloads the group, t
     await act(() => result.current.createSettlement({ settlement }));
 
     expect(bodies).toEqual([
-        JSON.stringify({
-            type: 'SETTLEMENT',
-            groupId: 'group-1',
-            settlement: { fromUserId: 'user-1', toUserId: 'user-2', amount: 12.5, currency: 'USD' },
-        }),
+        '{"type":"SETTLEMENT","groupId":"group-1","settlement":{"fromUserId":"user-1",' +
+            '"toUserId":"user-2","amount":12.5000,"currency":"USD"}}',
     ]);
     expect(sent).toContain('GET /groups/group-1');
     expect(isStale(client, dashboardKeys.balances())).toBe(true);

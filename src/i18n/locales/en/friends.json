@@ -31,7 +31,8 @@
         "youOwe": "You owe {{name}}",
         "owedToYou": "{{name}} owes you",
         "remainingDebt": "Remaining debt:",
-        "debtWillBeSettled": "The debt will be settled"
+        "debtWillBeSettled": "The debt will be settled",
+        "fullSettlementHint": "Will be settled in full: {{amount}} {{currency}}"
     },
     "invite": {
         "shareTitle": "Join me on ChipIn",

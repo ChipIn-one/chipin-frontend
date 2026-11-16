@@ -21,14 +21,6 @@ export interface FetchLedgerEntryParams {
     entryId: string;
 }
 
-export interface CreateSettlementParams {
-    groupId?: string;
-    fromUserId: string;
-    toUserId: string;
-    amount: number;
-    currency: string;
-}
-
 export interface FetchActivitiesParams {
     limit?: number;
     cursor?: number;

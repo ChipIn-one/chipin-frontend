@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import type { Group } from 'entities/groups';
+import { currencyCode, fromUnits } from 'shared/money';
 import { groupBalances } from 'test/groupFixtures';
 import { seedSelfUser } from 'test/selfUserSeed';
 
@@ -279,7 +280,7 @@ test('uses the selected group debt currency as the initial payment currency', ()
             ),
         )
         .then(() => {
-            expect(screen.getByRole('textbox')).toHaveProperty('value', '30.1234');
+            expect(screen.getByRole('textbox')).toHaveProperty('value', '30.12');
             return user.click(
                 screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }),
             );
@@ -289,8 +290,7 @@ test('uses the selected group debt currency as the initial payment currency', ()
                 settlement: {
                     fromUserId: currentUser.id,
                     toUserId: 'user-3',
-                    amount: 30.1234,
-                    currency: 'EUR',
+                    amount: fromUnits(301_234n, currencyCode('EUR')),
                     groupId: group.id,
                 },
             });
@@ -371,7 +371,7 @@ test('sets the selected group debt with the Full debt and Half quick picks', () 
             return user
                 .click(screen.getByRole('button', { name: 'friends:settleUp.half' }))
                 .then(() => {
-                    expect(input).toHaveProperty('value', '15.0617');
+                    expect(input).toHaveProperty('value', '15.06');
                     expect(screen.getByText('friends:settleUp.remainingDebt')).toBeTruthy();
                     return user.click(input);
                 })
@@ -385,7 +385,7 @@ test('sets the selected group debt with the Full debt and Half quick picks', () 
                     );
                 })
                 .then(() => {
-                    expect(input).toHaveProperty('value', '30.1234');
+                    expect(input).toHaveProperty('value', '30.12');
                     expect(screen.getByText('friends:settleUp.debtWillBeSettled')).toBeTruthy();
                 });
         });
@@ -419,8 +419,7 @@ test('submits half of the selected group debt', () => {
                 settlement: {
                     fromUserId: currentUser.id,
                     toUserId: 'user-3',
-                    amount: 45,
-                    currency: 'BDT',
+                    amount: fromUnits(450_000n, currencyCode('BDT')),
                     groupId: group.id,
                 },
             });
@@ -477,6 +476,47 @@ test('keeps payment content while its already-started settlement request refresh
             onResolve?.();
             return waitFor(() => {
                 expect(screen.queryByRole('dialog')).toBeNull();
+            });
+        });
+});
+
+test('a group debt below one minor unit is listed as "< 0.01" and settled exactly', () => {
+    createSettlement.mockResolvedValue(undefined);
+    const tinyDebtGroup: Group = {
+        ...group,
+        members: [
+            { user: groupUser, balancesByCurrency: {} },
+            {
+                user: { ...groupUser, id: 'user-4', displayName: 'Tiny Debtor' },
+                balancesByCurrency: groupBalances({ USD: -0.004 }),
+            },
+        ],
+    };
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={tinyDebtGroup} />);
+
+    const trigger = screen.getByRole('button', { name: 'common:buttons.settleUp' });
+
+    expect(trigger).toHaveProperty('disabled', false);
+
+    return user
+        .click(trigger)
+        .then(() => user.click(screen.getByRole('button', { name: /Tiny Debtor.*< 0\.01 USD/ })))
+        .then(() => {
+            expect(screen.getByRole('textbox')).toHaveProperty('value', '0.01');
+            return user.click(
+                screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }),
+            );
+        })
+        .then(() => {
+            expect(createSettlement).toHaveBeenCalledWith({
+                settlement: {
+                    fromUserId: currentUser.id,
+                    toUserId: 'user-4',
+                    amount: fromUnits(40n, currencyCode('USD')),
+                    groupId: group.id,
+                },
             });
         });
 });

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { toastLedgerWriteError, useIsLedgerEntryCreating } from 'hooks/useLedgerMutations';
 import { useSelfUser } from 'hooks/useSelfUser';
+import { moneyLedgerText } from 'shared/money';
 
 import type { SelectItem } from 'components/Select';
 
@@ -40,9 +41,9 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
     const [isSubmitPending, setIsSubmitPending] = useState(false);
     const selectedBalance = selectSettlementBalance(balances, currency);
     const [amount, setAmount] = useState(() => getSettlementAmount(selectedBalance));
-    const currencyItems: SelectItem[] = balances.map(balance => ({
-        value: balance.currency,
-        label: balance.currency,
+    const currencyItems: SelectItem[] = balances.map(({ net }) => ({
+        value: net.currency,
+        label: net.currency,
     }));
 
     if (!user) {
@@ -64,7 +65,9 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
     };
 
     const onFormSubmit = () => {
-        if (isSubmitInFlight.current || isSubmitting || settlement.isSubmitDisabled) {
+        const draft = settlement.settlement;
+
+        if (isSubmitInFlight.current || isSubmitting || !draft) {
             return;
         }
 
@@ -72,7 +75,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
         isSubmitInFlight.current = true;
         setIsSubmitPending(true);
 
-        onSubmit(settlement.params)
+        onSubmit(draft)
             .then(() => {
                 onClose();
                 toast.success(t('toasts:settlement.created'));
@@ -94,8 +97,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                         friend={friend}
                         summaryUser={settlement.summaryUser}
                         isFriendPayer={settlement.isFriendPayer}
-                        amount={settlement.maxAmount}
-                        currency={currency}
+                        amount={settlement.owed}
                         color={settlement.debtColor}
                     />
 
@@ -104,6 +106,14 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                         amount={amount}
                         currency={currency}
                         currencyItems={currencyItems}
+                        isAmountInvalid={settlement.isAmountInvalid}
+                        hint={
+                            settlement.fullSettlementAmount &&
+                            t('friends:settleUp.fullSettlementHint', {
+                                amount: moneyLedgerText(settlement.fullSettlementAmount),
+                                currency: settlement.fullSettlementAmount.currency,
+                            })
+                        }
                         onAmountChange={setAmount}
                         onCurrencyChange={onCurrencyChange}
                         onUseFullDebt={() => setAmount(getSettlementAmount(selectedBalance))}
@@ -112,8 +122,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
 
                     <SettlementStatus
                         isDebtSettled={settlement.isDebtSettled}
-                        remainingAmount={settlement.remainingAmount}
-                        currency={currency}
+                        remainingAmount={settlement.remaining}
                         color={settlement.debtColor}
                     />
 

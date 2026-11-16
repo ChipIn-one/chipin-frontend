@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { moneyInputText, parseMoneyInput } from './input';
+import { moneyInputText, moneyLedgerText, parseMoneyInput } from './input';
 import { currencyCode, fromUnits } from './money';
 
 describe('parseMoneyInput', () => {
@@ -69,5 +69,16 @@ describe('moneyInputText', () => {
         const money = fromUnits(units, currencyCode('KWD'));
 
         expect(moneyInputText(money)).toBe(text);
+    });
+});
+
+describe('moneyLedgerText', () => {
+    test.each([
+        [33_350n, '3.3350'],
+        [40n, '0.0040'],
+        [1_000_000n, '100.0000'],
+        [0n, '0.0000'],
+    ])('%s ledger units → %j (all four ledger digits)', (units, text) => {
+        expect(moneyLedgerText(fromUnits(units, currencyCode('USD')))).toBe(text);
     });
 });

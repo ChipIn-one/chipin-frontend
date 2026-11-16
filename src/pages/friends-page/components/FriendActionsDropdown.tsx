@@ -9,8 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { FriendBalance } from 'api/chipin.types';
-import { type Balance, legacyAmountFromMoney } from 'entities/balance';
+import type { Balance } from 'entities/balance';
 import { hasOutstandingDebt, type KnownUser } from 'entities/users';
 import { useCreateSettlement } from 'hooks/useLedgerMutations';
 import { useExpenseModalStore } from 'store/expenseModalStore';
@@ -18,12 +17,6 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import Dropdown from 'components/Dropdown';
 import { RemoveFriendAlertDialog } from 'components/modals/remove-friend-alert-dialog';
 import { SettleUpModal } from 'components/modals/settle-up-modal';
-
-// LEGACY until 03-21: the settle-up modal still reads number amounts.
-const toSettleUpBalance = ({ net }: Balance): FriendBalance => ({
-    currency: net.currency,
-    netAmount: legacyAmountFromMoney(net),
-});
 
 interface Props {
     friend: KnownUser;
@@ -104,7 +97,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     isOpened={isSettleUpOpened}
                     onOpenChange={setIsSettleUpOpened}
                     friend={friend.user}
-                    balances={friend.balances.map(toSettleUpBalance)}
+                    balances={friend.balances}
                     initialCurrency={balance.net.currency}
                     onSubmit={settlement => createSettlement({ settlement })}
                 />
