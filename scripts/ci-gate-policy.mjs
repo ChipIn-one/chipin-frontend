@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
@@ -38,9 +37,20 @@ export const resolveCiGateMode = ({ workflow, targetBranch, changedFiles }) => {
 
 const isCli = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 
+// stdin as a stream: `fs.readFileSync(0)` throws EAGAIN on a non-blocking pipe whose writer
+// (`git diff ... |` in frontend-ci.yml) has not finished yet.
+const readStdin = async () => {
+    const chunks = [];
+
+    for await (const chunk of process.stdin) {
+        chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+};
+
 if (isCli) {
     try {
-        const input = fs.readFileSync(0);
+        const input = await readStdin();
         const changedFiles =
             input.length === 0 ? [] : input.toString('utf8').split('\0').filter(Boolean);
         const mode = resolveCiGateMode({

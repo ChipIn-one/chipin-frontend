@@ -1,3 +1,6 @@
+import { spawn } from 'node:child_process';
+import { resolve } from 'node:path';
+
 import { describe, expect, test } from 'vitest';
 
 import { isDocsOnlyChange, resolveCiGateMode } from './ci-gate-policy.mjs';
@@ -67,5 +70,54 @@ describe('CI gate policy', () => {
                 }),
             ).toThrow('Unsupported CI target branch');
         }
+    });
+});
+
+// frontend-ci.yml pipes `git diff --name-only -z` into the CLI; the writer may still be running when
+// the CLI starts reading, so stdin must be read as a stream (a sync read of a pipe throws EAGAIN).
+describe('CLI reads the changed-file list from a pipe', () => {
+    const CLI = resolve(import.meta.dirname, 'ci-gate-policy.mjs');
+
+    const runCli = async chunks => {
+        const child = spawn(process.execPath, [CLI], {
+            env: {
+                ...process.env,
+                CHIPIN_CI_WORKFLOW: 'frontend-ci',
+                CHIPIN_TARGET_BRANCH: 'master',
+            },
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', chunk => (stdout += chunk));
+        child.stderr.on('data', chunk => (stderr += chunk));
+        const exit = new Promise(resolveExit => child.on('close', resolveExit));
+
+        // Slow writer: the CLI starts reading before the first chunk arrives.
+        for (const chunk of chunks) {
+            await new Promise(resolveDelay => setTimeout(resolveDelay, 50));
+            child.stdin.write(chunk);
+        }
+        child.stdin.end();
+
+        return { code: await exit, stdout, stderr };
+    };
+
+    const nulList = paths => paths.map(path => `${path}\0`).join('');
+
+    test('a large list written slowly in chunks gives full', async () => {
+        const paths = Array.from({ length: 5000 }, (_, index) => `apps/app/src/file-${index}.ts`);
+        const chunks = Array.from({ length: 10 }, (_, index) =>
+            nulList(paths.slice(index * 500, (index + 1) * 500)),
+        );
+
+        expect(await runCli(chunks)).toEqual({ code: 0, stdout: 'full\n', stderr: '' });
+    });
+
+    test('a docs-only list written slowly gives docs-only', async () => {
+        expect(
+            await runCli([nulList(['README.md']), nulList(['docs/api-notes/activity.md'])]),
+        ).toEqual({ code: 0, stdout: 'docs-only\n', stderr: '' });
     });
 });
