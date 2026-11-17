@@ -14,6 +14,24 @@ const DIST = resolve(import.meta.dirname, 'dist');
 
 const apiRewrites = config.rewrites.filter(rewrite => rewrite.source === API_SOURCE);
 
+// A host condition is `{ eq: host }` (exact match) or `{ suf: '.vercel.app' }` (previews). A plain
+// string value is a regex-like string that Vercel does not document as anchored, so the config must
+// not use one for a host (L1 of the 04-4a2 review): `chipin.one` must never match `app.chipin.one`.
+const hostConditionMatches = (condition, host) => {
+    if (condition.type !== 'host' || !condition.value || typeof condition.value !== 'object') {
+        return false;
+    }
+
+    if (typeof condition.value.eq === 'string') {
+        return condition.value.eq === host;
+    }
+
+    return typeof condition.value.suf === 'string' && host.endsWith(condition.value.suf);
+};
+
+// The exact host of an `{ eq }` condition (for the tests that list the hosts of a rule).
+const exactHost = condition => condition.value?.eq;
+
 const resolveApiDestination = host => {
     for (const rewrite of apiRewrites) {
         const hostCondition = rewrite.has?.find(condition => condition.type === 'host');
@@ -22,16 +40,7 @@ const resolveApiDestination = host => {
             continue;
         }
 
-        if (typeof hostCondition.value === 'string' && hostCondition.value === host) {
-            return rewrite.destination;
-        }
-
-        if (
-            hostCondition.value &&
-            typeof hostCondition.value === 'object' &&
-            typeof hostCondition.value.suf === 'string' &&
-            host.endsWith(hostCondition.value.suf)
-        ) {
+        if (hostConditionMatches(hostCondition, host)) {
             return rewrite.destination;
         }
     }
@@ -260,21 +269,13 @@ const allRoutes = (() => {
 })();
 
 const hostMatches = (route, host) =>
-    (route.has ?? []).every(condition => {
-        if (condition.type !== 'host') {
-            return false;
-        }
-
-        if (typeof condition.value === 'string') {
-            return condition.value === host;
-        }
-
-        return typeof condition.value?.suf === 'string' && host.endsWith(condition.value.suf);
-    });
+    (route.has ?? []).every(condition => hostConditionMatches(condition, host));
 
 // A route matches the pathname only. A redirect's `Location` gets the numbered capture groups
 // substituted (as in `resolveRedirect` above), and Vercel appends the request's query string to a
-// destination that has none, so `url` may carry a query and the redirect keeps it.
+// destination that has none, so `url` may carry a query and the redirect keeps it. The helper
+// assumes that runtime behaviour (L2 of the 04-4a2 review); the blocking dev smoke curl of
+// `/oauth/callback?code=x&returnTo=…` in DEPLOYMENT.md verifies it before Promote.
 const resolveRoute = (host, url) => {
     const queryIndex = url.indexOf('?');
     const pathname = queryIndex === -1 ? url : url.slice(0, queryIndex);
@@ -335,7 +336,7 @@ describe('Vercel /sw.js by host (04-4a1)', () => {
         );
         const hostConditions = config.rewrites
             .filter(rewrite => rewrite.destination === '/sw-kill.js')
-            .flatMap(rewrite => rewrite.has.map(condition => condition.value));
+            .flatMap(rewrite => rewrite.has.map(exactHost));
 
         expect(killSwitchHosts.sort()).toEqual([...LEGACY_SERVICE_WORKER_HOSTNAMES].sort());
         expect(hostConditions.sort()).toEqual([...LEGACY_SERVICE_WORKER_HOSTNAMES].sort());
@@ -420,7 +421,6 @@ const allowlistPaths = PRIVATE_SPA_NAVIGATION_ALLOWLIST.flatMap(regex => {
 const NEVER_REDIRECTED_PATHS = [
     '/',
     '/?utm_source=x',
-    '/index.html',
     '/privacy',
     '/terms',
     '/ru',
@@ -509,18 +509,88 @@ describe('Vercel step-1 legacy redirects (04-4a2)', () => {
         },
     );
 
+    // M1 of the 04-4a2 review: `getPublicRoute` does not know `/index.html`-style URLs, so the
+    // prerender file served there would boot the full app (and its session check) on the legacy
+    // host. They go to the directory path of the same host, which the prerender serves with 200.
+    test.each(
+        LEGACY_HOSTS.flatMap(host =>
+            [
+                ['/index.html', '/'],
+                ['/index.html?utm_source=x', '/?utm_source=x'],
+                ['/privacy/index.html', '/privacy'],
+                ['/terms/index.html', '/terms'],
+                ['/ru/index.html', '/ru'],
+                ['/ru/index.html?a=1&b=2', '/ru?a=1&b=2'],
+                ['/ru/privacy/index.html', '/ru/privacy'],
+                ['/ru/terms/index.html', '/ru/terms'],
+            ].map(([path, target]) => [host, path, target]),
+        ),
+    )('on %s redirects %s to %s on the same host with 302', (host, path, target) => {
+        expect(resolveRoute(host, path)).toEqual({ redirect: target, statusCode: 302 });
+    });
+
+    test.each(LEGACY_HOSTS)('on %s never emits a protocol-relative index.html redirect', host => {
+        expect(resolveRoute(host, '//example.com/index.html')?.redirect).toBeUndefined();
+    });
+
+    test.each(LEGACY_HOSTS)('on %s sends /dashboard/index.html to the app host', host => {
+        expect(resolveRoute(host, '/dashboard/index.html')).toEqual({
+            redirect: `${legacyHostAppOrigin(host)}/dashboard/index.html`,
+            statusCode: 302,
+        });
+    });
+
+    test.each([...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'])(
+        'leaves the index.html paths on %s untouched',
+        host => {
+            for (const path of ['/index.html', '/privacy/index.html', '/ru/index.html']) {
+                expect(resolveRoute(host, path)?.redirect).toBeUndefined();
+            }
+        },
+    );
+
+    // L1 of the 04-4a2 review: an unanchored `chipin.one` condition would match the app host and
+    // send `app.chipin.one/dashboard` to itself forever.
+    test.each(APP_HOSTS)('serves %s/dashboard with no redirect (no loop)', host => {
+        expect(resolveRoute(host, '/dashboard')).toEqual({ rewrite: '/app.html' });
+    });
+
+    test('writes every named host condition as an exact { eq } match', () => {
+        const hostConditions = ['redirects', 'rewrites', 'headers'].flatMap(key =>
+            config[key].flatMap(rule =>
+                (rule.has ?? []).filter(condition => condition.type === 'host'),
+            ),
+        );
+
+        expect(hostConditions.length).toBeGreaterThan(0);
+        for (const condition of hostConditions) {
+            expect(typeof condition.value).toBe('object');
+            expect(Object.keys(condition.value)).toHaveLength(1);
+            if (condition.value.eq !== undefined) {
+                expect(condition.value.eq).toMatch(/^[a-z-]+(\.[a-z-]+)+$/);
+            } else {
+                expect(condition.value).toEqual({ suf: '.vercel.app' });
+            }
+        }
+    });
+
     test('every step-1 redirect is a host-scoped 302 to the app host of its environment', () => {
         const step1 = config.redirects.filter(redirect => redirect.has);
 
         expect(step1.length).toBeGreaterThan(0);
         for (const redirect of step1) {
             const [condition] = redirect.has;
+            const host = exactHost(condition);
 
             expect(redirect.has).toHaveLength(1);
             expect(redirect.statusCode).toBe(302);
-            expect(LEGACY_HOSTS).toContain(condition.value);
+            expect(LEGACY_HOSTS).toContain(host);
+            // Either to the app host of the same environment, or (`/index.html`) a relative path
+            // on the same host.
             expect(
-                redirect.destination.startsWith(`${legacyHostAppOrigin(condition.value)}/`),
+                redirect.destination.startsWith(`${legacyHostAppOrigin(host)}/`) ||
+                    (redirect.destination.startsWith('/') &&
+                        !redirect.destination.startsWith('//')),
             ).toBe(true);
         }
     });

@@ -169,9 +169,17 @@ On the legacy hosts `/dashboard*`, `/solo*`, `/activity*`, `/settings*`,
 `/group*`, `/friends*`, `/oauth*`, `/not-found` and `/app.html` answer `302` to
 the app host of the same environment (`chipin.one` → `app.chipin.one`,
 `dev.chipin.one` → `app-dev.chipin.one`) with the same path and query. The
-status stays `302` for the whole life of these rules. The landing there signs
-nobody in: its sign-in buttons open `<app host>/dashboard`, and a visitor with a
-session hint is sent there without any `/api` auth call.
+status stays `302` for the whole life of these rules. `/index.html` and every
+`<path>/index.html` there answer `302` to the directory path of the same host
+(`/index.html` → `/`, `/privacy/index.html` → `/privacy`, `/ru/index.html` →
+`/ru`), and the full app never boots on a legacy host: if the SPA shell is
+reached there anyway, `root.tsx` replaces the page with the same URL on the app
+host. The landing there signs nobody in: its sign-in buttons open
+`<app host>/dashboard`, and a visitor with a session hint who opens the home
+page (`/`, `/ru/`) is sent there without any `/api` auth call; on `/privacy`,
+`/terms` and their `/ru/` variants such a visitor stays and reads the page. The
+session hint on the legacy host is never cleared (no auth call runs there), so a
+former user opening `chipin.one/` always lands on the app host.
 
 Preconditions:
 
@@ -180,26 +188,37 @@ Preconditions:
   and `CORS_ALLOWED_ORIGINS` contain `https://app-dev.chipin.one` (dev) and
   `https://app.chipin.one` (prod); the old origins stay.
 
-Order:
+Order (each app host exists, valid and with a certificate, before any redirect
+points at it):
 
-1. Merge 04-4a2 into `master`.
-2. Owner: Vercel → the existing app project → Settings → Domains → add
+1. Owner: Vercel → the existing app project → Settings → Domains → add
    `app-dev.chipin.one`, Git branch `master`. Do not rename the project: the
    backend preview allowlists (`OAUTH_ALLOWED_VERCEL_PREVIEW_PROJECTS`,
-   `CORS_ALLOWED_VERCEL_PREVIEW_PROJECTS`) are bound to its name.
-3. DNS: if the `chipin.one` zone is on Vercel, the record is added
-   automatically; if DNS is hosted elsewhere, add `CNAME app-dev` →
-   `cname.vercel-dns.com` (the same for `app` in step 5). Wait until Vercel
-   shows the domain as valid with a certificate.
-4. Smoke on dev, the dev variant of criterion 10 below on `app-dev.chipin.one`
-   and `dev.chipin.one`.
-5. Promote the `master` deployment to Production, then add `app.chipin.one`
-   (Production) to the same project.
+   `CORS_ALLOWED_VERCEL_PREVIEW_PROJECTS`) are bound to its name. DNS: if the
+   `chipin.one` zone is on Vercel, the record is added automatically; if DNS is
+   hosted elsewhere, add `CNAME app-dev` → `cname.vercel-dns.com` (the same for
+   `app` in step 4).
+2. Wait until Vercel shows `app-dev.chipin.one` with Valid Configuration and its
+   certificate is issued, then merge 04-4a2 into `master`. Adding the domain
+   before the merge is harmless: the host serves the current build, and nothing
+   links to it yet.
+3. Smoke on dev, the dev variant of criterion 10 below on `app-dev.chipin.one`
+   and `dev.chipin.one`. Two checks are blocking gates for Promote:
+   - `curl -sI 'https://dev.chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1'`
+     → `302`, `Location: https://app-dev.chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1`
+     (the same query; the config tests cannot prove that Vercel forwards it);
+   - `curl -sI https://app-dev.chipin.one/dashboard` → `200`, no redirect (an app
+     host never redirects to itself).
+4. Owner: add `app.chipin.one` (Production) to the same project and wait until it
+   shows Valid Configuration and its certificate is issued. As in step 2, adding
+   it before the Promote is harmless.
+5. Promote the `master` deployment to Production.
 6. Smoke on prod (criterion 10 of spec 04):
    - `curl -sI https://chipin.one/dashboard` → `302`, `Location: https://app.chipin.one/dashboard`;
    - `https://chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1` → `302` with the same query;
    - `https://chipin.one/group/join/x` → `302` to `https://app.chipin.one/group/join/x`;
    - `https://chipin.one/`, `/privacy`, `/ru/`, `/robots.txt`, `/.well-known/assetlinks.json` → `200`, no redirect, no `X-Robots-Tag`;
+   - `https://chipin.one/index.html` → `302` to `/` on the same host;
    - `https://chipin.one/sw.js` → `200`, `Cache-Control: no-cache`, the kill-switch body; `https://app.chipin.one/sw.js` → the app worker;
    - `https://app.chipin.one/` and `/dashboard` → `200` with `X-Robots-Tag: noindex, nofollow`; `https://app.chipin.one/api/health` → `200`;
    - `assetlinks.json` lists `chipin.one`, `dev.chipin.one`, `app.chipin.one`, `app-dev.chipin.one`;
@@ -222,10 +241,12 @@ sign-in.
 Rollback criterion: 404 or 5xx on `chipin.one` or `app.chipin.one` rising above
 1 % per hour, an OAuth sign-in error, or the app host unavailable.
 
-- Targeted (minutes): a PR that deletes only the step-1 legacy redirects in
-  `apps/app/vercel.json` (the `302` rows with a `chipin.one`/`dev.chipin.one`
-  host condition) and the legacy-host landing changes of 04-4a2
-  (`helpers/legacyHost.ts` users: `SignInEntry`, `PublicSession`), then Promote.
+- Targeted (tens of minutes: a PR, CI and a Promote): a PR that deletes only the
+  step-1 legacy redirects in `apps/app/vercel.json` (the `302` rows with a
+  `chipin.one`/`dev.chipin.one` host condition) and the legacy-host changes of
+  04-4a2 (`helpers/legacyHost.ts` users: `root.tsx`, `SignInEntry`,
+  `PublicSession`), then Promote. For an immediate stop, use the full rollback
+  below (remove the app domains and Instant Rollback).
   The app hosts keep their `/api` rewrites, `X-Robots-Tag` and domains, so users
   already on `app.chipin.one` keep working; `chipin.one` serves the app again,
   online-only while 04-4a1 stays.

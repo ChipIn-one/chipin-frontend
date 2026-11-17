@@ -25,3 +25,20 @@ export const getLegacyHostAppDashboardUrl = (hostname: string): string | null =>
 
     return origin === null ? null : `${origin}${ROUTES.DASHBOARD}`;
 };
+
+/**
+ * The same URL on the app host for a legacy host, else `null`. The SPA shell must never boot on a
+ * legacy host (its session check would refresh and set a cookie there): `root.tsx` replaces the
+ * page with this URL whenever it reaches the app branch there (`/index.html`-style URLs, any path
+ * the prerender serves that `getPublicRoute` does not know).
+ */
+export const getLegacyHostAppUrl = ({
+    hostname,
+    pathname,
+    search,
+    hash,
+}: Pick<Location, 'hostname' | 'pathname' | 'search' | 'hash'>): string | null => {
+    const origin = getLegacyHostAppOrigin(hostname);
+
+    return origin === null ? null : `${origin}${pathname}${search}${hash}`;
+};

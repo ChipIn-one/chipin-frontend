@@ -19,7 +19,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "chipin.one"
+                    "value": {
+                        "eq": "chipin.one"
+                    }
                 }
             ],
             "destination": "https://app.chipin.one/:path",
@@ -30,10 +32,38 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "chipin.one"
+                    "value": {
+                        "eq": "chipin.one"
+                    }
                 }
             ],
             "destination": "https://app.chipin.one/",
+            "statusCode": 302
+        },
+        {
+            "source": "/index.html",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "chipin.one"
+                    }
+                }
+            ],
+            "destination": "/",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path([^/].*?)/index.html",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "chipin.one"
+                    }
+                }
+            ],
+            "destination": "/:path",
             "statusCode": 302
         },
         {
@@ -41,7 +71,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "dev.chipin.one"
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
                 }
             ],
             "destination": "https://app-dev.chipin.one/:path",
@@ -52,10 +84,38 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "dev.chipin.one"
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
                 }
             ],
             "destination": "https://app-dev.chipin.one/",
+            "statusCode": 302
+        },
+        {
+            "source": "/index.html",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "/",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path([^/].*?)/index.html",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "/:path",
             "statusCode": 302
         }
     ],
@@ -65,7 +125,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "chipin.one"
+                    "value": {
+                        "eq": "chipin.one"
+                    }
                 }
             ],
             "destination": "https://api.chipin.one/:path*"
@@ -75,7 +137,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "dev.chipin.one"
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
                 }
             ],
             "destination": "https://api-dev.chipin.one/:path*"
@@ -85,7 +149,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "app.chipin.one"
+                    "value": {
+                        "eq": "app.chipin.one"
+                    }
                 }
             ],
             "destination": "https://api.chipin.one/:path*"
@@ -95,7 +161,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "app-dev.chipin.one"
+                    "value": {
+                        "eq": "app-dev.chipin.one"
+                    }
                 }
             ],
             "destination": "https://api-dev.chipin.one/:path*"
@@ -117,7 +185,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "chipin.one"
+                    "value": {
+                        "eq": "chipin.one"
+                    }
                 }
             ],
             "destination": "/sw-kill.js"
@@ -127,7 +197,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "dev.chipin.one"
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
                 }
             ],
             "destination": "/sw-kill.js"
@@ -255,7 +327,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "app.chipin.one"
+                    "value": {
+                        "eq": "app.chipin.one"
+                    }
                 }
             ],
             "headers": [
@@ -270,7 +344,9 @@
             "has": [
                 {
                     "type": "host",
-                    "value": "app-dev.chipin.one"
+                    "value": {
+                        "eq": "app-dev.chipin.one"
+                    }
                 }
             ],
             "headers": [

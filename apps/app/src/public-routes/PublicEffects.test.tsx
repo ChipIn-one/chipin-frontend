@@ -75,6 +75,8 @@ beforeEach(() => {
 });
 afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    setAuthSessionHint(false);
 });
 
 test('mounts the existing session-feedback and scroll-restoration hooks on public routes', () => {
@@ -87,17 +89,22 @@ test('mounts the existing session-feedback and scroll-restoration hooks on publi
 
 // 04-4a2 (spec 04 §4.5 step 1): on a legacy host the landing makes no auth call; a visitor with a
 // session hint goes straight to the app host of the same environment.
-const renderHomeOn = (hostname: string) => {
+const renderPageOn = (hostname: string, path: string) => {
     const replace = vi.fn();
     vi.stubGlobal('location', { ...window.location, hostname, replace });
-    const home = getOrThrow(
-        PUBLIC_ROUTE_ENTRIES.filter(item => item.page === 'home' && item.locale === 'en'),
-        0,
-    );
 
-    render(<PublicEffects route={home} isDark={false} />);
+    render(
+        <PublicEffects
+            route={getOrThrow(
+                PUBLIC_ROUTE_ENTRIES.filter(item => item.path === path),
+                0,
+            )}
+            isDark={false}
+        />,
+    );
     return replace;
 };
+const renderHomeOn = (hostname: string) => renderPageOn(hostname, '/');
 
 test.each([
     ['chipin.one', 'https://app.chipin.one/dashboard'],
@@ -113,8 +120,42 @@ test.each([
     expect(replace).toHaveBeenCalledExactlyOnceWith(target);
     expect(useCheckSignIn).not.toHaveBeenCalled();
     expect(refreshAuthTokens).not.toHaveBeenCalled();
-    setAuthSessionHint(false);
-    vi.unstubAllGlobals();
+});
+
+test.each(['chipin.one', 'dev.chipin.one'])(
+    'on %s the Russian home also hands a visitor with a hint to the app host',
+    host => {
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+        setAuthSessionHint(true);
+
+        const replace = renderPageOn(host, '/ru/');
+
+        expect(replace).toHaveBeenCalledOnce();
+        expect(useCheckSignIn).not.toHaveBeenCalled();
+    },
+);
+
+// M2 of the 04-4a2 review: the legal pages stay readable for a former user with a hint (store
+// listing, OAuth consent and mail link there); the visitor is anonymous locally, with no request.
+test.each(
+    ['chipin.one', 'dev.chipin.one'].flatMap(host =>
+        ['/privacy', '/terms', '/ru/privacy', '/ru/terms'].map(path => [host, path]),
+    ),
+)('on %s%s a visitor with a hint stays, anonymous, with no check', (host, path) => {
+    useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+    const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
+    useAuthStore.setState({ refreshAuthTokens });
+    setAuthSessionHint(true);
+
+    const replace = renderPageOn(host, path);
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(useCheckSignIn).not.toHaveBeenCalled();
+    expect(refreshAuthTokens).not.toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({
+        status: 'unauthenticated',
+        unauthReason: 'missing',
+    });
 });
 
 test('on a legacy host a visitor without a hint stays on the landing, anonymous, with no check', () => {
@@ -132,7 +173,6 @@ test('on a legacy host a visitor without a hint stays on the landing, anonymous,
         status: 'unauthenticated',
         unauthReason: 'missing',
     });
-    vi.unstubAllGlobals();
 });
 
 test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
@@ -145,8 +185,6 @@ test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
 
         expect(useCheckSignIn).toHaveBeenCalled();
         expect(replace).not.toHaveBeenCalled();
-        setAuthSessionHint(false);
-        vi.unstubAllGlobals();
     },
 );
 
@@ -226,7 +264,6 @@ test.each(['loaded', 'failed'] as const)(
         });
 
         expect(replace).toHaveBeenCalledExactlyOnceWith('/dashboard');
-        vi.unstubAllGlobals();
     },
 );
 
@@ -273,6 +310,5 @@ test.each([
         const replace = goHome();
 
         expect(replace).toHaveBeenCalledExactlyOnceWith(expected);
-        vi.unstubAllGlobals();
     },
 );
