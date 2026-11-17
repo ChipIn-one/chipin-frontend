@@ -16,8 +16,8 @@ import {
 } from './config/eslint/project.js';
 import { reactConfig, reactSyntax } from './config/eslint/react.js';
 
-// App directory relative to the repository root: '.' now, 'apps/app' after the monorepo move.
-const APP_DIR = '.';
+// App directory relative to the repository root (the npm workspace @chipin/app, 04-0a).
+const APP_DIR = 'apps/app';
 
 export default [
     ...baseConfig({ appDir: APP_DIR }),

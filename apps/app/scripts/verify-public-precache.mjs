@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const outputRoot = path.resolve('dist');
+const outputRoot = path.resolve(import.meta.dirname, '../dist');
 
 const verifyWorkerFiles = serviceWorker =>
     Promise.all([

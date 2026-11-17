@@ -10,8 +10,8 @@ on:
   pull_request:
     paths:
       - .github/workflows/openapi-drift.yml
-      - scripts/api/**
-      - openapi/**
+      - apps/app/scripts/api/**
+      - apps/app/openapi/**
 
 permissions:
   contents: read
@@ -55,14 +55,14 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: chipin.yaml
-          path: openapi/chipin.yaml
+          path: apps/app/openapi/chipin.yaml
           if-no-files-found: error
           retention-days: 30
       - name: Generate types
         id: gen
         # A generator failure (e.g. a new unclassified number field) is drift too: report it.
         run: |
-          paths=(openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts)
+          paths=(apps/app/openapi apps/app/src/shared/api/generated apps/app/src/shared/offline/modelHash.generated.ts)
           delimiter="DRIFT_$(openssl rand -hex 16)"
           if ! npm run -s api:gen 2> "$RUNNER_TEMP/drift.txt"; then
             echo "::warning::api:gen failed on the staging snapshot"

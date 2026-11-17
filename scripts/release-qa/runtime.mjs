@@ -26,7 +26,12 @@ import {
     validateDeployment,
     verifyCi,
 } from './core.mjs';
-import { hasPackageFiles, packageBuildChanges } from './ui-paths.mjs';
+import {
+    APP_PACKAGE_JSON,
+    hasPackageFiles,
+    mergePackageManifests,
+    packageBuildChanges,
+} from './ui-paths.mjs';
 
 const API = 'https://api.github.com';
 const REPO_PATH = `/repos/${REPOSITORY}`;
@@ -388,7 +393,7 @@ function readJsonAt(api, file, ref) {
         .then(text => (text == null ? null : JSON.parse(text)));
 }
 
-// Reads package.json and package-lock.json at the Production baseline and the candidate. Unreadable
+// Reads the root and apps/app package.json and package-lock.json at the Production baseline and the candidate. Unreadable
 // evidence is treated as build-affecting (a QA round), never as a block.
 export function readPackageBuildChanges(api, files, baseSha, headSha) {
     if (!hasPackageFiles(files)) return Promise.resolve([]);
@@ -396,16 +401,18 @@ export function readPackageBuildChanges(api, files, baseSha, headSha) {
         .then(() =>
             Promise.all([
                 readJsonAt(api, 'package.json', baseSha),
+                readJsonAt(api, APP_PACKAGE_JSON, baseSha),
                 readJsonAt(api, 'package-lock.json', baseSha),
                 readJsonAt(api, 'package.json', headSha),
+                readJsonAt(api, APP_PACKAGE_JSON, headSha),
                 readJsonAt(api, 'package-lock.json', headSha),
             ]),
         )
-        .then(([basePkg, baseLock, headPkg, headLock]) =>
+        .then(([baseRoot, baseApp, baseLock, headRoot, headApp, headLock]) =>
             packageBuildChanges({
                 files,
-                base: { pkg: basePkg, lock: baseLock },
-                head: { pkg: headPkg, lock: headLock },
+                base: { pkg: mergePackageManifests(baseRoot, baseApp), lock: baseLock },
+                head: { pkg: mergePackageManifests(headRoot, headApp), lock: headLock },
             }),
         )
         .catch(() => [UNREADABLE_PACKAGES]);

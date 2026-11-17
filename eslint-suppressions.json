@@ -1,40 +1,40 @@
 {
-  "contract-tests/support/http.ts": {
+  "apps/app/contract-tests/support/http.ts": {
     "@typescript-eslint/no-unsafe-return": {
       "count": 1
     }
   },
-  "ds-gallery/gallery.tsx": {
+  "apps/app/ds-gallery/gallery.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   },
-  "src/api/chipin.instance.ts": {
+  "apps/app/src/api/chipin.instance.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/api/chipin.interceptors.integration.test.ts": {
+  "apps/app/src/api/chipin.interceptors.integration.test.ts": {
     "boundaries/dependencies": {
       "count": 2
     }
   },
-  "src/api/chipin.interceptors.ts": {
+  "apps/app/src/api/chipin.interceptors.ts": {
     "boundaries/dependencies": {
       "count": 3
     }
   },
-  "src/basics/AmountInput.tsx": {
+  "apps/app/src/basics/AmountInput.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/BackgroundBox.tsx": {
+  "apps/app/src/basics/BackgroundBox.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/BalanceBadges.tsx": {
+  "apps/app/src/basics/BalanceBadges.tsx": {
     "boundaries/dependencies": {
       "count": 1
     },
@@ -42,7 +42,7 @@
       "count": 1
     }
   },
-  "src/basics/BalanceSummaryText.tsx": {
+  "apps/app/src/basics/BalanceSummaryText.tsx": {
     "boundaries/dependencies": {
       "count": 1
     },
@@ -50,147 +50,147 @@
       "count": 1
     }
   },
-  "src/basics/Checkbox.tsx": {
+  "apps/app/src/basics/Checkbox.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/ChipInLoader.tsx": {
+  "apps/app/src/basics/ChipInLoader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/DebtAmount.tsx": {
+  "apps/app/src/basics/DebtAmount.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/GroupRoleBadge.tsx": {
+  "apps/app/src/basics/GroupRoleBadge.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/Image.tsx": {
+  "apps/app/src/basics/Image.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/OwedStatusText.tsx": {
+  "apps/app/src/basics/OwedStatusText.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/PWABadge.tsx": {
+  "apps/app/src/basics/PWABadge.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/PageLoader.tsx": {
+  "apps/app/src/basics/PageLoader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/RelativeTime.tsx": {
+  "apps/app/src/basics/RelativeTime.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/UserAvatar.tsx": {
+  "apps/app/src/basics/UserAvatar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/buttons/BackButton.tsx": {
+  "apps/app/src/basics/buttons/BackButton.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/buttons/CopyButton.tsx": {
+  "apps/app/src/basics/buttons/CopyButton.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/buttons/NavButton.tsx": {
+  "apps/app/src/basics/buttons/NavButton.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/basics/empty-states/EmptyState.tsx": {
+  "apps/app/src/basics/empty-states/EmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/empty-states/NoActivityEmptyState.tsx": {
+  "apps/app/src/basics/empty-states/NoActivityEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/empty-states/NoDebtsEmptyState.tsx": {
+  "apps/app/src/basics/empty-states/NoDebtsEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/empty-states/NoFriendsEmptyState.tsx": {
+  "apps/app/src/basics/empty-states/NoFriendsEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/empty-states/NoGroupExpensesEmptyState.tsx": {
+  "apps/app/src/basics/empty-states/NoGroupExpensesEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/empty-states/NoGroupMembersEmptyState.tsx": {
+  "apps/app/src/basics/empty-states/NoGroupMembersEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/empty-states/NoGroupsEmptyState.tsx": {
+  "apps/app/src/basics/empty-states/NoGroupsEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/numbers/amount/Amount.tsx": {
+  "apps/app/src/basics/numbers/amount/Amount.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/basics/numbers/amount/index.ts": {
+  "apps/app/src/basics/numbers/amount/index.ts": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/AddExpenseButton.tsx": {
+  "apps/app/src/components/AddExpenseButton.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/AuthButtons.tsx": {
+  "apps/app/src/components/AuthButtons.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/CurrencySelect.tsx": {
+  "apps/app/src/components/CurrencySelect.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/DevMenu.tsx": {
+  "apps/app/src/components/DevMenu.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/Dropdown.tsx": {
+  "apps/app/src/components/Dropdown.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/Footer.test.tsx": {
+  "apps/app/src/components/Footer.test.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/components/Footer.tsx": {
+  "apps/app/src/components/Footer.tsx": {
     "boundaries/dependencies": {
       "count": 1
     },
@@ -198,82 +198,82 @@
       "count": 1
     }
   },
-  "src/components/GroupAvatar.tsx": {
+  "apps/app/src/components/GroupAvatar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/GroupsCards.tsx": {
+  "apps/app/src/components/GroupsCards.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/GroupsSectionHeader.tsx": {
+  "apps/app/src/components/GroupsSectionHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/Header.tsx": {
+  "apps/app/src/components/Header.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/LanguageSelector.tsx": {
+  "apps/app/src/components/LanguageSelector.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/OfflineQRCode.tsx": {
+  "apps/app/src/components/OfflineQRCode.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/SegmentedControl.tsx": {
+  "apps/app/src/components/SegmentedControl.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/Select.tsx": {
+  "apps/app/src/components/Select.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/ThemeSwitcherDev.tsx": {
+  "apps/app/src/components/ThemeSwitcherDev.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/UsersRow.tsx": {
+  "apps/app/src/components/UsersRow.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/ViewModeSwitch.tsx": {
+  "apps/app/src/components/ViewModeSwitch.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/dashboard-summary/DashboardHeader.tsx": {
+  "apps/app/src/components/dashboard-summary/DashboardHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/dashboard-summary/DashboardSummary.tsx": {
+  "apps/app/src/components/dashboard-summary/DashboardSummary.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/group-card/GroupCard.tsx": {
+  "apps/app/src/components/group-card/GroupCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/internal-page-layout/InternalPageLayout.tsx": {
+  "apps/app/src/components/internal-page-layout/InternalPageLayout.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/invite-onboarding/InviteOnboarding.tsx": {
+  "apps/app/src/components/invite-onboarding/InviteOnboarding.tsx": {
     "import-x/no-default-export": {
       "count": 1
     },
@@ -281,197 +281,197 @@
       "count": 1
     }
   },
-  "src/components/invite/InviteActionRows.tsx": {
+  "apps/app/src/components/invite/InviteActionRows.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/invite/InviteJoinConfirmation.tsx": {
+  "apps/app/src/components/invite/InviteJoinConfirmation.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/invite/InviteQRModal.tsx": {
+  "apps/app/src/components/invite/InviteQRModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/auth-modal/AuthModal.tsx": {
+  "apps/app/src/components/modals/auth-modal/AuthModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/base-alert-dialog/BaseAlertDialog.tsx": {
+  "apps/app/src/components/modals/base-alert-dialog/BaseAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/base-modal/BaseModal.tsx": {
+  "apps/app/src/components/modals/base-modal/BaseModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/components/overlay-layout/OverlayBody.tsx": {
+  "apps/app/src/components/modals/components/overlay-layout/OverlayBody.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/components/overlay-layout/OverlayFooter.tsx": {
+  "apps/app/src/components/modals/components/overlay-layout/OverlayFooter.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/components/overlay-layout/OverlayHeader.tsx": {
+  "apps/app/src/components/modals/components/overlay-layout/OverlayHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/create-update-group-modal/CreateUpdateGroupModal.tsx": {
+  "apps/app/src/components/modals/create-update-group-modal/CreateUpdateGroupModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/create-update-group-modal/components/create-group-form/CreateGroupForm.tsx": {
+  "apps/app/src/components/modals/create-update-group-modal/components/create-group-form/CreateGroupForm.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/create-update-group-modal/components/group-cover-field/GroupCoverField.tsx": {
+  "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/GroupCoverField.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/create-update-group-modal/components/group-cover-field/GroupCoverPickerControl.tsx": {
+  "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/GroupCoverPickerControl.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/create-update-group-modal/components/group-details-fields/GroupDetailsFields.tsx": {
+  "apps/app/src/components/modals/create-update-group-modal/components/group-details-fields/GroupDetailsFields.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/create-update-group-modal/components/update-group-form/UpdateGroupForm.tsx": {
+  "apps/app/src/components/modals/create-update-group-modal/components/update-group-form/UpdateGroupForm.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/early-supporter-promo-modal/EarlySupporterPromoModal.tsx": {
+  "apps/app/src/components/modals/early-supporter-promo-modal/EarlySupporterPromoModal.tsx": {
     "no-restricted-syntax": {
       "count": 1
     }
   },
-  "src/components/modals/kick-group-member-alert-dialog/KickGroupMemberAlertDialog.tsx": {
+  "apps/app/src/components/modals/kick-group-member-alert-dialog/KickGroupMemberAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/leave-group-alert-dialog/LeaveGroupAlertDialog.tsx": {
+  "apps/app/src/components/modals/leave-group-alert-dialog/LeaveGroupAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/modal-router/ModalRouter.tsx": {
+  "apps/app/src/components/modals/modal-router/ModalRouter.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/remove-friend-alert-dialog/RemoveFriendAlertDialog.tsx": {
+  "apps/app/src/components/modals/remove-friend-alert-dialog/RemoveFriendAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/remove-group-alert-dialog/RemoveGroupAlertDialog.tsx": {
+  "apps/app/src/components/modals/remove-group-alert-dialog/RemoveGroupAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/remove-ledger-entry-alert-dialog/RemoveLedgerEntryAlertDialog.tsx": {
+  "apps/app/src/components/modals/remove-ledger-entry-alert-dialog/RemoveLedgerEntryAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/SettleUpModal.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/SettleUpModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/DebtSection.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/DebtSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/DebtSelectionStep.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/DebtSelectionStep.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/GroupSettleUpFlow.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/GroupSettleUpFlow.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/SettlementAmountField.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/SettlementAmountField.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/SettlementDebtSummary.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/SettlementDebtSummary.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/SettlementForm.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/SettlementForm.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/SettlementFormContent.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/SettlementFormContent.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/settle-up-modal/components/SettlementStatus.tsx": {
+  "apps/app/src/components/modals/settle-up-modal/components/SettlementStatus.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/modals/user-avatar-modal/UserAvatarModal.tsx": {
+  "apps/app/src/components/modals/user-avatar-modal/UserAvatarModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/mode-logotype/ModeLogotype.tsx": {
+  "apps/app/src/components/mode-logotype/ModeLogotype.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/nav-bars/HeaderNav.tsx": {
+  "apps/app/src/components/nav-bars/HeaderNav.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/nav-bars/MobileNavBar.tsx": {
+  "apps/app/src/components/nav-bars/MobileNavBar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/nav-bars/desktop-sidebar/DesktopSidebar.tsx": {
+  "apps/app/src/components/nav-bars/desktop-sidebar/DesktopSidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/nav-bars/desktop-sidebar/components/profile-actions/ProfileActions.tsx": {
+  "apps/app/src/components/nav-bars/desktop-sidebar/components/profile-actions/ProfileActions.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/progress-bar/ProgressBar.tsx": {
+  "apps/app/src/components/progress-bar/ProgressBar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/search-select/CategorySearchSelect.tsx": {
+  "apps/app/src/components/search-select/CategorySearchSelect.tsx": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
     },
@@ -482,62 +482,62 @@
       "count": 1
     }
   },
-  "src/components/summary-debt-cards/OwedToYouCard.tsx": {
+  "apps/app/src/components/summary-debt-cards/OwedToYouCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/summary-debt-cards/SummaryDebtCards.tsx": {
+  "apps/app/src/components/summary-debt-cards/SummaryDebtCards.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/summary-debt-cards/TotalBalanceCard.tsx": {
+  "apps/app/src/components/summary-debt-cards/TotalBalanceCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/summary-debt-cards/YouOweCard.tsx": {
+  "apps/app/src/components/summary-debt-cards/YouOweCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/components/user-profile-summary/UserProfileSummary.tsx": {
+  "apps/app/src/components/user-profile-summary/UserProfileSummary.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/constants/publicRoutes.test.ts": {
+  "apps/app/src/constants/publicRoutes.test.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 2
     }
   },
-  "src/constants/publicRoutes.ts": {
+  "apps/app/src/constants/publicRoutes.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/features/activity/ActivityHeader.tsx": {
+  "apps/app/src/features/activity/ActivityHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/activity/ActivityList.tsx": {
+  "apps/app/src/features/activity/ActivityList.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/activity/ActivitySidebar.tsx": {
+  "apps/app/src/features/activity/ActivitySidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/activity/components/ActivityDateDivider.tsx": {
+  "apps/app/src/features/activity/components/ActivityDateDivider.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/activity/components/EventGroupCreated.tsx": {
+  "apps/app/src/features/activity/components/EventGroupCreated.tsx": {
     "import-x/no-cycle": {
       "count": 1
     },
@@ -545,7 +545,7 @@
       "count": 1
     }
   },
-  "src/features/activity/components/EventGroupDeleted.tsx": {
+  "apps/app/src/features/activity/components/EventGroupDeleted.tsx": {
     "import-x/no-cycle": {
       "count": 1
     },
@@ -553,7 +553,7 @@
       "count": 1
     }
   },
-  "src/features/activity/components/EventGroupUpdated.tsx": {
+  "apps/app/src/features/activity/components/EventGroupUpdated.tsx": {
     "import-x/no-cycle": {
       "count": 1
     },
@@ -561,7 +561,7 @@
       "count": 1
     }
   },
-  "src/features/activity/components/EventMemberJoin.tsx": {
+  "apps/app/src/features/activity/components/EventMemberJoin.tsx": {
     "import-x/no-cycle": {
       "count": 1
     },
@@ -569,7 +569,7 @@
       "count": 1
     }
   },
-  "src/features/activity/components/EventMemberLeft.tsx": {
+  "apps/app/src/features/activity/components/EventMemberLeft.tsx": {
     "import-x/no-cycle": {
       "count": 1
     },
@@ -577,7 +577,7 @@
       "count": 1
     }
   },
-  "src/features/activity/components/EventUnknown.tsx": {
+  "apps/app/src/features/activity/components/EventUnknown.tsx": {
     "import-x/no-cycle": {
       "count": 1
     },
@@ -585,37 +585,37 @@
       "count": 1
     }
   },
-  "src/features/activity/components/activity-event/ActivityEvent.tsx": {
+  "apps/app/src/features/activity/components/activity-event/ActivityEvent.tsx": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/activity-event/index.ts": {
+  "apps/app/src/features/activity/components/activity-event/index.ts": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-expense-transferred/EventExpenseTransferred.tsx": {
+  "apps/app/src/features/activity/components/event-expense-transferred/EventExpenseTransferred.tsx": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-expense-transferred/index.ts": {
+  "apps/app/src/features/activity/components/event-expense-transferred/index.ts": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-expense/EventExpense.tsx": {
+  "apps/app/src/features/activity/components/event-expense/EventExpense.tsx": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-expense/components/expense-icon/ExpenseIcon.tsx": {
+  "apps/app/src/features/activity/components/event-expense/components/expense-icon/ExpenseIcon.tsx": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
     }
   },
-  "src/features/activity/components/event-expense/components/expense-icon/helpers.ts": {
+  "apps/app/src/features/activity/components/event-expense/components/expense-icon/helpers.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
     },
@@ -623,247 +623,247 @@
       "count": 2
     }
   },
-  "src/features/activity/components/event-expense/index.ts": {
+  "apps/app/src/features/activity/components/event-expense/index.ts": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-member-kicked/EventMemberKicked.tsx": {
+  "apps/app/src/features/activity/components/event-member-kicked/EventMemberKicked.tsx": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-member-kicked/index.ts": {
+  "apps/app/src/features/activity/components/event-member-kicked/index.ts": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-settlement/EventSettlement.tsx": {
+  "apps/app/src/features/activity/components/event-settlement/EventSettlement.tsx": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/activity/components/event-settlement/index.ts": {
+  "apps/app/src/features/activity/components/event-settlement/index.ts": {
     "import-x/no-cycle": {
       "count": 1
     }
   },
-  "src/features/add-expense/AddExpenseModal.tsx": {
+  "apps/app/src/features/add-expense/AddExpenseModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-buttons/ExpenseButtons.tsx": {
+  "apps/app/src/features/add-expense/components/expense-buttons/ExpenseButtons.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-details-section/ExpenseDetailsSection.tsx": {
+  "apps/app/src/features/add-expense/components/expense-details-section/ExpenseDetailsSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-details-section/components/expense-amount-fields/ExpenseAmountFields.tsx": {
+  "apps/app/src/features/add-expense/components/expense-details-section/components/expense-amount-fields/ExpenseAmountFields.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-details-section/components/expense-currency-category-fields/ExpenseCurrencyCategoryFields.tsx": {
+  "apps/app/src/features/add-expense/components/expense-details-section/components/expense-currency-category-fields/ExpenseCurrencyCategoryFields.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-details-section/components/expense-date-field/ExpenseDateField.tsx": {
+  "apps/app/src/features/add-expense/components/expense-details-section/components/expense-date-field/ExpenseDateField.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-payer-search-select/ExpensePayerSearchSelect.tsx": {
+  "apps/app/src/features/add-expense/components/expense-payer-search-select/ExpensePayerSearchSelect.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-search-select-content/ExpenseSearchSelectContent.tsx": {
+  "apps/app/src/features/add-expense/components/expense-search-select-content/ExpenseSearchSelectContent.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-split-card/ExpenseSplitCard.tsx": {
+  "apps/app/src/features/add-expense/components/expense-split-card/ExpenseSplitCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-split-card/components/expense-input-actions/ExpenseInputActions.tsx": {
+  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-input-actions/ExpenseInputActions.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-split-card/components/expense-split-mode-control/ExpenseSplitModeControl.tsx": {
+  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-split-mode-control/ExpenseSplitModeControl.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-split-card/components/expense-users-list/ExpenseUsersList.tsx": {
+  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-users-list/ExpenseUsersList.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-split-card/components/split-type-header/SplitTypeHeader.tsx": {
+  "apps/app/src/features/add-expense/components/expense-split-card/components/split-type-header/SplitTypeHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-target-section/ExpenseTargetSection.tsx": {
+  "apps/app/src/features/add-expense/components/expense-target-section/ExpenseTargetSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-target-section/components/expense-group-search-select/ExpenseGroupSearchSelect.tsx": {
+  "apps/app/src/features/add-expense/components/expense-target-section/components/expense-group-search-select/ExpenseGroupSearchSelect.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/add-expense/components/expense-target-section/components/expense-scope-context/ExpenseScopeContext.tsx": {
+  "apps/app/src/features/add-expense/components/expense-target-section/components/expense-scope-context/ExpenseScopeContext.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/cta-section/CtaSection.tsx": {
+  "apps/app/src/features/landing/cta-section/CtaSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/features-section/FeaturesSection.tsx": {
+  "apps/app/src/features/landing/features-section/FeaturesSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/hero-section/HeroSection.tsx": {
+  "apps/app/src/features/landing/hero-section/HeroSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/hero-section/components/landing-stats/LandingStats.tsx": {
+  "apps/app/src/features/landing/hero-section/components/landing-stats/LandingStats.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/how-it-works-section/HowItWorksSection.tsx": {
+  "apps/app/src/features/landing/how-it-works-section/HowItWorksSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/showcase-sections/ShowcaseSections.tsx": {
+  "apps/app/src/features/landing/showcase-sections/ShowcaseSections.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/showcase-sections/components/group-page-preview/GroupPagePreview.tsx": {
+  "apps/app/src/features/landing/showcase-sections/components/group-page-preview/GroupPagePreview.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/showcase-sections/components/landing-preview-card/LandingPreviewCard.tsx": {
+  "apps/app/src/features/landing/showcase-sections/components/landing-preview-card/LandingPreviewCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/showcase-sections/components/showcase-section/ShowcaseSection.tsx": {
+  "apps/app/src/features/landing/showcase-sections/components/showcase-section/ShowcaseSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/landing/showcase-sections/components/solo-page-preview/SoloPagePreview.tsx": {
+  "apps/app/src/features/landing/showcase-sections/components/solo-page-preview/SoloPagePreview.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/routing/AppRouter.tsx": {
+  "apps/app/src/features/routing/AppRouter.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/routing/HomeRouteGuard.tsx": {
+  "apps/app/src/features/routing/HomeRouteGuard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/routing/SoloRouteGuard.tsx": {
+  "apps/app/src/features/routing/SoloRouteGuard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/features/routing/index.ts": {
+  "apps/app/src/features/routing/index.ts": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/helpers/activityEvent.test.ts": {
+  "apps/app/src/helpers/activityEvent.test.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/helpers/activityEvent.ts": {
+  "apps/app/src/helpers/activityEvent.ts": {
     "boundaries/dependencies": {
       "count": 2
     }
   },
-  "src/helpers/authSession.test.ts": {
+  "apps/app/src/helpers/authSession.test.ts": {
     "boundaries/dependencies": {
       "count": 2
     }
   },
-  "src/helpers/authSession.ts": {
+  "apps/app/src/helpers/authSession.ts": {
     "boundaries/dependencies": {
       "count": 3
     }
   },
-  "src/helpers/currencies.ts": {
+  "apps/app/src/helpers/currencies.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/helpers/decimalDisplay.ts": {
+  "apps/app/src/helpers/decimalDisplay.ts": {
     "no-restricted-syntax": {
       "count": 1
     }
   },
-  "src/helpers/expenseTargets.test.ts": {
+  "apps/app/src/helpers/expenseTargets.test.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/helpers/localStorage.test.ts": {
+  "apps/app/src/helpers/localStorage.test.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/helpers/localStorage.ts": {
+  "apps/app/src/helpers/localStorage.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/helpers/numbers.ts": {
+  "apps/app/src/helpers/numbers.ts": {
     "no-restricted-syntax": {
       "count": 3
     }
   },
-  "src/helpers/swUpdates.tsx": {
+  "apps/app/src/helpers/swUpdates.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/helpers/theme.test.ts": {
+  "apps/app/src/helpers/theme.test.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/helpers/theme.ts": {
+  "apps/app/src/helpers/theme.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/i18n/index.ts": {
+  "apps/app/src/i18n/index.ts": {
     "boundaries/dependencies": {
       "count": 1
     },
@@ -871,282 +871,282 @@
       "count": 1
     }
   },
-  "src/main.tsx": {
+  "apps/app/src/main.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/404-page/Page404.tsx": {
+  "apps/app/src/pages/404-page/Page404.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/404-page/components/HintCard.tsx": {
+  "apps/app/src/pages/404-page/components/HintCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/404-page/components/Icon404.tsx": {
+  "apps/app/src/pages/404-page/components/Icon404.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/404-page/index.ts": {
+  "apps/app/src/pages/404-page/index.ts": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/ActivityPage.tsx": {
+  "apps/app/src/pages/ActivityPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/DashboardPage.test.tsx": {
+  "apps/app/src/pages/DashboardPage.test.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/pages/DashboardPage.tsx": {
+  "apps/app/src/pages/DashboardPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/FriendJoinPage.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/pages/FriendJoinPage.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "src/pages/GlobalHooks.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/pages/GlobalHooks.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "src/pages/GroupJoinPage.test.tsx": {
+  "apps/app/src/pages/FriendJoinPage.test.tsx": {
     "boundaries/dependencies": {
       "count": 2
     }
   },
-  "src/pages/GroupJoinPage.tsx": {
+  "apps/app/src/pages/FriendJoinPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/HomePage.test.tsx": {
+  "apps/app/src/pages/GlobalHooks.test.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/pages/HomePage.tsx": {
+  "apps/app/src/pages/GlobalHooks.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/LegalPages.test.tsx": {
+  "apps/app/src/pages/GroupJoinPage.test.tsx": {
     "boundaries/dependencies": {
       "count": 2
     }
   },
-  "src/pages/PrivacyPage.tsx": {
+  "apps/app/src/pages/GroupJoinPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/TermsPage.tsx": {
+  "apps/app/src/pages/HomePage.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "apps/app/src/pages/HomePage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/activity-subevents-page/ActivitySubeventsPage.tsx": {
+  "apps/app/src/pages/LegalPages.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "apps/app/src/pages/PrivacyPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/FriendsPage.tsx": {
+  "apps/app/src/pages/TermsPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/CurrencyGroupCard.tsx": {
+  "apps/app/src/pages/activity-subevents-page/ActivitySubeventsPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendActionsDropdown.tsx": {
+  "apps/app/src/pages/friends-page/FriendsPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendInviteEmptyState.tsx": {
+  "apps/app/src/pages/friends-page/components/CurrencyGroupCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendListItem.tsx": {
+  "apps/app/src/pages/friends-page/components/FriendActionsDropdown.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendsFilterDropdown.tsx": {
+  "apps/app/src/pages/friends-page/components/FriendInviteEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendsList.tsx": {
+  "apps/app/src/pages/friends-page/components/FriendListItem.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendsPageHeader.tsx": {
+  "apps/app/src/pages/friends-page/components/FriendsFilterDropdown.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendsSearchBar.tsx": {
+  "apps/app/src/pages/friends-page/components/FriendsList.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/FriendsSidebar.tsx": {
+  "apps/app/src/pages/friends-page/components/FriendsPageHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/components/SettledUpCard.tsx": {
+  "apps/app/src/pages/friends-page/components/FriendsSearchBar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/friends-page/index.ts": {
+  "apps/app/src/pages/friends-page/components/FriendsSidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/GroupPage.tsx": {
+  "apps/app/src/pages/friends-page/components/SettledUpCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupBalancesTab.tsx": {
+  "apps/app/src/pages/friends-page/index.ts": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupCoverSection.tsx": {
+  "apps/app/src/pages/group-page/GroupPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupInviteActionRows.tsx": {
+  "apps/app/src/pages/group-page/components/GroupBalancesTab.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupInviteEmptyState.tsx": {
+  "apps/app/src/pages/group-page/components/GroupCoverSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupMembersTab.tsx": {
+  "apps/app/src/pages/group-page/components/GroupInviteActionRows.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupSettingsTab.tsx": {
+  "apps/app/src/pages/group-page/components/GroupInviteEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupSummary.tsx": {
+  "apps/app/src/pages/group-page/components/GroupMembersTab.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/components/GroupTabsContent.tsx": {
+  "apps/app/src/pages/group-page/components/GroupSettingsTab.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/group-page/index.ts": {
+  "apps/app/src/pages/group-page/components/GroupSummary.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/SettingsPage.tsx": {
+  "apps/app/src/pages/group-page/components/GroupTabsContent.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/AccountSection.tsx": {
+  "apps/app/src/pages/group-page/index.ts": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/AppSettingsSection.tsx": {
+  "apps/app/src/pages/settings-page/SettingsPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/NotificationsSection.tsx": {
+  "apps/app/src/pages/settings-page/components/AccountSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/PrivacySecuritySection.tsx": {
+  "apps/app/src/pages/settings-page/components/AppSettingsSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/RegionalSection.tsx": {
+  "apps/app/src/pages/settings-page/components/NotificationsSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/SettingsPageHeader.tsx": {
+  "apps/app/src/pages/settings-page/components/PrivacySecuritySection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/expense-preferences-section/ExpensePreferencesSection.tsx": {
+  "apps/app/src/pages/settings-page/components/RegionalSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/components/solo-preferences-section/SoloPreferencesSection.tsx": {
+  "apps/app/src/pages/settings-page/components/SettingsPageHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/settings-page/index.ts": {
+  "apps/app/src/pages/settings-page/components/expense-preferences-section/ExpensePreferencesSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/pages/solo-page/SoloPage.tsx": {
+  "apps/app/src/pages/settings-page/components/solo-preferences-section/SoloPreferencesSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "src/public-routes/PublicEffects.test.tsx": {
+  "apps/app/src/pages/settings-page/index.ts": {
+    "import-x/no-default-export": {
+      "count": 1
+    }
+  },
+  "apps/app/src/pages/solo-page/SoloPage.tsx": {
+    "import-x/no-default-export": {
+      "count": 1
+    }
+  },
+  "apps/app/src/public-routes/PublicEffects.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 4
     }
   },
-  "src/public-routes/PublicLanguageLinks.test.tsx": {
+  "apps/app/src/public-routes/PublicLanguageLinks.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   },
-  "src/root.tsx": {
+  "apps/app/src/root.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }

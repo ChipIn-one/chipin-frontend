@@ -10,9 +10,9 @@ export const IMPACT_RULES = [
     {
         id: 'AUTH-041',
         paths: new Set([
-            'src/store/authStore.ts',
-            'src/helpers/authSession.ts',
-            'src/features/routing/ProtectedRoute.tsx',
+            'apps/app/src/store/authStore.ts',
+            'apps/app/src/helpers/authSession.ts',
+            'apps/app/src/features/routing/ProtectedRoute.tsx',
         ]),
         sourceUrl: AUTH_041_URL,
         step: AUTH_041_STEP,
@@ -27,50 +27,50 @@ export const SMOKE_SHORT = {
     id: 'SMOKE-SHORT',
     sourceUrl: 'https://github.com/ChipIn-one/chipin-frontend/issues/543',
     prefixes: [
-        'src/features/routing/', // routing and protected routes
-        'src/public-routes/', // public route tree and prerendered entry
-        'src/api/', // API client, interceptors and resources
-        'src/bootstrap/', // API and Sentry bootstrap
+        'apps/app/src/features/routing/', // routing and protected routes
+        'apps/app/src/public-routes/', // public route tree and prerendered entry
+        'apps/app/src/api/', // API client, interceptors and resources
+        'apps/app/src/bootstrap/', // API and Sentry bootstrap
     ],
     files: new Set([
         // routing
-        'src/constants/routes.ts',
-        'src/constants/publicRoutes.ts',
-        'src/constants/publicRouteManifest.ts',
-        'src/helpers/publicRoutes.ts',
-        'scripts/private-spa-navigation.ts',
+        'apps/app/src/constants/routes.ts',
+        'apps/app/src/constants/publicRoutes.ts',
+        'apps/app/src/constants/publicRouteManifest.ts',
+        'apps/app/src/helpers/publicRoutes.ts',
+        'apps/app/scripts/private-spa-navigation.ts',
         // auth/session
-        'src/store/authStore.ts',
-        'src/store/authSelectors.ts',
-        'src/store/authConstants.ts',
-        'src/helpers/authSession.ts',
-        'src/constants/auth.ts',
-        'src/hooks/useCheckSignIn.tsx',
+        'apps/app/src/store/authStore.ts',
+        'apps/app/src/store/authSelectors.ts',
+        'apps/app/src/store/authConstants.ts',
+        'apps/app/src/helpers/authSession.ts',
+        'apps/app/src/constants/auth.ts',
+        'apps/app/src/hooks/useCheckSignIn.tsx',
         // store bootstrap
-        'src/root.tsx',
-        'src/main.tsx',
-        'src/app/providers/QueryProvider.tsx',
-        'src/shared/api/queryClient.ts',
-        'src/pages/GlobalHooks.tsx',
-        'src/hooks/useSyncUserSettings.tsx',
+        'apps/app/src/root.tsx',
+        'apps/app/src/main.tsx',
+        'apps/app/src/app/providers/QueryProvider.tsx',
+        'apps/app/src/shared/api/queryClient.ts',
+        'apps/app/src/pages/GlobalHooks.tsx',
+        'apps/app/src/hooks/useSyncUserSettings.tsx',
         // service worker / PWA
-        'src/helpers/pwa.ts',
-        'src/helpers/serviceWorkerRecovery.ts',
-        'src/helpers/serviceWorkerHost.ts',
-        'public/sw-kill.js',
-        'scripts/sw-app-plugin.ts',
-        'src/hooks/pwaHooks.tsx',
-        'src/basics/PWABadge.tsx',
-        'vite.config.ts',
-        'pwa-assets.config.ts',
-        'scripts/prerender-before-workbox.mjs',
-        'app.html',
+        'apps/app/src/helpers/pwa.ts',
+        'apps/app/src/helpers/serviceWorkerRecovery.ts',
+        'apps/app/src/helpers/serviceWorkerHost.ts',
+        'apps/app/public/sw-kill.js',
+        'apps/app/scripts/sw-app-plugin.ts',
+        'apps/app/src/hooks/pwaHooks.tsx',
+        'apps/app/src/basics/PWABadge.tsx',
+        'apps/app/vite.config.ts',
+        'apps/app/pwa-assets.config.ts',
+        'apps/app/scripts/prerender-before-workbox.mjs',
+        'apps/app/app.html',
         // theme switching
-        'src/helpers/theme.ts',
-        'src/constants/styled-themes.ts',
-        'src/constants/localstorage.ts',
+        'apps/app/src/helpers/theme.ts',
+        'apps/app/src/constants/styled-themes.ts',
+        'apps/app/src/constants/localstorage.ts',
         // Vercel routing and headers
-        'vercel.json',
+        'apps/app/vercel.json',
     ]),
     checks: [
         { step: 'Google sign-in on the Preview', expected: 'Dashboard opens' },

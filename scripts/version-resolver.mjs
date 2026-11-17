@@ -17,7 +17,9 @@ const RELEASE_TAG_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 const REPO_NAME_PART_PATTERN = /^[A-Za-z0-9._-]+$/u;
 const TAG_REF_PREFIX = 'refs/tags/';
 const PEELED_SUFFIX = '^{}';
-const REPOSITORY_ROOT = resolve(process.cwd());
+// The repository root from this file, not from the working directory: Vite runs with cwd = apps/app
+// (npm run -w @chipin/app, the Vercel Root Directory) (spec 04 §1.2, 04-0a).
+const REPOSITORY_ROOT = resolve(import.meta.dirname, '..');
 
 const normalizeValue = value => (typeof value === 'string' ? value.trim() : '');
 

@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react-swc';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
-import { resolveAppVersion } from './scripts/version-resolver.mjs';
+import { resolveAppVersion } from '../../scripts/version-resolver.mjs';
 
 const appVersion = resolveAppVersion();
 

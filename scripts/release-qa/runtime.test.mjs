@@ -885,7 +885,7 @@ test('an unlinked commit under src/ still blocks the handoff', () => {
     const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2' };
     return prepareReleaseQa({
         env,
-        readApi: evidenceApi({ pulls: null, files: ['src/App.tsx'] }),
+        readApi: evidenceApi({ pulls: null, files: ['apps/app/src/App.tsx'] }),
         writeApi: null,
         probe: () => Promise.resolve(),
     }).then(
@@ -1078,8 +1078,34 @@ function packageRaw({
         [contentsPath('package-lock.json', BASE)]: lockText(basePackages),
         [contentsPath('package.json', SHA)]: pkgText(deps, dev),
         [contentsPath('package-lock.json', SHA)]: lockText(lockPackages),
+        // No app workspace manifest at either commit (the GitHub contents API: absent = null).
+        [contentsPath('apps/app/package.json', BASE)]: null,
+        [contentsPath('apps/app/package.json', SHA)]: null,
     };
 }
+
+test('dependencies moved from the root package.json into apps/app/package.json are not a change (04-0a)', () => {
+    const files = ['package.json', 'apps/app/package.json', 'package-lock.json'];
+    const moved = raw => ({
+        ...packageRaw(),
+        [contentsPath('package.json', SHA)]: pkgText({}, { eslint: '^9.0.0' }),
+        [contentsPath('apps/app/package.json', SHA)]: JSON.stringify({
+            name: '@chipin/app',
+            dependencies: { i18next: raw },
+        }),
+    });
+    return readPackageBuildChanges(evidenceApi({ raw: moved('^26.4.2') }), files, BASE, SHA)
+        .then(changes => {
+            expect(changes).toEqual([]);
+            return readPackageBuildChanges(
+                evidenceApi({ raw: moved('^26.5.0') }),
+                files,
+                BASE,
+                SHA,
+            );
+        })
+        .then(changes => expect(changes).toEqual(['package.json dependencies: i18next']));
+});
 
 test('package evidence is read at the Production baseline and the candidate', () => {
     const files = ['package.json', 'package-lock.json'];
@@ -1111,7 +1137,7 @@ test('package evidence is read at the Production baseline and the candidate', ()
         })
         .then(changes => {
             expect(changes).toEqual([]);
-            return readPackageBuildChanges(evidenceApi(), ['src/App.tsx'], BASE, SHA);
+            return readPackageBuildChanges(evidenceApi(), ['apps/app/src/App.tsx'], BASE, SHA);
         })
         .then(changes => {
             expect(changes).toEqual([]);
@@ -1756,7 +1782,10 @@ function sharedRoot() {
 test('dispatch with qa_login=syllik and reassign_qa moves an existing QA Issue to the owner alone and mentions nobody', () => {
     const body = `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->\n- Immutable Preview URL: ${PREVIEW_URL}\n`;
     const assignment = assignmentApi(['syllik', 'SoRawSteak']);
-    const evidence = evidenceApi({ files: ['src/App.tsx'], prFiles: ['src/App.tsx'] });
+    const evidence = evidenceApi({
+        files: ['apps/app/src/App.tsx'],
+        prFiles: ['apps/app/src/App.tsx'],
+    });
     const readApi = {
         ...evidence,
         request: path => {
@@ -1858,10 +1887,16 @@ function scopeApi({ compareFiles, commits, totalCommits = commits.length, perCom
 const named = paths => paths.map(filename => ({ filename }));
 
 test('FE#621: a compare under 300 files keeps the compare file list and reads no commit', () => {
-    const api = scopeApi({ compareFiles: ['src/App.tsx', 'docs/a.md'], commits: [scopeSha(1)] });
+    const api = scopeApi({
+        compareFiles: ['apps/app/src/App.tsx', 'docs/a.md'],
+        commits: [scopeSha(1)],
+    });
     return readReleaseScope(api, BASE, SHA).then(scope => {
         expect(scope.fileSource).toBe('compare');
-        expect(scope.files.map(item => item.filename)).toEqual(['src/App.tsx', 'docs/a.md']);
+        expect(scope.files.map(item => item.filename)).toEqual([
+            'apps/app/src/App.tsx',
+            'docs/a.md',
+        ]);
         expect(scope.commits).toEqual([{ sha: scopeSha(1) }]);
         expect(api.requests.some(path => /\/commits\/[0-9a-f]{40}\?/.test(path))).toBe(false);
     });
@@ -1874,7 +1909,10 @@ test('FE#621: a compare with 300+ files is rebuilt from every paginated commit f
             sha,
             index === 0
                 ? [
-                      { filename: 'src/new.tsx', previous_filename: 'src/old.tsx' },
+                      {
+                          filename: 'apps/app/src/new.tsx',
+                          previous_filename: 'apps/app/src/old.tsx',
+                      },
                       ...named(Array.from({ length: 361 }, (_, file) => `src/fmt-${file}.ts`)),
                   ]
                 : named([`docs/file-${index % 120}.md`, `scripts/tool-${index}.mjs`]),
@@ -1890,14 +1928,14 @@ test('FE#621: a compare with 300+ files is rebuilt from every paginated commit f
         expect(scope.commits).toHaveLength(150);
         const paths = scope.files.map(item => item.filename);
         expect(new Set(paths).size).toBe(paths.length);
-        expect(paths).toContain('src/new.tsx');
-        expect(paths).toContain('src/old.tsx');
+        expect(paths).toContain('apps/app/src/new.tsx');
+        expect(paths).toContain('apps/app/src/old.tsx');
         expect(paths).toHaveLength(2 + 361 + 120 + 149);
         expect(scope.commitPaths.size).toBe(150);
         expect(scope.commitPaths.get(commits[0])).toHaveLength(2 + 361);
         expect(scope.commitPaths.get(commits[0]).slice(0, 2)).toEqual([
-            'src/new.tsx',
-            'src/old.tsx',
+            'apps/app/src/new.tsx',
+            'apps/app/src/old.tsx',
         ]);
         expect(api.requests.filter(path => path.includes(`/commits/${commits[0]}?`))).toHaveLength(
             4,

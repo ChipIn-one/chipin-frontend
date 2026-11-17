@@ -5,7 +5,14 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { findBaselineGrowth, main, messageId, parseBase, resolveBase } from './check-baseline.mjs';
+import {
+    findBaselineGrowth,
+    main,
+    messageId,
+    movedBaseline,
+    parseBase,
+    resolveBase,
+} from './check-baseline.mjs';
 
 const SHA = 'a'.repeat(40);
 const entry = count => ({ count });
@@ -182,6 +189,44 @@ describe('check-baseline growth', () => {
                 headRegistry: registry,
             }),
         ).toEqual([]);
+    });
+});
+
+describe('check-baseline across the apps/app move (04-0a)', () => {
+    const count = n => ({ 'no-debugger': { count: n } });
+
+    test('pre-move base keys of the moved folders are read under apps/app', () => {
+        expect(
+            movedBaseline({
+                'src/a.ts': count(1),
+                'ds-gallery/gallery.tsx': count(1),
+                'contract-tests/support/http.ts': count(1),
+                'apps/app/src/b.ts': count(2),
+                'scripts/x.mjs': count(3),
+            }),
+        ).toEqual({
+            'apps/app/src/a.ts': count(1),
+            'apps/app/ds-gallery/gallery.tsx': count(1),
+            'apps/app/contract-tests/support/http.ts': count(1),
+            'apps/app/src/b.ts': count(2),
+            'scripts/x.mjs': count(3),
+        });
+    });
+
+    test('the move is not growth, a higher count after the move still is', async () => {
+        const input = {
+            base: movedBaseline({ 'src/a.ts': count(2) }),
+            baseRegistry: {},
+            headRegistry: {},
+            file: 'eslint-suppressions.json',
+        };
+
+        expect(
+            await findBaselineGrowth({ ...input, head: { 'apps/app/src/a.ts': count(2) } }),
+        ).toEqual([]);
+        expect(
+            await findBaselineGrowth({ ...input, head: { 'apps/app/src/a.ts': count(3) } }),
+        ).toEqual(['eslint-suppressions.json: apps/app/src/a.ts no-debugger 2 -> 3']);
     });
 });
 

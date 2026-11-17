@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { resolveAppVersion } from '../../scripts/version-resolver.mjs';
+import { resolveAppVersion } from '../../../../scripts/version-resolver.mjs';
 
 import { APP_VERSION } from './version';
 

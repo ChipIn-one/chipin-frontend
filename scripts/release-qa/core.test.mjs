@@ -292,13 +292,13 @@ describe('scope and canonical QA identity', () => {
         html_url: 'https://github.com/ChipIn-one/chipin-frontend/pull/20',
         issues: [12],
         commits: [SHA, BASE],
-        files: ['src/App.tsx'],
+        files: ['apps/app/src/App.tsx'],
     };
     const primary = { issue: 12, step: 'Open settings', expected: 'Settings page appears' };
 
     test('deduplicates a multi-commit PR and derives only explicit steps and expected results', () => {
         const plan = buildChecklist({
-            files: ['src/App.tsx'],
+            files: ['apps/app/src/App.tsx'],
             commits: [SHA, BASE],
             pulls: [pull],
             issues: [issue],
@@ -314,7 +314,7 @@ describe('scope and canonical QA identity', () => {
         const files = [
             '.github/workflows/frontend-ci.yml',
             'scripts/release-qa/core.mjs',
-            'src/App.test.tsx',
+            'apps/app/src/App.test.tsx',
             'docs/help.md',
         ];
         const result = buildChecklist({
@@ -324,7 +324,7 @@ describe('scope and canonical QA identity', () => {
                 {
                     ...pull,
                     commits: [SHA],
-                    files: ['.github/workflows/frontend-ci.yml', 'src/App.test.tsx'],
+                    files: ['.github/workflows/frontend-ci.yml', 'apps/app/src/App.test.tsx'],
                 },
             ],
             issues: [issue],
@@ -341,7 +341,7 @@ describe('scope and canonical QA identity', () => {
 
     test('an included UI Issue without QA lines gets the check-against-Acceptance line instead of blocking', () => {
         const result = buildChecklist({
-            files: ['src/App.tsx'],
+            files: ['apps/app/src/App.tsx'],
             commits: [SHA],
             pulls: [{ ...pull, commits: [SHA] }],
             issues: [{ ...issue, body: '## Acceptance\n- [ ] Works' }],
@@ -367,7 +367,7 @@ describe('scope and canonical QA identity', () => {
         };
         const result = buildChecklist({
             files: [
-                'src/App.tsx',
+                'apps/app/src/App.tsx',
                 'package.json',
                 'package-lock.json',
                 '.github/workflows/frontend-ci.yml',
@@ -384,19 +384,24 @@ describe('scope and canonical QA identity', () => {
     test('an unlinked commit or PR under src/ still blocks', () => {
         expect(() =>
             buildChecklist({
-                files: ['src/App.tsx'],
+                files: ['apps/app/src/App.tsx'],
                 commits: [SHA],
                 pulls: [],
                 issues: [],
-                commitFiles: { [SHA]: ['src/App.tsx'] },
+                commitFiles: { [SHA]: ['apps/app/src/App.tsx'] },
             }),
         ).toThrow(/unlinked commit.*UI-affecting/);
         expect(() =>
-            buildChecklist({ files: ['src/App.tsx'], commits: [SHA], pulls: [], issues: [] }),
+            buildChecklist({
+                files: ['apps/app/src/App.tsx'],
+                commits: [SHA],
+                pulls: [],
+                issues: [],
+            }),
         ).toThrow(/unlinked commit/);
         expect(() =>
             buildChecklist({
-                files: ['src/App.tsx'],
+                files: ['apps/app/src/App.tsx'],
                 commits: [SHA],
                 pulls: [{ ...pull, commits: [SHA], issues: [] }],
                 issues: [],
@@ -404,7 +409,7 @@ describe('scope and canonical QA identity', () => {
         ).toThrow(/PR #20.*UI-affecting/);
         expect(() =>
             buildChecklist({
-                files: ['src/App.tsx'],
+                files: ['apps/app/src/App.tsx'],
                 commits: [SHA],
                 pulls: [{ ...pull, commits: [SHA], issues: [12, 13] }],
                 issues: [issue],
@@ -415,7 +420,7 @@ describe('scope and canonical QA identity', () => {
     test('a linked PR without readable files fails closed', () => {
         expect(() =>
             buildChecklist({
-                files: ['src/App.tsx'],
+                files: ['apps/app/src/App.tsx'],
                 commits: [SHA],
                 pulls: [{ ...pull, commits: [SHA], files: undefined }],
                 issues: [issue],
@@ -426,7 +431,7 @@ describe('scope and canonical QA identity', () => {
     test('mixed candidate omits manual checks for a linked non-UI PR', () => {
         const docsPull = { number: 21, issues: [13], commits: [BASE], files: ['docs/help.md'] };
         const result = buildChecklist({
-            files: ['src/App.tsx', 'docs/help.md'],
+            files: ['apps/app/src/App.tsx', 'docs/help.md'],
             commits: [SHA, BASE],
             pulls: [{ ...pull, commits: [SHA] }, docsPull],
             issues: [issue, { number: 13, body: '## Acceptance\n- [ ] Documentation updated' }],
@@ -441,7 +446,7 @@ describe('scope and canonical QA identity', () => {
 
     test('uses an explicit when/then acceptance criterion without guessing a scenario', () => {
         const result = buildChecklist({
-            files: ['src/App.tsx'],
+            files: ['apps/app/src/App.tsx'],
             commits: [SHA],
             pulls: [{ ...pull, commits: [SHA] }],
             issues: [
@@ -458,15 +463,27 @@ describe('scope and canonical QA identity', () => {
 
     test('a risky path appends the five SMOKE-SHORT checks once and AUTH-041 is not duplicated', () => {
         const result = buildChecklist({
-            files: ['src/store/authStore.ts', 'src/helpers/authSession.ts', 'src/api/groupsApi.ts'],
+            files: [
+                'apps/app/src/store/authStore.ts',
+                'apps/app/src/helpers/authSession.ts',
+                'apps/app/src/api/groupsApi.ts',
+            ],
             commits: [SHA, BASE],
             pulls: [
                 {
                     ...pull,
                     commits: [SHA],
-                    files: ['src/store/authStore.ts', 'src/helpers/authSession.ts'],
+                    files: [
+                        'apps/app/src/store/authStore.ts',
+                        'apps/app/src/helpers/authSession.ts',
+                    ],
                 },
-                { number: 21, issues: [12], commits: [BASE], files: ['src/api/groupsApi.ts'] },
+                {
+                    number: 21,
+                    issues: [12],
+                    commits: [BASE],
+                    files: ['apps/app/src/api/groupsApi.ts'],
+                },
             ],
             issues: [issue],
         });
@@ -491,13 +508,13 @@ describe('scope and canonical QA identity', () => {
 
     test('routing, bootstrap, service worker, theme and vercel.json trigger SMOKE-SHORT; tests and plain UI do not', () => {
         for (const file of [
-            'src/features/routing/AppRouter.tsx',
-            'src/root.tsx',
-            'src/bootstrap/initializeApi.ts',
-            'src/helpers/serviceWorkerRecovery.ts',
-            'src/helpers/theme.ts',
-            'vercel.json',
-            'vite.config.ts',
+            'apps/app/src/features/routing/AppRouter.tsx',
+            'apps/app/src/root.tsx',
+            'apps/app/src/bootstrap/initializeApi.ts',
+            'apps/app/src/helpers/serviceWorkerRecovery.ts',
+            'apps/app/src/helpers/theme.ts',
+            'apps/app/vercel.json',
+            'apps/app/vite.config.ts',
         ]) {
             const result = buildChecklist({
                 files: [file],
@@ -508,10 +525,14 @@ describe('scope and canonical QA identity', () => {
             expect(result.smoke, file).toBe(true);
         }
         const plain = buildChecklist({
-            files: ['src/App.tsx', 'src/api/groupsApi.test.ts'],
+            files: ['apps/app/src/App.tsx', 'apps/app/src/api/groupsApi.test.ts'],
             commits: [SHA],
             pulls: [
-                { ...pull, commits: [SHA], files: ['src/App.tsx', 'src/api/groupsApi.test.ts'] },
+                {
+                    ...pull,
+                    commits: [SHA],
+                    files: ['apps/app/src/App.tsx', 'apps/app/src/api/groupsApi.test.ts'],
+                },
             ],
             issues: [issue],
         });
@@ -566,7 +587,7 @@ describe('scope and canonical QA identity', () => {
     });
 
     test('tsconfig.app.json and scripts/version-resolver.mjs are build-affecting by path', () => {
-        for (const file of ['tsconfig.app.json', 'scripts/version-resolver.mjs']) {
+        for (const file of ['apps/app/tsconfig.app.json', 'scripts/version-resolver.mjs']) {
             const result = buildChecklist({
                 files: [file],
                 commits: [SHA],
@@ -584,11 +605,11 @@ describe('scope and canonical QA identity', () => {
 
     test('a build-affecting change forces SMOKE-SHORT next to plain UI work, once, without AUTH-041 duplicates', () => {
         const result = buildChecklist({
-            files: ['src/App.tsx', 'tsconfig.app.json'],
+            files: ['apps/app/src/App.tsx', 'apps/app/tsconfig.app.json'],
             commits: [SHA, BASE],
             pulls: [{ ...pull, commits: [SHA] }],
             issues: [issue],
-            commitFiles: { [BASE]: ['tsconfig.app.json'] },
+            commitFiles: { [BASE]: ['apps/app/tsconfig.app.json'] },
         });
         expect(result.smoke).toBe(true);
         expect(result.checks[0]).toEqual(primary);
@@ -598,11 +619,11 @@ describe('scope and canonical QA identity', () => {
 
     test('the QA Issue renders primary, missing-steps and smoke lines with => separators', () => {
         const plan = buildChecklist({
-            files: ['src/App.tsx', 'vercel.json'],
+            files: ['apps/app/src/App.tsx', 'apps/app/vercel.json'],
             commits: [SHA, BASE],
             pulls: [
                 { ...pull, commits: [SHA] },
-                { number: 21, issues: [13], commits: [BASE], files: ['vercel.json'] },
+                { number: 21, issues: [13], commits: [BASE], files: ['apps/app/vercel.json'] },
             ],
             issues: [
                 issue,
@@ -747,7 +768,7 @@ describe('scope and canonical QA identity', () => {
             body: `## QA\n${long}`,
         }));
         const plan = buildChecklist({
-            files: ['src/App.tsx'],
+            files: ['apps/app/src/App.tsx'],
             commits: pulls.map(item => item.commits[0]),
             pulls,
             issues: [{ ...issue, body: '' }],
@@ -773,7 +794,7 @@ describe('scope and canonical QA identity', () => {
             body: '## Acceptance\n- [ ] Works',
         };
         const plan = buildChecklist({
-            files: ['src/App.tsx', 'docs/help.md'],
+            files: ['apps/app/src/App.tsx', 'docs/help.md'],
             commits: [SHA, BASE, HEAD],
             pulls: [
                 {
@@ -822,7 +843,7 @@ describe('scope and canonical QA identity', () => {
 
     test('Issue QA lines come first under the Issue, then its PR steps; the fallback needs neither', () => {
         const withPr = buildChecklist({
-            files: ['src/App.tsx'],
+            files: ['apps/app/src/App.tsx'],
             commits: [SHA],
             pulls: [
                 {
@@ -849,7 +870,7 @@ describe('scope and canonical QA identity', () => {
             '#### #12: Settings page\n- [ ] #12: Open settings => Settings page appears\n\n#### PR #20: Settings (#12)\n',
         );
         const none = buildChecklist({
-            files: ['src/App.tsx'],
+            files: ['apps/app/src/App.tsx'],
             commits: [SHA],
             pulls: [{ ...pull, commits: [SHA], body: '## Summary\n- [ ] Not QA' }],
             issues: [{ ...issue, body: '## Acceptance\n- [ ] Works' }],
@@ -876,7 +897,7 @@ describe('scope and canonical QA identity', () => {
             deploymentId: 42,
             url: status.environment_url,
             plan: buildChecklist({
-                files: ['src/App.tsx'],
+                files: ['apps/app/src/App.tsx'],
                 commits: [SHA, BASE],
                 pulls: [pull],
                 issues: [issue],
@@ -898,7 +919,7 @@ describe('scope and canonical QA identity', () => {
             deploymentId: 42,
             url: status.environment_url,
             plan: buildChecklist({
-                files: ['src/App.tsx'],
+                files: ['apps/app/src/App.tsx'],
                 commits: [SHA, BASE],
                 pulls: [pull],
                 issues: [issue],

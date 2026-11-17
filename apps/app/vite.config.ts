@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
+import { resolveAppVersionInfo } from '../../scripts/version-resolver.mjs';
+
 import {
     addPublicDirectoryAliases,
     runPrerenderPublic,
@@ -12,7 +14,6 @@ import {
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
 import { shouldUploadSourcemaps } from './scripts/sentry-sourcemaps.ts';
 import { swAppPlugin } from './scripts/sw-app-plugin.ts';
-import { resolveAppVersionInfo } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
 

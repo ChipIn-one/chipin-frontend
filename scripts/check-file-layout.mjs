@@ -18,6 +18,9 @@ const repoRoot = resolve(import.meta.dirname, '..');
 
 export const BASELINE_PATH = 'config/file-layout-baseline.json';
 export const SOURCE_DIR = 'src';
+// The app workspace (04-0a). Baseline paths stay relative to it (`src/...`), so `--base` against a
+// commit from before the move compares the same paths.
+export const APP_DIR = 'apps/app';
 // Folders that hold a slice's private files, never a slice of their own (10.Recursive).
 const NOT_A_SLICE = new Set(['internal', 'components']);
 
@@ -165,7 +168,7 @@ export const main = (argv = process.argv.slice(2)) => {
         return 1;
     }
     const errors = checkFileLayout({
-        files: listFiles(repoRoot),
+        files: listFiles(resolve(repoRoot, APP_DIR)),
         baseline: readJson(BASELINE_PATH),
         baseBaseline: base ? readBaselineAt(base) : undefined,
     });

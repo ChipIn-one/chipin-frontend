@@ -364,7 +364,10 @@ export const projectConfig = ({ appDir }) => [
     {
         name: 'chipin/no-default-export',
         files: [LINT_FILES],
-        ignores: DEFAULT_EXPORT_EXCEPTIONS.map(glob => appGlob(appDir, glob)),
+        ignores: [
+            ...DEFAULT_EXPORT_EXCEPTIONS.map(glob => appGlob(appDir, glob)),
+            '*.config.{js,ts,mjs}',
+        ],
         plugins: { 'import-x': importX },
         rules: {
             'import-x/no-default-export': 'error',

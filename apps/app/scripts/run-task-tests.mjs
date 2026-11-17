@@ -14,7 +14,9 @@ const main = () => {
         return 1;
     }
 
-    const vitestCli = fileURLToPath(new URL('../node_modules/vitest/vitest.mjs', import.meta.url));
+    const vitestCli = fileURLToPath(
+        new URL('../../../node_modules/vitest/vitest.mjs', import.meta.url),
+    );
     const result = spawnSync(process.execPath, [vitestCli, 'run', ...testArgs], {
         stdio: 'inherit',
     });
