@@ -6,6 +6,8 @@ const boot = vi.hoisted(() => ({
     createRoot: vi.fn(() => ({ render: vi.fn() })),
     hydrateRoot: vi.fn(),
     startCacheRestore: vi.fn(),
+    syncHtmlLang: vi.fn(),
+    i18n: { changeLanguage: () => Promise.resolve() },
 }));
 
 vi.mock('react-dom/client', () => ({
@@ -17,7 +19,8 @@ vi.mock('shared/offline/restore', () => ({ startCacheRestore: boot.startCacheRes
 vi.mock('public-routes', () => ({ PublicApp: () => null }));
 vi.mock('bootstrap/initializeApi', () => ({ initializeApi: vi.fn() }));
 vi.mock('bootstrap/initializeSentry', () => ({ initializeSentry: vi.fn() }));
-vi.mock('i18n', () => ({ default: { changeLanguage: () => Promise.resolve() } }));
+vi.mock('i18n', () => ({ default: boot.i18n }));
+vi.mock('i18n/htmlLang', () => ({ syncHtmlLang: boot.syncHtmlLang }));
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 vi.mock('@vercel/speed-insights/react', () => ({ SpeedInsights: () => null }));
 vi.mock('basics/PWABadge', () => ({ default: () => null }));
@@ -105,4 +108,14 @@ test.each([
     });
     expect(boot.startCacheRestore).toHaveBeenCalledOnce();
     expect(replace).not.toHaveBeenCalled();
+});
+
+// #708: `<html lang>` follows the i18next language from the boot on, on the app and public pages.
+test.each([
+    ['https://app.chipin.one/settings', false],
+    ['https://app.chipin.one/ru/privacy', true],
+])('the boot of %s keeps the html lang in step with i18next', async (url, publicSsg) => {
+    await bootOn(url, { publicSsg });
+
+    expect(boot.syncHtmlLang).toHaveBeenCalledExactlyOnceWith(boot.i18n);
 });
