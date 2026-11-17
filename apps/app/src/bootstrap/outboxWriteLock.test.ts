@@ -977,20 +977,27 @@ describe('03-15c1 R2', () => {
         const release = await holdWebLock(WRITE_LOCK);
 
         timeOutNextLockRequests(3);
-        const restored = startLedgerOutbox(newClient(), USER, effects);
+        // Only the backoff timers are fake: the read retries after 1 s, 2 s, then waits 4 s.
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        try {
+            const restored = startLedgerOutbox(newClient(), USER, effects);
 
-        // The read times out three times (retried after 1 s and 2 s).
-        await wait(3_300);
-        expect(vi.mocked(AbortSignal.timeout).mock.calls.length).toBeGreaterThanOrEqual(3);
-        expect(outboxRestoreState(USER)).toBe('pending');
-        expect(
-            vi
-                .mocked(Sentry.captureMessage)
-                .mock.calls.filter(([message]) => message === 'outbox.write_lock_timeout'),
-        ).toHaveLength(1);
-        release();
-        await expect(restored).resolves.toBe('ok');
-    }, 10_000);
+            await vi.advanceTimersByTimeAsync(1_000);
+            await vi.advanceTimersByTimeAsync(2_000);
+            expect(vi.mocked(AbortSignal.timeout).mock.calls).toHaveLength(3);
+            expect(outboxRestoreState(USER)).toBe('pending');
+            expect(
+                vi
+                    .mocked(Sentry.captureMessage)
+                    .mock.calls.filter(([message]) => message === 'outbox.write_lock_timeout'),
+            ).toHaveLength(1);
+            release();
+            await vi.advanceTimersByTimeAsync(4_000);
+            await expect(restored).resolves.toBe('ok');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
 
     test('L1: two clears of the user, the first delete retrying: the new session waits for both deletes', async () => {
         const requests = serveLedger();
