@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import { ApiError } from 'shared/lib/apiError';
 import { useAuthStore } from 'store/authStore';
 
 import { OAuthCallbackPage } from './OAuthCallbackPage';
@@ -65,6 +67,44 @@ test('returns a failed OAuth exchange to the sanitized return route', () => {
     return screen.findByTestId('destination').then(destination => {
         expect(destination.textContent).toBe('/activity?filter=mine#latest');
         expect(exchangeGoogleOAuthCode).toHaveBeenCalledWith('bad-code');
+    });
+});
+
+test('AUTH-016: asks to start sign-in again in this browser when the OAuth browser binding is missing', () => {
+    const exchangeGoogleOAuthCode = vi.fn().mockRejectedValue(
+        new ApiError({
+            status: 400,
+            payload: { code: 'AUTH.OAUTH_BROWSER_BINDING_REQUIRED' },
+            cause: undefined,
+        }),
+    );
+    useAuthStore.setState({ exchangeGoogleOAuthCode });
+
+    renderCallback('/oauth/callback?code=unbound-code');
+
+    return screen.findByTestId('destination').then(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+            'Google sign-in could not be finished in this browser. Please start signing in again here.',
+        );
+    });
+});
+
+test('shows the expired-code message for an invalid OAuth exchange code', () => {
+    const exchangeGoogleOAuthCode = vi.fn().mockRejectedValue(
+        new ApiError({
+            status: 401,
+            payload: { code: 'AUTH.INVALID_OAUTH_EXCHANGE_CODE' },
+            cause: undefined,
+        }),
+    );
+    useAuthStore.setState({ exchangeGoogleOAuthCode });
+
+    renderCallback('/oauth/callback?code=spent-code');
+
+    return screen.findByTestId('destination').then(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+            'Google sign-in expired or is no longer valid. Please try again.',
+        );
     });
 });
 
