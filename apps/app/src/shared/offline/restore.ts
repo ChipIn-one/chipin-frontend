@@ -18,6 +18,7 @@ import { queryCacheKey } from './constants';
 import { persistOptions, reportPersistFailed } from './queryPersister';
 import {
     cachesByUser,
+    runCacheRestored,
     runUserClientSetup,
     takePendingSeed,
     unblockCacheWrites,
@@ -56,6 +57,9 @@ const restoreAndSubscribe = (entry: UserCache, userId: string): Promise<void> =>
             if (entry.disposed) {
                 // `clearUserData` ran during the restore: nothing of this user is saved again.
                 return;
+            }
+            if (!restoreAborted) {
+                runCacheRestored(entry.client, userId);
             }
             entry.unsubscribe = persistQueryClientSubscribe({
                 queryClient: entry.client,

@@ -1,8 +1,9 @@
+import { dehydrate, hydrate, QueryClient } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { type SelfUser, usersKeys } from 'entities/users';
+import { reconcileRestoredSelf, type SelfUser, usersKeys } from 'entities/users';
 import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -155,5 +156,128 @@ test('changes the language only when the language changes', () =>
                 expect(changeLanguage).toHaveBeenCalledTimes(2);
                 expect(changeLanguage).toHaveBeenLastCalledWith('en');
             });
+        });
+    }));
+
+// #719: the persisted cache is saved throttled, so a reload right after a settings write can
+// restore a self user older than the cached `LocalUser`, written at once on every confirmed value.
+// After the restore the entry takes this user's cached language and theme and keeps its update
+// time; the session load replaces it with the server value.
+const RESTORED_AT = Date.now() - 60_000;
+
+/** Seeds the self user the way the restore does: dehydrated, then hydrated into the client. */
+const restoreSelfUser = (user: SelfUser) => {
+    const source = new QueryClient();
+    source.setQueryData(usersKeys.self(), user, { updatedAt: RESTORED_AT });
+    act(() => {
+        hydrate(getDefaultTestQueryClient(), dehydrate(source));
+        reconcileRestoredSelf(getDefaultTestQueryClient(), 'user-1');
+    });
+};
+
+const cachedRu = { ...settings, language: 'ru', theme: 'dark', defaultCurrency: 'EUR' } as const;
+
+test.each([
+    ['another user', { id: 'user-2', role: 'USER', settings: cachedRu }],
+    ['no user id', { settings: cachedRu }],
+] as const)('a restored self user keeps its settings when the cached user is %s', (_, cached) => {
+    useAuthStore.setState({ status: 'authenticated' });
+    locale.matchLocale.mockImplementation(raw => raw);
+    saveLocalUser(cached);
+    restoreSelfUser(selfUser({ language: 'en', theme: 'light' }));
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(changeLanguage).toHaveBeenLastCalledWith('en');
+    expect(setTheme).toHaveBeenLastCalledWith('light');
+});
+
+test('a restored self user takes only the cached language and theme, and keeps its update time', () => {
+    saveLocalUser({ id: 'user-1', role: 'USER', settings: cachedRu });
+    restoreSelfUser(selfUser({ language: 'en', theme: 'light' }));
+
+    const client = getDefaultTestQueryClient();
+    expect(client.getQueryData<SelfUser>(usersKeys.self())?.settings).toEqual({
+        ...settings,
+        language: 'ru',
+        theme: 'dark',
+    });
+    expect(client.getQueryState(usersKeys.self())?.dataUpdatedAt).toBe(RESTORED_AT);
+});
+
+test('a restored invalidated self user stays invalidated after it takes the cached settings', () => {
+    saveLocalUser({ id: 'user-1', role: 'USER', settings: cachedRu });
+    const source = new QueryClient();
+    source.setQueryData(usersKeys.self(), selfUser({ language: 'en' }), { updatedAt: RESTORED_AT });
+    // What `updateSelf` `onError` leaves after the session ended: the entry marked for a reload.
+    void source.invalidateQueries({ queryKey: usersKeys.self(), refetchType: 'none' });
+    const client = getDefaultTestQueryClient();
+
+    act(() => {
+        hydrate(client, dehydrate(source));
+    });
+    expect(client.getQueryState(usersKeys.self())?.isInvalidated).toBe(true);
+    act(() => {
+        reconcileRestoredSelf(client, 'user-1');
+    });
+
+    expect(client.getQueryData<SelfUser>(usersKeys.self())?.settings.language).toBe('ru');
+    expect(client.getQueryState(usersKeys.self())?.isInvalidated).toBe(true);
+    expect(client.getQueryState(usersKeys.self())?.dataUpdatedAt).toBe(RESTORED_AT);
+});
+
+test('a restored self user does not override the newer cached language and theme', () => {
+    useAuthStore.setState({ status: 'authenticated' });
+    locale.matchLocale.mockImplementation(raw => raw);
+    saveLocalUser({ id: 'user-1', role: 'USER', settings: cachedRu });
+    restoreSelfUser(selfUser({ language: 'en', theme: 'light' }));
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(changeLanguage).toHaveBeenCalledWith('ru');
+    expect(changeLanguage).not.toHaveBeenCalledWith('en');
+    expect(locale.saveLocalePreference).not.toHaveBeenCalledWith('en');
+    expect(setTheme).toHaveBeenCalledWith('dark');
+    expect(setTheme).not.toHaveBeenCalledWith('light');
+});
+
+test('an optimistic change on the restored self user keeps the cached language', () =>
+    Promise.resolve().then(() => {
+        useAuthStore.setState({ status: 'authenticated' });
+        locale.matchLocale.mockImplementation(raw => raw);
+        saveLocalUser({ id: 'user-1', role: 'USER', settings: cachedRu });
+        restoreSelfUser(selfUser({ language: 'en', theme: 'light' }));
+        renderHook(() => useSyncUserSettings());
+
+        // What `onMutate` writes: the cached entry with one change, at the current time.
+        const client = getDefaultTestQueryClient();
+        const base = client.getQueryData<SelfUser>(usersKeys.self());
+        act(() => {
+            if (base) {
+                client.setQueryData(usersKeys.self(), {
+                    ...base,
+                    settings: { ...base.settings, theme: 'system' },
+                });
+            }
+        });
+        return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
+            expect(changeLanguage).not.toHaveBeenCalledWith('en');
+            expect(setTheme).toHaveBeenLastCalledWith('system');
+        });
+    }));
+
+test('a server value loaded after the restore applies over the cached user', () =>
+    Promise.resolve().then(() => {
+        useAuthStore.setState({ status: 'authenticated' });
+        locale.matchLocale.mockImplementation(raw => raw);
+        saveLocalUser({ id: 'user-1', role: 'USER', settings: cachedRu });
+        restoreSelfUser(selfUser({ language: 'en', theme: 'light' }));
+        renderHook(() => useSyncUserSettings());
+
+        // Changed on another device: the refetch brings a newer server value.
+        seedSelfUser(selfUser({ language: 'de', theme: 'light' }));
+        return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
+            expect(changeLanguage).toHaveBeenLastCalledWith('de');
+            expect(setTheme).toHaveBeenLastCalledWith('light');
         });
     }));
