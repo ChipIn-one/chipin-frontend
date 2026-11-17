@@ -1,4 +1,5 @@
 import { onlineManager, QueryClient } from '@tanstack/react-query';
+import { clear } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { ApiResponseFormatError, AuthRequestCancelledError } from 'shared/api/client';
@@ -26,15 +27,35 @@ import {
     type OutboxKind,
     type OutboxOpBase,
     pendingOutboxOps,
+    readOutbox,
     recordFailedOp,
     removeOutboxOp,
     resetOutbox,
-    startOutbox,
     stopOutbox,
 } from './outboxStore';
 import { isEntryWithPendingOp } from './pendingOps';
 
 vi.mock('./queryPersister', () => ({ reportPersistFailed: vi.fn() }));
+// The outbox keys in memory: the queue writes are real read-modify-writes, without IndexedDB timers.
+vi.mock('idb-keyval', () => {
+    const store = new Map<string, unknown>();
+
+    return {
+        get: (key: string) => Promise.resolve(store.get(key)),
+        set: (key: string, value: unknown) => {
+            store.set(key, value);
+            return Promise.resolve();
+        },
+        del: (key: string) => {
+            store.delete(key);
+            return Promise.resolve();
+        },
+        clear: () => {
+            store.clear();
+            return Promise.resolve();
+        },
+    };
+});
 // The queue writes stay real; a test can make one fail or hang (the IndexedDB writes of 03-15b).
 vi.mock('./outboxStore', async importOriginal => {
     const actual = await importOriginal<typeof import('./outboxStore')>();
@@ -72,7 +93,7 @@ const networkError = (): Error =>
 const queue = (
     entryId: string,
     kind: OutboxKind = 'updateExpense',
-    { owner = OWNER, createdAt = 1_000 }: { owner?: string; createdAt?: number } = {},
+    { owner = OWNER, createdAt = Date.now() }: { owner?: string; createdAt?: number } = {},
 ): Promise<OutboxOpBase> =>
     appendOutboxOp(seq => ({
         opId: `op-${seq}`,
@@ -156,10 +177,11 @@ const runAll = (
 
 const tick = (ms = 1_000): Promise<void> => vi.advanceTimersByTimeAsync(ms).then(() => undefined);
 
-beforeEach(() => {
+beforeEach(async () => {
     vi.useFakeTimers();
     resetOutbox();
-    startOutbox(OWNER);
+    await clear();
+    await readOutbox(OWNER);
 });
 
 afterEach(() => {
@@ -605,7 +627,7 @@ describe('03 §2.3 owner check (C3-07)', () => {
 
         await tick();
         session = 'user-2';
-        startOutbox('user-2');
+        await readOutbox('user-2');
         const own = await queue('entry-y', 'createExpense', { owner: 'user-2' });
         const ownRun = runOutboxOp(own, deps);
 
@@ -658,7 +680,7 @@ describe('03 §2.3 owner check (C3-07)', () => {
         expect([...answers.keys()]).toEqual([stale.opId]);
 
         session = 'user-2';
-        startOutbox('user-2');
+        await readOutbox('user-2');
         const own = await appendOutboxOp(seq => ({
             opId: 'op-of-user-2',
             seq,

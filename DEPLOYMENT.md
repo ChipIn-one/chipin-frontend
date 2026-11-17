@@ -30,7 +30,11 @@ the Sentry release and uploads source maps (see Build toolchain below).
 
 `VITE_FEATURE_OFFLINE_WRITES` turns on offline expense writes through the
 outbox (spec 03 §2.7) only when it is exactly `true`; it is unset (off) in every
-environment until PR 03-17 enables it.
+environment until PR 03-17 enables it. Since 03-15b the outbox is persisted in
+IndexedDB (`chipin:outbox:<userId>`, `chipin:outbox-failed:<userId>`), but it
+still coordinates one tab only (Web Locks arrive in 03-15c): keep the flag unset
+in every deploy, previews included. Off, the outbox code is not loaded and its
+keys are neither read nor written (only `clearUserData` deletes them, as before).
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.

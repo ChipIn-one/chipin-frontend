@@ -5,6 +5,7 @@ import {
     QueryClientProvider,
 } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { clear } from 'idb-keyval';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -26,7 +27,12 @@ import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
 import { createQueryClient } from 'shared/api/queryClient';
 import { currencyCode, fromUnits } from 'shared/money';
-import { resetOutbox } from 'shared/offline/outboxStore';
+import {
+    OutboxLimitError,
+    OutboxPersistError,
+    pendingOutboxOps,
+    resetOutbox,
+} from 'shared/offline/outboxStore';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
@@ -35,6 +41,7 @@ import { mountAsUserClient } from 'test/userClient';
 
 import {
     LedgerWriteRefusedError,
+    startUserLedgerOutbox,
     toastLedgerWriteError,
     useCreateExpense,
     useCreateSettlement,
@@ -42,6 +49,7 @@ import {
     useUpdateExpense,
 } from './useLedgerMutations';
 
+import 'fake-indexeddb/auto';
 import 'i18n/index';
 
 vi.mock('sonner', () => ({
@@ -772,6 +780,19 @@ test('the toast of a rejected write: offline is named, an ended session and a re
     ]);
 });
 
+test('03 §2.8: an expense not saved on the device says so; a full outbox asks for the network', () => {
+    toastLedgerWriteError(
+        new OutboxPersistError(new Error('QuotaExceededError')),
+        'Request failed',
+    );
+    toastLedgerWriteError(new OutboxLimitError(), 'Request failed');
+    expect(vi.mocked(toast.error).mock.calls).toEqual([
+        ['Could not save on the device — connect to the network'],
+        ['Too many unsent operations — connect to the network'],
+    ]);
+    expect(toast.success).not.toHaveBeenCalled();
+});
+
 test('a settlement is sent with its amount as a scale-4 literal and reloads the group, the dashboard and the feeds', async () => {
     const client = signIn();
     const sent = serve();
@@ -848,6 +869,8 @@ describe('C1-10 two create paths', () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         const client = signIn();
 
+        await clear();
+        await startUserLedgerOutbox(client, 'user-1');
         client.setQueryData(capabilitiesQueryOptions().queryKey, [
             'ledger.clientEntryId',
             'ledger.entryVersion',
@@ -865,12 +888,19 @@ describe('C1-10 two create paths', () => {
             retry: false,
         });
         expect(sentWrites(sent)).toEqual([]);
+        // §2.8: saved on the device (the append write landed), sent when the network is back.
+        expect(pendingOutboxOps()).toHaveLength(1);
+        expect(vi.mocked(toast.success).mock.calls).toEqual([
+            ['Saved, we will send it when the network is back'],
+        ]);
     });
 
     test('M2: a second submit in the same tick, while the first is being queued, is refused as busy: one op', async () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         const client = signIn();
 
+        await clear();
+        await startUserLedgerOutbox(client, 'user-1');
         client.setQueryData(capabilitiesQueryOptions().queryKey, [
             'ledger.clientEntryId',
             'ledger.entryVersion',

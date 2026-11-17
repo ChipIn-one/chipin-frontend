@@ -1,6 +1,7 @@
 // The hydration gate (spec 03 §1.5, §1.6): one QueryClient per user, its cache restored from IDB
 // outside React before the router renders, then subscribed for saving. Not part of it: the outbox
-// (restored separately by the leader, 03-15b) and the offline cold start (`useCheckSignIn`).
+// (restored separately, started by `runUserClientSetup` with the client, 03-15b) and the offline
+// cold start (`useCheckSignIn`).
 import { useCallback, useSyncExternalStore } from 'react';
 import * as Sentry from '@sentry/react';
 import type { QueryClient } from '@tanstack/react-query';
@@ -15,7 +16,13 @@ import { createQueryClient } from 'shared/api/queryClient';
 
 import { queryCacheKey } from './constants';
 import { persistOptions, reportPersistFailed } from './queryPersister';
-import { cachesByUser, takePendingSeed, unblockCacheWrites, type UserCache } from './userCaches';
+import {
+    cachesByUser,
+    runUserClientSetup,
+    takePendingSeed,
+    unblockCacheWrites,
+    type UserCache,
+} from './userCaches';
 
 /** After this the app starts without the cache; a late IDB result is not applied. */
 export const RESTORE_TIMEOUT_MS = 3000;
@@ -89,6 +96,8 @@ const ensureUserCache = (userId: string): UserCache => {
     cachesByUser.set(userId, entry);
     cachesByClient.set(entry.client, entry);
     takePendingSeed(userId)?.(entry.client);
+    // The outbox restore is not part of `ready` (§1.6, C3-02): it has no timeout of its own.
+    runUserClientSetup(entry.client, userId);
     entry.ready = restoreAndSubscribe(entry, userId).then(() => {
         entry.isReady = true;
         entry.listeners.forEach(listener => listener());

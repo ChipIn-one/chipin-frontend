@@ -7,6 +7,7 @@ import { initChipInApiInterceptors } from './chipin.interceptors';
 const onUnauthorizedSession = vi.fn();
 const onRequestFailure = vi.fn<(error: unknown, requestStartedAt?: number) => Promise<void>>();
 const onResponseSuccess = vi.fn();
+const onAccessTokenChanged = vi.fn<(token: string) => void>();
 
 const authSessionMocks = vi.hoisted(() => ({
     accessToken: 'current-access-token',
@@ -37,7 +38,12 @@ vi.mock('helpers/env', () => ({
 }));
 
 beforeAll(() => {
-    initChipInApiInterceptors(onUnauthorizedSession, onRequestFailure, onResponseSuccess);
+    initChipInApiInterceptors(
+        onUnauthorizedSession,
+        onRequestFailure,
+        onResponseSuccess,
+        onAccessTokenChanged,
+    );
 });
 
 beforeEach(() => {
@@ -366,6 +372,26 @@ test('reports every successful response of both instances, never a failed one', 
         response: { status: 503 },
     });
     expect(onResponseSuccess).toHaveBeenCalledTimes(2);
+});
+
+test('spec 03 §2.3: every new access token is announced once, before a request carries it', async () => {
+    const ok = () =>
+        apiInstance.get('/dashboard', {
+            adapter: config =>
+                Promise.resolve({ config, data: {}, headers: {}, status: 200, statusText: 'OK' }),
+        });
+
+    authSessionMocks.accessToken = 'token-of-a-sign-in';
+    await ok();
+    await ok();
+    expect(onAccessTokenChanged.mock.calls).toEqual([['token-of-a-sign-in']]);
+
+    authSessionMocks.accessToken = 'token-of-a-refresh';
+    await ok();
+    expect(onAccessTokenChanged.mock.calls).toEqual([
+        ['token-of-a-sign-in'],
+        ['token-of-a-refresh'],
+    ]);
 });
 
 test('passes when the failed request was sent, for the store to drop stale classifications', async () => {

@@ -624,7 +624,7 @@ Deviation (03-15a): the core is in memory and wired only behind `VITE_FEATURE_OF
 `outboxRun.ts` (`runOutboxOp`, `retryWrite`, `classifyOutboxError`, `adoptOutboxOps`, `recheckOutboxOwner`) and
 `entities/ledger/api/outbox.ts` (keys, op types, send, defaults, path choice). (1) The outbox defaults are registered on
 a client at its first outbox write (`registerLedgerOutboxDefaults`, once per client), not in `createQueryClient()`: there
-is no hydrate yet, and with the flag off nothing of the outbox runs; 03-15b registers them before hydrate. (2) The hooks
+is no hydrate yet, and with the flag off nothing of the outbox runs; resolved in 03-15b (see below). (2) The hooks
 keep their signatures and stay in `hooks/useLedgerMutations.ts`: the path choice (`chooseLedgerWritePath`, the
 `*ViaOutbox` functions) reads the entry type from the cached `ledger.entry(id)` instead of an `entry` argument (§2.9
 C2-33 needs that cache entry anyway); a settlement is never cached as `EXPENSE`, so it always takes the online key.
@@ -641,7 +641,7 @@ stop predicate instead of `{ ignoreStop }`; adoption continues each mutation it 
 `resumePausedMutations()` (no unrelated paused mutation is resumed). (8) The gate also has `adopt` (an adopted op
 keeps its place in the turn before its run reaches the gate), `releaseTurn`, `wake` (a discard), `reset` (a stop) and
 the `whenTurn` option `isSkipped`; a wait for the network or a backoff ends early on a discard or a stop.
-(9) `recheckOutboxOwner(sub)` opens the `auth` gate; calling it on a token refresh is the 03-15b `auth` gate wiring.
+(9) `recheckOutboxOwner(sub)` opens the `auth` gate; calling it on a token refresh is the 03-15b `auth` gate wiring (done, see below).
 The C3-07 check is bound to the token actually attached: every outbox request carries `expectedTokenSubject: owner`,
 and the request interceptor rejects a mismatch with `AuthRequestCancelledError` before sending (no session expiry),
 classified `auth` like any interceptor cancel (§2.5 row 401: pending, not failed). A run of a previous owner (account
@@ -665,6 +665,44 @@ its own run (`releaseOutboxClaim(opId)`), so a stale run never clears a newer ru
 travels on the Axios request config (`chipinExpectedTokenSubject`); Sentry does not serialize `error.config`
 (`initializeSentry` has no extra-error-data integration, `sendDefaultPii: false`, and no outbox error is captured),
 and the field cannot be stripped in the response-error path because the 401 retry reuses the config.
+
+Deviation (03-15b): the queue is persisted, still one tab (no Web Locks, no `BroadcastChannel`, no drain lock: 03-15c).
+(1) Resolves 03-15a (1): `clientFor(userId)` runs `runUserClientSetup` (`userCaches.ts`), wired by
+`bootstrap/outboxWiring.ts`, which loads the outbox only with the flag on and calls `startLedgerOutbox` =
+`registerLedgerOutboxDefaults` (once per client) and then `restoreOutbox(client, userId, adoption)` (`outboxRun.ts`);
+the register-on-first-write path is gone. Not literally in `createQueryClient()` (it cannot import the ledger entity
+or the hooks' effects), but always before the hydrate. Every tab with a user client restores and drains (no drain lock);
+adoption keeps continuing each mutation it builds (03-15a (7)). (2) Files: `outboxIo.ts` (`runOutboxIo`, the in-tab IO
+chain that 03-15c wraps in the write lock; `stopOutboxIo`/`deleteOutboxKeys` for `clearUserData`), `outboxSchema.ts`
+(`OutboxStateSchema`, `OutboxOpBaseSchema`, `FailedOpSchema`); no `outboxDrain.ts`/`outboxChannel.ts` yet.
+(3) `OutboxState` has every field; `retryRequested` and `conflictDrafts` are kept as read and never written by 03-15b
+(03-15c/03-16b), `sending` stays `null` (the claim is in memory) and a restore clears a stale one. (4) `OutboxOpSchema`
+is split: `OutboxOpBaseSchema` (the base fields, `entryKind: 'expense'`, `schema: 1`, the kind) on every read, an
+op invalid there → failed `unreadable` with the restore still `ok`; the ledger union by `kind` (`LedgerOutboxOpSchema`) on
+adoption. `draft`/`patch` are checked as objects only (built by our mappers, validated by the server: 400 → failed
+`validation`), like the query cache envelope. (5) The failed key is a list of `{ op, reason, failedAt }`; a record whose
+op is not readable is kept verbatim, counts towards the limit and blocks its `entryId` if it has one. `FailedOpSchema`
+keeps `conflict` readable (03-15a (11)); the reasons gain `stale`. (6) Every write reads both keys, applies the change,
+writes only a changed key, the failed key first; memory (`pendingRemovals`, `cancelledOpIds`) follows only after the
+write landed. While `outboxRestore !== 'ok'`, after an owner change or after `clearUserData` a write rejects with
+`OutboxWriteStoppedError` without IO, and `retryWrite` stops on it. `outboxRestore` is set by `readOutbox` once per owner.
+(7) The limit counts pending + failed (+ unreadable records) and applies to all three kinds: at 50 `offlineWritesAvailable`
+is false (the online path); an append that races it rejects with `OutboxLimitError` (toast `limitReached`). `stale` is
+checked on adoption (restore and after every append), not while an op already waits in its run. (8) The toasts live in
+`toasts:offline.*` (`saved`, `saveFailed`, `limitReached`), not in an `offline` namespace; `saved` is shown only while the
+network is unusable (online the caller's own success toast stays, "when the network is back" would be false); the error
+toasts come from `toastLedgerWriteError`. `saveRetry` is 03-15c. `persistFailedThisSession` is set by any rejected append
+write. (9) `navigator.storage.persist()` runs after the first appended op of the session; `isStoragePersisted()` keeps
+the `persisted()` answer for the 03-16a caption. (10) The `auth` gate closes at every `restoreOutbox` and opens at its
+end only if `getAccessTokenUserId()` is the owner; every new access token a request carries is announced once by the
+interceptor (`initChipInApiInterceptors`' 4th callback `onAccessTokenChanged`) and `bootstrap` calls
+`recheckOutboxOwner(sub)` (flag on only). A mismatch keeps it closed; the account-switch dialog is 03-16a.
+(11) `clearUserData`: step (1) `stopOutboxIo(userId)` stops the drain, forgets the queue and refuses later IO of the
+user; step (3) deletes the outbox keys through the same IO chain, after the write in flight. (12) Left for 03-15c: a
+same-owner stop and restart within one tick (unreachable in one tab, a reload is a new context) would let a stale run
+continue; its drain sessions fence it. Until 03-16a writes the 2xx entry into the cache, an edit and a delete of the
+same entry queued while the first is already being answered may take the cached base version (a false 409, a window
+of one request online).
 
 #### 2.5 Error handling
 

@@ -30,6 +30,9 @@ let areChipInApiInterceptorsConfigured = false;
 let onUnauthorizedSession: (() => void) | undefined;
 let onRequestFailure: ((error: unknown, requestStartedAt?: number) => Promise<void>) | undefined;
 let onResponseSuccess: (() => void) | undefined;
+let onAccessTokenChanged: ((token: string) => void) | undefined;
+// The last access token a request carried: a new one is announced once.
+let lastAttachedAccessToken: string | null = null;
 const requestAuthSessionVersions = new WeakMap<object, number>();
 // `performance.now()` when a request was sent: lets the store drop a classification older than its
 // last successful retry.
@@ -174,20 +177,32 @@ const processPublicApiResponseError = (error: unknown): Promise<never> => {
     return processConnectivityError(error);
 };
 
+// The listener (wired by the bootstrap) does not throw: it only schedules the outbox re-check.
+const announceAccessToken = (token: string): void => {
+    if (token !== lastAttachedAccessToken) {
+        lastAttachedAccessToken = token;
+        onAccessTokenChanged?.(token);
+    }
+};
+
 /**
  * Installs the interceptors once. `onRequestFailureCallback` gets every failed response that is not
  * an auth-flow outcome (and not the `/health` probe itself); the bootstrap wires it to the
  * failed-request classification and the connectivity store. `onResponseSuccessCallback` gets every
  * successful response of either instance: proof that the network is usable again.
+ * `onAccessTokenChangedCallback` gets every new access token before a request carries it (a sign-in,
+ * a refresh, another tab's account switch): the outbox re-checks its owner (spec 03 §2.3).
  */
 export const initChipInApiInterceptors = (
     onUnauthorizedSessionCallback?: () => void,
     onRequestFailureCallback?: (error: unknown, requestStartedAt?: number) => Promise<void>,
     onResponseSuccessCallback?: () => void,
+    onAccessTokenChangedCallback?: (token: string) => void,
 ): void => {
     onUnauthorizedSession = onUnauthorizedSessionCallback;
     onRequestFailure = onRequestFailureCallback;
     onResponseSuccess = onResponseSuccessCallback;
+    onAccessTokenChanged = onAccessTokenChangedCallback;
 
     if (areChipInApiInterceptorsConfigured) {
         return;
@@ -206,6 +221,9 @@ export const initChipInApiInterceptors = (
 
             if (currentAccessToken === null) {
                 return Promise.reject(new AuthRequestCancelledError());
+            }
+            if (currentAccessToken) {
+                announceAccessToken(currentAccessToken);
             }
             const expectedSubject: unknown = Reflect.get(config, EXPECTED_TOKEN_SUBJECT_CONFIG_KEY);
 
