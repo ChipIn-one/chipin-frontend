@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { matchPath, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
@@ -57,6 +57,10 @@ const getExpenseModalContext = (
     return 'dashboard';
 };
 
+/** The group of a `/group/:groupId` path. */
+const getRouteGroupId = (pathname: string): string | undefined =>
+    matchPath({ path: `${ROUTES.GROUP}/:groupId`, end: true }, pathname)?.params.groupId;
+
 export const useExpenseModalSource = ({
     context,
     friendId,
@@ -86,7 +90,11 @@ export const useExpenseModalSource = ({
                 lastUsedCurrency: group.lastUsedCurrency,
             })),
             knownFriends: friends?.map(friend => friend.user) ?? [],
-            defaultGroupId: selectedGroupId ?? groups[0]?.id,
+            // On a group page only the opened group: not the last one, not the first loaded.
+            defaultGroupId:
+                openingContext === 'group'
+                    ? getRouteGroupId(location.pathname)
+                    : (selectedGroupId ?? groups[0]?.id),
             preferredFriendId: friendId,
         }),
         [
@@ -95,6 +103,7 @@ export const useExpenseModalSource = ({
             friendId,
             friends,
             groups,
+            location.pathname,
             openingContext,
             selectedGroupId,
             skipCategory,

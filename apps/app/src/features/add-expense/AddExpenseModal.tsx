@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -24,6 +24,7 @@ const AddExpenseModal = () => {
         setIsOpened,
         close,
         initialize,
+        applyLateGroups,
         reset,
     } = useExpenseModalStore(
         useShallow(state => ({
@@ -34,6 +35,7 @@ const AddExpenseModal = () => {
             setIsOpened: state.setIsOpened,
             close: state.close,
             initialize: state.initialize,
+            applyLateGroups: state.applyLateGroups,
             reset: state.reset,
         })),
     );
@@ -53,6 +55,12 @@ const AddExpenseModal = () => {
     }, [initialize, isOpened, mode, reset, source]);
 
     useExpenseModalOpenChange(isOpened, onReset);
+
+    // The groups list can load after the modal opened (#718): the store takes it and picks the
+    // default group unless a target is already set.
+    useEffect(() => {
+        applyLateGroups(source);
+    }, [applyLateGroups, source]);
 
     const content = (
         <>
@@ -81,4 +89,4 @@ const AddExpenseModal = () => {
     );
 };
 
-export default AddExpenseModal;
+export { AddExpenseModal };

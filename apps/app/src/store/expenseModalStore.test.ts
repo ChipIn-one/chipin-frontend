@@ -561,3 +561,89 @@ test.each([
         expect(selectExpensePayload(useExpenseModalStore.getState())).not.toBeNull();
     },
 );
+
+// #718: the groups list loads after the create modal opened on a group page.
+const groupPageSource = (groups: { id: string; members: ExpenseParticipant[] }[]) => ({
+    context: 'group' as const,
+    currentUser,
+    defaultCurrency: 'AED',
+    defaultCategory: 'transport',
+    skipCategory: false,
+    groups,
+    knownFriends: [friend],
+    defaultGroupId: 'group-1',
+});
+
+test('EXP-063 a late groups list fills the default group of a create modal opened without one', () => {
+    useExpenseModalStore.getState().initialize(groupPageSource([]));
+    useExpenseModalStore
+        .getState()
+        .applyLateGroups(groupPageSource([{ id: 'group-1', members: [groupMember, currentUser] }]));
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.groupId).toBe('group-1');
+    expect(selectUserIds(state)).toEqual([currentUser.id, groupMember.id]);
+    expect(state.paidById).toBe(currentUser.id);
+});
+
+test('EXP-063 a late groups list keeps a group the user already chose', () => {
+    const groups = [
+        { id: 'group-1', members: [groupMember, currentUser] },
+        { id: 'group-2', members: [friend, currentUser] },
+    ];
+
+    useExpenseModalStore.getState().initialize(groupPageSource(groups));
+    useExpenseModalStore.getState().setGroupId('group-2');
+    useExpenseModalStore.getState().applyLateGroups({ ...groupPageSource(groups) });
+
+    expect(useExpenseModalStore.getState().groupId).toBe('group-2');
+});
+
+test('EXP-063 a late groups list keeps a friend target the user already chose', () => {
+    useExpenseModalStore.getState().initialize(groupPageSource([]));
+    useExpenseModalStore.getState().setTargetMode('friends');
+    useExpenseModalStore
+        .getState()
+        .applyLateGroups(groupPageSource([{ id: 'group-1', members: [groupMember, currentUser] }]));
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.targetMode).toBe('friends');
+    expect(state.groupId).toBe('');
+    expect(state.source.groups.map(group => group.id)).toEqual(['group-1']);
+
+    useExpenseModalStore.getState().setGroupId('group-1');
+
+    expect(selectUserIds(useExpenseModalStore.getState())).toEqual([
+        currentUser.id,
+        groupMember.id,
+    ]);
+});
+
+test('EXP-063 a group page never falls back to another group when its own is not listed', () => {
+    useExpenseModalStore.getState().initialize({
+        ...groupPageSource([{ id: 'group-2', members: [friend, currentUser] }]),
+        defaultGroupId: 'group-9',
+    });
+
+    expect(useExpenseModalStore.getState().groupId).toBe('');
+});
+
+test('EXP-063 a group-page modal keeps its own group when a later source names another', () => {
+    useExpenseModalStore
+        .getState()
+        .initialize({ ...groupPageSource([]), defaultGroupId: 'group-9' });
+    // Back to the dashboard: the source now defaults to the dashboard's group.
+    useExpenseModalStore.getState().applyLateGroups({
+        ...groupPageSource([{ id: 'group-1', members: [groupMember, currentUser] }]),
+        context: 'dashboard',
+        defaultGroupId: 'group-1',
+    });
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.groupId).toBe('');
+    expect(state.source.defaultGroupId).toBe('group-9');
+    expect(state.source.groups.map(group => group.id)).toEqual(['group-1']);
+});
