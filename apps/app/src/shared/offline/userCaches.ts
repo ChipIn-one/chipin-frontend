@@ -68,6 +68,20 @@ export const runUserClientSetup = (client: QueryClient, userId: string): void =>
     userClientSetup?.(client, userId);
 };
 
+// What runs on a user's client right after its persisted cache is restored (not after a timed-out
+// restore), wired by `bootstrap/initializeApi`: the restored self user takes the newer cached
+// language and theme (#719). `shared` cannot import the users entity itself.
+let cacheRestoredHandler: UserClientSetup | null = null;
+
+export const setCacheRestoredHandler = (handler: UserClientSetup | null): void => {
+    cacheRestoredHandler = handler;
+};
+
+/** Runs the wired handler after the restore of a user's client. */
+export const runCacheRestored = (client: QueryClient, userId: string): void => {
+    cacheRestoredHandler?.(client, userId);
+};
+
 // IndexedDB keys whose writes are dropped: a throttled persist scheduled before `clearUserData`
 // would otherwise bring the user's data back after the `del`.
 const blockedWriteKeys = new Set<string>();

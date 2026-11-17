@@ -1,9 +1,14 @@
 import { initChipInApiInterceptors } from 'api/chipin.interceptors';
+import { reconcileRestoredSelf } from 'entities/users';
 import { setAccessTokenRefreshListener } from 'helpers/authSession';
 import { getLocalUser } from 'helpers/localStorage';
 import { classifyRequestError } from 'shared/api/errors';
 import { bootstrapNetwork } from 'shared/offline/network';
-import { setCacheOwnerReader, setUserClientSetup } from 'shared/offline/userCaches';
+import {
+    setCacheOwnerReader,
+    setCacheRestoredHandler,
+    setUserClientSetup,
+} from 'shared/offline/userCaches';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { onConnectivityChange, onResponseSuccess } from 'store/connectivityStore';
 
@@ -18,6 +23,8 @@ const initializeApi = () => {
     setCacheOwnerReader(() => getLocalUser()?.id);
     // A user's new client starts its expense outbox (only with `VITE_FEATURE_OFFLINE_WRITES`).
     setUserClientSetup(startUserOutbox);
+    // A restored self user older than the cached language and theme takes them (#719).
+    setCacheRestoredHandler(reconcileRestoredSelf);
     initChipInApiInterceptors(
         () => {
             useAuthStore.getState().expireSession();
