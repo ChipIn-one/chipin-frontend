@@ -1,26 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { SUPPORTED_LOCALES } from 'constants/locales';
 import { LOCALE_PREFIX, PUBLIC_PAGES, PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
-import { ROUTE_META, ROUTES } from 'constants/routes';
+import { ROUTE_META } from 'constants/routes';
 
 import { APP_ROUTES, type AppRouteId } from './routeManifest';
-import manifestSource from './routeManifest.ts?raw';
 
-// The non-public routes of the current AppRouter (features/routing/AppRouter.tsx), composed from
-// ROUTES the same way the router composes them.
-const CURRENT_ROUTER_PATHS = [
-    ROUTES.OAUTH_CALLBACK,
-    ROUTES.DASHBOARD,
-    ROUTES.SOLO,
-    `${ROUTES.GROUP}/:groupId`,
-    `${ROUTES.GROUP_JOIN}/:inviteToken`,
-    ROUTES.ACTIVITY,
-    `${ROUTES.ACTIVITY}/:parentActivityId`,
-    `${ROUTES.FRIENDS_JOIN}/:inviteToken`,
-    ROUTES.FRIENDS,
-    ROUTES.SETTINGS,
-    ROUTES.NOT_FOUND_404,
-];
+// The node-importability of the manifest (§2.2) is checked by scripts/routeManifest.node.test.mjs.
+
 const PUBLIC_PATHS = new Set(PUBLIC_ROUTE_ENTRIES.map(route => route.path));
 
 // Spec 04 §2.2 table: the routes whose old chipin.one path is redirected to the app host.
@@ -35,9 +22,26 @@ const WITH_LEGACY_PATHS: readonly AppRouteId[] = [
     'settings',
 ];
 
+const META_FILES = import.meta.glob('../../i18n/locales/*/meta.json', {
+    eager: true,
+    import: 'default',
+});
+
 const regular = APP_ROUTES.filter(route => !route.transitional);
 const transitional = APP_ROUTES.filter(route => route.transitional);
 const sorted = (values: readonly string[]) => [...values].sort();
+
+/** The value at a dotted key path of parsed JSON, or undefined. */
+const valueAt = (json: unknown, path: string): unknown =>
+    path
+        .split('.')
+        .reduce<unknown>(
+            (node, key) =>
+                typeof node === 'object' && node !== null
+                    ? Object.entries(node).find(([name]) => name === key)?.[1]
+                    : undefined,
+            json,
+        );
 
 describe('route manifest', () => {
     it('has unique ids and unique paths among regular and among transitional routes', () => {
@@ -57,16 +61,12 @@ describe('route manifest', () => {
         }
     });
 
-    it('lists exactly the non-public routes the current router serves', () => {
-        expect(sorted(regular.map(route => '/' + route.path))).toEqual(
-            sorted(CURRENT_ROUTER_PATHS),
-        );
-    });
-
-    it('matches the paths and title keys of ROUTE_META', () => {
+    it('lists exactly the non-public ROUTE_META routes, with their title keys', () => {
         const privateMeta = ROUTE_META.filter(meta => !PUBLIC_PATHS.has(meta.path));
 
-        expect(sorted(privateMeta.map(meta => meta.path))).toEqual(sorted(CURRENT_ROUTER_PATHS));
+        expect(sorted(regular.map(route => '/' + route.path))).toEqual(
+            sorted(privateMeta.map(meta => meta.path)),
+        );
         for (const route of regular) {
             const meta = privateMeta.find(item => item.path === '/' + route.path);
 
@@ -102,12 +102,18 @@ describe('route manifest', () => {
         }
     });
 
-    it('has only type imports, so Node can import it without a build', () => {
-        const imports = manifestSource.split('\n').filter(line => /^\s*import\b/.test(line));
-
-        for (const line of imports) {
-            expect(line).toMatch(/^\s*import type\b/);
+    it('has every title key in the meta namespace of every locale', () => {
+        expect(sorted(Object.keys(META_FILES))).toEqual(
+            sorted(SUPPORTED_LOCALES.map(locale => `../../i18n/locales/${locale}/meta.json`)),
+        );
+        for (const [file, json] of Object.entries(META_FILES)) {
+            for (const route of APP_ROUTES) {
+                for (const key of [route.meta.titleKey, route.meta.entityTitleKey]) {
+                    if (key !== undefined) {
+                        expect(typeof valueAt(json, key), `${file}: ${key}`).toBe('string');
+                    }
+                }
+            }
         }
-        expect(manifestSource).not.toMatch(/\brequire\(|\bimport\(/);
     });
 });
