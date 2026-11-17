@@ -2,7 +2,6 @@ import axios from 'axios';
 
 import { API_ERROR_CODE } from 'constants/errors';
 import {
-    getAccessTokenSubject,
     getAuthSessionVersion,
     hasAuthAccessTokenRotated,
     isAuthSessionCurrent,
@@ -19,11 +18,6 @@ import { apiInstance, publicApiInstance } from './chipin.instance';
 const AUTHORIZATION_BEARER_PREFIX = 'Bearer ';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
 const AUTH_RETRY_CONFIG_KEY = 'chipinAuthRetry';
-/**
- * A request config field: the user id (`sub`) the attached access token must have. An outbox op is
- * sent only with its owner's token (spec 03 §2.3, C3-07); a mismatch rejects before sending.
- */
-export const EXPECTED_TOKEN_SUBJECT_CONFIG_KEY = 'chipinExpectedTokenSubject';
 const HEALTH_PATH = '/health';
 
 let areChipInApiInterceptorsConfigured = false;
@@ -35,7 +29,7 @@ const requestAuthSessionVersions = new WeakMap<object, number>();
 // last successful retry.
 const requestStartTimes = new WeakMap<object, number>();
 
-export class AuthRequestCancelledError extends Error {
+class AuthRequestCancelledError extends Error {
     readonly isStaleSession: boolean;
 
     constructor(isStaleSession = false) {
@@ -206,16 +200,6 @@ export const initChipInApiInterceptors = (
 
             if (currentAccessToken === null) {
                 return Promise.reject(new AuthRequestCancelledError());
-            }
-            const expectedSubject: unknown = Reflect.get(config, EXPECTED_TOKEN_SUBJECT_CONFIG_KEY);
-
-            // Not this session's request (another user's token): cancelled without expiring the session.
-            if (
-                typeof expectedSubject === 'string' &&
-                (!currentAccessToken ||
-                    getAccessTokenSubject(currentAccessToken) !== expectedSubject)
-            ) {
-                return Promise.reject(new AuthRequestCancelledError(true));
             }
 
             if (currentAccessToken) {

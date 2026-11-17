@@ -32,6 +32,7 @@
         "test:contract": "npm run test:contract -w @chipin/app --",
         "test:contract:smoke": "npm run test:contract:smoke -w @chipin/app --",
         "test:contract:full": "npm run test:contract:full -w @chipin/app --",
+        "test:e2e": "npm run test:e2e -w @chipin/app --",
         "prerender:public": "npm run prerender:public -w @chipin/app --",
         "verify:public-precache": "npm run verify:public-precache -w @chipin/app --",
         "build:ds-gallery": "npm run build:ds-gallery -w @chipin/app --",

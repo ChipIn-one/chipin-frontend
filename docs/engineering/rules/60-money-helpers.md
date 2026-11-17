@@ -7,7 +7,7 @@
 - Conversion between wire and domain happens only at the API boundary: `moneyFromWire`/`moneyToWire` in
   the `entities/*/model` mappers. Arithmetic runs on `bigint` ledger units; currency minor units are used
   only for display and input limits.
-- New code parses, rounds, sums, and formats money only in `apps/app/src/shared/money/`. Legacy code that has not migrated yet keeps its current amounts and the
+- New code parses, rounds, sums, and formats money only in `src/shared/money/`. Legacy code that has not migrated yet keeps its current amounts and the
   shared helpers in `helpers/numbers.ts` (`parseAmountInput`, `roundHalfUp`, `normalizeApiMoneyAmount`); do
   not add new money parsing, rounding, or arithmetic anywhere else.
 - Keep the public `Amount` component as the shared display boundary; backend-confirmed values remain the financial source of truth.
@@ -20,10 +20,10 @@
 
 ## Offline Financial Mutations
 
-Today there are no offline financial writes in production: the expense outbox core (`shared/offline/outbox*.ts`,
-`entities/ledger/api/outbox.ts`, 03-15a) runs only behind `VITE_FEATURE_OFFLINE_WRITES`, which stays unset (off)
-until 03-17, and a task changes it only when it asks to (`AGENTS.md` "Applies now"). Settle-up and payments are
-online-only. The rules below describe the target (spec 03 §2) and bind the flag-on path.
+Today there are no offline financial writes: `shared/offline/outboxGate.ts` and `shared/offline/pendingOps.ts`
+are no-op stubs that callers may already be wired against, and a task does not build the outbox unless it asks
+for one (`AGENTS.md` "Applies now"). The rules below describe the target (spec 03 §2) and apply once the
+outbox lands.
 
 - Offline expense create/edit/delete goes only through the outbox with a client-generated UUID
   (spec 03 §2). Settle-up and payments are never offline.
@@ -45,7 +45,7 @@ online-only. The rules below describe the target (spec 03 §2) and bind the flag
 
 - Do not round intermediate calculations.
 - Rounding is `roundToMinor` (half-up away from zero to the currency minor units), only for display, and
-  only inside `apps/app/src/shared/money/`.
+  only inside `src/shared/money/`.
 - Do not make a financial decision from a visually rounded value.
 - Missing exchange rates return `null`, never a silent zero or fabricated rate.
 - Currency conversion helpers receive rates/base/source/target explicitly and do not read stores.
@@ -67,7 +67,7 @@ online-only. The rules below describe the target (spec 03 §2) and bind the flag
 - Pass locale, rates, time, and other dependencies explicitly.
 - Browser boundary helpers such as storage, clipboard, and service worker modules may have side effects, which must be clear from their module/function names.
 - Use `null` for an expected absent result and throw/reject for an unexpected state that cannot safely continue.
-- Shared domain constants live in `apps/app/src/constants`; one-module constants stay local.
+- Shared domain constants live in `src/constants`; one-module constants stay local.
 - Name business-significant magic values and use existing time constants.
 
 ## localStorage

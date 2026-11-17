@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react-swc';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 import { resolveAppVersion } from '../../scripts/version-resolver.mjs';
 
@@ -14,6 +14,9 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         setupFiles: ['./src/test/setup.ts'],
+        // Playwright specs run only through `npm run test:e2e` (playwright.config.ts); the pure
+        // e2e support modules keep their `*.test.ts` unit tests here.
+        exclude: [...configDefaults.exclude, 'e2e/**/*.spec.ts'],
         clearMocks: true,
         restoreMocks: true,
     },

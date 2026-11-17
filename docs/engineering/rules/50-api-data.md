@@ -1,7 +1,7 @@
 # API And Data Rules
 
 Until the spec 03 PRs land, TanStack Query, the `api()` wrapper, the generated OpenAPI types
-(`apps/app/src/shared/api/generated/`), and zod do not exist; a task does not install or create them. A new server
+(`src/shared/api/generated/`), and zod do not exist; a task does not install or create them. A new server
 read that would need them before they exist is BLOCKED — ask the owner. Existing server stores keep working
 as described in the legacy notes below, without new server-data fields (`10-architecture.md` §Ownership).
 
@@ -47,11 +47,11 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 
 ## Wire Types
 
-- Request and response types come from the backend OpenAPI snapshot (`apps/app/src/shared/api/generated/`, spec 03
+- Request and response types come from the backend OpenAPI snapshot (`src/shared/api/generated/`, spec 03
   §5); do not hand-write new `Request`/`Response` types for endpoints it covers. Generated files are not
   edited by hand.
-- The snapshot is `apps/app/openapi/chipin.yaml`; `apps/app/openapi/BACKEND_VERSION` is the backend prod SHA that `npm run api:fetch` takes it from.
-- `npm run api:gen` regenerates the types, the wire field registry (`apps/app/scripts/api/wire-fields.mjs`) and `MODEL_SHAPE_HASH`; CI runs
+- The snapshot is `openapi/chipin.yaml`; `openapi/BACKEND_VERSION` is the backend prod SHA that `npm run api:fetch` takes it from.
+- `npm run api:gen` regenerates the types, the wire field registry (`scripts/api/wire-fields.mjs`) and `MODEL_SHAPE_HASH`; CI runs
   `npm run api:check`, and `openapi-drift.yml` reports staging drift daily in the "OpenAPI drift" issue.
 - Run `npm run api:gen` and commit its output after any bump of `typescript` or `openapi-typescript`: both change the
   generated text, and `api:check` fails until it is regenerated.
@@ -60,7 +60,7 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 - Calls go through the typed `api()` wrapper over the shared Axios instance; direct `axios` calls outside
   the API layer are prohibited.
 - zod validates only data that can have a stale format: IndexedDB cache, outbox, and `localStorage`.
-- Legacy `apps/app/src/api/*` modules keep their hand-written types and the namespace-import rule above until their
+- Legacy `src/api/*` modules keep their hand-written types and the namespace-import rule above until their
   resource moves to the generated client.
 
 ## Payloads

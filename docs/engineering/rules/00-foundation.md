@@ -35,7 +35,7 @@ export const fetchGroup = (groupId: string): Promise<Group> => {
 ## Modules
 
 - Named exports only (`import-x/no-default-export`). Exceptions: tool config files (root `*.config.{js,ts,mjs}`,
-  `apps/app/ds-gallery/vite.config.ts`) and `*.d.ts`. Existing default exports are lint suppressions that only
+  `ds-gallery/vite.config.ts`) and `*.d.ts`. Existing default exports are lint suppressions that only
   shrink: a touched file switches to `export { X }`, and its importers and `vi.mock(..., () => ({ default }))`
   calls switch to the named export in the same PR. A lazy route uses
   `lazy(() => import('pages/X').then(m => ({ default: m.X })))`.

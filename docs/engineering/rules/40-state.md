@@ -1,7 +1,7 @@
 # Zustand State Rules
 
 Until the spec 03 PRs land, TanStack Query, the `api()` wrapper, the generated OpenAPI types
-(`apps/app/src/shared/api/generated/`), and zod do not exist; a task does not install or create them. A new server
+(`src/shared/api/generated/`), and zod do not exist; a task does not install or create them. A new server
 read that would need them before they exist is BLOCKED — ask the owner. Existing server stores keep working
 as described in the legacy notes below, without new server-data fields (`10-architecture.md` §Ownership).
 

@@ -14,12 +14,7 @@ import {
     isNetworkError,
     publicApi,
 } from './client';
-import {
-    apiInstance,
-    EXPECTED_TOKEN_SUBJECT_CONFIG_KEY,
-    initChipInApiInterceptors,
-    publicApiInstance,
-} from './http';
+import { apiInstance, initChipInApiInterceptors, publicApiInstance } from './http';
 import { encodePathSegment } from './pathSegment';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
@@ -102,18 +97,6 @@ beforeEach(() => {
 
 afterEach(() => {
     apiInstance.defaults.adapter = originalAdapter;
-});
-
-// Spec 03 §2.3 C3-07: the outbox names the token subject its request must carry; nothing else does.
-test('expectedTokenSubject reaches the interceptors as a config field, only when given', async () => {
-    await api('delete', '/ledger/entries/{id}', {
-        params: { id: UUID },
-        expectedTokenSubject: 'user-1',
-    });
-    expect(Reflect.get(lastRequest(), EXPECTED_TOKEN_SUBJECT_CONFIG_KEY)).toBe('user-1');
-
-    await api('delete', '/ledger/entries/{id}', { params: { id: UUID } });
-    expect(Reflect.has(lastRequest(), EXPECTED_TOKEN_SUBJECT_CONFIG_KEY)).toBe(false);
 });
 
 describe('{param} substitution through encodePathSegment (cases of api/apiPath.test.ts)', () => {

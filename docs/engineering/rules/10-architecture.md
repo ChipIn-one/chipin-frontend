@@ -45,7 +45,7 @@ import `test`; no production file may import it.
   value through helper parameters.
 - The allowed dependency direction is `selector → helper`; helpers cannot depend on selectors.
 
-`features/routing` is an `app` element because it imports pages (until it moves to `apps/app/src/app/router`, spec 04). Do not copy that dependency direction into new features; new route composition belongs at the app/router boundary.
+`features/routing` is an `app` element because it imports pages (until it moves to `src/app/router`, spec 04). Do not copy that dependency direction into new features; new route composition belongs at the app/router boundary.
 
 `import-x/no-cycle` (`maxDepth: 3`) runs only in `npm run lint:full` (CI). Known violations of the layer, cycle and
 slice rules are entries in `eslint-suppressions.json`; the baseline only shrinks.
@@ -67,7 +67,7 @@ slice rules are entries in `eslint-suppressions.json`; the baseline only shrinks
 
 ## Slice Structure
 
-A slice is `apps/app/src/<layer>/<slice>/`. Its directory owns its primary component, presentation styles,
+A slice is `src/<layer>/<slice>/`. Its directory owns its primary component, presentation styles,
 subcomponents, and private implementation details. Create only files that the implementation actually
 needs; never scaffold empty directories or placeholder files.
 
@@ -104,7 +104,7 @@ The example shows the available locations, not a required complete file set.
 
 ## Index Files And Import Boundaries
 
-- The only barrel is the slice root `apps/app/src/<layer>/<slice>/index.ts`; it exposes the slice's public API and
+- The only barrel is the slice root `src/<layer>/<slice>/index.ts`; it exposes the slice's public API and
   never re-exports `internal/`.
 - Inside a slice, import files by relative path; do not import through the slice's own `index.ts`.
 - Another `features`/`entities` slice is imported only through its `index.ts` (`boundaries/dependencies`).
@@ -112,9 +112,9 @@ The example shows the available locations, not a required complete file set.
   at any depth (D27).
 - Existing nested `index.ts` files are legacy: do not add new ones and do not remove them incidentally.
   `scripts/check-file-layout.mjs` (`npm run check:file-layout`, part of `verify`) fails on an `index.ts`
-  outside `apps/app/src/<layer>/<slice>/` and on a new `useConnect.ts`; the existing ones are listed in
+  outside `src/<layer>/<slice>/` and on a new `useConnect.ts`; the existing ones are listed in
   `config/file-layout-baseline.json`, which only shrinks.
-- Bare imports such as `store/groupsStore` are aliases from `compilerOptions.paths` in `apps/app/tsconfig.app.json`
+- Bare imports such as `store/groupsStore` are aliases from `compilerOptions.paths` in `tsconfig.app.json`
   (no `baseUrl`); that is the only alias list. Vite reads it through `vite-tsconfig-paths`, and the
   `simple-import-sort` groups are built from it in `config/eslint/aliases.js`. A new top-level `src`
   directory gets an entry there, nowhere else.

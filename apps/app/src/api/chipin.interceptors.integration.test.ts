@@ -9,11 +9,7 @@ import {
 import { hasAuthSessionHint } from 'helpers/localStorage';
 
 import { apiInstance } from './chipin.instance';
-import {
-    AuthRequestCancelledError,
-    EXPECTED_TOKEN_SUBJECT_CONFIG_KEY,
-    initChipInApiInterceptors,
-} from './chipin.interceptors';
+import { initChipInApiInterceptors } from './chipin.interceptors';
 
 const onUnauthorizedSession = vi.fn(() => {
     invalidateAuthSession();
@@ -353,34 +349,4 @@ test('does not refresh or retry an old 401 after a new auth session is establish
             expect(newSessionAuthorizationHeaders).toEqual([`Bearer ${newAccessToken}`]);
             expect(onUnauthorizedSession).not.toHaveBeenCalled();
         });
-});
-
-// Spec 03 §2.3 C3-07 (H2): an outbox request carries the owner it must be sent for; the check runs
-// against the token the interceptor attaches, after any refresh.
-test('a request expecting another token subject is not sent and does not expire the session; others are unchanged', async () => {
-    const sentAuthorizations: (string | undefined)[] = [];
-    const ledgerRequest = (expectedSubject?: string): Promise<unknown> => {
-        const config = { url: '/ledger/entries', method: 'post' };
-
-        if (expectedSubject !== undefined) {
-            Reflect.set(config, EXPECTED_TOKEN_SUBJECT_CONFIG_KEY, expectedSubject);
-        }
-        return apiInstance.request(config);
-    };
-
-    const tokenOfY = createAccessToken('user-y');
-
-    establishAuthSession(tokenOfY);
-    apiInstance.defaults.adapter = config => {
-        sentAuthorizations.push(getAuthorizationHeader(config));
-        return Promise.resolve(successResponse(config));
-    };
-
-    await expect(ledgerRequest('user-x')).rejects.toBeInstanceOf(AuthRequestCancelledError);
-    expect(sentAuthorizations).toEqual([]);
-    expect(onUnauthorizedSession).not.toHaveBeenCalled();
-
-    await expect(ledgerRequest('user-y')).resolves.toMatchObject({ status: 200 });
-    await expect(ledgerRequest()).resolves.toMatchObject({ status: 200 });
-    expect(sentAuthorizations).toEqual([`Bearer ${tokenOfY}`, `Bearer ${tokenOfY}`]);
 });
