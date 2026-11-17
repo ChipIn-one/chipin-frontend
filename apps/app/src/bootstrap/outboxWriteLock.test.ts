@@ -970,21 +970,60 @@ describe('03-15c1 R2', () => {
         expect(requests).toEqual(['POST entry-b']);
     });
 
-    test('N1: a restore read waiting on a contended lock reports one lock timeout', async () => {
+    test('N1: a restore read that times out on the lock three times reports one lock timeout', async () => {
         await storeOutbox([storedOp(1, 'entry-a')]);
         resetOutbox();
         onlineManager.setOnline(false);
         const release = await holdWebLock(WRITE_LOCK);
 
-        timeOutNextLockRequests();
+        timeOutNextLockRequests(3);
         const restored = startLedgerOutbox(newClient(), USER, effects);
 
-        await wait(50);
+        // The read times out three times (retried after 1 s and 2 s).
+        await wait(3_300);
+        expect(vi.mocked(AbortSignal.timeout).mock.calls.length).toBeGreaterThanOrEqual(3);
         expect(outboxRestoreState(USER)).toBe('pending');
-        expect(Sentry.captureMessage).toHaveBeenCalledWith('outbox.write_lock_timeout', {
-            level: 'warning',
-        });
+        expect(
+            vi
+                .mocked(Sentry.captureMessage)
+                .mock.calls.filter(([message]) => message === 'outbox.write_lock_timeout'),
+        ).toHaveLength(1);
         release();
         await expect(restored).resolves.toBe('ok');
+    }, 10_000);
+
+    test('L1: two clears of the user, the first delete retrying: the new session waits for both deletes', async () => {
+        const requests = serveLedger();
+
+        onlineManager.setOnline(false);
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        await openTab();
+        timeOutNextLockRequests();
+        const first = clearUserData(USER, () => undefined);
+
+        await wait(10);
+        // A sign-in and a sign-out again: the second delete lands at once.
+        const second = clearUserData(USER, () => undefined);
+
+        await wait(10);
+        const client = newClient();
+
+        await startLedgerOutbox(client, USER, effects);
+        expect(pendingOutboxOps()).toEqual([]);
+        await appendOutboxOp(seq => ({
+            ...storedOp(seq, 'entry-b'),
+            opId: 'op-new',
+            kind: 'createExpense' as const,
+            entryKind: 'expense' as const,
+            schema: 1 as const,
+        }));
+        await Promise.all([first, second]);
+
+        expect((await readOutboxKey())?.ops.map(op => op.opId)).toEqual(['op-new']);
+        await startLedgerOutbox(client, USER, effects);
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => expect(requests).toEqual(['POST entry-b']));
+        await wait(50);
+        expect(requests).toEqual(['POST entry-b']);
     });
 });

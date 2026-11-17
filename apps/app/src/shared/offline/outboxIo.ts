@@ -184,9 +184,13 @@ export const deleteOutboxKeys = (userId: string): Promise<void> => {
         () => undefined,
     );
 
-    pendingDeletes.set(userId, settled);
-    void settled.then(() => {
-        if (pendingDeletes.get(userId) === settled) {
+    // A second clear of the user while the first delete still retries: the session waits for both.
+    const previous = pendingDeletes.get(userId);
+    const current = previous ? Promise.all([previous, settled]).then(() => undefined) : settled;
+
+    pendingDeletes.set(userId, current);
+    void current.then(() => {
+        if (pendingDeletes.get(userId) === current) {
             pendingDeletes.delete(userId);
         }
     });
