@@ -80,7 +80,8 @@ test('preparation runs resolve, then one e2e job per profile, then prepare, each
 
 test('only prepare holds the Issue, Slack and dev-read secrets; the e2e job holds only staging and bypass secrets', () => {
     const { resolve, e2e, prepare: job } = prepare.jobs;
-    expect(secretsOf(resolve)).toEqual([]);
+    // The optional bypass secret reaches only the probe of the validated Preview URL.
+    expect(secretsOf(resolve)).toEqual(['VERCEL_AUTOMATION_BYPASS_SECRET']);
     expect(resolve.steps.at(-1).env.GITHUB_TOKEN).toBe('${{ github.token }}');
     expect(resolve.permissions).toEqual({ contents: 'read', actions: 'read', deployments: 'read' });
     expect(new Set(secretsOf(e2e))).toEqual(
@@ -92,7 +93,12 @@ test('only prepare holds the Issue, Slack and dev-read secrets; the e2e job hold
     );
     expect(e2e.permissions).toEqual({ contents: 'read' });
     expect(new Set(secretsOf(job))).toEqual(
-        new Set(['CHIPIN_DEV_READ_TOKEN', 'CHIPIN_ISSUE_WRITE_TOKEN', 'SLACK_WEBHOOK_CI']),
+        new Set([
+            'CHIPIN_DEV_READ_TOKEN',
+            'CHIPIN_ISSUE_WRITE_TOKEN',
+            'SLACK_WEBHOOK_CI',
+            'VERCEL_AUTOMATION_BYPASS_SECRET',
+        ]),
     );
     // Trusted jobs install nothing and run only this master SHA's code.
     for (const trusted of [resolve, job]) {
@@ -124,7 +130,8 @@ test('the matrix runs five profiles without fail-fast, installs only its own bro
         { profile: 'pixel', browser: 'chromium' },
         { profile: 'iphone', browser: 'webkit' },
     ]);
-    expect(e2e['timeout-minutes']).toBeLessThanOrEqual(10);
+    // Hard caps, not the wall-time target: a test step cut at 7 minutes still leaves room for the purge.
+    expect(e2e['timeout-minutes']).toBe(15);
     const checkout = e2e.steps.find(step => step.uses?.startsWith('actions/checkout@'));
     expect(checkout.with).toEqual({
         ref: '${{ needs.resolve.outputs.sha }}',
@@ -135,7 +142,13 @@ test('the matrix runs five profiles without fail-fast, installs only its own bro
     for (const step of installs) {
         expect(step.env).toEqual({ BROWSER: '${{ matrix.browser }}' });
         expect(step.run).toMatch(/ "\$BROWSER"$/);
+        expect(step.if).toMatch(/^steps\.project\.outputs\.available == 'true' && /);
     }
+    // Restore only: the candidate's install scripts run in this job, so it never saves a cache.
+    const caches = e2e.steps.filter(step => step.uses?.startsWith('actions/cache'));
+    expect(caches.map(step => step.uses)).toEqual([
+        'actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
+    ]);
     const test = e2e.steps.find(step => step.id === 'e2e');
     expect(test.run).toBe('npx playwright test --project="$PROFILE"');
     expect(test.env).toMatchObject({
@@ -143,7 +156,13 @@ test('the matrix runs five profiles without fail-fast, installs only its own bro
         CHIPIN_E2E_RUN_ID: '${{ steps.run.outputs.id }}',
         PROFILE: '${{ matrix.profile }}',
     });
-    expect(test['timeout-minutes']).toBeLessThan(e2e['timeout-minutes']);
+    expect(test['timeout-minutes']).toBe(7);
+    expect(test.if).toBe("steps.project.outputs.available == 'true'");
+    // A candidate without the profile's project is reported, not run.
+    const project = e2e.steps.find(step => step.id === 'project');
+    expect(project.run).toContain('npx playwright test --list --project="$PROFILE"');
+    expect(project.run).toContain('Project(s) \\"$PROFILE\\" not found');
+    expect(project.run).toContain('echo "available=false"');
 });
 
 test('each profile job provisions and purges like the PR smoke: own run id first, purge always, artifacts after a verified purge', () => {
@@ -163,8 +182,11 @@ test('each profile job provisions and purges like the PR smoke: own run id first
     const result = steps.find(step => step.name === 'Upload profile result');
     expect(result.with.name).toBe('e2e-result-${{ matrix.profile }}');
     expect(result.with.path).toBe('${{ runner.temp }}/e2e-result/result.json');
+    // "Re-run failed jobs" replaces the earlier result of the same profile.
+    expect(result.with.overwrite).toBe(true);
     const write = steps.find(step => step.name === 'Write profile result');
     expect(write.run).toContain('version: 1, profile: $profile, status: $status');
+    expect(write.run).toContain('status=unsupported');
 });
 
 test('pull requests still run and install only the desktop Chromium project', () => {

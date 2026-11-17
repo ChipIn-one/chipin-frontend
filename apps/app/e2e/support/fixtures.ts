@@ -14,7 +14,7 @@ import { LS_KEY_AUTH_SESSION_HINT } from '../../src/constants/localstorage';
 
 import {
     E2E_RUN_ID_VARIABLE,
-    isPreviewOriginRequest,
+    previewBypassHeaders,
     readE2eEnvironment,
     resolveE2eBasicAuth,
     resolveE2eTarget,
@@ -100,12 +100,20 @@ export const test = base.extend<E2eFixtures>({
             });
             contexts.push(context);
             if (bypass) {
+                // Only the Preview origin is routed; every other request is left untouched.
                 await context.route(
-                    url => isPreviewOriginRequest(bypass, url.href),
-                    route =>
-                        route.continue({
-                            headers: { ...route.request().headers(), ...bypass.headers },
-                        }),
+                    url => url.origin === bypass.origin,
+                    route => {
+                        const request = route.request();
+                        const headers = previewBypassHeaders(bypass, {
+                            url: request.url(),
+                            isNavigation: request.isNavigationRequest(),
+                        });
+
+                        return headers
+                            ? route.continue({ headers: { ...request.headers(), ...headers } })
+                            : route.continue();
+                    },
                 );
             }
             const page = await context.newPage();

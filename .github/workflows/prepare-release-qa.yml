@@ -74,6 +74,8 @@ jobs:
         id: candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # Optional; sent only to the validated Preview URL by the public-Preview probe.
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CANDIDATE_SHA: ${{ inputs.candidate_sha }}
           PREVIEW_DEPLOYMENT_ID: ${{ inputs.deployment_id }}
         run: node scripts/release-qa-resolve.mjs
@@ -86,7 +88,9 @@ jobs:
     needs: resolve
     if: github.actor == 'syllik' && github.triggering_actor == 'syllik' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # A hard cap, not the wall-time target (about 5-7 minutes, docs/e2e-tests.md): it leaves room
+    # for the purge after a test step cut at its own limit.
+    timeout-minutes: 15
     permissions:
       contents: read
     strategy:
@@ -141,26 +145,49 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browser
+      # The candidate's code (an npm ci with install scripts) runs before this step: no matrix job ever
+      # saves a cache. It only restores the browser that master pushes cached (e2e-smoke.yml).
+      - name: Restore Playwright browser
         id: browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browser }}
+      # A candidate from before the matrix has no project for this profile: reported as such, nothing
+      # runs. Any other failure to list the tests fails the job.
+      - name: Check the candidate has this profile
+        id: project
+        working-directory: apps/app
+        env:
+          PROFILE: ${{ matrix.profile }}
+          CHIPIN_E2E_BASE_URL: ${{ needs.resolve.outputs.url }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          if output="$(npx playwright test --list --project="$PROFILE" 2>&1)"; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          elif grep -qF "Project(s) \"$PROFILE\" not found" <<<"$output"; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Profile not in this candidate::The candidate's playwright.config.ts has no '$PROFILE' project (it predates the browser matrix)."
+          else
+            printf '%s\n' "$output" | tail -20
+            exit 1
+          fi
       - name: Install the profile's browser
-        if: steps.browsers.outputs.cache-hit != 'true'
+        if: steps.project.outputs.available == 'true' && steps.browsers.outputs.cache-hit != 'true'
         working-directory: apps/app
         env:
           BROWSER: ${{ matrix.browser }}
         run: npx playwright install --with-deps "$BROWSER"
       # The cache holds only the browser; its system libraries are installed on every runner.
       - name: Install the browser's system dependencies
-        if: steps.browsers.outputs.cache-hit == 'true'
+        if: steps.project.outputs.available == 'true' && steps.browsers.outputs.cache-hit == 'true'
         working-directory: apps/app
         env:
           BROWSER: ${{ matrix.browser }}
         run: npx playwright install-deps "$BROWSER"
       - name: Check staging API
+        if: steps.project.outputs.available == 'true'
         shell: bash
         run: |
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 https://api-dev.chipin.one/users/self || true)"
@@ -173,7 +200,8 @@ jobs:
       # step. The optional Vercel bypass secret is sent only to the Preview origin.
       - name: Run e2e on the Preview (smoke + money flows)
         id: e2e
-        timeout-minutes: 6
+        if: steps.project.outputs.available == 'true'
+        timeout-minutes: 7
         working-directory: apps/app
         env:
           CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
@@ -191,12 +219,15 @@ jobs:
         env:
           PROFILE: ${{ matrix.profile }}
           OUTCOME: ${{ steps.e2e.outcome }}
+          AVAILABLE: ${{ steps.project.outputs.available }}
           REPORT: ${{ runner.temp }}/playwright-results.json
         shell: bash
         run: |
           set -euo pipefail
           status=error passed=0 failed=0 flaky=0 skipped=0
-          if [[ -s "$REPORT" ]] && jq -e '.stats | [.expected, .unexpected, .flaky, .skipped] | all(type == "number" and . >= 0 and . == floor)' "$REPORT" >/dev/null; then
+          if [[ "$AVAILABLE" == "false" ]]; then
+            status=unsupported
+          elif [[ -s "$REPORT" ]] && jq -e '.stats | [.expected, .unexpected, .flaky, .skipped] | all(type == "number" and . >= 0 and . == floor)' "$REPORT" >/dev/null; then
             read -r passed failed flaky skipped < <(jq -r '.stats | "\(.expected) \(.unexpected) \(.flaky) \(.skipped)"' "$REPORT")
             if [[ "$OUTCOME" == "success" ]]; then status=passed; else status=failed; fi
           fi
@@ -214,6 +245,8 @@ jobs:
           path: ${{ runner.temp }}/e2e-result/result.json
           retention-days: 3
           if-no-files-found: ignore
+          # "Re-run failed jobs" replaces the earlier attempt's result of this profile.
+          overwrite: true
       # The teardown writes the marker, holding the run id, only after its second purge found no
       # user of the run left. Without it nothing is scanned or uploaded.
       - name: Check verified purge
@@ -373,6 +406,7 @@ jobs:
           CHIPIN_ISSUE_WRITE_TOKEN: ${{ secrets.CHIPIN_ISSUE_WRITE_TOKEN }}
           SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
           SLACK_USER_MAP: ${{ vars.SLACK_USER_MAP }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CANDIDATE_SHA: ${{ needs.resolve.outputs.sha }}
           PREVIEW_DEPLOYMENT_ID: ${{ needs.resolve.outputs.deployment_id }}
           CANDIDATE_FALLBACK_HEAD: ${{ needs.resolve.outputs.fallback_head }}

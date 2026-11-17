@@ -24,6 +24,7 @@ import {
     parseMatrixResult,
     parseQaResult,
     renderMatrixBanner,
+    renderMatrixChecks,
     renderMatrixTable,
     resultOutcome,
     slackCommitLink,
@@ -256,8 +257,18 @@ export function postSlack(webhook, payload, fetchImpl = fetch) {
     });
 }
 
-export function probePublicPreview(url, fetchImpl = fetch) {
-    return fetchImpl(url, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(10000) })
+// Vercel's Protection Bypass for Automation header, sent only with the optional secret and only to
+// the validated Preview URL; the secret is never logged.
+const VERCEL_BYPASS_HEADER = 'x-vercel-protection-bypass';
+
+export function probePublicPreview(url, fetchImpl = fetch, bypassSecret = '') {
+    const secret = typeof bypassSecret === 'string' ? bypassSecret.trim() : '';
+    return fetchImpl(url, {
+        method: 'GET',
+        redirect: 'error',
+        signal: AbortSignal.timeout(10000),
+        ...(secret ? { headers: { [VERCEL_BYPASS_HEADER]: secret } } : {}),
+    })
         .then(response => {
             if (!response.ok || !/text\/html/i.test(response.headers.get('content-type') ?? '')) {
                 throw new Error('Selected Preview URL is not publicly accessible as an HTML page.');
@@ -672,11 +683,13 @@ export function readMatrixResults(dir, { lstatImpl = lstat, readImpl = readFile 
     ).then(Object.fromEntries);
 }
 
-// The conclusion of each matrix job (`e2e <profile>`) of this run attempt, from the GitHub API. An
-// unreadable list leaves every conclusion unknown, so no profile counts as passed.
-export function readMatrixConclusions(api, runId, attempt) {
+// The latest conclusion of each matrix job (`e2e <profile>`) of this run, from the GitHub API, all
+// pages. `filter=latest` keeps, after "Re-run failed jobs", the newest attempt of every job, so a job
+// that was not re-run keeps its earlier conclusion. An unreadable list leaves every conclusion
+// unknown, so no profile counts as passed.
+export function readMatrixConclusions(api, runId) {
     return api
-        .listObject(`${REPO_PATH}/actions/runs/${runId}/attempts/${attempt}/jobs`, 'jobs')
+        .listObject(`${REPO_PATH}/actions/runs/${runId}/jobs?filter=latest`, 'jobs')
         .then(jobs => {
             const conclusions = {};
             for (const { id } of MATRIX_PROFILES) {
@@ -697,12 +710,9 @@ export function readMatrix({ api, env, files }) {
     return Promise.resolve().then(() => {
         const runId = Number(env.GITHUB_RUN_ID);
         matrixRunUrl(runId);
-        const attempt = Number(env.GITHUB_RUN_ATTEMPT || '1');
-        if (!Number.isSafeInteger(attempt) || attempt <= 0)
-            throw new Error('GITHUB_RUN_ATTEMPT must be a positive integer.');
         return Promise.all([
             readMatrixResults(env.E2E_MATRIX_DIR, files),
-            readMatrixConclusions(api, runId, attempt),
+            readMatrixConclusions(api, runId),
         ]).then(([results, conclusions]) => summarizeMatrix({ results, conclusions, runId }));
     });
 }
@@ -909,7 +919,9 @@ const PREVIEW_ORIGIN = /^https:\/\/chipin-frontend-[a-z0-9]+-sylliks-projects\.v
 // The `resolve` job of prepare-release-qa.yml: the candidate and its immutable Preview, with every
 // check the e2e matrix relies on (trusted vercel[bot] deployment of the exact SHA, public Preview, the
 // SHA inside current master). `prepare` repeats the full trust checks on the same values.
-export function resolveReleaseCandidate({ env, api, probe = probePublicPreview }) {
+export function resolveReleaseCandidate({ env, api, probe = null }) {
+    const probeUrl =
+        probe ?? (url => probePublicPreview(url, fetch, env.VERCEL_AUTOMATION_BYPASS_SECRET));
     return Promise.resolve()
         .then(() => assertOwnerDispatch(env))
         .then(() =>
@@ -921,7 +933,7 @@ export function resolveReleaseCandidate({ env, api, probe = probePublicPreview }
         )
         .then(candidate =>
             Promise.all([
-                readCandidate(api, candidate.deploymentId, candidate.sha, probe),
+                readCandidate(api, candidate.deploymentId, candidate.sha, probeUrl),
                 compare(api, candidate.sha, 'master'),
             ]).then(([preview, toMaster]) => {
                 if (!['ahead', 'identical'].includes(toMaster?.status))
@@ -959,10 +971,11 @@ export function formatResolveOutputs(resolved) {
     ].join('\n');
 }
 
-// A same-SHA rerun's matrix result as an Issue comment. It never starts with `qa`, so the result
-// reader ignores it.
-export function formatMatrixComment(matrix) {
-    return `${renderMatrixBanner(matrix)}\n\n${renderMatrixTable(matrix)}\n`;
+// A same-SHA rerun's matrix result as an Issue comment, with the SMOKE-SHORT checks whose owner it
+// changes. It never starts with `qa`, so the result reader ignores it.
+export function formatMatrixComment(matrix, plan = null) {
+    const checks = renderMatrixChecks(plan, matrix);
+    return `${renderMatrixBanner(matrix)}\n\n${renderMatrixTable(matrix)}\n${checks ? `\n${checks}\n` : ''}`;
 }
 
 export function prepareReleaseQa({
@@ -971,9 +984,11 @@ export function prepareReleaseQa({
     writeApi,
     sharedRoot,
     post = postSlack,
-    probe = probePublicPreview,
+    probe = null,
     matrixFiles,
 }) {
+    const probeUrl =
+        probe ?? (url => probePublicPreview(url, fetch, env.VERCEL_AUTOMATION_BYPASS_SECRET));
     const qaLogin = isOwnerLogin(env.QA_LOGIN) ? RELEASE_OWNER : env.QA_LOGIN || 'SoRawSteak';
     const priority = env.QA_PRIORITY || 'P2';
     if (!['P0', 'P1', 'P2', 'P3'].includes(priority))
@@ -996,7 +1011,7 @@ export function prepareReleaseQa({
             sha = resolved.sha;
             deploymentId = resolved.deploymentId;
             return Promise.all([
-                readCandidate(readApi, deploymentId, sha, probe),
+                readCandidate(readApi, deploymentId, sha, probeUrl),
                 readCi(readApi, sha),
                 readApi
                     .list(`${REPO_PATH}/deployments?environment=Production`)
@@ -1079,7 +1094,7 @@ export function prepareReleaseQa({
                         existing && matrix
                             ? writeApi.request(`${REPO_PATH}/issues/${issue.number}/comments`, {
                                   method: 'POST',
-                                  body: { body: formatMatrixComment(matrix) },
+                                  body: { body: formatMatrixComment(matrix, plan) },
                               })
                             : null;
                     return obtain.then(issue => {

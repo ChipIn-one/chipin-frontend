@@ -23,7 +23,9 @@ export const MATRIX_PROFILES = Object.freeze([
     { id: 'iphone', label: 'iPhone 15 (WebKit)' },
 ]);
 const MATRIX_RESULT_KEYS = ['failed', 'flaky', 'passed', 'profile', 'skipped', 'status', 'version'];
-const MATRIX_RESULT_STATUSES = new Set(['passed', 'failed', 'error']);
+// `unsupported`: the candidate's playwright.config.ts has no project of this profile (it predates
+// the matrix), so nothing ran.
+const MATRIX_RESULT_STATUSES = new Set(['passed', 'failed', 'error', 'unsupported']);
 const MATRIX_COUNTS = ['passed', 'failed', 'flaky', 'skipped'];
 const MAX_MATRIX_COUNT = 10000;
 
@@ -60,15 +62,16 @@ export function matrixRunUrl(runId) {
 }
 
 // A profile passed only when its job concluded `success` (read from the GitHub API, trusted) and its
-// result file reports passed tests and no failure. A failure in either is `failed`; no valid result,
-// or an unverified pass, is `not_run`.
+// result file reports passed tests and no failure. A failure in either is `failed`; a candidate
+// without the profile's project is `predates`; no valid result, or an unverified pass, is `not_run`.
 export function summarizeMatrix({ results = {}, conclusions = {}, runId }) {
     const runUrl = matrixRunUrl(runId);
     const profiles = MATRIX_PROFILES.map(({ id, label }) => {
         const result = results[id] ?? null;
         const conclusion = conclusions[id] ?? null;
         let status = 'not_run';
-        if (result && result.status !== 'error') {
+        if (result?.status === 'unsupported') status = 'predates';
+        else if (result && result.status !== 'error') {
             if (result.status === 'failed' || result.failed > 0 || conclusion === 'failure')
                 status = 'failed';
             else if (conclusion === 'success' && result.passed > 0) status = 'passed';
@@ -90,12 +93,17 @@ export function summarizeMatrix({ results = {}, conclusions = {}, runId }) {
     };
 }
 
-const MATRIX_STATUS_TEXT = { passed: 'passed', failed: '**failed**', not_run: '**no result**' };
+const MATRIX_STATUS_TEXT = {
+    passed: 'passed',
+    failed: '**failed**',
+    not_run: '**no result**',
+    predates: '**not in this candidate**',
+};
 
 function matrixProblems(matrix) {
     const named = status =>
         matrix.profiles.filter(profile => profile.status === status).map(profile => profile.label);
-    return { failed: named('failed'), missing: named('not_run') };
+    return { failed: named('failed'), missing: named('not_run'), predates: named('predates') };
 }
 
 // The first block of a QA Issue (and of a same-SHA retry comment): the verdict before any detail.
@@ -103,10 +111,13 @@ export function renderMatrixBanner(matrix) {
     const run = `[run](${matrix.runUrl})`;
     if (matrix.passed)
         return `> [!NOTE]\n> The automated browser matrix passed on all ${matrix.profiles.length} profiles (${run}). The SMOKE-SHORT checks it covers are marked as automated.`;
-    const { failed, missing } = matrixProblems(matrix);
+    const { failed, missing, predates } = matrixProblems(matrix);
     const parts = [
         failed.length ? `Failed: ${failed.join(', ')}.` : '',
         missing.length ? `No result: ${missing.join(', ')}.` : '',
+        predates.length
+            ? `The candidate predates the browser matrix (no Playwright project): ${predates.join(', ')}.`
+            : '',
     ].filter(Boolean);
     return `> [!CAUTION]\n> **The automated browser matrix did not pass.** ${parts.join(' ')} See the ${run}.\n> The SMOKE-SHORT checks it covers stay in the manual list.`;
 }
@@ -133,10 +144,11 @@ export function formatMatrixLine(matrix) {
     const run = slackLink(matrix.runUrl, 'Run');
     if (matrix.passed)
         return `Автотесты в браузерах прошли на всех ${matrix.profiles.length} профилях — ${run}`;
-    const { failed, missing } = matrixProblems(matrix);
+    const { failed, missing, predates } = matrixProblems(matrix);
     const parts = [
         failed.length ? `упали: ${failed.join(', ')}` : '',
         missing.length ? `без результата: ${missing.join(', ')}` : '',
+        predates.length ? `кандидат старше этих профилей: ${predates.join(', ')}` : '',
     ].filter(Boolean);
     return `Автотесты в браузерах НЕ прошли (${parts.join('; ')}) — ${run}`;
 }
@@ -620,7 +632,7 @@ export function buildChecklist({
         } else {
             checks.push(...steps);
         }
-        // SMOKE-SHORT already ends with AUTH-041; never add the same check twice.
+        // SMOKE-SHORT already holds AUTH-041; never add the same check twice.
         if (!smoke) checks.push(...impactChecks([...linked.paths], issueNumber));
         checks.push(...pullSteps);
     }
@@ -695,6 +707,19 @@ function applyMatrix(checks, matrix) {
             : item,
     );
     return [...marked.filter(item => !item.covered), ...marked.filter(item => item.covered)];
+}
+
+// For a same-SHA rerun comment: the SMOKE-SHORT checks whose owner this matrix changes. A failed
+// matrix gives them to the tester as unchecked boxes (the kept body may list them as automated); a
+// passed one lists them as covered. Empty when the plan has no automated check.
+export function renderMatrixChecks(plan, matrix) {
+    if (plan?.kind !== 'checks') return '';
+    const changed = applyMatrix(plan.checks, matrix).filter(item => item.covered || item.handBack);
+    if (changed.length === 0) return '';
+    const intro = matrix.passed
+        ? 'These SMOKE-SHORT checks are covered by this run of the browser matrix:'
+        : 'This run of the browser matrix did not pass, so these SMOKE-SHORT checks are back with the tester (they count even if the Issue body lists them as automated):';
+    return `${intro}\n\n${changed.map(renderCheck).join('\n')}`;
 }
 
 export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan, matrix = null }) {

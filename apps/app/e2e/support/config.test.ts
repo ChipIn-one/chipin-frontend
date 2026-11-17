@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-    isPreviewOriginRequest,
     LOCAL_DEV_SERVER_ORIGIN,
+    previewBypassHeaders,
     resolveE2eBasicAuth,
     resolveE2eTarget,
     resolvePreviewBypass,
@@ -109,35 +109,48 @@ describe('resolveE2eBasicAuth', () => {
     });
 });
 
-describe('resolvePreviewBypass', () => {
+describe('resolvePreviewBypass and previewBypassHeaders', () => {
     const preview = 'https://chipin-frontend-fzwunx6is-sylliks-projects.vercel.app';
+    const environment = {
+        CHIPIN_E2E_BASE_URL: preview,
+        VERCEL_AUTOMATION_BYPASS_SECRET: 's3cr3t',
+    };
+    const bypass = resolvePreviewBypass(environment, resolveE2eTarget(environment));
+    const headers = {
+        'x-vercel-protection-bypass': 's3cr3t',
+        'x-vercel-set-bypass-cookie': 'true',
+    };
 
-    it('sends the bypass header to the Preview origin only', () => {
-        const environment = {
-            CHIPIN_E2E_BASE_URL: preview,
-            VERCEL_AUTOMATION_BYPASS_SECRET: 's3cr3t',
-        };
-        const bypass = resolvePreviewBypass(environment, resolveE2eTarget(environment));
-
-        expect(bypass).toEqual({
-            origin: preview,
-            headers: { 'x-vercel-protection-bypass': 's3cr3t' },
-        });
+    it('sends the bypass and set-cookie headers on document navigations to the Preview origin', () => {
+        expect(bypass).toEqual({ origin: preview, secret: 's3cr3t' });
         if (!bypass) {
             return;
         }
-        expect(isPreviewOriginRequest(bypass, `${preview}/group/1`)).toBe(true);
-        expect(isPreviewOriginRequest(bypass, `${preview}/api/groups`)).toBe(true);
-        for (const other of [
+        for (const url of [`${preview}/`, `${preview}/group/1`, `${preview}/apiary?x=1`]) {
+            expect(previewBypassHeaders(bypass, { url, isNavigation: true }), url).toEqual(headers);
+        }
+    });
+
+    it('never sends them to /api, to subresources or to any other origin', () => {
+        if (!bypass) {
+            throw new Error('bypass expected');
+        }
+        expect(
+            previewBypassHeaders(bypass, { url: `${preview}/assets/app.js`, isNavigation: false }),
+        ).toBeNull();
+        for (const url of [
+            `${preview}/api`,
+            `${preview}/api/groups`,
+            `${preview}/api/auth/refresh`,
             'https://api-dev.chipin.one/groups',
             'https://chipin.one/',
             'http://chipin-frontend-fzwunx6is-sylliks-projects.vercel.app/',
             `${preview}:8443/`,
             'https://chipin-frontend-fzwunx6is-sylliks-projects.vercel.app.example.com/',
-            'https://vercel.live/_next-live/feedback.js',
+            'https://accounts.google.com/o/oauth2/auth',
             'not a url',
         ]) {
-            expect(isPreviewOriginRequest(bypass, other), other).toBe(false);
+            expect(previewBypassHeaders(bypass, { url, isNavigation: true }), url).toBeNull();
         }
     });
 
@@ -146,7 +159,7 @@ describe('resolvePreviewBypass', () => {
         { CHIPIN_E2E_BASE_URL: preview, VERCEL_AUTOMATION_BYPASS_SECRET: '  ' },
         { VERCEL_AUTOMATION_BYPASS_SECRET: 's3cr3t' },
         { CHIPIN_E2E_BASE_URL: 'http://localhost:4173', VERCEL_AUTOMATION_BYPASS_SECRET: 's3cr3t' },
-    ])('sends nothing without a secret or to a non-Preview target', environment => {
-        expect(resolvePreviewBypass(environment, resolveE2eTarget(environment))).toBeNull();
+    ])('sends nothing without a secret or to a non-Preview target', value => {
+        expect(resolvePreviewBypass(value, resolveE2eTarget(value))).toBeNull();
     });
 });

@@ -15,6 +15,7 @@ import {
     parseMatrixResult,
     parseQaResult,
     prQaSteps,
+    renderMatrixChecks,
     resultOutcome,
     slackLink,
     summarizeMatrix,
@@ -1409,5 +1410,57 @@ describe('release browser matrix', () => {
         expect(formatMatrixLine(failed)).toBe(
             `Автотесты в браузерах НЕ прошли (упали: Desktop Chromium; без результата: Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit)) — <${RUN_URL}|Run>`,
         );
+    });
+
+    test('a candidate from before the matrix is stated as such, not as failed or no result', () => {
+        const unsupported = id =>
+            parseMatrixResult(result(id, { status: 'unsupported', passed: 0 }), id);
+        expect(unsupported('firefox')).toMatchObject({ status: 'unsupported' });
+        const matrix = summarizeMatrix({
+            results: {
+                chromium: parseMatrixResult(result('chromium'), 'chromium'),
+                firefox: unsupported('firefox'),
+                webkit: unsupported('webkit'),
+                pixel: unsupported('pixel'),
+                iphone: unsupported('iphone'),
+            },
+            // The unsupported jobs succeed: nothing ran.
+            conclusions: Object.fromEntries(IDS.map(id => [id, 'success'])),
+            runId: 4242,
+        });
+        expect(matrix.passed).toBe(false);
+        expect(matrix.profiles.map(profile => profile.status)).toEqual([
+            'passed',
+            'predates',
+            'predates',
+            'predates',
+            'predates',
+        ]);
+        const text = body(matrix);
+        expect(text.split('\n')[2]).toBe(
+            `> **The automated browser matrix did not pass.** The candidate predates the browser matrix (no Playwright project): Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit). See the [run](${RUN_URL}).`,
+        );
+        expect(text).toContain('| Desktop Firefox | **not in this candidate** | 0 | 0 | 0 | 0 |');
+        expect(text).not.toMatch(/Failed:|No result:/);
+        expect(formatMatrixLine(matrix)).toBe(
+            `Автотесты в браузерах НЕ прошли (кандидат старше этих профилей: Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit)) — <${RUN_URL}|Run>`,
+        );
+    });
+
+    test('rerun checks: a failed matrix hands b-e back as boxes, a passed one lists them as covered, none without SMOKE-SHORT', () => {
+        const failed = summarizeMatrix({ results: {}, conclusions: {}, runId: 4242 });
+        const back = renderMatrixChecks(smokePlan(), failed);
+        expect(back.match(/^- \[ \] SMOKE-SHORT: /gm) ?? []).toHaveLength(4);
+        expect(back).not.toContain('Google sign-in');
+        const covered = renderMatrixChecks(smokePlan(), allPassed());
+        expect(covered.match(/^- SMOKE-SHORT \(automated\): /gm) ?? []).toHaveLength(4);
+        const plain = buildChecklist({
+            files: ['apps/app/src/App.tsx'],
+            commits: [SHA],
+            pulls: [{ number: 20, issues: [12], commits: [SHA], files: ['apps/app/src/App.tsx'] }],
+            issues: [{ number: 12, body: '- [ ] QA: Open settings => Settings page appears' }],
+        });
+        expect(renderMatrixChecks(plain, failed)).toBe('');
+        expect(renderMatrixChecks({ kind: 'none' }, failed)).toBe('');
     });
 });

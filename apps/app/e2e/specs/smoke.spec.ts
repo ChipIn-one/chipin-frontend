@@ -68,7 +68,11 @@ test.describe('SMOKE-SHORT', () => {
         ).toBeVisible();
 
         // The button of the layout shown at this viewport (desktop sidebar, floating or mobile bar).
-        await visibleOne(page.getByRole('button', { name: 'Add expense', exact: true })).click();
+        const addExpense = page
+            .getByRole('button', { name: 'Add expense', exact: true })
+            .filter({ visible: true });
+        await expect(addExpense).toHaveCount(1);
+        await addExpense.click();
         const dialog = page.getByRole('dialog', { name: 'Add an expense' });
         // Neither field has an accessible label (the "Amount" text is not bound to the input), so
         // the placeholders are their only stable handles.

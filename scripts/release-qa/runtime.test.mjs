@@ -9,7 +9,9 @@ import {
     chooseProductionBaseline,
     fallbackFromEnv,
     formatResolveOutputs,
+    GitHubApi,
     prepareReleaseQa,
+    probePublicPreview,
     readMatrix,
     readMatrixConclusions,
     readMatrixResults,
@@ -2040,7 +2042,7 @@ function withJobs(api, jobs) {
         ...api,
         listObject: (path, key) =>
             key === 'jobs'
-                ? path.endsWith('/actions/runs/777/attempts/1/jobs')
+                ? path.endsWith('/actions/runs/777/jobs?filter=latest')
                     ? jobs instanceof Error
                         ? Promise.reject(jobs)
                         : Promise.resolve(jobs)
@@ -2083,7 +2085,7 @@ test('matrix results are read only from the fixed path of each known profile, st
         .finally(() => (dir ? rm(dir, { recursive: true, force: true }) : undefined));
 });
 
-test('job conclusions come from the jobs of this run attempt; duplicates, unfinished or unreadable jobs are unknown', () => {
+test('job conclusions come from the latest attempt of each job of this run; duplicates, unfinished or unreadable jobs are unknown', () => {
     const api = jobs => withJobs({}, jobs);
     return readMatrixConclusions(
         api([
@@ -2093,7 +2095,6 @@ test('job conclusions come from the jobs of this run attempt; duplicates, unfini
             { name: 'prepare', status: 'completed', conclusion: 'success' },
         ]),
         777,
-        1,
     )
         .then(conclusions => {
             expect(conclusions).toEqual({
@@ -2103,12 +2104,12 @@ test('job conclusions come from the jobs of this run attempt; duplicates, unfini
                 pixel: null,
                 iphone: null,
             });
-            return readMatrixConclusions(api(new Error('HTTP 403')), 777, 1);
+            return readMatrixConclusions(api(new Error('HTTP 403')), 777);
         })
         .then(conclusions => expect(conclusions).toEqual({}));
 });
 
-test('no matrix directory means no matrix; a matrix needs a valid run id and attempt', () =>
+test('no matrix directory means no matrix; a matrix needs a valid run id', () =>
     readMatrix({ api: {}, env: { GITHUB_RUN_ID: '777' } })
         .then(value => expect(value).toBeNull())
         .then(() =>
@@ -2119,19 +2120,72 @@ test('no matrix directory means no matrix; a matrix needs a valid run id and att
                 throw new Error('Invalid run id accepted.');
             },
             error => expect(error.message).toMatch(/GITHUB_RUN_ID/),
-        )
-        .then(() =>
-            readMatrix({
-                api: {},
-                env: { E2E_MATRIX_DIR: '/nowhere', GITHUB_RUN_ID: '777', GITHUB_RUN_ATTEMPT: '0' },
-            }),
-        )
-        .then(
-            () => {
-                throw new Error('Invalid attempt accepted.');
-            },
-            error => expect(error.message).toMatch(/GITHUB_RUN_ATTEMPT/),
         ));
+
+test('after "Re-run failed jobs" the jobs list with filter=latest is read over all pages', () => {
+    const requested = [];
+    // Page 1: 100 other jobs; page 2: the matrix, where only webkit was re-run (attempt 2) and the
+    // jobs not re-run keep their attempt-1 conclusions.
+    const pages = {
+        1: Array.from({ length: 100 }, (_, index) => ({
+            name: `other ${index}`,
+            status: 'completed',
+            conclusion: 'success',
+        })),
+        2: matrixJobs({ firefox: 'failure' }).map(job =>
+            job.name === 'e2e webkit' ? { ...job, run_attempt: 2 } : { ...job, run_attempt: 1 },
+        ),
+    };
+    const fetchImpl = url => {
+        requested.push(url);
+        const page = Number(new URL(url).searchParams.get('page'));
+        return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ total_count: 105, jobs: pages[page] ?? [] }),
+        });
+    };
+    return readMatrixConclusions(new GitHubApi('token', fetchImpl), 777).then(conclusions => {
+        expect(requested).toEqual([
+            'https://api.github.com/repos/ChipIn-one/chipin-frontend/actions/runs/777/jobs?filter=latest&per_page=100&page=1',
+            'https://api.github.com/repos/ChipIn-one/chipin-frontend/actions/runs/777/jobs?filter=latest&per_page=100&page=2',
+        ]);
+        expect(conclusions).toEqual({
+            chromium: 'success',
+            firefox: 'failure',
+            webkit: 'success',
+            pixel: 'success',
+            iphone: 'success',
+        });
+    });
+});
+
+test('the Preview probe sends the bypass header only with a secret, only to the probed URL', () => {
+    const calls = [];
+    const fetchImpl = (url, options) => {
+        calls.push({ url, headers: options.headers ?? null });
+        return Promise.resolve({ ok: true, headers: new Headers({ 'content-type': 'text/html' }) });
+    };
+    return probePublicPreview(PREVIEW_URL, fetchImpl, 's3cr3t')
+        .then(() => probePublicPreview(PREVIEW_URL, fetchImpl, ''))
+        .then(() => probePublicPreview(PREVIEW_URL, fetchImpl, undefined))
+        .then(() => {
+            expect(calls).toEqual([
+                { url: PREVIEW_URL, headers: { 'x-vercel-protection-bypass': 's3cr3t' } },
+                { url: PREVIEW_URL, headers: null },
+                { url: PREVIEW_URL, headers: null },
+            ]);
+            // A protected Preview without the secret still fails closed, without the secret in the message.
+            const denied = () =>
+                Promise.resolve({ ok: false, status: 401, headers: new Headers() });
+            return probePublicPreview(PREVIEW_URL, denied, 's3cr3t').then(
+                () => {
+                    throw new Error('protected Preview accepted');
+                },
+                error => expect(error.message).not.toContain('s3cr3t'),
+            );
+        });
+});
 
 test('a non-UI candidate with a failed matrix still states the failure in its one Slack line', () => {
     const posted = [];
@@ -2410,11 +2464,105 @@ test('a same-SHA rerun keeps the Issue body and posts the new matrix result as a
                 ),
             ).toBe(true);
             expect(text).toContain('| Pixel 7 (Chromium) | passed | 12 | 0 | 0 | 0 |');
+            // Fail, then pass: the checks a failed run gave back are listed as covered now.
+            expect(text).toContain(
+                'These SMOKE-SHORT checks are covered by this run of the browser matrix:\n\n- SMOKE-SHORT (automated): Create a group expense split equally',
+            );
+            expect(text.match(/^- SMOKE-SHORT \(automated\): /gm) ?? []).toHaveLength(4);
+            expect(text).not.toContain('- [ ]');
             // The result reader never takes it for a QA result or a near-miss.
             return import('./core.mjs').then(core => {
                 expect(core.resultOutcome(text)).toBeNull();
                 expect(core.isNearMissResult(text)).toBe(false);
             });
+        });
+});
+
+test('pass, then fail on a same-SHA rerun: the comment hands SMOKE-SHORT b-e back as unchecked boxes', () => {
+    const assignment = assignmentApi(['syllik', 'SoRawSteak']);
+    let root = null;
+    let dir = null;
+    let created = '';
+    const comments = [];
+    const events = [];
+    const writeApi = {
+        request: (path, options) => {
+            if (path.endsWith('/issues/50/comments')) {
+                events.push('comment');
+                comments.push(options.body.body);
+                return Promise.resolve({ id: 1 });
+            }
+            return assignment.writeApi.request(path, options);
+        },
+    };
+    const run = (results, jobs, issues, shared) =>
+        prepareReleaseQa({
+            env: uiEnv(dir),
+            readApi: withJobs(uiQaApis(assignment, issues), jobs),
+            writeApi,
+            sharedRoot: shared,
+            post: () => {
+                events.push('slack');
+                return Promise.resolve(true);
+            },
+            probe: () => Promise.resolve(),
+        });
+    return matrixDir(Object.fromEntries(PROFILE_IDS.map(id => [id, matrixResult(id)])))
+        .then(value => {
+            dir = value;
+            return creatingSharedRoot([]);
+        })
+        .then(shared => {
+            root = shared;
+            // First round: every profile passed; the new Issue lists b-e as automated.
+            return run(null, matrixJobs(), [], shared)
+                .then(() => readFile(join(root, 'created.md'), 'utf8'))
+                .then(body => {
+                    created = body;
+                    expect(body.match(/^- SMOKE-SHORT \(automated\): /gm) ?? []).toHaveLength(4);
+                    return writeFile(
+                        join(dir, 'e2e-result-firefox', 'result.json'),
+                        matrixResult('firefox', { status: 'failed', passed: 11, failed: 1 }),
+                    );
+                })
+                .then(() => {
+                    events.length = 0;
+                    const existing = {
+                        ...assignment.issue(),
+                        title: `Release QA ${SHA}`,
+                        state: 'open',
+                        body: created,
+                    };
+                    // Rerun of the same SHA: Firefox fails now.
+                    return run(null, matrixJobs({ firefox: 'failure' }), [existing], shared);
+                });
+        })
+        .finally(() =>
+            Promise.all([
+                root ? rm(root, { recursive: true, force: true }) : undefined,
+                dir ? rm(dir, { recursive: true, force: true }) : undefined,
+            ]),
+        )
+        .then(value => {
+            expect(value.matrix.passed).toBe(false);
+            expect(events).toEqual(['comment', 'slack']);
+            expect(comments).toHaveLength(1);
+            const text = comments[0];
+            expect(text.split('\n').slice(0, 2)).toEqual([
+                '> [!CAUTION]',
+                `> **The automated browser matrix did not pass.** Failed: Desktop Firefox. See the [run](${MATRIX_RUN_URL}).`,
+            ]);
+            expect(text).toContain(
+                'This run of the browser matrix did not pass, so these SMOKE-SHORT checks are back with the tester',
+            );
+            const handedBack = text.match(
+                /^- \[ \] SMOKE-SHORT: .* \(the browser matrix did not pass: check by hand\)$/gm,
+            );
+            expect(handedBack).toHaveLength(4);
+            expect(handedBack[0]).toContain('Create a group expense split equally');
+            // Only the changed checks: the always-manual ones stay in the body.
+            expect(text).not.toContain('Google sign-in');
+            expect(text).not.toContain('On a real phone');
         });
 });
 

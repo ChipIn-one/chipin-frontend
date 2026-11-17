@@ -118,19 +118,19 @@ export const resolveE2eBasicAuth = (environment: E2eEnvironment): E2eBasicAuth =
     return { password, username };
 };
 
-/** Vercel's header for Protection Bypass for Automation. */
+/** Vercel's headers for Protection Bypass for Automation. */
 export const VERCEL_BYPASS_HEADER = 'x-vercel-protection-bypass';
+export const VERCEL_SET_BYPASS_COOKIE_HEADER = 'x-vercel-set-bypass-cookie';
 
 export interface PreviewBypass {
-    /** Requests to exactly this origin get the header; no other host ever does. */
+    /** Only document navigations to exactly this origin get the headers; no other host ever does. */
     origin: string;
-    headers: Record<string, string>;
+    secret: string;
 }
 
 /**
  * The optional Vercel deployment-protection bypass: only for a Vercel Preview target and only when
- * the secret is set (an unprotected Preview needs none). It is sent per request to the Preview
- * origin, never through `extraHTTPHeaders`, which would also reach other hosts.
+ * the secret is set (an unprotected Preview needs none).
  */
 export const resolvePreviewBypass = (
     environment: E2eEnvironment,
@@ -142,16 +142,45 @@ export const resolvePreviewBypass = (
         return null;
     }
 
-    return { origin: target.baseUrl, headers: { [VERCEL_BYPASS_HEADER]: secret } };
+    return { origin: target.baseUrl, secret };
 };
 
-/** Whether `url` is a request to the bypass origin (scheme, host and port all equal). */
-export const isPreviewOriginRequest = (bypass: PreviewBypass, url: string): boolean => {
-    try {
-        return new URL(url).origin === bypass.origin;
-    } catch {
-        return false;
+export interface BypassRequest {
+    url: string;
+    /** Playwright's `request.isNavigationRequest()`: a document load of a frame. */
+    isNavigation: boolean;
+}
+
+/**
+ * The bypass headers for one request, or null. They go only on document navigations to exactly the
+ * Preview origin (scheme, host and port), never to `/api/...` (vercel.json rewrites it to the
+ * staging API) and never through `extraHTTPHeaders`, which would reach every host. Vercel answers
+ * the navigation with its bypass cookie, which then covers the page's other requests to the Preview.
+ */
+export const previewBypassHeaders = (
+    bypass: PreviewBypass,
+    request: BypassRequest,
+): Record<string, string> | null => {
+    if (!request.isNavigation) {
+        return null;
     }
+
+    let url: URL;
+    try {
+        url = new URL(request.url);
+    } catch {
+        return null;
+    }
+
+    if (
+        url.origin !== bypass.origin ||
+        url.pathname === '/api' ||
+        url.pathname.startsWith('/api/')
+    ) {
+        return null;
+    }
+
+    return { [VERCEL_BYPASS_HEADER]: bypass.secret, [VERCEL_SET_BYPASS_COOKIE_HEADER]: 'true' };
 };
 
 /** The e2e variables of `process.env` (Node: the Playwright config, global setup and workers). */
