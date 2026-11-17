@@ -5,7 +5,16 @@ import enGroup from './locales/en/group.json';
 import ruFriends from './locales/ru/friends.json';
 import ruGroup from './locales/ru/group.json';
 
-const JOIN_KEYS = ['cancel', 'confirm', 'description', 'goHome', 'invalidTitle', 'retry', 'title'];
+const JOIN_KEYS = [
+    'cancel',
+    'confirm',
+    'description',
+    'goHome',
+    'invalidTitle',
+    'retry',
+    'sessionLoadError',
+    'title',
+];
 
 const LOCALES = {
     en: { friends: enFriends, group: enGroup },

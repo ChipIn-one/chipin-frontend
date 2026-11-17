@@ -6,10 +6,12 @@ import { ROUTES } from 'constants/routes';
 
 import { useJoinGroup } from './useGroupMutations';
 import { type InviteConfirmationState, useInviteConfirmation } from './useInviteConfirmation';
+import { useIsUserWriteEnabled } from './useUserMutations';
 
 export const useJoinInviteLink = (): InviteConfirmationState => {
     const navigate = useNavigate();
     const joinGroup = useJoinGroup();
+    const isAcceptEnabled = useIsUserWriteEnabled();
     const { inviteToken } = useParams<{ inviteToken: string }>();
 
     const onAccept = useCallback((token: string) => joinGroup(token), [joinGroup]);
@@ -23,6 +25,8 @@ export const useJoinInviteLink = (): InviteConfirmationState => {
     return useInviteConfirmation({
         inviteToken,
         errorFallbackMessage: i18n.t('toasts:group.inviteJoinError'),
+        isAcceptEnabled,
+        sessionLoadErrorMessage: i18n.t('group:join.sessionLoadError'),
         onAccept,
         onAccepted,
     });

@@ -7,13 +7,7 @@
 import type { Response } from '@playwright/test';
 
 import { expect, test } from '../../support/fixtures';
-import {
-    expectSettledUp,
-    gotoAfterGroupsList,
-    openGroupTab,
-    selectGroupTab,
-    uniqueSuffix,
-} from '../../support/ui';
+import { expectSettledUp, openGroupTab, selectGroupTab, uniqueSuffix } from '../../support/ui';
 
 /** The join request (`POST /groups/invite/{inviteToken}`). */
 const isGroupJoin = (response: Response): boolean =>
@@ -32,10 +26,9 @@ test.describe('GRP-030 join by invite link', () => {
         const inviteToken = await provisioning.getGroupInviteToken(owner, groupId);
 
         const joinerPage = await signIn(joiner);
-        // Workaround for #730: a Join click before the session is restored is silently dropped.
-        // The groups list is read only once the user's own query client is active (after the
-        // remount that resets the confirmation), so the click waits for it.
-        await gotoAfterGroupsList(joinerPage, `/group/join/${inviteToken}`);
+        // Join stays disabled (loading) until the session is restored (#730); the click waits for
+        // the enabled button.
+        await joinerPage.goto(`/group/join/${inviteToken}`);
         await expect(
             joinerPage.getByRole('heading', { name: 'Join this group by invite?' }),
         ).toBeVisible();

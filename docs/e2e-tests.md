@@ -39,7 +39,7 @@ The invite link is `<app origin>/group/join/<token>` (`buildGroupInviteLink`, `g
 
 A page that has just written money data is never reloaded or reopened with `goto`: the persisted cache is written at most once per second and the group detail stays fresh for 30 s, so a reload within a second of a write shows the balance from before it (#724). The writing user stays in the app (switches tabs, goes back in the same document, follows in-app links); the other participant opens a fresh context.
 
-The invite test works around #730 (a Join click before the session restore has finished is silently dropped): it opens the invite link, waits for the groups list (read only once the session is restored on the user's client), and only then clicks Join, asserting that the join request succeeded.
+The invite test opens the invite link and clicks Join as soon as the confirmation shows: the Join button stays disabled (loading) until the session is restored (#730), and Playwright waits for it to be enabled. The test asserts that the join request succeeded.
 
 One locator exception: the split-share inputs of the expense editor have no accessible name (#725), so `split.spec.ts` finds them structurally, as the input next to the participant's label.
 

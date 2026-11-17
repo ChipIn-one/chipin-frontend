@@ -58,7 +58,8 @@ export interface SelfUserState {
 
 const skipRefetch = (): Promise<undefined> => Promise.resolve(undefined);
 
-const retrySessionLoad = (): Promise<unknown> => loadSelfUserForSession();
+/** Runs the session self load again (a Retry before the user's client exists). */
+export const retrySessionLoad = (): Promise<unknown> => loadSelfUserForSession();
 
 /** The latest session self load (`store/sessionUser`), for readers without the user's client. */
 export const useSessionSelfLoad = (): SessionSelfLoad =>
