@@ -3,6 +3,7 @@
 // result or a final error; everything else (no network, 5xx, the auth and outdated gates) waits
 // inside it, holding the turn. It is the `mutationFn` of the outbox mutations (`retry: false`,
 // `networkMode: 'always'`: the wait is here, not in the TanStack retryer; owner item 35).
+import * as Sentry from '@sentry/react';
 import type { MutationKey, QueryClient } from '@tanstack/react-query';
 import { onlineManager } from '@tanstack/react-query';
 
@@ -15,7 +16,7 @@ import {
 import { ApiError } from 'shared/lib/apiError';
 
 import { outboxGate } from './outboxGate';
-import { OutboxWriteStoppedError } from './outboxIo';
+import { OutboxLockTimeoutError, OutboxWriteStoppedError } from './outboxIo';
 import { ledgerEntryKey } from './outboxRegistry';
 import {
     claimOutboxOp,
@@ -160,6 +161,16 @@ const sleep = (ms: number): Promise<void> =>
         setTimeout(resolve, ms);
     });
 
+// A write the outbox refused (stopped, cleared) is no persistence failure; a write-lock timeout is
+// transient and reported on its own, without taking the once-per-session persist-failure report.
+const reportWriteFailure = (error: unknown): void => {
+    if (error instanceof OutboxLockTimeoutError) {
+        Sentry.captureMessage('outbox.write_lock_timeout', { level: 'warning' });
+    } else if (!(error instanceof OutboxWriteStoppedError)) {
+        reportPersistFailed(error);
+    }
+};
+
 /**
  * Repeats a failed queue write with backoff until it lands (true) or `shouldStop` (false: the op
  * stays queued and the next drain sends it again, idempotent). The request is never repeated. A
@@ -178,7 +189,7 @@ export const retryWrite = (
                 return false;
             }
             setOutboxStatus(op.opId, 'failed-unsaved');
-            reportPersistFailed(error);
+            reportWriteFailure(error);
             return sleep(backoff(attempt)).then(() =>
                 shouldStop() ? false : retryWrite(op, write, shouldStop, attempt + 1),
             );
@@ -193,13 +204,6 @@ const isStale = (op: OutboxOpBase, fence: OutboxFence): boolean =>
 
 const skipped = (op: OutboxOpBase, fence: OutboxFence): OutboxResult | null =>
     isStale(op, fence) ? STOPPED : isOpCancelled(op.opId) ? CANCELLED : null;
-
-// A write the outbox refused (stopped, cleared) is no persistence failure.
-const reportWriteFailure = (error: unknown): void => {
-    if (!(error instanceof OutboxWriteStoppedError)) {
-        reportPersistFailed(error);
-    }
-};
 
 // Compare-and-clear of the run's own claim; a failure leaves it to the next claim or restore.
 const releaseClaim = (op: OutboxOpBase, fence: OutboxFence): Promise<void> =>
@@ -317,6 +321,9 @@ const onSendError = async (
         case 'network':
         case 'transient':
             await releaseClaim(op, fence);
+            if (isStale(op, fence)) {
+                return STOPPED;
+            }
             setOutboxStatus(
                 op.opId,
                 errorClass.kind === 'network' ? 'waiting-network' : 'server-unavailable',
@@ -548,7 +555,10 @@ export const adoptOutboxOps = (
         // Like `resumePausedMutations`: a final error is handled by the defaults' `onError`. A
         // mutation that failed before its run started must not hold the turn of the later ops (L4).
         void mutation.continue().catch(() => {
-            outboxGate.releaseTurn(op.opId);
+            // A newer drain session may have adopted the op again: not this session's turn to release.
+            if (isDrainFence(fence)) {
+                outboxGate.releaseTurn(op.opId);
+            }
         });
     });
 };

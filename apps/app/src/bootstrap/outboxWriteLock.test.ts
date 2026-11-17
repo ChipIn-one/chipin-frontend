@@ -10,13 +10,18 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import type { LedgerWriteEffects } from 'entities/ledger/api/mutations';
-import { type LedgerOutboxOp, startLedgerOutbox } from 'entities/ledger/api/outbox';
+import {
+    chooseLedgerWritePath,
+    type LedgerOutboxOp,
+    startLedgerOutbox,
+} from 'entities/ledger/api/outbox';
 import { capabilitiesQueryOptions } from 'entities/ledger/api/queries';
 import { saveLocalUser } from 'helpers/localStorage';
 import { createQueryClient } from 'shared/api/queryClient';
-import { outboxStateKey } from 'shared/offline/constants';
+import { clearUserData } from 'shared/offline/clearUserData';
+import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
 import { outboxGate } from 'shared/offline/outboxGate';
-import { outboxWriteLockName } from 'shared/offline/outboxIo';
+import { outboxWriteLockName, OutboxWriteStoppedError } from 'shared/offline/outboxIo';
 import {
     enqueueOutboxOp,
     ledgerEntryKey,
@@ -30,16 +35,19 @@ import {
     isOpCancelled,
     isOutboxPersistFailed,
     OutboxPersistError,
+    outboxRestoreState,
+    outboxStatus,
     pendingOutboxOps,
     resetOutbox,
     stopOutbox,
 } from 'shared/offline/outboxStore';
 import { persistCodec } from 'shared/offline/persistCodec';
+import { reportPersistFailed } from 'shared/offline/queryPersister';
 import { onAccessTokenRefreshed } from 'store/authStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
-import { holdWebLock } from 'test/webLocks';
+import { holdWebLock, removeWebLocks } from 'test/webLocks';
 
 import 'fake-indexeddb/auto';
 
@@ -52,6 +60,10 @@ vi.mock('helpers/authSession', async importOriginal => ({
 vi.mock('@sentry/react', async importOriginal => ({
     ...(await importOriginal<typeof import('@sentry/react')>()),
     captureMessage: vi.fn(),
+}));
+vi.mock('shared/offline/queryPersister', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared/offline/queryPersister')>()),
+    reportPersistFailed: vi.fn(),
 }));
 // The IndexedDB access log: every `set` of a key and every `del`, in order.
 const idbLog = vi.hoisted((): string[] => []);
@@ -78,6 +90,7 @@ const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval');
 const USER = 'user-1';
 const OTHER = 'user-2';
 const OUTBOX_KEY = outboxStateKey(USER);
+const FAILED_KEY = outboxFailedKey(USER);
 const WRITE_LOCK = outboxWriteLockName(USER);
 
 const server = setupMswServer();
@@ -721,4 +734,204 @@ describe('03-15c1 the drain-session fence (M2)', () => {
             expect(requests).toHaveLength(1);
         },
     );
+});
+
+// `AbortSignal.timeout` of the next lock requests: an already timed-out signal.
+const timeOutNextLockRequests = (count = 1): void => {
+    const spy = vi.spyOn(AbortSignal, 'timeout');
+
+    for (let index = 0; index < count; index += 1) {
+        spy.mockReturnValueOnce(AbortSignal.abort(new DOMException('timed out', 'TimeoutError')));
+    }
+};
+
+const storeBothKeys = async (): Promise<void> => {
+    await storeOutbox([storedOp(1, 'entry-a')]);
+    await idb.set(FAILED_KEY, persistCodec.stringify([]));
+};
+
+const expectKeysDeleted = async (): Promise<void> => {
+    expect(await idb.get(OUTBOX_KEY)).toBeUndefined();
+    expect(await idb.get(FAILED_KEY)).toBeUndefined();
+};
+
+describe('03-15c1 R1: the delete, the restore read and the fallbacks', () => {
+    test('L1: the clearUserData delete retries after a lock timeout; the lock released → both keys deleted', async () => {
+        onlineManager.setOnline(false);
+        await storeBothKeys();
+        await openTab();
+        const release = await holdWebLock(WRITE_LOCK);
+
+        timeOutNextLockRequests();
+        const cleared = clearUserData(USER, () => undefined);
+
+        await wait(100);
+        expect(await idb.get(OUTBOX_KEY)).toBeDefined();
+        release();
+        await cleared;
+        await expectKeysDeleted();
+    });
+
+    test('L1: a lock that is never granted: after the last timeout the keys are deleted without it', async () => {
+        onlineManager.setOnline(false);
+        await storeBothKeys();
+        await openTab();
+        const release = await holdWebLock(WRITE_LOCK);
+
+        timeOutNextLockRequests(3);
+        await clearUserData(USER, () => undefined);
+        await expectKeysDeleted();
+        release();
+    });
+
+    test('L2: a lock timeout on the first read keeps the restore pending and retries it', async () => {
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        resetOutbox();
+        onlineManager.setOnline(false);
+        const release = await holdWebLock(WRITE_LOCK);
+
+        timeOutNextLockRequests();
+        const restored = startLedgerOutbox(newClient(), USER, effects);
+
+        await wait(50);
+        expect(outboxRestoreState(USER)).toBe('pending');
+        release();
+        await expect(restored).resolves.toBe('ok');
+        expect(pendingOutboxOps().map(op => op.opId)).toEqual(['op-1']);
+    });
+
+    test('L3: flag off, an account switch and clearUserData request no lock and delete the keys', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'false');
+        saveLocalUser({ id: USER, settings });
+        await storeBothKeys();
+        const request = vi.spyOn(navigator.locks, 'request');
+
+        onAccessTokenRefreshed(fakeAccessToken(OTHER));
+        await wait(50);
+        await clearUserData(OTHER, () => undefined);
+
+        expect(request).not.toHaveBeenCalled();
+        await expectKeysDeleted();
+    });
+
+    test('L3: flag on, the delete waits for a held write lock and lands after its release', async () => {
+        onlineManager.setOnline(false);
+        await storeBothKeys();
+        await openTab();
+        const release = await holdWebLock(WRITE_LOCK);
+        const cleared = clearUserData(USER, () => undefined);
+
+        await wait(50);
+        expect(await idb.get(OUTBOX_KEY)).toBeDefined();
+        release();
+        await cleared;
+        await expectKeysDeleted();
+    });
+
+    test('L3: without Web Locks the online path is chosen; persisted ops are still restored and sent', async () => {
+        const requests = serveLedger();
+
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        removeWebLocks();
+        const client = await openTab();
+
+        expect(chooseLedgerWritePath(client, { kind: 'create' })).toBe('online');
+        await vi.waitFor(() => expect(requests).toEqual(['POST entry-a']));
+    });
+
+    test('L5: without AbortSignal.timeout the write lock still works and still times out', async () => {
+        const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'timeout');
+
+        Object.defineProperty(AbortSignal, 'timeout', { configurable: true, value: undefined });
+        try {
+            onlineManager.setOnline(false);
+            await openTab();
+            await expect(appendCreate('entry-a')).resolves.toMatchObject({ opId: 'op-1' });
+
+            const release = await holdWebLock(WRITE_LOCK);
+
+            vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+            const appended = appendCreate('entry-b').catch((error: unknown) => error);
+
+            await vi.advanceTimersByTimeAsync(5_000);
+            expect(await appended).toBeInstanceOf(OutboxPersistError);
+            vi.useRealTimers();
+            release();
+        } finally {
+            vi.useRealTimers();
+            if (descriptor) {
+                Object.defineProperty(AbortSignal, 'timeout', descriptor);
+            } else {
+                Reflect.deleteProperty(AbortSignal, 'timeout');
+            }
+        }
+    });
+});
+
+describe('03-15c1 R1: reports, disposed users, stale runs', () => {
+    test('N1: a lock timeout of a drain write is reported as a lock timeout, not as a persistence failure', async () => {
+        onlineManager.setOnline(false);
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        await openTab();
+        const release = await holdWebLock(WRITE_LOCK);
+
+        timeOutNextLockRequests();
+        onlineManager.setOnline(true);
+        await vi.waitFor(() =>
+            expect(Sentry.captureMessage).toHaveBeenCalledWith('outbox.write_lock_timeout', {
+                level: 'warning',
+            }),
+        );
+        expect(reportPersistFailed).not.toHaveBeenCalled();
+        release();
+    });
+
+    test('N1: a lock request refused for another reason is no lock timeout: offline writing turns off', async () => {
+        onlineManager.setOnline(false);
+        await openTab();
+        vi.spyOn(navigator.locks, 'request').mockRejectedValueOnce(new TypeError('refused'));
+
+        await expect(appendCreate('entry-a')).rejects.toBeInstanceOf(OutboxPersistError);
+        expect(isOutboxPersistFailed()).toBe(true);
+    });
+
+    test('N2: IO of a cleared user queued in the tab is refused without requesting the lock', async () => {
+        onlineManager.setOnline(false);
+        await openTab();
+        const release = await holdWebLock(WRITE_LOCK);
+        const request = vi.spyOn(navigator.locks, 'request');
+        const first = appendCreate('entry-a').catch((error: unknown) => error);
+        const second = appendCreate('entry-b').catch((error: unknown) => error);
+
+        await wait(10);
+        const cleared = clearUserData(USER, () => undefined);
+
+        release();
+        expect(await first).toBeInstanceOf(OutboxWriteStoppedError);
+        expect(await second).toBeInstanceOf(OutboxWriteStoppedError);
+        await cleared;
+        // The first append (requested before the clear) and the delete; never the second append.
+        expect(request.mock.calls.filter(([name]) => name === WRITE_LOCK)).toHaveLength(2);
+    });
+
+    test('N4: a run that went stale while it cleared its claim after a 5xx sets no status', async () => {
+        const answer = deferred();
+        const requests = serveLedger(() => 503, [answer]);
+
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        const client = await openTab();
+
+        await vi.waitFor(() => expect(requests).toHaveLength(1));
+        const release = await holdWebLock(WRITE_LOCK);
+
+        answer.resolve();
+        await wait(30);
+        stopOutbox();
+        release();
+
+        await vi.waitFor(() =>
+            expect(firstMutation(client)?.state.data).toEqual({ kind: 'stopped' }),
+        );
+        expect(outboxStatus('op-1')).toBeUndefined();
+    });
 });

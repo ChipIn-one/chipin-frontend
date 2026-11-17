@@ -431,7 +431,18 @@ export const readOutbox = (userId: string): Promise<OutboxRestore> => {
     if (restoring) {
         return restoring;
     }
-    const reading: Promise<OutboxRestore> = runOutboxIo(userId, () => readKeys(userId)).then(
+    // A write-lock timeout is transient (§2.3): the read is retried and `outboxRestore` stays
+    // `pending` meanwhile; only an IDB error or an unreadable key fails the restore.
+    const read = (attempt: number): Promise<ReadKeys> =>
+        runOutboxIo(userId, () => readKeys(userId)).catch((error: unknown) => {
+            if (!(error instanceof OutboxLockTimeoutError) || restoring !== reading) {
+                throw error;
+            }
+            return new Promise<void>(resolve => {
+                setTimeout(resolve, Math.min(1000 * 2 ** attempt, 30_000));
+            }).then(() => read(attempt + 1));
+        });
+    const reading: Promise<OutboxRestore> = read(0).then(
         read => {
             if (restoring !== reading) {
                 return 'pending';

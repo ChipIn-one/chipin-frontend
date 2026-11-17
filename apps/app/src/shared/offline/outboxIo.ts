@@ -38,26 +38,43 @@ export const hasWebLocks = (): boolean =>
     'locks' in navigator &&
     typeof navigator.locks.request === 'function';
 
+// A signal aborted after the lock timeout. `AbortSignal.timeout` is missing in older browsers
+// (Safari before 16): an `AbortController` and a timer instead.
+const lockTimeoutSignal = (): { signal: AbortSignal; clear: () => void } => {
+    if (typeof Reflect.get(AbortSignal, 'timeout') === 'function') {
+        return {
+            signal: AbortSignal.timeout(OUTBOX_WRITE_LOCK_TIMEOUT_MS),
+            clear: () => undefined,
+        };
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+        controller.abort(new DOMException('The outbox write lock timed out', 'TimeoutError'));
+    }, OUTBOX_WRITE_LOCK_TIMEOUT_MS);
+
+    return { signal: controller.signal, clear: () => clearTimeout(timer) };
+};
+
 // The lock spans the whole IO (a read-modify-write of both keys) and nothing else: never a request.
+// Only a request the timeout aborted is a lock timeout; any other refusal keeps its error.
 const underWriteLock = <T>(userId: string, io: () => Promise<T>): Promise<T> => {
     if (!hasWebLocks()) {
         return io();
     }
+    const { signal, clear } = lockTimeoutSignal();
     let started = false;
 
     return navigator.locks
-        .request(
-            outboxWriteLockName(userId),
-            { signal: AbortSignal.timeout(OUTBOX_WRITE_LOCK_TIMEOUT_MS) },
-            () => {
-                started = true;
-                return io();
-            },
-        )
+        .request(outboxWriteLockName(userId), { signal }, () => {
+            started = true;
+            clear();
+            return io();
+        })
         .then(
             (result: Promise<T>) => result,
             (error: unknown) => {
-                throw started ? error : new OutboxLockTimeoutError();
+                clear();
+                throw !started && signal.aborted ? new OutboxLockTimeoutError() : error;
             },
         );
 };
@@ -90,15 +107,16 @@ const enqueue = <T>(io: () => Promise<T>): Promise<T> => {
     return run;
 };
 
+const refuseDisposed = <T>(userId: string, io: () => Promise<T>): Promise<T> =>
+    disposedUsers.has(userId) ? Promise.reject(new OutboxWriteStoppedError()) : io();
+
 /**
  * Runs `io` after every earlier outbox IO of this tab, under the user's write lock; a cleared
- * user's IO is refused (checked once the lock is held).
+ * user's IO is refused before the lock is requested and again once it is held.
  */
 export const runOutboxIo = <T>(userId: string, io: () => Promise<T>): Promise<T> =>
     enqueue(() =>
-        underWriteLock(userId, () =>
-            disposedUsers.has(userId) ? Promise.reject(new OutboxWriteStoppedError()) : io(),
-        ),
+        refuseDisposed(userId, () => underWriteLock(userId, () => refuseDisposed(userId, io))),
     );
 
 /** The user's outbox starts again (a sign-in after a sign-out): their IO runs again. */
@@ -120,17 +138,36 @@ export const stopOutboxIo = (userId: string): void => {
     disposeListeners.forEach(listener => listener(userId));
 };
 
+/** A delete whose write lock timed out is tried this many times, then done without the lock. */
+export const OUTBOX_DELETE_LOCK_ATTEMPTS = 3;
+
+const sleep = (ms: number): Promise<void> =>
+    new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+
 /**
  * `clearUserData` step (3): deletes the user's outbox keys under the write lock, once the IO already
  * running has settled (from step (1) on no new IO of the user starts), so no write of it lands after
- * the `del`. Not part of the chain itself: a hanging delete never holds later outbox IO.
+ * the `del`. A lock timeout (another tab holds the lock) is retried with a backoff; after
+ * `OUTBOX_DELETE_LOCK_ATTEMPTS` timeouts the keys are deleted without the lock (this tab's IO of the
+ * user is refused already): the user's data must not survive a sign-out. Not part of the chain
+ * itself: a hanging delete never holds later outbox IO.
  */
 export const deleteOutboxKeys = (userId: string): Promise<void> => {
     const deleteKeys = (): Promise<void> =>
         Promise.all(outboxKeys(userId).map(key => del(key))).then(() => undefined);
+    const lockedDelete = (attempt: number): Promise<void> =>
+        underWriteLock(userId, deleteKeys).catch((error: unknown) => {
+            if (!(error instanceof OutboxLockTimeoutError)) {
+                throw error;
+            }
+            return attempt + 1 >= OUTBOX_DELETE_LOCK_ATTEMPTS
+                ? deleteKeys()
+                : sleep(250 * 2 ** attempt).then(() => lockedDelete(attempt + 1));
+        });
     // Flag off no outbox runs anywhere: the keys are deleted without a lock, as before 03-15c1.
-    const remove = (): Promise<void> =>
-        isOfflineWritesFlagOn() ? underWriteLock(userId, deleteKeys) : deleteKeys();
+    const remove = (): Promise<void> => (isOfflineWritesFlagOn() ? lockedDelete(0) : deleteKeys());
 
     return running === 0 ? start(remove) : tail.then(remove);
 };

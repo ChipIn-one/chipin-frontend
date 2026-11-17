@@ -33,6 +33,7 @@ import {
     removeOutboxOp,
     resetOutbox,
     restoreOutboxVersions,
+    startOutbox,
     stopOutbox,
     writeOutbox,
 } from './outboxStore';
@@ -775,4 +776,35 @@ test('03-15b L3: the restore takes the persisted versions, except of an entry wh
     markPendingRemoval(first.opId);
     restoreOutboxVersions();
     expect(getOutboxVersion('entry-x')).toBe('v-newer');
+});
+
+test('03-15c1 R1 N3: a mutation of an older drain session failing before its run keeps the newer session turn', async () => {
+    const hold = deferred();
+    const [first] = [await queue('entry-a')];
+    const client = new QueryClient();
+
+    client.setMutationDefaults(['test', 'outbox'], {
+        mutationFn: () =>
+            hold.promise.then(() => Promise.reject(new Error('failed before its run'))),
+        networkMode: 'always',
+        retry: false,
+    });
+    adoptOutboxOps(
+        client,
+        () => ['test', 'outbox'],
+        () => true,
+    );
+    // The drain stops and starts again: the new session adopts op-1 again, op-2 waits behind it.
+    stopOutbox();
+    startOutbox(OWNER);
+    const second = await queue('entry-b');
+    let hasTurn = false;
+
+    outboxGate.adopt(first);
+    void outboxGate.whenTurn(second).then(() => {
+        hasTurn = true;
+    });
+    hold.resolve();
+    await tick(10);
+    expect(hasTurn).toBe(false);
 });
