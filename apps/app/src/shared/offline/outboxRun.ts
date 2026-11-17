@@ -48,6 +48,7 @@ import {
     pendingOutboxOps,
     readOutbox,
     recordFailedOp,
+    refreshOutbox,
     releaseOutboxClaim,
     removeOutboxOp,
     restoreOutboxVersions,
@@ -652,10 +653,14 @@ export const restoreOutbox = (
         if (result !== 'ok' || outboxOwner() !== userId) {
             return result;
         }
+        // The clear write re-reads the keys; when it fails they are read once more (L5).
         return writeOutbox(draft => {
             draft.sending = null;
         })
-            .catch(reportWriteFailure)
+            .catch((error: unknown) => {
+                reportWriteFailure(error);
+                return refreshOutbox();
+            })
             .then(() => {
                 if (outboxOwner() !== userId || isOutboxStopped()) {
                     return result;

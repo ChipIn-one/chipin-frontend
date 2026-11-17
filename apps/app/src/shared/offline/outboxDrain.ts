@@ -7,6 +7,7 @@
 // release every waiting run resolves `stopped` without a request, so the next holder adopts its op.
 // The tabs ping each other through `outboxChannel.ts`. Without Web Locks the tab drains without the
 // lock (offline writing is off there, §2.3: only ops persisted before are sent).
+import * as Sentry from '@sentry/react';
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 
 import {
@@ -40,6 +41,7 @@ import {
     onOutboxWritten,
     type OutboxOpBase,
     type OutboxRestore,
+    outboxRestoreState,
     outboxStatus,
     pendingOutboxOps,
     readOutbox,
@@ -49,6 +51,12 @@ import {
 } from './outboxStore';
 
 export const outboxDrainLockName = (userId: string): string => `chipin-outbox-drain:${userId}`;
+
+/** §2.3: a hidden tab waits at most this long for its request in flight, then aborts it and releases. */
+export const OUTBOX_HIDDEN_RELEASE_MS = 15_000;
+
+/** A failed re-read is tried again after this delay (doubling, at most 30 s). */
+const REREAD_RETRY_MS = 1000;
 
 /** What the page tells the drain (the browser's page lifecycle; a fake one in tests). */
 export interface OutboxPage {
@@ -99,6 +107,10 @@ interface Drain {
     holding: boolean;
     /** Ends the hold: the lock is released. */
     release: (() => void) | null;
+    /** A release is pending (hidden, waiting for the request in flight): no new session starts. */
+    releasing: boolean;
+    /** Failed re-reads in a row (the retry backs off). */
+    rereadFailures: number;
     /** Settles once this drain's lock request has ended (granted and released, or withdrawn). */
     settled: Promise<void>;
     syncing: Promise<void>;
@@ -111,7 +123,12 @@ interface Drain {
 let drain: Drain | null = null;
 const remoteStatuses = new Map<string, OutboxChannelStatus>();
 
-const holder = (): Drain | null => (drain?.holding === true && !drain.stopped ? drain : null);
+const holder = (): Drain | null =>
+    drain?.holding === true && !drain.stopped && !drain.releasing ? drain : null;
+
+const report = (error: unknown): void => {
+    Sentry.captureException(error);
+};
 
 /** The badge hint state (§2.3): this tab drains, waits for the drain lock, or has no outbox. */
 export const outboxDrainState = (): 'holding' | 'waiting' | 'off' =>
@@ -153,11 +170,25 @@ const applyQueue = (current: Drain): Promise<void> => {
     return forgetCancelledInKey(orphans, currentOutboxFence()).catch(() => undefined);
 };
 
-// One at a time: re-read the keys, then (the holder) apply them.
+// One at a time: re-read the keys, then (the holder) apply them. A failed re-read is tried again
+// with a backoff (a lost ping would leave an op unadopted while the tabs stay open, L5).
 const sync = (current: Drain): Promise<void> => {
     current.syncing = current.syncing
         .then(() => refreshOutbox())
-        .then(() => {
+        .then(read => {
+            if (!read) {
+                current.rereadFailures += 1;
+                setTimeout(
+                    () => {
+                        if (drain === current) {
+                            void sync(current);
+                        }
+                    },
+                    Math.min(REREAD_RETRY_MS * 2 ** (current.rereadFailures - 1), 30_000),
+                );
+                return undefined;
+            }
+            current.rereadFailures = 0;
             const pending = new Set(pendingOutboxOps().map(({ opId }) => opId));
 
             [...remoteStatuses.keys()].forEach(opId => {
@@ -166,7 +197,8 @@ const sync = (current: Drain): Promise<void> => {
                 }
             });
             return holder() === current && !isOutboxStopped() ? applyQueue(current) : undefined;
-        });
+        })
+        .catch(report);
     return current.syncing;
 };
 
@@ -191,10 +223,15 @@ const onMessage = (current: Drain, message: OutboxChannelMessage): void => {
     }
 };
 
-// The drain session: it lasts while the lock is held. A tab hidden (or stopped) when the lock comes
-// does not drain: it releases it at once.
+// The drain session: it lasts while the lock is held. A tab hidden (or stopped) when the lock comes,
+// or whose outbox is not restored (§1.6), does not drain: it releases it at once.
 const hold = (current: Drain, started: () => void): Promise<void> => {
-    if (drain !== current || current.stopped || page.isHidden()) {
+    if (
+        drain !== current ||
+        current.stopped ||
+        page.isHidden() ||
+        outboxRestoreState(current.userId) !== 'ok'
+    ) {
         started();
         return Promise.resolve();
     }
@@ -210,9 +247,11 @@ const hold = (current: Drain, started: () => void): Promise<void> => {
                 announceStatuses();
                 return applyQueue(current);
             })
-            .then(started);
+            .catch(report)
+            .finally(started);
     }).finally(() => {
         current.holding = false;
+        current.releasing = false;
         current.release = null;
     });
 };
@@ -224,7 +263,8 @@ const requestLock = (current: Drain): Promise<void> => {
         current.frozen ||
         current.holding ||
         current.request ||
-        page.isHidden()
+        page.isHidden() ||
+        outboxRestoreState(current.userId) !== 'ok'
     ) {
         return Promise.resolve();
     }
@@ -270,21 +310,37 @@ const requestLock = (current: Drain): Promise<void> => {
     });
 };
 
-// §2.3: hidden → the lock goes once no request is in flight (a queued request stays: granted while
-// hidden, it is released at once); freeze/pagehide → the request in flight is aborted first and
-// the queued request withdrawn (a frozen tab must not be granted the lock).
+// Resolves true once no request is in flight, false after `OUTBOX_HIDDEN_RELEASE_MS`.
+const whenIdleOrLate = (): Promise<boolean> =>
+    new Promise(resolve => {
+        const timer = setTimeout(() => resolve(false), OUTBOX_HIDDEN_RELEASE_MS);
+
+        void whenOutboxIdle().then(() => {
+            clearTimeout(timer);
+            resolve(true);
+        });
+    });
+
+// §2.3: hidden → the lock goes once no request is in flight, at the latest after
+// `OUTBOX_HIDDEN_RELEASE_MS` (then the request is aborted); a queued request stays (granted while
+// hidden, it is released at once). freeze/pagehide → the request in flight is aborted first and the
+// queued request withdrawn (a frozen tab must not be granted the lock).
 const releaseLock = (current: Drain, { abort }: { abort: boolean }): Promise<void> => {
     if (abort) {
         current.request?.abort();
     }
-    if (!current.holding) {
+    if (!current.holding || (current.releasing && !abort)) {
         return Promise.resolve();
     }
+    current.releasing = true;
     if (abort) {
         abortOutboxSends();
     }
     stopOutbox();
-    return (abort ? Promise.resolve() : whenOutboxIdle()).then(() => {
+    return (abort ? Promise.resolve(true) : whenIdleOrLate()).then(idle => {
+        if (!idle) {
+            abortOutboxSends();
+        }
         current.release?.();
     });
 };
@@ -306,6 +362,7 @@ export const startOutboxDrain = (
         const current = drain;
 
         return readOutbox(userId).then(result => {
+            // Not holding, or a release pending (the re-request after it starts the session, L1).
             if (holder() !== current) {
                 return requestLock(current).then(() => result);
             }
@@ -322,6 +379,8 @@ export const startOutboxDrain = (
         request: null,
         holding: false,
         release: null,
+        releasing: false,
+        rereadFailures: 0,
         settled: Promise.resolve(),
         syncing: Promise.resolve(),
         stopped: false,
@@ -374,6 +433,8 @@ export const stopOutboxDrain = (): Promise<void> => {
     remoteStatuses.clear();
     current.request?.abort();
     if (current.holding) {
+        // Another tab of the same user may hold the lock next: no request stays in flight (L2).
+        abortOutboxSends();
         stopOutbox();
         current.release?.();
     }
@@ -431,5 +492,12 @@ export const discardOutboxOps = (opIds: readonly string[]): Promise<DiscardResul
     discardOps(opIds).then(result => syncIfHolder().then(() => result));
 
 /** "Retry" from any tab (§2.3): the holder adopts the failed ops; resolves with the requested ids. */
-export const retryOutboxOps = (opIds: readonly string[]): Promise<string[]> =>
-    requestRetry(opIds).then(requested => syncIfHolder().then(() => requested));
+export const retryOutboxOps = (opIds: readonly string[]): Promise<string[]> => {
+    const current = drain;
+
+    return current
+        ? requestRetry(opIds, current.hooks.isAcceptable).then(requested =>
+              syncIfHolder().then(() => requested),
+          )
+        : Promise.resolve([]);
+};

@@ -544,7 +544,14 @@ export const writeOutbox = <T>(
             return writeKeys(owner, read.state, read).then(() => {
                 if (ownerId === owner && isOwnerFence(fence)) {
                     state = read.state;
-                    writeListeners.forEach(listener => listener());
+                    // The write landed: a failing listener must not turn it into a rejection.
+                    writeListeners.forEach(listener => {
+                        try {
+                            listener();
+                        } catch (error: unknown) {
+                            Sentry.captureException(error);
+                        }
+                    });
                 }
                 return result;
             });
@@ -560,21 +567,25 @@ export const onOutboxWritten = (listener: () => void): (() => void) => {
     };
 };
 
-/** Re-reads both keys under the write lock (a `changed` ping, the drain lock, §2.3). Never rejects. */
-export const refreshOutbox = (): Promise<void> => {
+/**
+ * Re-reads both keys under the write lock (a `changed` ping, the drain lock, §2.3). Resolves false
+ * when the read failed (the caller retries); never rejects.
+ */
+export const refreshOutbox = (): Promise<boolean> => {
     const owner = ownerId;
     const epoch = ownerEpoch;
 
     if (owner === null || restoreState !== 'ok') {
-        return Promise.resolve();
+        return Promise.resolve(true);
     }
     return runOutboxIo(owner, () => readKeys(owner)).then(
         read => {
             if (ownerId === owner && ownerEpoch === epoch) {
                 state = read.state;
             }
+            return true;
         },
-        () => undefined,
+        () => false,
     );
 };
 
@@ -665,9 +676,6 @@ export const isRetryRequested = (opId: string): boolean =>
 export const retryRequestedOps = (): readonly OutboxOpBase[] =>
     state.retryRequested.flatMap(opId => state.failed.get(opId)?.op ?? []).sort(bySeq);
 
-/** The claim in the key (`OutboxState.sending`). */
-export const outboxClaim = (): PersistedOutboxState['sending'] => state.sending;
-
 const unreadableEntryIds = (): string[] =>
     state.unreadable.flatMap(({ entryId }) => (entryId === null ? [] : [entryId]));
 
@@ -735,6 +743,11 @@ export const removeOutboxOp = (op: OutboxOpBase, fence: OutboxFence): Promise<vo
             draft.retryRequested = draft.retryRequested.filter(opId => opId !== op.opId);
             if (isClaimOf(draft, op.opId, fence)) {
                 draft.sending = null;
+            }
+            // A run of a drain session that is no longer current leaves `versions` to the
+            // current holder (its version may be older than the one the holder wrote since).
+            if (!isDrainFence(fence)) {
+                return { isLeft: true, version: undefined };
             }
             const version = outboxVersions.get(op.entryId);
             const isLeft = draft.ops.some(({ entryId }) => entryId === op.entryId);
@@ -945,11 +958,19 @@ export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
 
 /**
  * "Retry" of failed ops from any tab (§2.3): their ids join `retryRequested` in one write; the drain
- * tab adopts them on the `changed` ping. Resolves with the ids that are failed and now requested.
+ * tab adopts them on the `changed` ping. An op that may not be sent (another owner, `isSendable`
+ * false) is not requested. Resolves with the ids that are failed and now requested.
  */
-export const requestRetry = (opIds: readonly string[]): Promise<string[]> =>
+export const requestRetry = (
+    opIds: readonly string[],
+    isSendable: (op: OutboxOpBase) => boolean,
+): Promise<string[]> =>
     writeOutbox(draft => {
-        const requested = opIds.filter(opId => draft.failed.has(opId));
+        const requested = opIds.filter(opId => {
+            const failed = draft.failed.get(opId);
+
+            return failed !== undefined && failed.op.owner === ownerId && isSendable(failed.op);
+        });
 
         draft.retryRequested = [...new Set([...draft.retryRequested, ...requested])];
         return requested;

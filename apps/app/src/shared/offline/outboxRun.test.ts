@@ -626,7 +626,7 @@ test('D29 M4: a success does not unblock its entry; only a Retry of the failed o
     // Retry: the failed op takes its turn by seq, its success unblocks the entry, op-3 follows.
     const [failed] = failedOutboxOps();
 
-    await requestRetry(failed ? [failed.op.opId] : []);
+    await requestRetry(failed ? [failed.op.opId] : [], () => true);
     const retried = failed ? runOutboxOp(failed.op, deps) : null;
 
     await tick();
