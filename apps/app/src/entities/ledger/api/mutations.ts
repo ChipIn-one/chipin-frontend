@@ -1,8 +1,8 @@
 // The ledger entity mutations (spec 03 §2.1, §6 row 6): create and update an expense, create a
 // settlement (settle-up), delete a ledger entry (an expense or a settlement: one endpoint, spec 03
 // §2.9). Online only: no outbox, no retry, and the hooks refuse them offline before `mutate`. The
-// keys are the online set of spec 03 §2.1; the outbox set and `registerLedgerMutationDefaults`
-// arrive with 03-15a.
+// keys are the online set of spec 03 §2.1; the outbox set of an expense is `./outbox.ts` (03-15a,
+// behind `VITE_FEATURE_OFFLINE_WRITES`).
 //
 // Nothing is written into a cache here (the server is the source of truth for finances): once a
 // sent write settles, what shows the entry is read again. Until every view of the entry is a

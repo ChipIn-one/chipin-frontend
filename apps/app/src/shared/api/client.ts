@@ -10,11 +10,16 @@ import type { PublicOperations } from 'shared/api/generated/publicOperations';
 import type { paths } from 'shared/api/generated/schema';
 import { ApiError, ApiResponseFormatError, getApiErrorPayload } from 'shared/lib/apiError';
 
-import { apiInstance, publicApiInstance } from './http';
+import {
+    apiInstance,
+    AuthRequestCancelledError,
+    EXPECTED_TOKEN_SUBJECT_CONFIG_KEY,
+    publicApiInstance,
+} from './http';
 import { encodePathSegment, InvalidPathSegmentError } from './pathSegment';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
-export { ApiError, ApiResponseFormatError, InvalidPathSegmentError };
+export { ApiError, ApiResponseFormatError, AuthRequestCancelledError, InvalidPathSegmentError };
 
 export type Method = 'get' | 'put' | 'post' | 'delete' | 'patch';
 
@@ -79,6 +84,8 @@ export type ApiOptions<O> = ParamsPart<O> &
         headers?: Record<string, string>;
         signal?: AbortSignal;
         onUploadProgress?: (event: AxiosProgressEvent) => void;
+        /** The `sub` the attached access token must have, else the request is not sent (C3-07). */
+        expectedTokenSubject?: string;
     };
 
 /** `opts` is required when the operation has a required path param, query or body. */
@@ -93,6 +100,7 @@ interface LooseOptions {
     headers?: Record<string, string>;
     signal?: AbortSignal;
     onUploadProgress?: (event: AxiosProgressEvent) => void;
+    expectedTokenSubject?: string;
 }
 
 const isLooseOptions = (value: unknown): value is LooseOptions =>
@@ -164,6 +172,10 @@ const request = async <P extends keyof paths, M extends MethodOf<P>>(
         // A multipart upload keeps the Axios default request transform.
         ...(isMultipart ? {} : { transformRequest: [stringifyWireJson] }),
     };
+
+    if (opts.expectedTokenSubject !== undefined) {
+        Reflect.set(config, EXPECTED_TOKEN_SUBJECT_CONFIG_KEY, opts.expectedTokenSubject);
+    }
     let response;
 
     try {
@@ -218,3 +230,6 @@ export function publicApi<P extends PublicPath, M extends PublicMethodOf<P>>(
  */
 export const isNetworkError = (error: unknown): boolean =>
     isAxiosError(error) && error.response === undefined && !isCancel(error);
+
+/** A request cancelled through its `AbortSignal` (Axios `CanceledError`). */
+export const isRequestCancelled = (error: unknown): boolean => isCancel(error);

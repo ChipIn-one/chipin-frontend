@@ -618,6 +618,54 @@ A single retry policy (replaces the former `outboxRetry`/`retry: outboxRetry`):
 
 TanStack **queries** use their own `queryRetry` policy (§1.2); outbox mutations have `retry: false`.
 
+Deviation (03-15a): the core is in memory and wired only behind `VITE_FEATURE_OFFLINE_WRITES` (default off); files
+`shared/offline/outboxGate.ts`, `outboxStore.ts` (queue, `seq`, `discardOps`, `cancelledOpIds`, `outboxVersions`,
+`pendingRemovals`; every change through `writeOutbox`, the future write-locked IDB write), `outboxRegistry.ts`,
+`outboxRun.ts` (`runOutboxOp`, `retryWrite`, `classifyOutboxError`, `adoptOutboxOps`, `recheckOutboxOwner`) and
+`entities/ledger/api/outbox.ts` (keys, op types, send, defaults, path choice). (1) The outbox defaults are registered on
+a client at its first outbox write (`registerLedgerOutboxDefaults`, once per client), not in `createQueryClient()`: there
+is no hydrate yet, and with the flag off nothing of the outbox runs; 03-15b registers them before hydrate. (2) The hooks
+keep their signatures and stay in `hooks/useLedgerMutations.ts`: the path choice (`chooseLedgerWritePath`, the
+`*ViaOutbox` functions) reads the entry type from the cached `ledger.entry(id)` instead of an `entry` argument (§2.9
+C2-33 needs that cache entry anyway); a settlement is never cached as `EXPENSE`, so it always takes the online key.
+(3) `offlineWritesAvailable` is the flag and the three capabilities (read from the cache, fetched when absent); the
+restore, Web Locks, `BroadcastChannel` and storage conditions arrive with 03-15b/c. (4) Until 03-16b a 409
+`LEDGER.VERSION_CONFLICT` (and an unknown version with GET 200) is a final error `conflict`: the op is failed and its
+entry blocked, no draft. (5) Every op carries `groupId` and `parentActivityId` (what is read again on settle); the entry id of a create is
+made once per submit (a repeated submit while one is being queued is refused as busy, like the online path); the
+form keeps no id yet, 03-16a moves it to the form's opening (§2.7); a 404 on a create is failed `rejected`. A delete
+whose unknown version GETs a 404 is a success no-op (like DELETE 404), not `deletedRemotely`.
+(6) No optimistic `setQueryData` and no `setQueryData` of the 2xx entry: there is no `ledger.entry` query or mapper
+yet, the settle invalidates through the hooks' `LedgerWriteEffects`. (7) `retryWrite(op, write, shouldStop)` takes the
+stop predicate instead of `{ ignoreStop }`; adoption continues each mutation it builds instead of calling
+`resumePausedMutations()` (no unrelated paused mutation is resumed). (8) The gate also has `adopt` (an adopted op
+keeps its place in the turn before its run reaches the gate), `releaseTurn`, `wake` (a discard), `reset` (a stop) and
+the `whenTurn` option `isSkipped`; a wait for the network or a backoff ends early on a discard or a stop.
+(9) `recheckOutboxOwner(sub)` opens the `auth` gate; calling it on a token refresh is the 03-15b `auth` gate wiring.
+The C3-07 check is bound to the token actually attached: every outbox request carries `expectedTokenSubject: owner`,
+and the request interceptor rejects a mismatch with `AuthRequestCancelledError` before sending (no session expiry),
+classified `auth` like any interceptor cancel (§2.5 row 401: pending, not failed). A run of a previous owner (account
+switch in the tab) resolves `stopped` without touching the new owner's queue or gate. Only a Retry or a discard
+unblocks an entry; a sent op waiting for its removal write is refused by `discardOps` and is no pending create.
+(10) Classification beyond the §2.5 table: 429, a 2xx with a non-JSON body and a cancelled request are `transient`;
+410 is a no-op only with `LEDGER.ENTRY_DELETED`, a 409 or 410 with another code is `rejected`.
+(11) Open items with their rows: the `ledger.entry(id)` query (key factory in `entities/ledger`, `toLedgerEntry`,
+the optimistic write and the 2xx `setQueryData` of §2.2/§2.5) is owned by 03-16a; until it lands nothing fills that
+cache, so an outbox edit or delete is unreachable in the app and only a create can take the outbox path. 03-15b:
+`FailedOpSchema` keeps the reason `conflict` readable and 03-16b turns such records into conflict drafts on restore.
+03-16a decides whether settle-up refuses a group with queued expenses or shows the "excluding unsent operations"
+caption (the settle-up busy guard does not see outbox ops). An adopted op whose mutation fails before its run starts
+releases its turn (`adoptOutboxOps`), so it cannot stall later ops. `VITE_FEATURE_OFFLINE_WRITES` stays unset in every
+deploy, previews included, until at least 03-15b (the in-memory queue is lost on reload).
+(12) From the R2 review, for 03-15c: a 2xx that arrives after `stopOutbox()` of the same owner resolves `stopped` and
+the next drain resends the op (idempotent), unlike §2.4 "the removal keeps retrying after the drain stops"; 03-15c
+processes a same-owner 2xx normally and returns `stopped` only after an owner change. `stopOutbox` clears both
+cancelled sets; 03-15c clears cancellations per run (`forgetCancelled`) instead. The send claim is released only by
+its own run (`releaseOutboxClaim(opId)`), so a stale run never clears a newer run's claim. The outbox owner's user id
+travels on the Axios request config (`chipinExpectedTokenSubject`); Sentry does not serialize `error.config`
+(`initializeSentry` has no extra-error-data integration, `sendDefaultPii: false`, and no outbox error is captured),
+and the field cannot be stripped in the response-error path because the 401 retry reuses the config.
+
 #### 2.5 Error handling
 
 409 is distinguished **by `code`**, not by status: `SYSTEM.CONFLICT` — transient (retry), `LEDGER.VERSION_CONFLICT` —
@@ -1347,9 +1395,9 @@ Each PR ≤ ~400 lines of diff (excluding the generated file) and is released in
 | 03-14 | expense modal: breaking the store↔selectors cycle (the draft types into `store/expenseModalTypes.ts`), co-location of the modal UI in `features/add-expense/` (the draft store stays in `store/`; §6 row 6) | 03-13 |
 | 03-14b | expense create/update payload on `Money` (§4.3): `selectExpensePayload`/`expenseModalSelectors.ts` and `api/chipin.params.ts` stop building amounts/shares as JS `number` (`Number(text)`, `expenseModalSelectors.ts:161-162, 695-699, 732`; `chipin.params.ts:43-51, 72, 80, 95`); the write goes through the `toXWire()`/`moneyToWire` mappers the outbox will use; check `buildExpenseUpdateParams` (`store/expenseModalUpdate.ts:95-130`), which never sends `date` in the PATCH although the type allows it. File-lock `src/store/expenseModal*` applies | 03-14 |
 | 03-15a | the outbox core, one tab, **in memory**: `ledgerOutboxMutationKeys` + defaults/callbacks, the path-choice hooks (§2.1), the "expenses only" registry, `seq`, the in-memory queue store behind the §2.3 interface (`enqueueOutboxOp`, `adoptOutboxOps`), `runOutboxOp` + `retryWrite` + the drain turn + gate (global + per-entry block; changes the 03-7a stub interface, §1.6) + `discardOps`/`cancelledOpIds` + `outboxVersions`/`pendingRemovals`, the `owner` check; flag `VITE_FEATURE_OFFLINE_WRITES=false`. Tests: `seq` order one at a time, a failed op of X does not block Y, error classes, discard, settlement guard, two create paths | 03-7b, 03-13, 03-14b; owner confirmation on D3 (00) |
-| 03-15b | outbox persistence: `OutboxState` + zod, the `outboxRestore` guard (§1.6), the IDB keys with explicit writes (§2.3), the failed key with an awaited write, the append write + toast, `storage.persist()`, limits 50 (pending + failed; drafts join in 03-16b)/14 days + `stale`, the `auth` gate by the token `sub`. Tests: reload, slow/failed restore, the failed window, quota, foreign session | 03-15a |
-| 03-15c | multiple tabs (D29, §2.3): the write lock around every read-modify-write of the outbox keys, append from any tab, the drain lock (released on hidden/freeze/pagehide, re-requested on resume) + adoption on acquisition and on ping, the `sending` claim, `BroadcastChannel` (`changed`/`status`/`status-request`/`settled { op, entry }`), re-read on ping and on lock acquisition, `retryRequested`/discard from any tab, the badge hint, no-Web-Locks fallback. Tests: two tabs (an op written in tab B is sent exactly once; the holder dies mid-request → the next holder resends with the same op-id, no duplicate; concurrent appends keep both ops; fresh version in a non-drain tab; hidden → visible in one tab still sends; release with a request in flight → aborted, no concurrent resend, no false conflict draft; claim cleared after a network error/5xx, discard then allowed; claim fails once stopped, a late removal clears only its own claim; removal after success finishes after a stop, restore sees no stale version; claim write rejected → transient retry; drain writes after `clearUserData` are no-ops; a version is deleted only inside the write-locked removal when no op of the entry remains; `whenTurn` of a Retry waits its turn, a hidden tab that gets the drain lock does not drain; `retryingOpIds` cleared after the run, `cancelled` cleaned for never-adopted folded ops; Retry of a failed op is claimed and sent, not `CANCELLED`; a stale holder's late clear leaves the new holder's claim; re-acquisition during a pending removal keeps the in-memory version, no false conflict; a run in backoff across hidden → visible continues and its op is sent once) | 03-15b |
-| 03-16a | `OutboxSheet`, `<OnlineOnly>` + `ONLINE_ONLY_ACTIONS` (including `settlement.delete`/`edit`), the caption at balances, confirm on `signOut` with a non-empty outbox and the outbox part of the account-switch dialog, banners `outboxUnavailable`/`storageNotPersisted`, i18n ×5 | 03-15c |
+| 03-15b | outbox persistence: `OutboxState` + zod, the `outboxRestore` guard (§1.6), the IDB keys with explicit writes (§2.3), the failed key with an awaited write, the append write + toast, `storage.persist()`, limits 50 (pending + failed; drafts join in 03-16b)/14 days + `stale`, the `auth` gate by the token `sub`. Tests: reload, slow/failed restore, the failed window, quota, foreign session (03-15a review: `FailedOpSchema` keeps the interim reason `conflict` readable; `recheckOutboxOwner` wired on every new access token) | 03-15a |
+| 03-15c | multiple tabs (D29, §2.3): the write lock around every read-modify-write of the outbox keys, append from any tab, the drain lock (released on hidden/freeze/pagehide, re-requested on resume) + adoption on acquisition and on ping, the `sending` claim, `BroadcastChannel` (`changed`/`status`/`status-request`/`settled { op, entry }`), re-read on ping and on lock acquisition, `retryRequested`/discard from any tab, the badge hint, no-Web-Locks fallback. Tests: two tabs (an op written in tab B is sent exactly once; the holder dies mid-request → the next holder resends with the same op-id, no duplicate; concurrent appends keep both ops; fresh version in a non-drain tab; hidden → visible in one tab still sends; release with a request in flight → aborted, no concurrent resend, no false conflict draft; claim cleared after a network error/5xx, discard then allowed; claim fails once stopped, a late removal clears only its own claim; removal after success finishes after a stop, restore sees no stale version; claim write rejected → transient retry; drain writes after `clearUserData` are no-ops; a version is deleted only inside the write-locked removal when no op of the entry remains; `whenTurn` of a Retry waits its turn, a hidden tab that gets the drain lock does not drain; `retryingOpIds` cleared after the run, `cancelled` cleaned for never-adopted folded ops; Retry of a failed op is claimed and sent, not `CANCELLED`; a stale holder's late clear leaves the new holder's claim; re-acquisition during a pending removal keeps the in-memory version, no false conflict; a run in backoff across hidden → visible continues and its op is sent once); from the 03-15a R2 review: a same-owner 2xx after a stop is processed (removal retried), cancellations are cleared per run, not on stop | 03-15b |
+| 03-16a | `OutboxSheet`, `<OnlineOnly>` + `ONLINE_ONLY_ACTIONS` (including `settlement.delete`/`edit`), the caption at balances, confirm on `signOut` with a non-empty outbox and the outbox part of the account-switch dialog, banners `outboxUnavailable`/`storageNotPersisted`, i18n ×5; from the 03-15a review: the `ledger.entry(id)` query (key factory, `toLedgerEntry`, the optimistic write and the 2xx `setQueryData`, §2.2), the client entry id made at the form's opening + test "a repeated submit queues one op", and settle-up with queued expenses (refuse for the group, or the balance caption) | 03-15c |
 | 03-16b | conflict handling per D28 (§2.6): `recordConflict` (fresh `current` into `ledger.entry(id)` and the list caches, later ops of the entry folded into a `ConflictDraft`), the toasts `offline:conflictChanged`/`offline:conflictNotDeleted`, reopening the draft in the edit form and resending with `baseVersion = current.version`, the draft rows in `OutboxSheet`, drafts in the limit of 50 and the sign-out count, i18n ×5; no dialog | 03-16a |
 | 03-17 | enable the flag for expenses | BE-03-1, BE-03-2, BE-03-5, 03-16b, 03-20, 04-4a2 in prod (D30: the queue lives in IndexedDB of the app-host origin and does not move between origins; after cutover step 1 the app origin is `app.chipin.one` and no longer changes, step 2 (04-4b) moves only the site, spec 04 §4.1) |
 | 03-18 | delete `loadingStore`, `errorsStore`, their selectors; leftover `useConnect` (done; §6 row 8) | 03-14 |
