@@ -20,7 +20,8 @@ const errorName = (error: unknown): string =>
 /**
  * Strictly in the order of §1.5, otherwise a throttled write (1 s) or a cache event after the `del`
  * brings the user's data back: (1) stop saving the query cache and stop the user's outbox (its drain
- * and every later outbox write; the drain lock joins here in 03-15c2); (2) clear the user's QueryClient; (2a) `resetUserStores`, the
+ * and every later outbox write; `stopOutboxIo` also releases the drain lock, stops requesting it
+ * and closes the outbox channel, `outboxDrain.ts`); (2) clear the user's QueryClient; (2a) `resetUserStores`, the
  * legacy zustand stores and the expense draft (they live in `store`, so the caller passes them);
  * (3) delete the user's IndexedDB keys (the outbox keys after the outbox write
  * already running, so none lands after the `del`); (4) forget the user's client, so the provider and the next

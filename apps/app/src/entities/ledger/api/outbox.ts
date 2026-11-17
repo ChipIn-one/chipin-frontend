@@ -1,9 +1,10 @@
-// The ledger outbox (spec 03 §2.1, 03-15a/b/c1): expenses only, persisted in IndexedDB under the write lock,
+// The ledger outbox (spec 03 §2.1, 03-15a/b/c): expenses only, persisted in IndexedDB under the write lock,
 // behind `VITE_FEATURE_OFFLINE_WRITES` (off: every write takes the online path and nothing of the
 // outbox is read or written, as before). With the flag on a user's new client registers the outbox
-// defaults and then restores the persisted ops (`startLedgerOutbox`). On the outbox path a write
-// creates no mutation itself: it appends an op (the registry checks it is an expense) and the
-// adoption creates the op's mutation with the outbox key and its defaults. A settlement and
+// defaults and then starts the outbox (`startLedgerOutbox`): the tab reads it and, holding the
+// drain lock, adopts and sends it. On the outbox path a write creates no mutation itself: it
+// appends an op (the registry checks it is an expense) and the drain tab's adoption creates the
+// op's mutation with the outbox key and its defaults. A settlement and
 // settle-up never take this path (§2.9).
 import type { QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -11,6 +12,13 @@ import { z } from 'zod';
 import { getAccessTokenUserId } from 'helpers/authSession';
 import { api, ApiError } from 'shared/api/client';
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
+import { hasBroadcastChannel } from 'shared/offline/outboxChannel';
+import {
+    adoptIfDraining,
+    announceOutboxSettled,
+    type OutboxDrainHooks,
+    startOutboxDrain,
+} from 'shared/offline/outboxDrain';
 import { hasWebLocks } from 'shared/offline/outboxIo';
 import {
     cachedEntryType,
@@ -20,19 +28,18 @@ import {
     type OutboxOpSeed,
 } from 'shared/offline/outboxRegistry';
 import {
-    adoptOutboxOps,
     type OutboxAdoption,
     type OutboxDeps,
     OutboxEntryGoneError,
     type OutboxResult,
     type OutboxSent,
-    restoreOutbox,
     runOutboxOp,
 } from 'shared/offline/outboxRun';
 import { OutboxOpBaseSchema } from 'shared/offline/outboxSchema';
 import {
     isOutboxFull,
     isOutboxPersistFailed,
+    noteSettledVersion,
     type OutboxOpBase,
     outboxOwner,
     type OutboxRestore,
@@ -118,6 +125,7 @@ const isLedgerOutboxOp = (value: unknown): value is LedgerOutboxOp =>
 const resolveVersion = (
     op: UpdateExpenseOp | DeleteExpenseOp,
     knownVersion: string | null,
+    signal: AbortSignal,
 ): Promise<string> => {
     const version = knownVersion ?? op.baseVersion;
 
@@ -129,6 +137,7 @@ const resolveVersion = (
     return api('get', '/ledger/entries/{id}', {
         params: { id: op.entryId },
         expectedTokenSubject: op.owner,
+        signal,
     }).then(
         current => {
             throw new ApiError({
@@ -152,14 +161,17 @@ const opHeaders = (op: LedgerOutboxOp, version: string): Record<string, string> 
     'X-Client-Op-Id': op.opId,
 });
 
+// `signal`: a release of the drain lock on freeze/pagehide aborts the request (§2.3).
 const sendLedgerOutboxOp = (
     op: LedgerOutboxOp,
     knownVersion: string | null,
+    signal: AbortSignal,
 ): Promise<OutboxSent> => {
     switch (op.kind) {
         case 'createExpense':
             return api('post', '/ledger/entries', {
                 expectedTokenSubject: op.owner,
+                signal,
                 body: {
                     type: 'EXPENSE',
                     id: op.entryId,
@@ -168,22 +180,24 @@ const sendLedgerOutboxOp = (
                 },
             }).then(entry => ({ version: entry.version, entry }));
         case 'updateExpense':
-            return resolveVersion(op, knownVersion)
+            return resolveVersion(op, knownVersion, signal)
                 .then(version =>
                     api('patch', '/ledger/entries/{id}', {
                         params: { id: op.entryId },
                         expectedTokenSubject: op.owner,
+                        signal,
                         headers: opHeaders(op, version),
                         body: { type: 'EXPENSE', expense: op.patch },
                     }),
                 )
                 .then(entry => ({ version: entry.version, entry }));
         case 'deleteExpense':
-            return resolveVersion(op, knownVersion)
+            return resolveVersion(op, knownVersion, signal)
                 .then(version =>
                     api('delete', '/ledger/entries/{id}', {
                         params: { id: op.entryId },
                         expectedTokenSubject: op.owner,
+                        signal,
                         headers: opHeaders(op, version),
                     }),
                 )
@@ -204,10 +218,9 @@ const OFFLINE_WRITE_CAPABILITIES: readonly BackendCapability[] = [
 ];
 
 /**
- * `offlineWritesAvailable` of §2.7 as far as 03-15c1 goes: the flag, the backend capabilities, Web
- * Locks (the write lock, §2.3), this tab's `outboxRestore === 'ok'` for the client's user, no
- * failed append write this session, and fewer than 50 ops (§2.8; 03-15c2 adds `BroadcastChannel`).
- * Flag off: nothing is read.
+ * `offlineWritesAvailable` of §2.7: the flag, the backend capabilities, Web Locks and
+ * `BroadcastChannel` (§2.3), this tab's `outboxRestore === 'ok'` for the client's user, no failed
+ * append write this session, and fewer than 50 ops (§2.8). Flag off: nothing is read.
  */
 export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
     if (!isOfflineWritesFlagOn()) {
@@ -224,6 +237,7 @@ export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
     return (
         OFFLINE_WRITE_CAPABILITIES.every(name => capabilities.includes(name)) &&
         hasWebLocks() &&
+        hasBroadcastChannel() &&
         owner !== null &&
         outboxRestoreState(owner) === 'ok' &&
         !isOutboxPersistFailed() &&
@@ -286,11 +300,17 @@ export const registerLedgerOutboxDefaults = (
                     void client.invalidateQueries({ queryKey: ledgerEntryKey(variables.entryId) });
                 }
             },
-            // `stopped`/`cancelled` changed nothing on the server: nothing to read again.
+            // `stopped`/`cancelled` changed nothing on the server: nothing to read again. The other
+            // tabs run the same effects on `settled` (§2.2).
             onSettled: (result, error, variables) => {
                 if (!isLedgerOutboxOp(variables) || (!error && result?.kind !== 'sent')) {
                     return undefined;
                 }
+                announceOutboxSettled(
+                    variables,
+                    error ? 'failed' : 'sent',
+                    result?.kind === 'sent' ? result.entry : null,
+                );
                 const context = {
                     groupId: variables.groupId ?? undefined,
                     parentActivityId: variables.parentActivityId ?? undefined,
@@ -309,10 +329,47 @@ const ledgerAdoption = (client: QueryClient): OutboxAdoption => ({
     sessionUserId: () => getAccessTokenUserId(),
 });
 
+const versionOf = (entry: unknown): string | null =>
+    typeof entry === 'object' &&
+    entry !== null &&
+    'version' in entry &&
+    typeof entry.version === 'string'
+        ? entry.version
+        : null;
+
+// §2.2 in a tab that does not drain: the effects of another tab's settled op of this owner. Until
+// the `ledger.entry(id)` query (03-16a) the answered version is kept by the outbox, so the next
+// edit appended here is based on it (no false 409).
+const ledgerDrainHooks = (
+    client: QueryClient,
+    userId: string,
+    effects: LedgerWriteEffects,
+): OutboxDrainHooks => ({
+    ...ledgerAdoption(client),
+    onRemoteSettled: ({ op, result, entry }) => {
+        if (!isLedgerOutboxOp(op) || op.owner !== userId) {
+            return;
+        }
+        const context = {
+            groupId: op.groupId ?? undefined,
+            parentActivityId: op.parentActivityId ?? undefined,
+        };
+
+        if (result === 'sent') {
+            noteSettledVersion(op.entryId, versionOf(entry));
+            void effects.onEntryWritten(context, client).catch(() => undefined);
+            return;
+        }
+        void client.invalidateQueries({ queryKey: ledgerEntryKey(op.entryId) });
+        void effects.onWriteFailed(context, client).catch(() => undefined);
+    },
+});
+
 /**
  * Starts the outbox of the user's new client (§2.1, §2.3; `bootstrap` wires it to `clientFor`):
- * the defaults are registered first, then the persisted ops are hydrated as paused mutations and
- * resumed (`restoreOutbox`). Flag off: nothing is registered, read or written.
+ * the defaults are registered first, then the tab reads the outbox and requests the drain lock;
+ * holding it, the persisted ops are hydrated as paused mutations and resumed (`restoreOutbox`).
+ * Flag off: nothing is registered, read or written, no lock is requested and no channel opened.
  */
 export const startLedgerOutbox = (
     client: QueryClient,
@@ -323,11 +380,11 @@ export const startLedgerOutbox = (
         return Promise.resolve('pending');
     }
     registerLedgerOutboxDefaults(client, effects);
-    return restoreOutbox(client, userId, ledgerAdoption(client));
+    return startOutboxDrain(client, userId, ledgerDrainHooks(client, userId, effects));
 };
 
-// Every tab drains its own appends until the drain lock (03-15c2). The path choice
-// required this tab's restored outbox of the client's user, so its defaults are registered.
+// Any tab appends (§2.3): the drain tab adopts its own op at once, the others learn it by the
+// `changed` ping. The path choice required this tab's restored outbox of the client's user.
 const enqueueLedgerOp = <Op extends LedgerOutboxOp>(
     client: QueryClient,
     target: Omit<OutboxOpRequest, 'owner'>,
@@ -339,9 +396,7 @@ const enqueueLedgerOp = <Op extends LedgerOutboxOp>(
         return Promise.reject(new Error('No signed-in user client'));
     }
     return enqueueOutboxOp(client, { ...target, owner }, build).then(() => {
-        const { mutationKeyFor, isAcceptable } = ledgerAdoption(client);
-
-        adoptOutboxOps(client, mutationKeyFor, isAcceptable);
+        adoptIfDraining();
     });
 };
 

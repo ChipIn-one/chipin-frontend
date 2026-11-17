@@ -33,8 +33,10 @@ import {
     isOutboxStopped,
     isOwnerFence,
     isPendingRemoval,
+    isRetryRequested,
     markPendingRemoval,
     noteOutboxVersion,
+    noteSettledVersion,
     onOutboxWake,
     outboxEntryIds,
     type OutboxFence,
@@ -42,12 +44,14 @@ import {
     type OutboxOpBase,
     outboxOwner,
     type OutboxRestore,
+    outboxSessionSignal,
     pendingOutboxOps,
     readOutbox,
     recordFailedOp,
     releaseOutboxClaim,
     removeOutboxOp,
     restoreOutboxVersions,
+    retryRequestedOps,
     setOutboxStatus,
     startOutbox,
     trackFailureWrite,
@@ -89,8 +93,11 @@ export class OutboxEntryGoneError extends Error {
 }
 
 export interface OutboxDeps<Op extends OutboxOpBase> {
-    /** Sends one op; `knownVersion` is our latest write of the entry (§2.1), else null. */
-    send: (op: Op, knownVersion: string | null) => Promise<OutboxSent>;
+    /**
+     * Sends one op; `knownVersion` is our latest write of the entry (§2.1), else null. `signal` is
+     * aborted when the drain is released on freeze/pagehide (§2.3).
+     */
+    send: (op: Op, knownVersion: string | null, signal: AbortSignal) => Promise<OutboxSent>;
     /** The `sub` of the current access token (§2.3), compared with `op.owner` before each send. */
     sessionUserId: () => string | null;
 }
@@ -282,6 +289,7 @@ const onSent = (
         return STOPPED;
     }
     noteOutboxVersion(op, sent.version);
+    noteSettledVersion(op.entryId, sent.version);
     markPendingRemoval(op.opId);
     if (isDrainFence(fence)) {
         outboxGate.releaseTurn(op.opId);
@@ -364,15 +372,46 @@ const onSendError = async (
     }
 };
 
+// Requests of this tab in flight: the drain lock is released on hidden only once none is (§2.3).
+let inFlight = 0;
+const idleListeners = new Set<() => void>();
+
+/** Resolves once no request of this tab is in flight. */
+export const whenOutboxIdle = (): Promise<void> =>
+    inFlight === 0
+        ? Promise.resolve()
+        : new Promise(resolve => {
+              idleListeners.add(resolve);
+          });
+
+const trackSend = <T>(send: Promise<T>): Promise<T> => {
+    inFlight += 1;
+    return send.finally(() => {
+        inFlight -= 1;
+        if (inFlight === 0) {
+            const listeners = [...idleListeners];
+
+            idleListeners.clear();
+            listeners.forEach(listener => listener());
+        }
+    });
+};
+
+// The failed ops whose Retry runs in this tab now; cleared when the run settles.
+const retryingOpIds = new Set<string>();
+
+export const isOutboxRetrying = (opId: string): boolean => retryingOpIds.has(opId);
+
 const attempt = async <Op extends OutboxOpBase>(
     op: Op,
     deps: OutboxDeps<Op>,
     ignoreEntryBlock: boolean,
     count: number,
     fence: OutboxFence,
+    signal: AbortSignal,
 ): Promise<OutboxResult> => {
     const retry = (): Promise<OutboxResult> =>
-        attempt(op, deps, ignoreEntryBlock, count + 1, fence);
+        attempt(op, deps, ignoreEntryBlock, count + 1, fence, signal);
     const isOwnerSession = (): boolean => deps.sessionUserId() === op.owner;
 
     // M2: a stale run never joins the turn order of a newer drain session.
@@ -426,7 +465,7 @@ const attempt = async <Op extends OutboxOpBase>(
         outboxGate.close('auth');
         return retry();
     }
-    const outcome = await deps.send(op, getOutboxVersion(op.entryId)).then(
+    const outcome = await trackSend(deps.send(op, getOutboxVersion(op.entryId), signal)).then(
         (sent: OutboxSent) => ({ sent }),
         (error: unknown) => ({ error }),
     );
@@ -443,16 +482,20 @@ const attempt = async <Op extends OutboxOpBase>(
 /**
  * Sends one op when its turn comes, within the drain session it started in (its fence). Resolves
  * with a success, `stopped` or `cancelled`; rejects only with `OutboxTerminalError`, after the op
- * was recorded as failed.
+ * was recorded as failed. A failed op under "Retry" (`retryRequested`) ignores its entry's block.
  */
 export const runOutboxOp = <Op extends OutboxOpBase>(
     op: Op,
     deps: OutboxDeps<Op>,
-    { ignoreEntryBlock = false }: { ignoreEntryBlock?: boolean } = {},
+    { ignoreEntryBlock = isRetryRequested(op.opId) }: { ignoreEntryBlock?: boolean } = {},
 ): Promise<OutboxResult> => {
     const fence = currentOutboxFence();
 
-    return attempt(op, deps, ignoreEntryBlock, 0, fence).finally(() => {
+    if (ignoreEntryBlock) {
+        retryingOpIds.add(op.opId);
+    }
+    return attempt(op, deps, ignoreEntryBlock, 0, fence, outboxSessionSignal()).finally(() => {
+        retryingOpIds.delete(op.opId);
         // A newer session may have adopted the same op: its turn is not this run's to release.
         if (isDrainFence(fence)) {
             outboxGate.releaseTurn(op.opId);
@@ -486,11 +529,22 @@ const opIdOf = (variables: unknown): unknown =>
         ? variables.opId
         : undefined;
 
+/** The ops with a pending outbox mutation in this tab (settled ones linger until gc). */
+export const runningOutboxOpIds = (client: QueryClient): ReadonlySet<unknown> =>
+    new Set(
+        client
+            .getMutationCache()
+            .getAll()
+            .filter(mutation => mutation.state.status === 'pending')
+            .map(mutation => opIdOf(mutation.state.variables)),
+    );
+
 /** Whether the op may be sent for its owner (C3-07) and is an expense (C2-02). */
 export type OutboxOpCheck = (op: OutboxOpBase) => boolean;
 
 /**
- * Creates the outbox mutations (the only place, §2.1): each pending op not yet running, by `seq`,
+ * Creates the outbox mutations (the only place, §2.1, in the drain-lock holder): each pending op
+ * and each failed op under "Retry" not yet running, by `seq`,
  * as a paused mutation without a scope that continues at once (the drain turn orders them). An
  * op of another owner or not an expense moves to failed `unreadable`, an op older than 14 days to
  * failed `stale` (§2.8); skipped: cancelled (in memory or in the key), failed, already sent
@@ -503,29 +557,34 @@ export const adoptOutboxOps = (
 ): void => {
     const cache = client.getMutationCache();
     const fence = currentOutboxFence();
-    const running = new Set(
-        cache
-            .getAll()
-            .filter(mutation => mutation.state.status === 'pending')
-            .map(mutation => opIdOf(mutation.state.variables)),
-    );
+    const running = runningOutboxOpIds(client);
+    const retries = retryRequestedOps();
 
-    pendingOutboxOps().forEach(op => {
+    [...pendingOutboxOps(), ...retries].forEach(op => {
+        const isRetry = retries.includes(op);
+
         if (
             isOpCancelled(op.opId) ||
             isOpCancelledInKey(op.opId) ||
-            isOpFailed(op.opId) ||
+            (isOpFailed(op.opId) && !isRetry) ||
             isPendingRemoval(op.opId) ||
             running.has(op.opId)
         ) {
             return;
         }
-        const failure =
-            op.owner !== outboxOwner() || !isAcceptable(op)
-                ? 'unreadable'
-                : Date.now() - op.createdAt > OUTBOX_STALE_MS
-                  ? 'stale'
-                  : null;
+        const isForeign = op.owner !== outboxOwner() || !isAcceptable(op);
+
+        // A Retry of an op that may not be sent stays failed (it would hold the `auth` gate).
+        if (isRetry && isForeign) {
+            return;
+        }
+        const failure = isRetry
+            ? null
+            : isForeign
+              ? 'unreadable'
+              : Date.now() - op.createdAt > OUTBOX_STALE_MS
+                ? 'stale'
+                : null;
 
         if (failure) {
             outboxGate.block(op.entryId);
@@ -535,7 +594,7 @@ export const adoptOutboxOps = (
             );
             return;
         }
-        outboxGate.adopt(op);
+        outboxGate.adopt(op, isRetry);
         const mutation = cache.build<OutboxResult, Error, OutboxOpBase, unknown>(
             client,
             { mutationKey: mutationKeyFor(op.kind) },
@@ -572,9 +631,10 @@ export interface OutboxAdoption {
 }
 
 /**
- * The start of the outbox in this tab (§1.6, §2.3; every tab drains until the drain lock of 03-15c2): the
- * `auth` gate is closed, `readOutbox` sets `outboxRestore`; only when it is `ok`: one write clears
- * a stale `sending` claim and moves the unreadable ops to failed, the versions are restored, every
+ * The drain-lock acquisition (§1.6, §2.3; `outboxDrain.ts`): a new drain session starts, the
+ * `auth` gate is closed, `readOutbox` sets `outboxRestore` (once per owner); only when it is `ok`:
+ * one write re-reads the keys and clears a stale `sending` claim of a previous holder (no other
+ * tab sends while this one holds the lock) and moves the unreadable ops to failed, the versions are restored, every
  * entry with a failed op is blocked, the ops are adopted as paused mutations (by `seq`, skipping
  * cancelled, failed, pending-removal and running ops), the outbox entries are invalidated (§1.4)
  * and the `auth` gate opens if the token's `sub` is the owner. The defaults of the outbox keys

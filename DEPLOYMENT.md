@@ -36,11 +36,14 @@ environment until PR 03-17 enables it. Since 03-15b the outbox is persisted in
 IndexedDB (`chipin:outbox:<userId>`, `chipin:outbox-failed:<userId>`). Since
 03-15c1 every read-modify-write of the keys runs under a Web Lock
 (`chipin-outbox-write:<userId>`), so concurrent appends from two tabs no longer
-lose an op; but every open tab still drains the queue until the drain lock of
-03-15c2. Keep the flag unset in every deploy, previews included, until 03-17
-enables it. Off, the outbox modules are loaded but inert: nothing of the outbox
-is started, read or written, and no lock or channel is created (only
-`clearUserData` deletes its keys, as before).
+lose an op. Since 03-15c2 only the tab holding the drain lock
+(`chipin-outbox-drain:<userId>`) sends the queue; the other open tabs append and
+ping it over `BroadcastChannel('chipin-outbox:<userId>')`, so two tabs no longer
+both drain. Offline writing also needs `BroadcastChannel`. Keep the flag unset
+in every deploy, previews included, until 03-17 enables it (03-16a/03-16b come
+first). Off, the outbox modules are loaded but inert: nothing of the outbox is
+started, read or written, and no lock, channel or page listener is created
+(only `clearUserData` deletes its keys, as before).
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.

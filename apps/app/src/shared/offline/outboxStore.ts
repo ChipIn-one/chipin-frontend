@@ -68,12 +68,15 @@ interface UnreadableRecord {
     readonly entryId: string | null;
 }
 
-export type OutboxStatus =
-    | 'waiting-network'
-    | 'server-unavailable'
-    | 'sign-in-required'
-    | 'update-required'
-    | 'failed-unsaved';
+export const OUTBOX_STATUSES = [
+    'waiting-network',
+    'server-unavailable',
+    'sign-in-required',
+    'update-required',
+    'failed-unsaved',
+] as const;
+
+export type OutboxStatus = (typeof OUTBOX_STATUSES)[number];
 
 /** `outboxRestore` of §1.6: this tab's first read of the owner's keys. */
 export type OutboxRestore = 'pending' | 'ok' | 'failed';
@@ -320,10 +323,17 @@ let persistFailedThisSession = false;
 // every start of the drain. A run of an older fence never writes, claims or touches the gate.
 let ownerEpoch = 0;
 let drainSession = '';
+// Aborts the requests of the drain session (§2.3: a release on freeze/pagehide aborts the one in flight).
+let drainAbort = new AbortController();
 const outboxVersions = new Map<string, string>();
 const pendingRemovals = new Set<string>();
 const cancelledOpIds = new Set<string>();
 const statusByOpId = new Map<string, OutboxStatus>();
+// The version a settled op of the entry answered, in any tab (`settled`, §2.2): an append prefers it
+// to the cached entry's until the `ledger.entry(id)` query of 03-16a holds it.
+const settledVersions = new Map<string, string>();
+const statusListeners = new Set<(opId: string, status: OutboxStatus) => void>();
+const writeListeners = new Set<() => void>();
 // Entries whose failed-list write is still pending: their block must stay (D29).
 const failureWrites = new Map<string, number>();
 
@@ -335,6 +345,7 @@ const forgetMemory = (): void => {
     pendingRemovals.clear();
     cancelledOpIds.clear();
     statusByOpId.clear();
+    settledVersions.clear();
     failureWrites.clear();
 };
 
@@ -354,12 +365,8 @@ export const isOwnerFence = (fence: OutboxFence): boolean =>
 export const isDrainFence = (fence: OutboxFence): boolean =>
     running && isOwnerFence(fence) && fence.session === drainSession;
 
-/**
- * The tab starts draining the outbox of `userId`; another user's queue is dropped from memory. A
- * start after a stop (or of another owner) opens a new drain session: the runs of the previous one
- * are stale. A start while the drain runs changes nothing.
- */
-export const startOutbox = (userId: string): void => {
+/** The tab's outbox is `userId`'s (it may append and read); another user's queue is dropped from memory. */
+export const bindOutboxOwner = (userId: string): void => {
     if (ownerId !== userId) {
         forgetMemory();
         outboxGate.reset();
@@ -368,10 +375,28 @@ export const startOutbox = (userId: string): void => {
         reviveOutboxIo(userId);
         running = false;
     }
+};
+
+/**
+ * The tab starts draining the outbox of `userId` (it took the drain lock, §2.3). A start after a
+ * stop (or of another owner) opens a new drain session: the runs of the previous one are stale. A
+ * start while the drain runs changes nothing.
+ */
+export const startOutbox = (userId: string): void => {
+    bindOutboxOwner(userId);
     if (!running) {
         drainSession = crypto.randomUUID();
+        drainAbort = new AbortController();
     }
     running = true;
+};
+
+/** Aborted when the drain is released on freeze/pagehide: the session's requests take it. */
+export const outboxSessionSignal = (): AbortSignal => drainAbort.signal;
+
+/** §2.3: a release on freeze/pagehide aborts the request in flight first. */
+export const abortOutboxSends = (): void => {
+    drainAbort.abort();
 };
 
 const wakeListeners = new Set<() => void>();
@@ -389,7 +414,10 @@ const wake = (): void => {
     outboxGate.wake();
 };
 
-/** The drain stops (logout, user change): every waiting run resolves `STOPPED` without a request. */
+/**
+ * The drain stops (the drain lock is released, logout, user change): every waiting run resolves
+ * `STOPPED` without a request.
+ */
 export const stopOutbox = (): void => {
     running = false;
     wake();
@@ -427,7 +455,7 @@ export const isOutboxStopped = (): boolean => !running;
  * `failed` (the key is kept, Sentry `outbox.restore_failed`). Never rejects.
  */
 export const readOutbox = (userId: string): Promise<OutboxRestore> => {
-    startOutbox(userId);
+    bindOutboxOwner(userId);
     if (restoring) {
         return restoring;
     }
@@ -516,10 +544,37 @@ export const writeOutbox = <T>(
             return writeKeys(owner, read.state, read).then(() => {
                 if (ownerId === owner && isOwnerFence(fence)) {
                     state = read.state;
+                    writeListeners.forEach(listener => listener());
                 }
                 return result;
             });
         }),
+    );
+};
+
+/** Called after every write of this tab landed (the `changed` ping, §2.3). */
+export const onOutboxWritten = (listener: () => void): (() => void) => {
+    writeListeners.add(listener);
+    return () => {
+        writeListeners.delete(listener);
+    };
+};
+
+/** Re-reads both keys under the write lock (a `changed` ping, the drain lock, §2.3). Never rejects. */
+export const refreshOutbox = (): Promise<void> => {
+    const owner = ownerId;
+    const epoch = ownerEpoch;
+
+    if (owner === null || restoreState !== 'ok') {
+        return Promise.resolve();
+    }
+    return runOutboxIo(owner, () => readKeys(owner)).then(
+        read => {
+            if (ownerId === owner && ownerEpoch === epoch) {
+                state = read.state;
+            }
+        },
+        () => undefined,
     );
 };
 
@@ -578,6 +633,18 @@ export const appendOutboxOp = <Op extends OutboxOpBase>(
         throw new OutboxPersistError(error);
     });
 
+/** The version a settled op of the entry answered (null for a delete: forgotten). */
+export const noteSettledVersion = (entryId: string, version: string | null): void => {
+    if (version === null) {
+        settledVersions.delete(entryId);
+    } else {
+        settledVersions.set(entryId, version);
+    }
+};
+
+export const settledVersionOf = (entryId: string): string | null =>
+    settledVersions.get(entryId) ?? null;
+
 /** The pending ops by `seq`. */
 export const pendingOutboxOps = (): readonly OutboxOpBase[] => [...state.ops].sort(bySeq);
 
@@ -587,6 +654,19 @@ export const isOpFailed = (opId: string): boolean => state.failed.has(opId);
 
 /** Discarded in the key (`OutboxState.cancelled`): a restore or an adoption skips it. */
 export const isOpCancelledInKey = (opId: string): boolean => state.cancelled.has(opId);
+
+export const cancelledInKey = (): readonly string[] => [...state.cancelled];
+
+/** A failed op whose Retry was requested (by any tab) and not yet settled. */
+export const isRetryRequested = (opId: string): boolean =>
+    state.failed.has(opId) && state.retryRequested.includes(opId);
+
+/** The failed ops under "Retry", by `seq` (the drain tab adopts them, §2.3). */
+export const retryRequestedOps = (): readonly OutboxOpBase[] =>
+    state.retryRequested.flatMap(opId => state.failed.get(opId)?.op ?? []).sort(bySeq);
+
+/** The claim in the key (`OutboxState.sending`). */
+export const outboxClaim = (): PersistedOutboxState['sending'] => state.sending;
 
 const unreadableEntryIds = (): string[] =>
     state.unreadable.flatMap(({ entryId }) => (entryId === null ? [] : [entryId]));
@@ -652,6 +732,7 @@ export const removeOutboxOp = (op: OutboxOpBase, fence: OutboxFence): Promise<vo
         draft => {
             draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
             draft.failed.delete(op.opId);
+            draft.retryRequested = draft.retryRequested.filter(opId => opId !== op.opId);
             if (isClaimOf(draft, op.opId, fence)) {
                 draft.sending = null;
             }
@@ -704,6 +785,7 @@ export const recordFailedOp = (
         draft => {
             draft.failed.set(op.opId, { op, reason, failedAt: Date.now() });
             draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
+            draft.retryRequested = draft.retryRequested.filter(opId => opId !== op.opId);
             if (isClaimOf(draft, op.opId, fence)) {
                 draft.sending = null;
             }
@@ -729,6 +811,17 @@ export const forgetCancelled = (opId: string, fence: OutboxFence): Promise<void>
 
 export const setOutboxStatus = (opId: string, status: OutboxStatus): void => {
     statusByOpId.set(opId, status);
+    statusListeners.forEach(listener => listener(opId, status));
+};
+
+/** The drain tab tells the other tabs (`status`, §2.3). */
+export const onOutboxStatus = (
+    listener: (opId: string, status: OutboxStatus) => void,
+): (() => void) => {
+    statusListeners.add(listener);
+    return () => {
+        statusListeners.delete(listener);
+    };
 };
 
 export const outboxStatus = (opId: string): OutboxStatus | undefined => statusByOpId.get(opId);
@@ -761,8 +854,10 @@ export const claimOutboxOp = (
             if (!isOwnerSession()) {
                 return 'auth';
             }
+            // A failed op only under "Retry" (§2.3).
             const isQueued =
-                draft.ops.some(({ opId }) => opId === op.opId) || draft.failed.has(op.opId);
+                draft.ops.some(({ opId }) => opId === op.opId) ||
+                (draft.failed.has(op.opId) && draft.retryRequested.includes(op.opId));
 
             if (
                 !isQueued ||
@@ -828,6 +923,7 @@ export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
             discarded.push(opId);
             entries.add(op.entryId);
             draft.failed.delete(opId);
+            draft.retryRequested = draft.retryRequested.filter(id => id !== opId);
             // Only a pending op has a run that must resolve `CANCELLED`; it forgets the id.
             if (pending) {
                 draft.cancelled.add(opId);
@@ -846,3 +942,40 @@ export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
         wake();
         return { discarded, refused };
     });
+
+/**
+ * "Retry" of failed ops from any tab (§2.3): their ids join `retryRequested` in one write; the drain
+ * tab adopts them on the `changed` ping. Resolves with the ids that are failed and now requested.
+ */
+export const requestRetry = (opIds: readonly string[]): Promise<string[]> =>
+    writeOutbox(draft => {
+        const requested = opIds.filter(opId => draft.failed.has(opId));
+
+        draft.retryRequested = [...new Set([...draft.retryRequested, ...requested])];
+        return requested;
+    });
+
+/** The drain tab learned of another tab's discard: its waiting runs resolve `CANCELLED`. */
+export const markOpsCancelled = (opIds: readonly string[]): void => {
+    opIds.forEach(opId => cancelledOpIds.add(opId));
+    wake();
+};
+
+/**
+ * The drain tab forgets cancellations that no run will forget (ops discarded before any tab
+ * adopted them, §2.3 `cancelled` cleaned for never-adopted ops).
+ */
+export const forgetCancelledInKey = (
+    opIds: readonly string[],
+    fence: OutboxFence,
+): Promise<void> =>
+    opIds.length === 0
+        ? Promise.resolve()
+        : writeOutbox(
+              draft => {
+                  opIds.forEach(opId => draft.cancelled.delete(opId));
+              },
+              { fence, drain: true },
+          ).then(() => {
+              opIds.forEach(opId => cancelledOpIds.delete(opId));
+          });
