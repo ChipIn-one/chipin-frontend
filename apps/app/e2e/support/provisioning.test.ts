@@ -7,8 +7,10 @@ import {
     formatPurgeCounts,
     isRunId,
     parsePurgeCounts,
+    type ProvisionedUser,
     purgeAndVerify,
     type PurgeCounts,
+    readGroupInviteToken,
     readRefreshCookieValue,
 } from './provisioning';
 
@@ -23,6 +25,44 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}): Response =>
         ...init,
         headers: { 'Content-Type': 'application/json', ...init.headers },
     });
+
+const USER_A: ProvisionedUser = {
+    id: 'user-a',
+    displayName: 'E2E A',
+    accessToken: 'access-token-a',
+    refreshCookieValue: 'refresh-a',
+};
+const USER_B: ProvisionedUser = {
+    id: 'user-b',
+    displayName: 'E2E B',
+    accessToken: 'access-token-b',
+    refreshCookieValue: 'refresh-b',
+};
+
+const publicUser = (id: string) => ({
+    id,
+    email: `${id}@example.test`,
+    displayName: id,
+    createdAt: 1,
+    updatedAt: 1,
+});
+
+const groupResponse = (inviteToken: unknown) => ({
+    id: 'group-1',
+    name: 'E2E Group',
+    inviteToken,
+    description: null,
+    creator: publicUser('user-a'),
+    members: [{ user: publicUser('user-a'), balancesByCurrency: {} }],
+    createdAt: 1,
+    updatedAt: 1,
+    coverUrl: null,
+    simplifyDebts: false,
+    role: 'OWNER',
+    status: 'ACTIVE',
+    lastUsedCurrency: null,
+    recentActivities: { items: [], nextCursor: null },
+});
 
 describe('readRefreshCookieValue', () => {
     it('returns the value of a host-only, secure refresh cookie', () => {
@@ -232,5 +272,78 @@ describe('createProvisioningClient', () => {
         );
         expect(failure).not.toContain(BASIC_AUTH.password);
         expect(failure).not.toContain(BASIC_AUTH.username);
+    });
+});
+
+describe('readGroupInviteToken', () => {
+    it('returns the invite token of a valid group', () => {
+        expect(readGroupInviteToken(groupResponse('invite-token-1'))).toBe('invite-token-1');
+    });
+
+    it('rejects a group without a token, without echoing the response', () => {
+        // parseGroup checks the token first, so a missing one fails there.
+        expect(() => readGroupInviteToken(groupResponse(''))).toThrow(
+            'group.inviteToken must be a non-empty string',
+        );
+    });
+});
+
+describe('createProvisioningClient ledger and group reads', () => {
+    it('records a USD group settlement as the debtor', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(() =>
+            Promise.resolve(jsonResponse({ id: 'entry-1' }, { status: 201 })),
+        );
+        const client = createProvisioningClient(BASIC_AUTH, RUN_ID, fetchImpl);
+
+        await client.addGroupSettlement({
+            groupId: 'group-1',
+            debtor: USER_B,
+            creditor: USER_A,
+            amount: 7.5,
+        });
+
+        const [url, init] = fetchImpl.mock.calls[0] ?? [];
+        const headers = new Headers(init?.headers);
+
+        expect(String(url)).toBe('https://api-dev.chipin.one/ledger/entries');
+        expect(init?.method).toBe('POST');
+        expect(headers.get('Authorization')).toBe('Bearer access-token-b');
+        expect(init?.body).toBe(
+            JSON.stringify({
+                type: 'SETTLEMENT',
+                groupId: 'group-1',
+                settlement: {
+                    fromUserId: 'user-b',
+                    toUserId: 'user-a',
+                    amount: 7.5,
+                    currency: 'USD',
+                },
+            }),
+        );
+    });
+
+    it('reads the group invite token as a member', async () => {
+        const fetchImpl = vi.fn<typeof fetch>(() =>
+            Promise.resolve(jsonResponse(groupResponse('invite-token-1'))),
+        );
+        const client = createProvisioningClient(BASIC_AUTH, RUN_ID, fetchImpl);
+
+        await expect(client.getGroupInviteToken(USER_A, 'group-1')).resolves.toBe('invite-token-1');
+
+        const [url, init] = fetchImpl.mock.calls[0] ?? [];
+
+        expect(String(url)).toBe('https://api-dev.chipin.one/groups/group-1');
+        expect(init?.method).toBe('GET');
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer access-token-a');
+    });
+
+    it('names only the method and path when the group read fails', async () => {
+        const client = createProvisioningClient(BASIC_AUTH, RUN_ID, () =>
+            Promise.resolve(jsonResponse({ code: 'GROUP.NOT_FOUND' }, { status: 404 })),
+        );
+
+        await expect(client.getGroupInviteToken(USER_A, 'group-1')).rejects.toThrow(
+            'Staging API https://api-dev.chipin.one: GET /groups/group-1 failed with HTTP 404',
+        );
     });
 });
