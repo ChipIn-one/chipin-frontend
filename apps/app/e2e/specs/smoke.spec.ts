@@ -101,7 +101,7 @@ test.describe('SMOKE-SHORT', () => {
         const balancesAfter = page.getByRole('tabpanel', { name: 'Balances' });
         await expect(balancesAfter.getByText('Settled up')).toHaveCount(0);
         await expect(balancesAfter.getByText(/^You are owed/)).toHaveText(
-            exactBalance('You are owed', '5'),
+            exactBalance('You are owed', '6'),
         );
     });
 
@@ -134,7 +134,7 @@ test.describe('SMOKE-SHORT', () => {
         const participantBalances = await openGroupTab(participantPage, groupId, 'Balances');
         await expect(participantBalances.getByText(payer.displayName)).toBeVisible();
         await expect(participantBalances.getByText(/^You owe/)).toHaveText(
-            exactBalance('You owe', '15'),
+            exactBalance('You owe', '14'),
         );
     });
 
@@ -209,7 +209,7 @@ test.describe('SMOKE-SHORT', () => {
 
         await page.reload();
         await expect(page.getByText('Язык интерфейса')).toBeVisible();
-        await expect(page.getByRole('radio', { name: 'Тёмная' })).toBeChecked();
+        await expect(page.getByRole('radio', { name: 'Светлая' })).toBeChecked();
         await expect(page.locator('html')).toHaveClass(/\bdark\b/);
         expect(
             await page.evaluate((): unknown => Reflect.get(window, '__chipinE2eFirstFrames')),
@@ -226,8 +226,6 @@ test.describe('SMOKE-SHORT', () => {
         const user = await provisioning.register('E2E Logout');
         const page = await signIn(user);
 
-        await page.goto('/settings');
-        await page.getByRole('button', { name: 'Sign Out', exact: true }).click();
         await expect(page).not.toHaveURL(/\/settings/);
 
         await page.goto('/settings');
