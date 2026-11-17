@@ -1,35 +1,10 @@
 // SMOKE-SHORT b-e (docs/engineering/release-qa.md, scripts/release-qa/impact-rules.mjs) in Chromium.
 // Item a (Google sign-in opens Dashboard) needs the real OAuth flow and stays manual. Preconditions
 // are arranged through the staging API; the checked action goes through the UI.
-import type { Page, Response } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { expect, test } from '../support/fixtures';
-
-// Every name is unique per test, so a leftover of another run can never match.
-const uniqueSuffix = (): string => crypto.randomUUID().slice(0, 8);
-
-const openGroupTab = async (page: Page, groupId: string, tab: 'Balances' | 'Expenses') => {
-    await page.goto(`/group/${groupId}`);
-    await page.getByRole('tab', { name: tab }).click();
-
-    return page.getByRole('tabpanel', { name: tab });
-};
-
-/** The whole balance line, e.g. "You are owed 5 USD" (BalanceSummaryText), and nothing more. */
-const exactBalance = (label: 'You are owed' | 'You owe', amount: string): RegExp =>
-    new RegExp(`^${label}\\s+${amount}\\s+USD$`);
-
-/** The settings write (entities/users/api/mutations.ts: `PATCH /users/self`). */
-const isSelfSettingsWrite = (response: Response): boolean =>
-    response.request().method() === 'PATCH' &&
-    /\/api\/users\/self$/.test(new URL(response.url()).pathname);
-
-/** Clicks and waits until the settings write it causes has succeeded on the server. */
-const clickAndSaveSettings = async (page: Page, click: () => Promise<void>): Promise<void> => {
-    const [response] = await Promise.all([page.waitForResponse(isSelfSettingsWrite), click()]);
-
-    expect(response.status(), 'PATCH /users/self status').toBeLessThan(300);
-};
+import { clickAndSaveSettings, exactBalance, openGroupTab, uniqueSuffix } from '../support/ui';
 
 /**
  * The user's persisted query cache (shared/offline/queryPersister.ts: idb-keyval, key

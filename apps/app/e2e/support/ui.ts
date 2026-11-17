@@ -1,11 +1,12 @@
-// UI helpers of the money specs (docs/e2e-tests.md). They avoid layout assumptions: a control that
+// UI helpers of the e2e specs (docs/e2e-tests.md). They avoid layout assumptions: a control that
 // exists once per layout (desktop sidebar, mobile bar, header) is taken from the visible ones.
 import { expect, type Locator, type Page, type Response } from '@playwright/test';
 
 /** Every name is unique per test, so a leftover of another run can never match. */
 export const uniqueSuffix = (): string => crypto.randomUUID().slice(0, 8);
 
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** `text` as a literal inside a RegExp: display names and labels may hold regex characters. */
+export const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * The whole balance line, e.g. "You are owed 7.5 USD" (basics/BalanceSummaryText), and nothing
@@ -29,8 +30,21 @@ export const openGroupWithGroupsList = async (page: Page, groupId: string): Prom
     const groupsList = page.waitForResponse(isGroupsListRead);
     await page.goto(`/group/${groupId}`);
     const response = await groupsList;
+    // The body is read into the query cache only after it has arrived in full.
+    await response.finished();
 
     expect(response.ok(), 'GET /groups status').toBe(true);
+};
+
+/**
+ * Asserts the open expense editor knows the group (its group select or edit scope names it).
+ * Without the groups list it opens with no group (#718): this fails before any field is filled.
+ */
+export const expectExpenseDialogGroup = async (
+    dialog: Locator,
+    groupName: string,
+): Promise<void> => {
+    await expect(dialog.getByText(groupName).first()).toBeVisible();
 };
 
 /** Selects a tab of the open group page and returns its panel. */
@@ -58,7 +72,7 @@ export const expectBalance = async (
     amount: string,
 ): Promise<void> => {
     await expect(balances.getByText(otherMember)).toBeVisible();
-    await expect(balances.getByText(new RegExp(`^${label}\\b`))).toHaveText(
+    await expect(balances.getByText(new RegExp(`^${escapeRegExp(label)}\\b`))).toHaveText(
         exactBalance(label, amount),
     );
 };

@@ -3,9 +3,16 @@
 // does). With the production flags no change can wait offline and sync later: offline writes are
 // behind VITE_FEATURE_OFFLINE_WRITES (off), and the ledger, group and user writes are refused while
 // offline (hooks/useLedgerMutations.ts, useGroupMutations.ts, useUserMutations.ts). So only the
-// banner and the saved data it promises are checked.
+// banner and the saved data it promises are checked. Without a service worker that saved data is the
+// in-memory query cache of the open page.
 import { expect, test } from '../../support/fixtures';
-import { expectBalance, openGroupTab, uniqueSuffix } from '../../support/ui';
+import {
+    exactBalance,
+    expectBalance,
+    openGroupTab,
+    selectGroupTab,
+    uniqueSuffix,
+} from '../../support/ui';
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -49,6 +56,14 @@ test.describe('offline', () => {
 
         await page.context().setOffline(false);
         await expect(banner).toHaveCount(0);
-        await expectBalance(balances, friend.displayName, 'You are owed', '15');
+        // On the Vite dev server the HMR client may reload the page once it reconnects, which
+        // resets the tab to Expenses: the tab is selected again, retried while a reload happens.
+        await expect(async () => {
+            const after = await selectGroupTab(page, 'Balances');
+            await expect(after.getByText(/^You are owed\b/)).toHaveText(
+                exactBalance('You are owed', '15'),
+                { timeout: 2_000 },
+            );
+        }).toPass();
     });
 });

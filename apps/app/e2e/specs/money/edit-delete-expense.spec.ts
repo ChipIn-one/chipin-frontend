@@ -1,12 +1,13 @@
 // Money-critical flows (#667): editing and deleting an expense recalculates the balances of both
 // participants. The expense is arranged through the staging API; the edit or delete goes through
 // the expense history page (Expenses tab -> the expense), as a user reaches it.
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../../support/fixtures';
 import type { ProvisionedUser, ProvisioningClient } from '../../support/provisioning';
 import {
     expectBalance,
+    expectExpenseDialogGroup,
     expectSettledUp,
     openGroupTab,
     openGroupWithGroupsList,
@@ -19,6 +20,7 @@ interface ExpenseSetup {
     payer: ProvisionedUser;
     participant: ProvisionedUser;
     groupId: string;
+    groupName: string;
     description: string;
 }
 
@@ -27,9 +29,8 @@ const arrangeExpense = async (provisioning: ProvisioningClient): Promise<Expense
     const payer = await provisioning.register('E2E Payer');
     const participant = await provisioning.register('E2E Participant');
     await provisioning.makeFriends(payer, participant);
-    const groupId = await provisioning.createGroup(payer, `E2E Group ${uniqueSuffix()}`, [
-        participant,
-    ]);
+    const groupName = `E2E Group ${uniqueSuffix()}`;
+    const groupId = await provisioning.createGroup(payer, groupName, [participant]);
     const description = `E2E taxi ${uniqueSuffix()}`;
     await provisioning.addEqualGroupExpense({
         groupId,
@@ -39,7 +40,7 @@ const arrangeExpense = async (provisioning: ProvisioningClient): Promise<Expense
         description,
     });
 
-    return { payer, participant, groupId, description };
+    return { payer, participant, groupId, groupName, description };
 };
 
 /**
@@ -64,18 +65,33 @@ const openExpenseAction = async (
     await visibleOne(button).click();
 };
 
+/**
+ * Back from the expense history to the group page in the same document, then its Balances tab.
+ * The page that wrote is never reloaded or reopened with `goto`: a reload within 1 s of a write
+ * restores the pre-write group from the persisted cache (throttled by 1 s) and does not refetch it
+ * while fresh (30 s), so the old balance would show (#724).
+ */
+const backToGroupBalances = async (page: Page, groupId: string): Promise<Locator> => {
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/group/${groupId}$`));
+
+    return selectGroupTab(page, 'Balances');
+};
+
 test.describe('EXP-044 EXP-050 changing an expense', () => {
     test('EXP-044 editing the amount recalculates both balances', async ({
         provisioning,
         signIn,
     }) => {
-        const { payer, participant, groupId, description } = await arrangeExpense(provisioning);
+        const { payer, participant, groupId, groupName, description } =
+            await arrangeExpense(provisioning);
 
         const payerPage = await signIn(payer);
         // The editor takes the group's members from the groups list (#718).
         await openGroupWithGroupsList(payerPage, groupId);
         await openExpenseAction(payerPage, description, 'Update');
         const dialog = payerPage.getByRole('dialog', { name: 'Edit expense' });
+        await expectExpenseDialogGroup(dialog, groupName);
         const amount = dialog.getByPlaceholder('0.00');
         await expect(amount).toHaveValue(/^30(\.0+)?$/);
         await amount.fill('50');
@@ -84,7 +100,7 @@ test.describe('EXP-044 EXP-050 changing an expense', () => {
         await save.click();
         await expect(dialog).toBeHidden();
 
-        const payerBalances = await openGroupTab(payerPage, groupId, 'Balances');
+        const payerBalances = await backToGroupBalances(payerPage, groupId);
         await expectBalance(payerBalances, participant.displayName, 'You are owed', '25');
 
         const participantPage = await signIn(participant);
@@ -111,7 +127,7 @@ test.describe('EXP-044 EXP-050 changing an expense', () => {
             participantPage.getByRole('button', { name: 'Delete', exact: true }),
         ).toHaveCount(0);
 
-        const participantBalances = await openGroupTab(participantPage, groupId, 'Balances');
+        const participantBalances = await backToGroupBalances(participantPage, groupId);
         await expectSettledUp(participantBalances, payer.displayName);
 
         const payerPage = await signIn(payer);

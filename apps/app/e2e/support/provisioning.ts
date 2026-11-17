@@ -205,14 +205,10 @@ const send = (fetchImpl: FetchImpl, options: RequestOptions): Promise<Response> 
  * credential: it is returned to the test only, never put in a message.
  */
 export const readGroupInviteToken = (value: unknown): string => {
+    // Throws unless the group, its token included, is valid; the narrowing below only types it.
     parseGroup(value);
-    const token = isRecord(value) ? value.inviteToken : undefined;
 
-    if (typeof token !== 'string' || token.length === 0) {
-        throw new E2eProvisioningError('group.inviteToken must be a non-empty string');
-    }
-
-    return token;
+    return isRecord(value) && typeof value.inviteToken === 'string' ? value.inviteToken : '';
 };
 
 const readJson = (response: Response, description: string): Promise<unknown> =>
@@ -264,13 +260,6 @@ export interface ProvisioningClient {
         participants: readonly ProvisionedUser[];
         amount: number;
         description: string;
-    }) => Promise<void>;
-    /** A USD settlement from `debtor` to `creditor` in the group, recorded by the debtor. */
-    addGroupSettlement: (input: {
-        groupId: string;
-        debtor: ProvisionedUser;
-        creditor: ProvisionedUser;
-        amount: number;
     }) => Promise<void>;
     /** The group's invite token (`GET /groups/{id}` as `member`), for the invite link. */
     getGroupInviteToken: (member: ProvisionedUser, groupId: string) => Promise<string>;
@@ -370,22 +359,6 @@ export const createProvisioningClient = (
                         category: 'food',
                         currency: 'USD',
                         sharingMode: { type: 'AUTO' },
-                    },
-                },
-                method: 'POST',
-                path: '/ledger/entries',
-            }).then(() => undefined),
-        addGroupSettlement: ({ groupId, debtor, creditor, amount }) =>
-            requestJson({
-                authorization: bearer(debtor),
-                body: {
-                    type: 'SETTLEMENT',
-                    groupId,
-                    settlement: {
-                        fromUserId: debtor.id,
-                        toUserId: creditor.id,
-                        amount,
-                        currency: 'USD',
                     },
                 },
                 method: 'POST',
