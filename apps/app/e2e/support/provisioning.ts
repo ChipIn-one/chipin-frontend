@@ -200,6 +200,21 @@ const send = (fetchImpl: FetchImpl, options: RequestOptions): Promise<Response> 
     );
 };
 
+/**
+ * The invite token of a group read by id (GRP-015: every active member sees it). The token is a
+ * credential: it is returned to the test only, never put in a message.
+ */
+export const readGroupInviteToken = (value: unknown): string => {
+    // parseGroup validates the whole group, its token included; the check below only narrows the type.
+    parseGroup(value);
+
+    if (!isRecord(value) || typeof value.inviteToken !== 'string') {
+        throw new E2eProvisioningError('group.inviteToken must be a non-empty string');
+    }
+
+    return value.inviteToken;
+};
+
 const readJson = (response: Response, description: string): Promise<unknown> =>
     response.text().then(text => {
         try {
@@ -250,6 +265,8 @@ export interface ProvisioningClient {
         amount: number;
         description: string;
     }) => Promise<void>;
+    /** The group's invite token (`GET /groups/{id}` as `member`), for the invite link. */
+    getGroupInviteToken: (member: ProvisionedUser, groupId: string) => Promise<string>;
     purge: () => Promise<PurgeCounts>;
 }
 
@@ -351,6 +368,12 @@ export const createProvisioningClient = (
                 method: 'POST',
                 path: '/ledger/entries',
             }).then(() => undefined),
+        getGroupInviteToken: (member, groupId) =>
+            requestJson({
+                authorization: bearer(member),
+                method: 'GET',
+                path: `/groups/${encodeURIComponent(groupId)}`,
+            }).then(readGroupInviteToken),
         purge: () =>
             requestJson({
                 authorization: basicAuthorization,

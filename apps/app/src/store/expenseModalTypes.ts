@@ -93,6 +93,11 @@ interface ExpenseModalActions {
     close: () => void;
     setIsOpened: (isOpened: boolean) => void;
     initialize: (source: ExpenseModalSource) => void;
+    /**
+     * An open create modal takes the groups of a newer source (the list loaded after it opened)
+     * and, while its target is a group not chosen yet, picks the default group.
+     */
+    applyLateGroups: (source: ExpenseModalSource) => void;
     initializeEdit: (initialization: ExpenseModalEditInitialization) => void;
     reset: () => void;
     setDescription: (description: string) => void;

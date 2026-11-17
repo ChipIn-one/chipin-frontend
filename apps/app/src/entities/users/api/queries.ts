@@ -1,5 +1,6 @@
 // The users entity (spec 03 §1.2, §6 row 3): the self user, the known users (friends) and the
 // premium promo counter, with the defaults below.
+import type { QueryClient } from '@tanstack/react-query';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { getLocalUser, saveLocalUser, toLocalUser } from 'helpers/localStorage';
@@ -35,6 +36,44 @@ export const syncLocalUser = (user: SelfUser): SelfUser => {
         saveLocalUser(cached.role === undefined ? { id: next.id, settings: next.settings } : next);
     }
     return user;
+};
+
+/**
+ * After the persisted cache is restored (#719): the cache is saved throttled, so a reload right
+ * after a settings write can restore a self user older than the cached `LocalUser`, which every
+ * confirmed value writes at once. The entry takes this user's cached language and theme (only
+ * those: an account switch carries them, and only them, over to the next user's `LocalUser`). Its
+ * update time and its invalidation are kept; the session load replaces it with the server value.
+ */
+export const reconcileRestoredSelf = (client: QueryClient, userId: string): void => {
+    const cached = getLocalUser();
+    const state = client.getQueryState<SelfUser>(usersKeys.self());
+    const user = state?.data;
+
+    if (cached?.id !== userId || !state || !user) {
+        return;
+    }
+    const { language, theme } = cached.settings;
+    // An empty language is unset (an older cached record): the restored one stays.
+    const nextLanguage = language === '' ? user.settings.language : language;
+
+    if (user.settings.language === nextLanguage && user.settings.theme === theme) {
+        return;
+    }
+    client.setQueryData(
+        usersKeys.self(),
+        { ...user, settings: { ...user.settings, language: nextLanguage, theme } },
+        { updatedAt: state.dataUpdatedAt },
+    );
+    // `setQueryData` clears the flag: an entry marked for a reload (a write rolled back after its
+    // session ended) stays marked, without a fetch from here.
+    if (state.isInvalidated) {
+        void client.invalidateQueries({
+            queryKey: usersKeys.self(),
+            exact: true,
+            refetchType: 'none',
+        });
+    }
 };
 
 // A load cancelled while its response was on the way (a self write confirmed after it started, a

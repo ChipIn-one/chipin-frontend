@@ -13,6 +13,7 @@ import {
     restoreReady,
     startCacheRestore,
 } from './restore';
+import { setCacheRestoredHandler } from './userCaches';
 
 import 'fake-indexeddb/auto';
 
@@ -60,6 +61,19 @@ describe('bootstrapUserCache', () => {
 
         expect(clientFor('restore-ok').getQueryData(DASHBOARD_KEY)).toEqual({ total: 5n });
         expect(Sentry.captureMessage).not.toHaveBeenCalled();
+    });
+
+    test('the wired handler runs on the restored client, after the restore (#719)', async () => {
+        await storeCache('restored-handler');
+        const seen: unknown[] = [];
+        setCacheRestoredHandler((client, userId) => {
+            seen.push(userId, client.getQueryData(DASHBOARD_KEY));
+        });
+
+        await bootstrapUserCache('restored-handler');
+        setCacheRestoredHandler(null);
+
+        expect(seen).toEqual(['restored-handler', { total: 5n }]);
     });
 
     test('one client per user, memoized; two users never share one', () => {

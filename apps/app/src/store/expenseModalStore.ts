@@ -178,8 +178,10 @@ const getDefaultGroupId = (source: ExpenseModalSource): string => {
         ? source.groups.find(group => group.id === source.defaultGroupId)
         : undefined;
 
+    // A group page uses only its own group: one missing from the list is waited for, never
+    // replaced by another group.
     if (source.context === 'group') {
-        return requestedGroup?.id ?? source.groups[0]?.id ?? '';
+        return source.defaultGroupId ? (requestedGroup?.id ?? '') : (source.groups[0]?.id ?? '');
     }
 
     const usableGroup =
@@ -275,6 +277,53 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             ...state,
             ...getInitializedState(source),
         }));
+    },
+    applyLateGroups: source => {
+        set(state => {
+            if (!state.isOpened || state.mode !== 'create') {
+                return state;
+            }
+
+            const storedGroupIds = new Set(state.source.groups.map(group => group.id));
+            const hasNewGroups = source.groups.some(group => !storedGroupIds.has(group.id));
+            // A friend target or a chosen group is the user's (or the opening's) choice: kept.
+            const needsGroup = state.targetMode === 'group' && !state.groupId;
+
+            if (!hasNewGroups && !needsGroup) {
+                return state;
+            }
+
+            // The group select lists the live groups: the store keeps the same list, so a group
+            // picked later has its members.
+            const withGroups: ExpenseModalState = {
+                ...state,
+                source: {
+                    ...state.source,
+                    groups: hasNewGroups ? source.groups : state.source.groups,
+                    // A modal opened on a group page keeps that page's group, even after a
+                    // navigation away changed the source.
+                    defaultGroupId:
+                        state.source.context === 'group'
+                            ? state.source.defaultGroupId
+                            : source.defaultGroupId,
+                },
+            };
+            const groupId = needsGroup ? getDefaultGroupId(withGroups.source) : '';
+
+            if (!groupId) {
+                return hasNewGroups ? withGroups : state;
+            }
+
+            const next: ExpenseModalState = {
+                ...withGroups,
+                groupId,
+                currency: state.isCurrencyManuallyEdited
+                    ? state.currency
+                    : getDefaultCurrency(withGroups.source, 'group', groupId),
+            };
+
+            return { ...next, ...getSplitDefaults(next) };
+        });
     },
     initializeEdit: initialization => {
         set(state => ({

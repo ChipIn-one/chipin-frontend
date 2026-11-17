@@ -19,6 +19,7 @@ export {
     fetchSelfUser,
     knownUsersQueryOptions,
     premiumPromoQueryOptions,
+    reconcileRestoredSelf,
     selfUserQueryOptions,
     useKnownUsersQuery,
     usePremiumPromoQuery,
