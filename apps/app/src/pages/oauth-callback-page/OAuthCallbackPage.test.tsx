@@ -71,13 +71,11 @@ test('returns a failed OAuth exchange to the sanitized return route', () => {
 });
 
 test('AUTH-016: asks to start sign-in again in this browser when the OAuth browser binding is missing', () => {
-    const exchangeGoogleOAuthCode = vi.fn().mockRejectedValue(
-        new ApiError({
-            status: 400,
-            payload: { code: 'AUTH.OAUTH_BROWSER_BINDING_REQUIRED' },
-            cause: undefined,
-        }),
-    );
+    // The exchange goes through axios: production rejects with an AxiosError, not an `ApiError`.
+    const exchangeGoogleOAuthCode = vi.fn().mockRejectedValue({
+        isAxiosError: true,
+        response: { status: 400, data: { code: 'AUTH.OAUTH_BROWSER_BINDING_REQUIRED' } },
+    });
     useAuthStore.setState({ exchangeGoogleOAuthCode });
 
     renderCallback('/oauth/callback?code=unbound-code');
