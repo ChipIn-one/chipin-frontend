@@ -438,6 +438,10 @@ export const readOutbox = (userId: string): Promise<OutboxRestore> => {
             if (!(error instanceof OutboxLockTimeoutError) || restoring !== reading) {
                 throw error;
             }
+            // Once per restore: it stays `pending` while the lock is contended.
+            if (attempt === 0) {
+                Sentry.captureMessage('outbox.write_lock_timeout', { level: 'warning' });
+            }
             return new Promise<void>(resolve => {
                 setTimeout(resolve, Math.min(1000 * 2 ** attempt, 30_000));
             }).then(() => read(attempt + 1));

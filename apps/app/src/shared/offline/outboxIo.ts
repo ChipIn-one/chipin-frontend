@@ -110,14 +110,24 @@ const enqueue = <T>(io: () => Promise<T>): Promise<T> => {
 const refuseDisposed = <T>(userId: string, io: () => Promise<T>): Promise<T> =>
     disposedUsers.has(userId) ? Promise.reject(new OutboxWriteStoppedError()) : io();
 
+// The `clearUserData` delete of each user still running (it may retry after a lock timeout): the
+// user's next outbox session reads and writes only after it, never into keys it then deletes.
+const pendingDeletes = new Map<string, Promise<void>>();
+
 /**
- * Runs `io` after every earlier outbox IO of this tab, under the user's write lock; a cleared
- * user's IO is refused before the lock is requested and again once it is held.
+ * Runs `io` after every earlier outbox IO of this tab and after the user's pending delete, under the
+ * user's write lock; a cleared user's IO is refused before the lock is requested and again once it is
+ * held. Another user's IO does not wait for the delete.
  */
-export const runOutboxIo = <T>(userId: string, io: () => Promise<T>): Promise<T> =>
-    enqueue(() =>
-        refuseDisposed(userId, () => underWriteLock(userId, () => refuseDisposed(userId, io))),
-    );
+export const runOutboxIo = <T>(userId: string, io: () => Promise<T>): Promise<T> => {
+    const run = (): Promise<T> =>
+        enqueue(() =>
+            refuseDisposed(userId, () => underWriteLock(userId, () => refuseDisposed(userId, io))),
+        );
+    const deleting = pendingDeletes.get(userId);
+
+    return deleting ? deleting.then(run) : run();
+};
 
 /** The user's outbox starts again (a sign-in after a sign-out): their IO runs again. */
 export const reviveOutboxIo = (userId: string): void => {
@@ -168,6 +178,17 @@ export const deleteOutboxKeys = (userId: string): Promise<void> => {
         });
     // Flag off no outbox runs anywhere: the keys are deleted without a lock, as before 03-15c1.
     const remove = (): Promise<void> => (isOfflineWritesFlagOn() ? lockedDelete(0) : deleteKeys());
+    const deleting = running === 0 ? start(remove) : tail.then(remove);
+    const settled: Promise<void> = deleting.then(
+        () => undefined,
+        () => undefined,
+    );
 
-    return running === 0 ? start(remove) : tail.then(remove);
+    pendingDeletes.set(userId, settled);
+    void settled.then(() => {
+        if (pendingDeletes.get(userId) === settled) {
+            pendingDeletes.delete(userId);
+        }
+    });
+    return deleting;
 };

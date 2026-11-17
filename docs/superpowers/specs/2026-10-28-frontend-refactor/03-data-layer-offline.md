@@ -718,11 +718,14 @@ Deviation (03-15c1): the write lock, the persisted claim and the fence; still no
 chain stays, so `deleteOutboxKeys` still lands after the write in flight); the `clearUserData` delete takes it only with
 the flag on (flag off: no lock, as before); a lock timeout there is retried with a backoff and after the third the
 keys are deleted without the lock (the user's data must not survive a sign-out; this tab's IO of the user is refused
-already). A cleared user's IO is refused before the lock is requested and again once it is held. Without Web Locks
+already). Until that delete has settled, the same user's outbox IO waits for it (a sign-in again restores and
+appends only after the old keys are gone; another user's IO does not wait). A cleared user's IO is refused before the
+lock is requested and again once it is held. Without Web Locks
 the IO is ordered by the tab's chain only and `offlineWritesAvailable` is false; ops already persisted are still
 restored and sent. Without `AbortSignal.timeout` the lock timeout is an `AbortController` and a timer. Only a request
 the timeout aborted is a lock timeout; it is transient everywhere: the first read of the restore retries it and
-`outboxRestore` stays `pending` (§1.6 `failed` stays for an IDB error or an unreadable key), and a drain write reports
+`outboxRestore` stays `pending` (§1.6 `failed` stays for an IDB error or an unreadable key; reported once per restore
+as Sentry `outbox.write_lock_timeout`), and a drain write reports
 it as Sentry `outbox.write_lock_timeout`, not as `offline.persist_failed`. (2) The fence is two tokens:
 the owner epoch (bumped by an owner change and by `clearUserData`) and the drain session (`crypto.randomUUID()` at
 every start of the drain after a stop; 03-15c2 makes it the drain-lock hold). A run captures both. A stale drain

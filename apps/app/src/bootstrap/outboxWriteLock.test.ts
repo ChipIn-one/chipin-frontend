@@ -935,3 +935,56 @@ describe('03-15c1 R1: reports, disposed users, stale runs', () => {
         expect(outboxStatus('op-1')).toBeUndefined();
     });
 });
+
+describe('03-15c1 R2', () => {
+    test("M1: a retried clearUserData delete lands before the same user's new session reads or writes", async () => {
+        const requests = serveLedger();
+
+        onlineManager.setOnline(false);
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        await openTab();
+        timeOutNextLockRequests();
+        const cleared = clearUserData(USER, () => undefined);
+
+        await wait(10);
+        // The same user signs in again while the delete waits for its retry.
+        const client = newClient();
+
+        await startLedgerOutbox(client, USER, effects);
+        expect(pendingOutboxOps()).toEqual([]);
+        await appendOutboxOp(seq => ({
+            ...storedOp(seq, 'entry-b'),
+            opId: 'op-new',
+            kind: 'createExpense' as const,
+            entryKind: 'expense' as const,
+            schema: 1 as const,
+        }));
+        await cleared;
+
+        expect((await readOutboxKey())?.ops.map(op => op.opId)).toEqual(['op-new']);
+        // The client adopts the appended op (as the ledger append path does) and sends it.
+        await startLedgerOutbox(client, USER, effects);
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => expect(requests).toEqual(['POST entry-b']));
+        await wait(50);
+        expect(requests).toEqual(['POST entry-b']);
+    });
+
+    test('N1: a restore read waiting on a contended lock reports one lock timeout', async () => {
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        resetOutbox();
+        onlineManager.setOnline(false);
+        const release = await holdWebLock(WRITE_LOCK);
+
+        timeOutNextLockRequests();
+        const restored = startLedgerOutbox(newClient(), USER, effects);
+
+        await wait(50);
+        expect(outboxRestoreState(USER)).toBe('pending');
+        expect(Sentry.captureMessage).toHaveBeenCalledWith('outbox.write_lock_timeout', {
+            level: 'warning',
+        });
+        release();
+        await expect(restored).resolves.toBe('ok');
+    });
+});
