@@ -1,15 +1,24 @@
-// The outbox queue (spec 03 §2.3), one tab (03-15b). The queue is the persisted keys
-// `chipin:outbox:<userId>` (`OutboxState`) and `chipin:outbox-failed:<userId>`: every change goes
-// through `writeOutbox`, one read-modify-write of both keys in the order of `runOutboxIo` (03-15c
-// wraps it in the write lock). `state` is the last state this tab read or wrote, for the synchronous
-// readers. The rest is the drain tab's memory: `cancelledOpIds`, `pendingRemovals`,
-// `outboxVersions`, the statuses and the op being sent.
+// The outbox queue (spec 03 §2.3). The queue is the persisted keys `chipin:outbox:<userId>`
+// (`OutboxState`) and `chipin:outbox-failed:<userId>`: every change goes through `writeOutbox`, one
+// read-modify-write of both keys under the write lock (`runOutboxIo`, 03-15c1); a decision that
+// depends on the queue (the claim, a pending create, whether an entry keeps its version) is taken
+// from the draft read under that lock, never from memory. `state` is the last state this tab read
+// or wrote, for the synchronous readers. The rest is the drain tab's memory: `cancelledOpIds`,
+// `pendingRemovals`, `outboxVersions`, the statuses. A run carries the fence it started with
+// (`OutboxFence`): the owner epoch (bumped by an owner change and by `clearUserData`) and the drain
+// session (new at every start of the drain); its writes and gate calls are refused once it is stale.
 import * as Sentry from '@sentry/react';
 import { get, set } from 'idb-keyval';
 
 import { outboxFailedKey, outboxStateKey } from './constants';
 import { outboxGate } from './outboxGate';
-import { onOutboxDisposed, OutboxWriteStoppedError, reviveOutboxIo, runOutboxIo } from './outboxIo';
+import {
+    onOutboxDisposed,
+    OutboxLockTimeoutError,
+    OutboxWriteStoppedError,
+    reviveOutboxIo,
+    runOutboxIo,
+} from './outboxIo';
 import {
     type FAILED_REASONS,
     FailedKeySchema,
@@ -307,7 +316,10 @@ let restoreState: OutboxRestore = 'pending';
 let restoring: Promise<OutboxRestore> | null = null;
 // §2.8: an append write was rejected; offline writing stays off until the app restarts.
 let persistFailedThisSession = false;
-let sendingOpId: string | null = null;
+// The fence (M2): `ownerEpoch` changes with the owner and at `clearUserData`, `drainSession` at
+// every start of the drain. A run of an older fence never writes, claims or touches the gate.
+let ownerEpoch = 0;
+let drainSession = '';
 const outboxVersions = new Map<string, string>();
 const pendingRemovals = new Set<string>();
 const cancelledOpIds = new Set<string>();
@@ -319,7 +331,6 @@ const forgetMemory = (): void => {
     state = emptyState();
     restoreState = 'pending';
     restoring = null;
-    sendingOpId = null;
     outboxVersions.clear();
     pendingRemovals.clear();
     cancelledOpIds.clear();
@@ -327,13 +338,38 @@ const forgetMemory = (): void => {
     failureWrites.clear();
 };
 
-/** The tab starts draining the outbox of `userId`; another user's queue is dropped from memory. */
+/** What a run started with: the owner epoch and the drain session (M2). */
+export interface OutboxFence {
+    readonly epoch: number;
+    readonly session: string;
+}
+
+export const currentOutboxFence = (): OutboxFence => ({ epoch: ownerEpoch, session: drainSession });
+
+/** The run's owner data still exists: no owner change and no `clearUserData` since it started. */
+export const isOwnerFence = (fence: OutboxFence): boolean =>
+    ownerId !== null && fence.epoch === ownerEpoch;
+
+/** The run belongs to this tab's current drain: not stopped, not restarted, same owner data. */
+export const isDrainFence = (fence: OutboxFence): boolean =>
+    running && isOwnerFence(fence) && fence.session === drainSession;
+
+/**
+ * The tab starts draining the outbox of `userId`; another user's queue is dropped from memory. A
+ * start after a stop (or of another owner) opens a new drain session: the runs of the previous one
+ * are stale. A start while the drain runs changes nothing.
+ */
 export const startOutbox = (userId: string): void => {
     if (ownerId !== userId) {
         forgetMemory();
         outboxGate.reset();
         ownerId = userId;
+        ownerEpoch += 1;
         reviveOutboxIo(userId);
+        running = false;
+    }
+    if (!running) {
+        drainSession = crypto.randomUUID();
     }
     running = true;
 };
@@ -358,9 +394,7 @@ export const stopOutbox = (): void => {
     running = false;
     wake();
     outboxGate.reset();
-    // Every waiting run has resolved: no cancellation is needed any more (the persisted list is
-    // cleared by the runs' `forgetCancelled`).
-    cancelledOpIds.clear();
+    // The cancellations stay: each run forgets its own when it settles (`forgetCancelled`).
 };
 
 /** Tests only: no owner, an empty queue, a new session. */
@@ -368,6 +402,7 @@ export const resetOutbox = (): void => {
     stopOutbox();
     forgetMemory();
     ownerId = null;
+    ownerEpoch += 1;
     persistFailedThisSession = false;
 };
 
@@ -377,6 +412,7 @@ onOutboxDisposed(userId => {
         stopOutbox();
         forgetMemory();
         ownerId = null;
+        ownerEpoch += 1;
     }
 });
 
@@ -428,27 +464,42 @@ export const outboxRestoreState = (userId: string): OutboxRestore =>
 /** §2.8: an append write failed in this session; offline writing is off until restart. */
 export const isOutboxPersistFailed = (): boolean => persistFailedThisSession;
 
-/**
- * One read-modify-write of both keys (§2.3), in this tab's IO order. Rejects when the write
- * fails (the change did not happen) and with `OutboxWriteStoppedError`, without a write, while
- * `outboxRestore !== 'ok'` (§1.6) or after the owner changed or was cleared. `change` changes only
- * the draft; the memory follows once the write has landed.
- */
-export const writeOutbox = <T>(change: (draft: OutboxState) => T): Promise<T> => {
-    const owner = ownerId;
+/** Whose write it is: a run passes its fence; `drain` also needs its drain session current. */
+export interface OutboxWriteGuard {
+    fence?: OutboxFence;
+    drain?: boolean;
+}
 
-    if (owner === null || restoreState !== 'ok') {
+/**
+ * One read-modify-write of both keys (§2.3) under the write lock. Rejects when the write fails
+ * (the change did not happen) and with `OutboxWriteStoppedError`, without a write, while
+ * `outboxRestore !== 'ok'` (§1.6), after the owner changed or was cleared since the call (or since
+ * the guard's fence), and for a `drain` write once its drain session is stale; checked again once
+ * the lock is held. `change` changes only the draft; the memory follows once the write has landed.
+ */
+export const writeOutbox = <T>(
+    change: (draft: OutboxState) => T,
+    { fence = currentOutboxFence(), drain = false }: OutboxWriteGuard = {},
+): Promise<T> => {
+    const owner = ownerId;
+    const isAllowed = (): boolean =>
+        ownerId === owner &&
+        restoreState === 'ok' &&
+        isOwnerFence(fence) &&
+        (!drain || isDrainFence(fence));
+
+    if (owner === null || !isAllowed()) {
         return Promise.reject(new OutboxWriteStoppedError());
     }
     return runOutboxIo(owner, () =>
         readKeys(owner).then(read => {
-            if (ownerId !== owner || restoreState !== 'ok') {
+            if (!isAllowed()) {
                 throw new OutboxWriteStoppedError();
             }
             const result = change(read.state);
 
             return writeKeys(owner, read.state, read).then(() => {
-                if (ownerId === owner) {
+                if (ownerId === owner && isOwnerFence(fence)) {
                     state = read.state;
                 }
                 return result;
@@ -463,17 +514,35 @@ const countOps = (draft: OutboxState): number =>
 /** §2.8: the outbox holds `OUTBOX_LIMIT` pending and failed ops; no op is appended. */
 export const isOutboxFull = (): boolean => countOps(state) >= OUTBOX_LIMIT;
 
+// An unsent create of the entry (a sent one, still waiting for its removal, has a version).
+const hasPendingCreateIn = (draft: OutboxState, entryId: string): boolean =>
+    draft.ops.some(
+        op =>
+            op.entryId === entryId && op.kind === 'createExpense' && !pendingRemovals.has(op.opId),
+    );
+
+/** What an append may read of the queue: the draft under the write lock (N3), never memory. */
+export interface OutboxAppendView {
+    hasPendingCreateOf: (entryId: string) => boolean;
+}
+
 /**
  * Appends the op that `build` makes with the next `seq` (C2-16), resolving once the write has
  * landed. Refused at the limit (`OutboxLimitError`). A rejected write (`OutboxPersistError`): the op
  * does not exist and offline writing is off until restart (§2.8, Sentry `outbox.persist_failed`).
+ * A write-lock timeout is an `OutboxPersistError` too (the same toast), but transient: offline
+ * writing stays on (Sentry `outbox.write_lock_timeout`).
  */
-export const appendOutboxOp = <Op extends OutboxOpBase>(build: (seq: number) => Op): Promise<Op> =>
+export const appendOutboxOp = <Op extends OutboxOpBase>(
+    build: (seq: number, queue: OutboxAppendView) => Op,
+): Promise<Op> =>
     writeOutbox(draft => {
         if (countOps(draft) >= OUTBOX_LIMIT) {
             throw new OutboxLimitError();
         }
-        const op = build(draft.nextSeq);
+        const op = build(draft.nextSeq, {
+            hasPendingCreateOf: entryId => hasPendingCreateIn(draft, entryId),
+        });
 
         draft.nextSeq += 1;
         draft.ops.push(op);
@@ -481,6 +550,10 @@ export const appendOutboxOp = <Op extends OutboxOpBase>(build: (seq: number) => 
     }).catch((error: unknown) => {
         if (error instanceof OutboxLimitError || error instanceof OutboxWriteStoppedError) {
             throw error;
+        }
+        if (error instanceof OutboxLockTimeoutError) {
+            Sentry.captureMessage('outbox.write_lock_timeout', { level: 'warning' });
+            throw new OutboxPersistError(error);
         }
         persistFailedThisSession = true;
         Sentry.captureMessage('outbox.persist_failed', {
@@ -511,26 +584,19 @@ export const failedEntryIds = (): ReadonlySet<string> =>
 export const outboxEntryIds = (): ReadonlySet<string> =>
     new Set([...entryIdsOf(state), ...unreadableEntryIds()]);
 
-const hasOtherOpOf = (entryId: string, opId: string): boolean =>
-    state.ops.some(op => op.entryId === entryId && op.opId !== opId);
-
-/** An unsent create of the entry (a sent one, still waiting for its removal, has a version). */
-export const hasPendingCreateOf = (entryId: string): boolean =>
-    state.ops.some(
-        op =>
-            op.entryId === entryId && op.kind === 'createExpense' && !pendingRemovals.has(op.opId),
-    );
-
 /** Our latest write of the entry, newer than any `baseVersion` (§2.1). */
 export const getOutboxVersion = (entryId: string): string | null =>
     outboxVersions.get(entryId) ?? null;
 
-/** After a success: the version is kept only while later ops of the entry still need it. */
+/**
+ * After a success: the entry's new version, for its later ops. Whether one is left is decided by
+ * the removal write from the draft (N3: another tab may have appended one meanwhile).
+ */
 export const noteOutboxVersion = (op: OutboxOpBase, version: string | null): void => {
-    if (version !== null && hasOtherOpOf(op.entryId, op.opId)) {
-        outboxVersions.set(op.entryId, version);
-    } else {
+    if (version === null) {
         outboxVersions.delete(op.entryId);
+    } else {
+        outboxVersions.set(op.entryId, version);
     }
 };
 
@@ -556,23 +622,40 @@ export const markPendingRemoval = (opId: string): void => {
 
 export const isPendingRemoval = (opId: string): boolean => pendingRemovals.has(opId);
 
-/**
- * A sent op leaves the queue (and the failed list, after a Retry); the same write keeps the
- * entry's version while another op of it is left (`OutboxState.versions`).
- */
-export const removeOutboxOp = (op: OutboxOpBase): Promise<void> =>
-    writeOutbox(draft => {
-        draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
-        draft.failed.delete(op.opId);
-        const version = outboxVersions.get(op.entryId);
+// The claim is this run's: a stale run never clears a newer run's claim (§2.3).
+const isClaimOf = (draft: OutboxState, opId: string, fence: OutboxFence): boolean =>
+    draft.sending?.opId === opId && draft.sending.session === fence.session;
 
-        if (version !== undefined && draft.ops.some(({ entryId }) => entryId === op.entryId)) {
-            draft.versions.set(op.entryId, version);
-        } else {
-            draft.versions.delete(op.entryId);
-        }
-    }).then(() => {
+/**
+ * A sent op leaves the queue (and the failed list, after a Retry) and its claim is cleared; the
+ * same write keeps the entry's version while another op of it is left in the draft
+ * (`OutboxState.versions`), else the version is deleted, here only. Refused once the owner's data
+ * changed since the run's fence (not by a stop: a same-owner removal finishes after it).
+ */
+export const removeOutboxOp = (op: OutboxOpBase, fence: OutboxFence): Promise<void> =>
+    writeOutbox(
+        draft => {
+            draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
+            draft.failed.delete(op.opId);
+            if (isClaimOf(draft, op.opId, fence)) {
+                draft.sending = null;
+            }
+            const version = outboxVersions.get(op.entryId);
+            const isLeft = draft.ops.some(({ entryId }) => entryId === op.entryId);
+
+            if (version !== undefined && isLeft) {
+                draft.versions.set(op.entryId, version);
+            } else {
+                draft.versions.delete(op.entryId);
+            }
+            return { isLeft, version };
+        },
+        { fence },
+    ).then(({ isLeft, version }) => {
         pendingRemovals.delete(op.opId);
+        if (!isLeft && version !== undefined && outboxVersions.get(op.entryId) === version) {
+            outboxVersions.delete(op.entryId);
+        }
     });
 
 /** Counts a failed-list write of the entry until it lands (or is given up). */
@@ -593,21 +676,40 @@ export const trackFailureWrite = <T>(entryId: string, write: Promise<T>): Promis
 export const hasNoFailureOf = (entryId: string): boolean =>
     !failureWrites.has(entryId) && !failedEntryIds().has(entryId);
 
-/** A final answer: the op moves from the queue to the failed list (§2.5), in one write. */
-export const recordFailedOp = (op: OutboxOpBase, reason: FailedReason): Promise<void> =>
-    writeOutbox(draft => {
-        draft.failed.set(op.opId, { op, reason, failedAt: Date.now() });
-        draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
-    });
+/**
+ * A final answer: the op moves from the queue to the failed list (§2.5) and its claim is cleared,
+ * in one write of the run's drain session.
+ */
+export const recordFailedOp = (
+    op: OutboxOpBase,
+    reason: FailedReason,
+    fence: OutboxFence,
+): Promise<void> =>
+    writeOutbox(
+        draft => {
+            draft.failed.set(op.opId, { op, reason, failedAt: Date.now() });
+            draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
+            if (isClaimOf(draft, op.opId, fence)) {
+                draft.sending = null;
+            }
+        },
+        { fence, drain: true },
+    );
 
 export const isOpCancelled = (opId: string): boolean => cancelledOpIds.has(opId);
 
-/** The op's run settled: its cancellation is no longer needed (§2.5). */
-export const forgetCancelled = (opId: string): Promise<void> => {
+/** The op's run settled: its cancellation is no longer needed (§2.5); per run, not on a stop. */
+export const forgetCancelled = (opId: string, fence: OutboxFence): Promise<void> => {
+    if (!isOwnerFence(fence)) {
+        return Promise.resolve();
+    }
     cancelledOpIds.delete(opId);
-    return writeOutbox(draft => {
-        draft.cancelled.delete(opId);
-    });
+    return writeOutbox(
+        draft => {
+            draft.cancelled.delete(opId);
+        },
+        { fence },
+    );
 };
 
 export const setOutboxStatus = (opId: string, status: OutboxStatus): void => {
@@ -616,35 +718,69 @@ export const setOutboxStatus = (opId: string, status: OutboxStatus): void => {
 
 export const outboxStatus = (opId: string): OutboxStatus | undefined => statusByOpId.get(opId);
 
-/** Why a claim was refused: the drain stopped (or the owner changed), or the op left the queue. */
-export type OutboxClaim = 'claimed' | 'stopped' | 'gone';
+/**
+ * Why a claim was refused: the drain stopped (or the owner changed), the op left the queue, or the
+ * session's token is not the owner's (`auth`).
+ */
+export type OutboxClaim = 'claimed' | 'stopped' | 'gone' | 'auth';
 
 /**
- * The `sending` claim of §2.3 (one tab, in memory), taken in this tab's IO order: a discard whose
- * write is in flight lands first and the claim sees the op gone (`gone`: no request), or the claim
- * lands first and the discard refuses the op ("already sending"). A Retry claims a failed op.
+ * The `sending` claim of §2.3: a compare-and-set under the write lock. With the lock held, the
+ * run's drain session is current and the owner unchanged (else `stopped`), the session's token is
+ * still the owner's (N4, else `auth`), the op is still pending or failed (a Retry) and neither
+ * cancelled nor sent (else `gone`); then `sending = { opId, session }`. A discard whose write lands
+ * first makes the claim see the op gone (no request); a claim that lands first makes the discard
+ * refuse the op ("already sending"). Rejects only when the write itself failed (transient).
  */
-export const claimOutboxOp = (op: OutboxOpBase): Promise<OutboxClaim> =>
-    runOutboxIo(op.owner, () => {
-        if (!running || ownerId !== op.owner) {
-            return Promise.resolve<OutboxClaim>('stopped');
-        }
-        const isQueued =
-            state.ops.some(({ opId }) => opId === op.opId) || state.failed.has(op.opId);
+export const claimOutboxOp = (
+    op: OutboxOpBase,
+    fence: OutboxFence,
+    isOwnerSession: () => boolean,
+): Promise<OutboxClaim> =>
+    writeOutbox(
+        (draft): OutboxClaim => {
+            // The drain session itself is re-checked by the `drain` guard once the lock is held.
+            if (ownerId !== op.owner) {
+                return 'stopped';
+            }
+            if (!isOwnerSession()) {
+                return 'auth';
+            }
+            const isQueued =
+                draft.ops.some(({ opId }) => opId === op.opId) || draft.failed.has(op.opId);
 
-        if (!isQueued || cancelledOpIds.has(op.opId) || state.cancelled.has(op.opId)) {
-            return Promise.resolve<OutboxClaim>('gone');
+            if (
+                !isQueued ||
+                cancelledOpIds.has(op.opId) ||
+                draft.cancelled.has(op.opId) ||
+                pendingRemovals.has(op.opId)
+            ) {
+                return 'gone';
+            }
+            draft.sending = { opId: op.opId, session: fence.session };
+            return 'claimed';
+        },
+        { fence, drain: true },
+    ).catch((error: unknown) => {
+        if (error instanceof OutboxWriteStoppedError) {
+            return 'stopped';
         }
-        sendingOpId = op.opId;
-        return Promise.resolve<OutboxClaim>('claimed');
-    }).catch((): OutboxClaim => 'stopped');
+        throw error;
+    });
 
-/** Clears the claim only while it is this op's: a stale run never clears a newer run's claim. */
-export const releaseOutboxClaim = (opId: string): void => {
-    if (sendingOpId === opId) {
-        sendingOpId = null;
-    }
-};
+/**
+ * Clears the claim only while it is this run's `{ opId, session }` (compare-and-clear): a stale run
+ * never clears a newer run's claim. Before a backoff or a gate wait, so a discard is allowed meanwhile.
+ */
+export const releaseOutboxClaim = (op: OutboxOpBase, fence: OutboxFence): Promise<void> =>
+    writeOutbox(
+        draft => {
+            if (isClaimOf(draft, op.opId, fence)) {
+                draft.sending = null;
+            }
+        },
+        { fence },
+    );
 
 export interface DiscardResult {
     discarded: string[];
@@ -659,7 +795,9 @@ export interface DiscardResult {
  */
 export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
     writeOutbox(draft => {
-        const isSent = (opId: string): boolean => opId === sendingOpId || pendingRemovals.has(opId);
+        // The claim is read from the draft under the lock: any tab's request in flight is refused.
+        const isSent = (opId: string): boolean =>
+            draft.sending?.opId === opId || pendingRemovals.has(opId);
         const refused = opIds.filter(isSent);
         const discarded: string[] = [];
         const pendingIds: string[] = [];

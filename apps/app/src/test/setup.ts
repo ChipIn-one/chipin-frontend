@@ -5,6 +5,7 @@ import { afterEach, vi } from 'vitest';
 import { resetTabUserId } from 'helpers/localStorage';
 
 import { DefaultTestQueryProvider, resetTestQueryClients } from './renderWithQueryClient';
+import { installFakeWebLocks } from './webLocks';
 
 type Wrapper = JSXElementConstructor<{ children: ReactNode }>;
 
@@ -71,7 +72,11 @@ Object.defineProperties(HTMLElement.prototype, {
     },
 });
 
+// jsdom has no Web Locks: the outbox write lock (spec 03 §2.3) runs on an in-memory one.
+installFakeWebLocks();
+
 afterEach(() => {
+    installFakeWebLocks();
     cleanup();
     resetTestQueryClients();
     // The next test reads this tab's user from the `LocalUser` it sets up.
