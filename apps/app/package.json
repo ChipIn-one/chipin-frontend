@@ -15,6 +15,7 @@
         "test:contract": "vitest run --config vitest.contract.config.ts",
         "test:contract:smoke": "vitest run --config vitest.contract.config.ts contract-tests/auth-session.contract.ts",
         "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts",
+        "test:e2e": "playwright test",
         "prerender:public": "node scripts/prerender-public.mjs",
         "verify:public-precache": "node scripts/verify-public-precache.mjs",
         "build:ds-gallery": "vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs",
@@ -48,6 +49,7 @@
         "zustand": "^5.1.0"
     },
     "devDependencies": {
+        "@playwright/test": "1.65.1",
         "@sentry/vite-plugin": "^5.4.0",
         "@testing-library/react": "^16.3.3",
         "@testing-library/user-event": "^14.6.10",
