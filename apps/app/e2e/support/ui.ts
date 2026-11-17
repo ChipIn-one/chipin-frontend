@@ -37,8 +37,20 @@ export const openGroupWithGroupsList = async (page: Page, groupId: string): Prom
 };
 
 /**
- * Asserts the open expense editor knows the group (its group select or edit scope names it).
- * Without the groups list it opens with no group (#718): this fails before any field is filled.
+ * Add mode on a group page: asserts the open expense editor lists `member` as a split row. The rows
+ * come from the selected group's members; opened before the groups list, the editor has no group
+ * and no rows (#718), so this fails before any field is filled.
+ */
+export const expectExpenseDialogMembers = async (
+    dialog: Locator,
+    member: string,
+): Promise<void> => {
+    await expect(dialog.locator('label').filter({ hasText: member })).toBeVisible();
+};
+
+/**
+ * Edit mode: the scope line names the group ("Group expense: <name>"). It shows the edit context,
+ * not that the groups list was loaded (it does not prove #718).
  */
 export const expectExpenseDialogGroup = async (
     dialog: Locator,

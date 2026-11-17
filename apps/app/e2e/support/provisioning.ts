@@ -205,10 +205,14 @@ const send = (fetchImpl: FetchImpl, options: RequestOptions): Promise<Response> 
  * credential: it is returned to the test only, never put in a message.
  */
 export const readGroupInviteToken = (value: unknown): string => {
-    // Throws unless the group, its token included, is valid; the narrowing below only types it.
+    // parseGroup validates the whole group, its token included; the check below only narrows the type.
     parseGroup(value);
 
-    return isRecord(value) && typeof value.inviteToken === 'string' ? value.inviteToken : '';
+    if (!isRecord(value) || typeof value.inviteToken !== 'string') {
+        throw new E2eProvisioningError('group.inviteToken must be a non-empty string');
+    }
+
+    return value.inviteToken;
 };
 
 const readJson = (response: Response, description: string): Promise<unknown> =>

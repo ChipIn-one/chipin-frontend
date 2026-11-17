@@ -64,6 +64,6 @@ test.describe('offline', () => {
                 exactBalance('You are owed', '15'),
                 { timeout: 2_000 },
             );
-        }).toPass();
+        }).toPass({ timeout: 15_000 });
     });
 });

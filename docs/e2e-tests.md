@@ -18,9 +18,8 @@ Code: `apps/app/playwright.config.ts`, `apps/app/e2e/specs/` (tests), `apps/app/
 | Test                                                                                        | Flow                       |
 | ------------------------------------------------------------------------------------------- | -------------------------- |
 | EXP-011: an expense split by amounts gives each participant their own share                 | unequal split              |
-| SET-007: a partial payment leaves the remaining debt for both participants                  | settle up                  |
+| SET-007: a partial payment leaves the remaining debt and appears in both activities         | settle up, activity        |
 | SET-007, BAL-003: paying the full debt settles both participants                            | settle up                  |
-| SET-007: a recorded payment appears in the activity of both participants                    | settle up, activity        |
 | EXP-044: editing the amount recalculates both balances                                      | edit an expense            |
 | BAL-004, EXP-050: deleting the expense settles both participants                            | delete an expense          |
 | GRP-030: a second user joins through the invite link and both see each other                | join by invite link        |
@@ -42,7 +41,7 @@ A page that has just written money data is never reloaded or reopened with `goto
 
 One locator exception: the split-share inputs of the expense editor have no accessible name (#725), so `split.spec.ts` finds them structurally, as the input next to the participant's label.
 
-All specs run on pull requests. Estimate: each money test takes about 8 to 20 s (two registrations, one or two contexts, two to four screens), so the nine add about 60 to 90 s with 2 workers, and the test step stays near 2 to 2.5 minutes, well inside its 10-minute timeout. If the measured job grows beyond that, tag the slowest tests `@release` and exclude them on pull requests with `--grep-invert @release`.
+All specs run on pull requests. Estimate: each money test takes about 8 to 20 s (two registrations, one or two contexts, two to four screens), so the eight add about 55 to 85 s with 2 workers, and the test step stays near 2 to 2.5 minutes, well inside its 10-minute timeout. If the measured job grows beyond that, tag the slowest tests `@release` and exclude them on pull requests with `--grep-invert @release`.
 
 ## Commands
 

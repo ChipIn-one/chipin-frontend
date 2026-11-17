@@ -77,7 +77,7 @@ const recordPayment = async (
 // not refetch it while fresh (30 s), so the old balance would show (#724). The debtor
 // stays in the app; the other participant opens a fresh context.
 test.describe('SET-007 settle up', () => {
-    test('a partial payment leaves the remaining debt for both participants', async ({
+    test('a partial payment leaves the remaining debt and appears in both activities', async ({
         provisioning,
         signIn,
     }) => {
@@ -87,10 +87,22 @@ test.describe('SET-007 settle up', () => {
         await recordPayment(debtorPage, groupId, creditor, '7.5');
         const debtorBalances = await selectGroupTab(debtorPage, 'Balances');
         await expectBalance(debtorBalances, creditor.displayName, 'You owe', '7.5');
+        // In-app navigation: the write invalidated the activity feed in this document's cache, so
+        // the Activity page reads it from the server.
+        await visibleOne(debtorPage.getByRole('link', { name: 'Activity', exact: true })).click();
+        await expect(debtorPage).toHaveURL(/\/activity$/);
+        await expect(debtorPage.getByText(/^You paid\b/)).toHaveText(
+            exactBalance('You paid', '7.5'),
+        );
 
         const creditorPage = await signIn(creditor);
         const creditorBalances = await openGroupTab(creditorPage, groupId, 'Balances');
         await expectBalance(creditorBalances, debtor.displayName, 'You are owed', '7.5');
+        await creditorPage.goto('/activity');
+        const debtorPaid = `${debtor.displayName} paid`;
+        await expect(
+            creditorPage.getByText(new RegExp(`^${escapeRegExp(debtorPaid)}\\b`)),
+        ).toHaveText(exactBalance(debtorPaid, '7.5'));
     });
 
     test('BAL-003 paying the full debt settles both participants', async ({
@@ -107,29 +119,5 @@ test.describe('SET-007 settle up', () => {
         const creditorPage = await signIn(creditor);
         const creditorBalances = await openGroupTab(creditorPage, groupId, 'Balances');
         await expectSettledUp(creditorBalances, debtor.displayName);
-    });
-
-    test('a recorded payment appears in the activity of both participants', async ({
-        provisioning,
-        signIn,
-    }) => {
-        const { creditor, debtor, groupId } = await arrangeDebt(provisioning);
-
-        const debtorPage = await signIn(debtor);
-        await recordPayment(debtorPage, groupId, creditor, '7.5');
-        // In-app navigation: the write invalidated the activity feed in this document's cache, so
-        // the Activity page reads it from the server.
-        await visibleOne(debtorPage.getByRole('link', { name: 'Activity', exact: true })).click();
-        await expect(debtorPage).toHaveURL(/\/activity$/);
-        await expect(debtorPage.getByText(/^You paid\b/)).toHaveText(
-            exactBalance('You paid', '7.5'),
-        );
-
-        const creditorPage = await signIn(creditor);
-        await creditorPage.goto('/activity');
-        const debtorPaid = `${debtor.displayName} paid`;
-        await expect(
-            creditorPage.getByText(new RegExp(`^${escapeRegExp(debtorPaid)}\\b`)),
-        ).toHaveText(exactBalance(debtorPaid, '7.5'));
     });
 });

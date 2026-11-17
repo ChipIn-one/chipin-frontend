@@ -4,7 +4,7 @@
 import { expect, test } from '../../support/fixtures';
 import {
     expectBalance,
-    expectExpenseDialogGroup,
+    expectExpenseDialogMembers,
     openGroupTab,
     openGroupWithGroupsList,
     selectGroupTab,
@@ -20,8 +20,9 @@ test.describe('EXP-011 unequal split', () => {
         const payer = await provisioning.register('E2E Payer');
         const friend = await provisioning.register('E2E Friend');
         await provisioning.makeFriends(payer, friend);
-        const groupName = `E2E Group ${uniqueSuffix()}`;
-        const groupId = await provisioning.createGroup(payer, groupName, [friend]);
+        const groupId = await provisioning.createGroup(payer, `E2E Group ${uniqueSuffix()}`, [
+            friend,
+        ]);
         const description = `E2E hotel ${uniqueSuffix()}`;
 
         const payerPage = await signIn(payer);
@@ -30,7 +31,7 @@ test.describe('EXP-011 unequal split', () => {
             payerPage.getByRole('button', { name: 'Add expense', exact: true }),
         ).click();
         const dialog = payerPage.getByRole('dialog', { name: 'Add an expense' });
-        await expectExpenseDialogGroup(dialog, groupName);
+        await expectExpenseDialogMembers(dialog, friend.displayName);
         // Neither field has an accessible label, so the placeholders are their only stable handles.
         await dialog.getByPlaceholder('0.00').fill('30');
         await dialog.getByPlaceholder('e.g. Hotel booking, dinner...').fill(description);
