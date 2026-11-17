@@ -12,6 +12,7 @@ import {
     expectBalance,
     expectSettledUp,
     openGroupTab,
+    reloadAndReadGroup,
     selectGroupTab,
     uniqueSuffix,
     visibleOne,
@@ -72,10 +73,9 @@ const recordPayment = async (
     await expect(payment).toBeHidden();
 };
 
-// The page that recorded the payment is never reloaded or reopened with `goto`: a reload within
-// 1 s of a write restores the pre-write group from the persisted cache (throttled by 1 s) and does
-// not refetch it while fresh (30 s), so the old balance would show (#724). The debtor
-// stays in the app; the other participant opens a fresh context.
+// The debtor reloads right after the payment: the persisted cache may still hold the group from
+// before it, and the Balances tab must show the server's balance anyway (#724). The other
+// participant opens a fresh context.
 test.describe('SET-007 settle up', () => {
     test('a partial payment leaves the remaining debt and appears in both activities', async ({
         provisioning,
@@ -85,10 +85,10 @@ test.describe('SET-007 settle up', () => {
 
         const debtorPage = await signIn(debtor);
         await recordPayment(debtorPage, groupId, creditor, '7.5');
+        await reloadAndReadGroup(debtorPage, groupId);
         const debtorBalances = await selectGroupTab(debtorPage, 'Balances');
         await expectBalance(debtorBalances, creditor.displayName, 'You owe', '7.5');
-        // In-app navigation: the write invalidated the activity feed in this document's cache, so
-        // the Activity page reads it from the server.
+        // In-app navigation: a feed cached before the reload is read again from the server (#724).
         await visibleOne(debtorPage.getByRole('link', { name: 'Activity', exact: true })).click();
         await expect(debtorPage).toHaveURL(/\/activity$/);
         await expect(debtorPage.getByText(/^You paid\b/)).toHaveText(
@@ -113,6 +113,7 @@ test.describe('SET-007 settle up', () => {
 
         const debtorPage = await signIn(debtor);
         await recordPayment(debtorPage, groupId, creditor, null);
+        await reloadAndReadGroup(debtorPage, groupId);
         const debtorBalances = await selectGroupTab(debtorPage, 'Balances');
         await expectSettledUp(debtorBalances, creditor.displayName);
 

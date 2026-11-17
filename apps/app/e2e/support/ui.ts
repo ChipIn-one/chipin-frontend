@@ -36,6 +36,29 @@ export const gotoAfterGroupsList = async (page: Page, path: string): Promise<voi
     expect(response.ok(), 'GET /groups status').toBe(true);
 };
 
+/** The group detail read (`GET /groups/{id}`), which carries the members' balances. */
+const isGroupDetailRead =
+    (groupId: string) =>
+    (response: Response): boolean =>
+        response.request().method() === 'GET' &&
+        new URL(response.url()).pathname === `/api/groups/${groupId}`;
+
+/**
+ * Reloads the group page right after a money write, without waiting for the persisted cache, and
+ * resolves once the group detail has been read again from the server (#724): a restored group from
+ * before the write shows first and must not count as fresh.
+ */
+export const reloadAndReadGroup = async (page: Page, groupId: string): Promise<void> => {
+    const [response] = await Promise.all([
+        page.waitForResponse(isGroupDetailRead(groupId)),
+        page.reload(),
+    ]);
+    // The body is read into the query cache only after it has arrived in full.
+    await response.finished();
+
+    expect(response.ok(), 'GET /groups/{id} status').toBe(true);
+};
+
 /**
  * Opens the group page and resolves once the groups list has loaded. The expense editor (create and
  * edit) reads its groups when it opens; opened before this list, it has no group (#718).

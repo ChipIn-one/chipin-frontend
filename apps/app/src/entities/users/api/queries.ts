@@ -5,6 +5,7 @@ import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { getLocalUser, saveLocalUser, toLocalUser } from 'helpers/localStorage';
 import { api } from 'shared/api/client';
+import { refetchIfRestored } from 'shared/api/queryClient';
 
 import { toKnownUsers } from '../model/toKnownUsers';
 import { toSelfUser } from '../model/toSelfUser';
@@ -107,6 +108,8 @@ export const knownUsersQueryOptions = () =>
     queryOptions({
         queryKey: usersKeys.known(),
         staleTime: USERS_QUERY_DEFAULTS.known.staleTime,
+        // The friends' balances.
+        refetchOnMount: refetchIfRestored,
         queryFn: ({ signal }) => api('get', '/users/known-users', { signal }).then(toKnownUsers),
     });
 

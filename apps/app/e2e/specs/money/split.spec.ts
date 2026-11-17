@@ -1,12 +1,13 @@
 // Money-critical flows (#667): an unequal split. Preconditions are arranged through the staging API;
 // the checked action goes through the UI, and both participants' balances are asserted as shown. The
-// payer's page is never reloaded after the write (#724): it switches tabs in place.
+// payer reloads right after the write: the server's balance shows, not a restored one (#724).
 import { expect, test } from '../../support/fixtures';
 import {
     expectBalance,
     expectExpenseDialogMembers,
     openGroupTab,
     openGroupWithGroupsList,
+    reloadAndReadGroup,
     selectGroupTab,
     uniqueSuffix,
     visibleOne,
@@ -53,6 +54,7 @@ test.describe('EXP-011 unequal split', () => {
         await expect(submit).toBeEnabled();
         await submit.click();
         await expect(dialog).toBeHidden();
+        await reloadAndReadGroup(payerPage, groupId);
 
         const expenses = await selectGroupTab(payerPage, 'Expenses');
         await expect(expenses.getByText(description)).toBeVisible();
