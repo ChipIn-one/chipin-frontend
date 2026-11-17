@@ -6,6 +6,7 @@ export interface E2eEnvironment {
     CHIPIN_E2E_BASE_URL?: string;
     CHIPIN_CONTRACT_SWAGGER_USER?: string;
     CHIPIN_CONTRACT_SWAGGER_PASSWORD?: string;
+    VERCEL_AUTOMATION_BYPASS_SECRET?: string;
 }
 
 export interface E2eTarget {
@@ -117,6 +118,42 @@ export const resolveE2eBasicAuth = (environment: E2eEnvironment): E2eBasicAuth =
     return { password, username };
 };
 
+/** Vercel's header for Protection Bypass for Automation. */
+export const VERCEL_BYPASS_HEADER = 'x-vercel-protection-bypass';
+
+export interface PreviewBypass {
+    /** Requests to exactly this origin get the header; no other host ever does. */
+    origin: string;
+    headers: Record<string, string>;
+}
+
+/**
+ * The optional Vercel deployment-protection bypass: only for a Vercel Preview target and only when
+ * the secret is set (an unprotected Preview needs none). It is sent per request to the Preview
+ * origin, never through `extraHTTPHeaders`, which would also reach other hosts.
+ */
+export const resolvePreviewBypass = (
+    environment: E2eEnvironment,
+    target: E2eTarget,
+): PreviewBypass | null => {
+    const secret = environment.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+
+    if (!secret || target.kind !== 'vercel-preview') {
+        return null;
+    }
+
+    return { origin: target.baseUrl, headers: { [VERCEL_BYPASS_HEADER]: secret } };
+};
+
+/** Whether `url` is a request to the bypass origin (scheme, host and port all equal). */
+export const isPreviewOriginRequest = (bypass: PreviewBypass, url: string): boolean => {
+    try {
+        return new URL(url).origin === bypass.origin;
+    } catch {
+        return false;
+    }
+};
+
 /** The e2e variables of `process.env` (Node: the Playwright config, global setup and workers). */
 export const readE2eEnvironment = (): E2eEnvironment => {
     const read = (key: keyof E2eEnvironment): string | undefined => {
@@ -129,5 +166,6 @@ export const readE2eEnvironment = (): E2eEnvironment => {
         CHIPIN_E2E_BASE_URL: read('CHIPIN_E2E_BASE_URL'),
         CHIPIN_CONTRACT_SWAGGER_USER: read('CHIPIN_CONTRACT_SWAGGER_USER'),
         CHIPIN_CONTRACT_SWAGGER_PASSWORD: read('CHIPIN_CONTRACT_SWAGGER_PASSWORD'),
+        VERCEL_AUTOMATION_BYPASS_SECRET: read('VERCEL_AUTOMATION_BYPASS_SECRET'),
     };
 };

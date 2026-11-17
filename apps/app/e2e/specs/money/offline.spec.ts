@@ -1,6 +1,7 @@
-// Money-critical flows (#667): going offline. Chromium only, with service workers allowed for this
-// file (the Vite dev server registers none, `devOptions.enabled: false`; a Vercel Preview target
-// does). With the production flags no change can wait offline and sync later: offline writes are
+// Money-critical flows (#667): going offline. Chromium only (desktop and the Pixel profile); the
+// Firefox and WebKit profiles skip it until it is checked there (the Issue in the skip reason).
+// Service workers are allowed for this file (the Vite dev server registers none,
+// `devOptions.enabled: false`; a Vercel Preview target does). With the production flags no change can wait offline and sync later: offline writes are
 // behind VITE_FEATURE_OFFLINE_WRITES (off), and the ledger, group and user writes are refused while
 // offline (hooks/useLedgerMutations.ts, useGroupMutations.ts, useUserMutations.ts). So only the
 // banner and the saved data it promises are checked. Without a service worker that saved data is the
@@ -19,7 +20,7 @@ test.use({ serviceWorkers: 'allow' });
 test.describe('offline', () => {
     test.skip(
         ({ browserName }) => browserName !== 'chromium',
-        'The offline spec runs in Chromium only',
+        'Chromium only for now: https://github.com/ChipIn-one/chipin-frontend/issues/TBD-offline-spec-firefox-webkit',
     );
 
     test('going offline shows the banner over the saved balance, and reconnecting hides it', async ({

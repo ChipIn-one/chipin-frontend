@@ -13,6 +13,134 @@ export const RELEASE_OWNER = 'syllik';
 // Russian tester guide on master, linked from every new QA Issue and the #chipin-ci handoff.
 export const TESTER_GUIDE_URL = `https://github.com/${REPOSITORY}/blob/master/docs/qa/README.md`;
 
+// Release browser matrix (docs/e2e-tests.md#release-browser-matrix). An id is the Playwright project
+// name and the matrix leg of prepare-release-qa.yml; a label is fixed text for the Issue and Slack.
+export const MATRIX_PROFILES = Object.freeze([
+    { id: 'chromium', label: 'Desktop Chromium' },
+    { id: 'firefox', label: 'Desktop Firefox' },
+    { id: 'webkit', label: 'Desktop WebKit' },
+    { id: 'pixel', label: 'Pixel 7 (Chromium)' },
+    { id: 'iphone', label: 'iPhone 15 (WebKit)' },
+]);
+const MATRIX_RESULT_KEYS = ['failed', 'flaky', 'passed', 'profile', 'skipped', 'status', 'version'];
+const MATRIX_RESULT_STATUSES = new Set(['passed', 'failed', 'error']);
+const MATRIX_COUNTS = ['passed', 'failed', 'flaky', 'skipped'];
+const MAX_MATRIX_COUNT = 10000;
+
+// One leg's result file. The e2e job that writes it runs the candidate's install scripts and test
+// code, so the file is untrusted: anything but this exact shape is no result.
+export function parseMatrixResult(text, profileId) {
+    let value;
+    try {
+        value = JSON.parse(text);
+    } catch {
+        return null;
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    if (Object.keys(value).sort().join() !== MATRIX_RESULT_KEYS.join()) return null;
+    if (
+        value.version !== 1 ||
+        value.profile !== profileId ||
+        !MATRIX_RESULT_STATUSES.has(value.status)
+    )
+        return null;
+    const counts = {};
+    for (const key of MATRIX_COUNTS) {
+        const count = value[key];
+        if (!Number.isSafeInteger(count) || count < 0 || count > MAX_MATRIX_COUNT) return null;
+        counts[key] = count;
+    }
+    return { status: value.status, ...counts };
+}
+
+export function matrixRunUrl(runId) {
+    if (!Number.isSafeInteger(runId) || runId <= 0)
+        throw new Error('GITHUB_RUN_ID must be a positive integer for the browser matrix.');
+    return `https://github.com/${REPOSITORY}/actions/runs/${runId}`;
+}
+
+// A profile passed only when its job concluded `success` (read from the GitHub API, trusted) and its
+// result file reports passed tests and no failure. A failure in either is `failed`; no valid result,
+// or an unverified pass, is `not_run`.
+export function summarizeMatrix({ results = {}, conclusions = {}, runId }) {
+    const runUrl = matrixRunUrl(runId);
+    const profiles = MATRIX_PROFILES.map(({ id, label }) => {
+        const result = results[id] ?? null;
+        const conclusion = conclusions[id] ?? null;
+        let status = 'not_run';
+        if (result && result.status !== 'error') {
+            if (result.status === 'failed' || result.failed > 0 || conclusion === 'failure')
+                status = 'failed';
+            else if (conclusion === 'success' && result.passed > 0) status = 'passed';
+        }
+        const counts = result
+            ? {
+                  passed: result.passed,
+                  failed: result.failed,
+                  flaky: result.flaky,
+                  skipped: result.skipped,
+              }
+            : null;
+        return { id, label, status, counts };
+    });
+    return {
+        runUrl,
+        profiles,
+        passed: profiles.every(profile => profile.status === 'passed'),
+    };
+}
+
+const MATRIX_STATUS_TEXT = { passed: 'passed', failed: '**failed**', not_run: '**no result**' };
+
+function matrixProblems(matrix) {
+    const named = status =>
+        matrix.profiles.filter(profile => profile.status === status).map(profile => profile.label);
+    return { failed: named('failed'), missing: named('not_run') };
+}
+
+// The first block of a QA Issue (and of a same-SHA retry comment): the verdict before any detail.
+export function renderMatrixBanner(matrix) {
+    const run = `[run](${matrix.runUrl})`;
+    if (matrix.passed)
+        return `> [!NOTE]\n> The automated browser matrix passed on all ${matrix.profiles.length} profiles (${run}). The SMOKE-SHORT checks it covers are marked as automated.`;
+    const { failed, missing } = matrixProblems(matrix);
+    const parts = [
+        failed.length ? `Failed: ${failed.join(', ')}.` : '',
+        missing.length ? `No result: ${missing.join(', ')}.` : '',
+    ].filter(Boolean);
+    return `> [!CAUTION]\n> **The automated browser matrix did not pass.** ${parts.join(' ')} See the ${run}.\n> The SMOKE-SHORT checks it covers stay in the manual list.`;
+}
+
+export function renderMatrixTable(matrix) {
+    const rows = matrix.profiles.map(profile => {
+        const counts = profile.counts
+            ? MATRIX_COUNTS.map(key => profile.counts[key]).join(' | ')
+            : '- | - | - | -';
+        return `| ${profile.label} | ${MATRIX_STATUS_TEXT[profile.status]} | ${counts} |`;
+    });
+    return [
+        `### Automated browser matrix`,
+        `Playwright smoke and money flows against the immutable Preview URL ([run](${matrix.runUrl})).`,
+        '',
+        '| Profile | Result | Passed | Failed | Flaky | Skipped |',
+        '| --- | --- | --- | --- | --- | --- |',
+        ...rows,
+    ].join('\n');
+}
+
+// The Slack line about the matrix, built from fixed labels and the validated run URL only.
+export function formatMatrixLine(matrix) {
+    const run = slackLink(matrix.runUrl, 'Run');
+    if (matrix.passed)
+        return `Автотесты в браузерах прошли на всех ${matrix.profiles.length} профилях — ${run}`;
+    const { failed, missing } = matrixProblems(matrix);
+    const parts = [
+        failed.length ? `упали: ${failed.join(', ')}` : '',
+        missing.length ? `без результата: ${missing.join(', ')}` : '',
+    ].filter(Boolean);
+    return `Автотесты в браузерах НЕ прошли (${parts.join('; ')}) — ${run}`;
+}
+
 export function assertFullSha(value, label = 'SHA') {
     if (!FULL_SHA.test(value ?? ''))
         throw new Error(`${label} must be a full lowercase 40-character SHA.`);
@@ -519,12 +647,15 @@ function renderCheck(item) {
             ? ` ([${item.source}](${item.sourceUrl}))`
             : '';
     const expected = item.expected ? ` => ${item.expected}` : '';
-    return `- [ ] ${label}: ${item.step}${expected}${source}`;
+    if (item.covered) return `- ${label} (automated): ${item.step}${expected}${source}`;
+    const handBack = item.handBack ? ' (the browser matrix did not pass: check by hand)' : '';
+    return `- [ ] ${label}: ${item.step}${expected}${source}${handBack}`;
 }
 
 const titled = (label, title) => (title ? `${label}: ${title}` : label);
 
 function groupHeading(item, titles) {
+    if (item.covered) return '#### SMOKE-SHORT covered by the browser matrix';
     if (item.smoke) return '#### SMOKE-SHORT';
     if (item.pull)
         return `#### ${titled(`PR #${item.pull}`, titles?.pulls?.[item.pull])} (#${item.issue})`;
@@ -553,7 +684,20 @@ function renderNoQa(item) {
         : `- ${item.commit} (no PR, no UI-affecting paths)`;
 }
 
-export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan }) {
+// With a matrix result, the automated SMOKE-SHORT checks are listed as covered (after the manual ones)
+// when every profile passed, and stay manual with a note otherwise. Without one (no matrix ran) the
+// list is unchanged.
+function applyMatrix(checks, matrix) {
+    if (!matrix) return checks;
+    const marked = checks.map(item =>
+        item.smoke && item.automated
+            ? { ...item, covered: matrix.passed, handBack: !matrix.passed }
+            : item,
+    );
+    return [...marked.filter(item => !item.covered), ...marked.filter(item => item.covered)];
+}
+
+export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan, matrix = null }) {
     assertFullSha(sha);
     assertFullSha(baselineSha, 'Production baseline SHA');
     if (plan.kind !== 'checks') throw new Error('A QA Issue requires explicit checks.');
@@ -565,7 +709,9 @@ export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan }) {
                     `- #${item.issue} via ${item.pulls.map(number => `PR #${number}`).join(', ')}`,
             )
             .join('\n') || '- None';
-    const checks = renderChecks(plan.checks, plan.titles);
+    const checks = renderChecks(applyMatrix(plan.checks, matrix), plan.titles);
+    const banner = matrix ? `${renderMatrixBanner(matrix)}\n\n` : '';
+    const matrixSection = matrix ? `\n\n${renderMatrixTable(matrix)}` : '';
     const missing = plan.missingSteps?.length
         ? `\n\n### Missing QA steps\n${plan.missingSteps.map(number => `- Neither #${number} nor its PRs in this release have QA steps; check it against its Acceptance.`).join('\n')}`
         : '';
@@ -575,7 +721,7 @@ export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan }) {
     const build = plan.buildAffecting?.length
         ? `\n\n### Build-affecting changes\n${plan.buildAffecting.map(reason => `- ${reason}`).join('\n')}`
         : '';
-    return `${marker}\n## Problem\nRelease candidate ${sha} needs manual frontend QA.\n\n## Outcome\nOwner reviews this Issue before deciding whether to manually Promote the selected deployment.\n\n## Acceptance\n- Candidate SHA: ${sha}\n- Previous verified Production SHA: ${baselineSha}\n- Preview deployment: ${deploymentId}\n- Immutable Preview URL: ${url}\n\n### Included work\n${included}\n\n### Checks (step => expected)\n${checks}${missing}${build}${noQa}\n\n### QA result\nPost a new comment whose first line is \`QA PASS\`, \`QA FAIL\` or \`QA BLOCKED\`; notes may follow on the next lines. Only the assigned QA counts. Checkboxes alone are not acceptance.\nTester guide (Russian): ${TESTER_GUIDE_URL}\n\n### Defects and retest\n- Defect links: add canonical Bug Issues here.\n\n## Dependencies\n- Manual owner Promote only after owner review.\n\n## References\n- ${TESTER_GUIDE_URL}\n- https://github.com/${REPOSITORY}/blob/master/docs/engineering/release-qa.md\n`;
+    return `${marker}\n${banner}## Problem\nRelease candidate ${sha} needs manual frontend QA.\n\n## Outcome\nOwner reviews this Issue before deciding whether to manually Promote the selected deployment.\n\n## Acceptance\n- Candidate SHA: ${sha}\n- Previous verified Production SHA: ${baselineSha}\n- Preview deployment: ${deploymentId}\n- Immutable Preview URL: ${url}${matrixSection}\n\n### Included work\n${included}\n\n### Checks (step => expected)\n${checks}${missing}${build}${noQa}\n\n### QA result\nPost a new comment whose first line is \`QA PASS\`, \`QA FAIL\` or \`QA BLOCKED\`; notes may follow on the next lines. Only the assigned QA counts. Checkboxes alone are not acceptance.\nTester guide (Russian): ${TESTER_GUIDE_URL}\n\n### Defects and retest\n- Defect links: add canonical Bug Issues here.\n\n## Dependencies\n- Manual owner Promote only after owner review.\n\n## References\n- ${TESTER_GUIDE_URL}\n- https://github.com/${REPOSITORY}/blob/master/docs/engineering/release-qa.md\n`;
 }
 
 export function findQaIssue(issues, sha, deploymentId, url) {

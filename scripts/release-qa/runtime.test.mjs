@@ -1,4 +1,5 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
 import {
@@ -6,11 +7,17 @@ import {
     assertRetrySafe,
     assignQa,
     chooseProductionBaseline,
+    fallbackFromEnv,
+    formatResolveOutputs,
     prepareReleaseQa,
+    readMatrix,
+    readMatrixConclusions,
+    readMatrixResults,
     readPackageBuildChanges,
     readReleaseScope,
     readResultAndNotify,
     resolveCandidate,
+    resolveReleaseCandidate,
     sendHandoff,
     validateResultEvent,
 } from './runtime.mjs';
@@ -1991,4 +1998,523 @@ test('FE#621: a compare commit count that differs from the commits read blocks t
             'Compare commit pagination incomplete.',
         ),
     ]);
+});
+
+// Release browser matrix (#666).
+const MATRIX_RUN_URL = 'https://github.com/ChipIn-one/chipin-frontend/actions/runs/777';
+const matrixResult = (profile, overrides = {}) =>
+    JSON.stringify({
+        version: 1,
+        profile,
+        status: 'passed',
+        passed: 12,
+        failed: 0,
+        flaky: 0,
+        skipped: 0,
+        ...overrides,
+    });
+const PROFILE_IDS = ['chromium', 'firefox', 'webkit', 'pixel', 'iphone'];
+const matrixJobs = (conclusions = {}) =>
+    PROFILE_IDS.map(id => ({
+        name: `e2e ${id}`,
+        status: 'completed',
+        conclusion: conclusions[id] ?? 'success',
+    }));
+
+// Writes one artifact folder per entry, as actions/download-artifact lays them out.
+function matrixDir(files) {
+    return mkdtemp(join(tmpdir(), 'release-qa-matrix-')).then(dir =>
+        Promise.all(
+            Object.entries(files).map(([profile, text]) =>
+                mkdir(join(dir, `e2e-result-${profile}`)).then(() =>
+                    writeFile(join(dir, `e2e-result-${profile}`, 'result.json'), text),
+                ),
+            ),
+        ).then(() => dir),
+    );
+}
+
+// The evidence API plus this run's matrix jobs.
+function withJobs(api, jobs) {
+    return {
+        ...api,
+        listObject: (path, key) =>
+            key === 'jobs'
+                ? path.endsWith('/actions/runs/777/attempts/1/jobs')
+                    ? jobs instanceof Error
+                        ? Promise.reject(jobs)
+                        : Promise.resolve(jobs)
+                    : Promise.reject(new Error(`Unexpected jobs path ${path}`))
+                : api.listObject(path, key),
+    };
+}
+
+test('matrix results are read only from the fixed path of each known profile, strictly', () => {
+    let dir = null;
+    return matrixDir({
+        chromium: matrixResult('chromium'),
+        firefox: '{"version":1',
+        webkit: matrixResult('webkit', { pad: 'x'.repeat(5000) }),
+        // A result file that claims another profile is no result.
+        pixel: matrixResult('iphone'),
+    })
+        .then(created => {
+            dir = created;
+            // A symlink is not a regular file, even when it points at a valid result.
+            return mkdir(join(dir, 'e2e-result-iphone')).then(() =>
+                symlink(
+                    join(dir, 'e2e-result-chromium', 'result.json'),
+                    join(dir, 'e2e-result-iphone', 'result.json'),
+                ),
+            );
+        })
+        .then(() => readMatrixResults(dir))
+        .then(results => {
+            expect(results).toEqual({
+                chromium: { status: 'passed', passed: 12, failed: 0, flaky: 0, skipped: 0 },
+                firefox: null,
+                webkit: null,
+                pixel: null,
+                iphone: null,
+            });
+            return readMatrixResults(join(dir, 'missing'));
+        })
+        .then(results => expect(Object.values(results)).toEqual([null, null, null, null, null]))
+        .finally(() => (dir ? rm(dir, { recursive: true, force: true }) : undefined));
+});
+
+test('job conclusions come from the jobs of this run attempt; duplicates, unfinished or unreadable jobs are unknown', () => {
+    const api = jobs => withJobs({}, jobs);
+    return readMatrixConclusions(
+        api([
+            ...matrixJobs({ firefox: 'failure' }).filter(job => job.name !== 'e2e iphone'),
+            { name: 'e2e webkit', status: 'completed', conclusion: 'success' },
+            { name: 'e2e pixel', status: 'in_progress', conclusion: null },
+            { name: 'prepare', status: 'completed', conclusion: 'success' },
+        ]),
+        777,
+        1,
+    )
+        .then(conclusions => {
+            expect(conclusions).toEqual({
+                chromium: 'success',
+                firefox: 'failure',
+                webkit: null,
+                pixel: null,
+                iphone: null,
+            });
+            return readMatrixConclusions(api(new Error('HTTP 403')), 777, 1);
+        })
+        .then(conclusions => expect(conclusions).toEqual({}));
+});
+
+test('no matrix directory means no matrix; a matrix needs a valid run id and attempt', () =>
+    readMatrix({ api: {}, env: { GITHUB_RUN_ID: '777' } })
+        .then(value => expect(value).toBeNull())
+        .then(() =>
+            readMatrix({ api: {}, env: { E2E_MATRIX_DIR: '/nowhere', GITHUB_RUN_ID: 'x' } }),
+        )
+        .then(
+            () => {
+                throw new Error('Invalid run id accepted.');
+            },
+            error => expect(error.message).toMatch(/GITHUB_RUN_ID/),
+        )
+        .then(() =>
+            readMatrix({
+                api: {},
+                env: { E2E_MATRIX_DIR: '/nowhere', GITHUB_RUN_ID: '777', GITHUB_RUN_ATTEMPT: '0' },
+            }),
+        )
+        .then(
+            () => {
+                throw new Error('Invalid attempt accepted.');
+            },
+            error => expect(error.message).toMatch(/GITHUB_RUN_ATTEMPT/),
+        ));
+
+test('a non-UI candidate with a failed matrix still states the failure in its one Slack line', () => {
+    const posted = [];
+    const post = (url, payload) => {
+        posted.push(payload.text);
+        return Promise.resolve(true);
+    };
+    let dir = null;
+    return matrixDir({
+        chromium: matrixResult('chromium'),
+        firefox: matrixResult('firefox', { status: 'failed', passed: 11, failed: 1 }),
+        webkit: matrixResult('webkit'),
+        pixel: matrixResult('pixel'),
+    })
+        .then(created => {
+            dir = created;
+            return prepareReleaseQa({
+                env: {
+                    ...ownerEnv,
+                    CANDIDATE_SHA: SHA,
+                    PREVIEW_DEPLOYMENT_ID: '42',
+                    SLACK_WEBHOOK_CI: WEBHOOK,
+                    E2E_MATRIX_DIR: dir,
+                },
+                readApi: withJobs(
+                    evidenceApi(),
+                    matrixJobs({ firefox: 'failure', iphone: 'failure' }),
+                ),
+                writeApi: null,
+                post,
+                probe: () => Promise.resolve(),
+            });
+        })
+        .finally(() => (dir ? rm(dir, { recursive: true, force: true }) : undefined))
+        .then(value => {
+            expect(value.outcome).toBe('NO_MANUAL_QA_REQUIRED');
+            expect(value.matrix.passed).toBe(false);
+            expect(posted).toEqual([
+                [
+                    `Релиз-кандидат ${COMMIT_LINK} — QA не нужен, UI не менялся`,
+                    `Автотесты в браузерах НЕ прошли (упали: Desktop Firefox; без результата: iPhone 15 (WebKit)) — <${MATRIX_RUN_URL}|Run>`,
+                    `<${PREVIEW_URL}|Build>`,
+                ].join('\n'),
+            ]);
+            noBareUrl(posted[0]);
+        });
+});
+
+// Fake shared org modules whose intake records the created Issue body before "creating" #50.
+function creatingSharedRoot(events) {
+    return sharedRoot().then(root =>
+        writeFile(
+            join(root, 'automation', 'issue-intake.mjs'),
+            [
+                "import { readFile, writeFile } from 'node:fs/promises';",
+                "import { join } from 'node:path';",
+                'export function run(args) {',
+                "    const body = args[args.indexOf('--body-file') + 1];",
+                '    return readFile(body, "utf8")',
+                `        .then(text => writeFile(${JSON.stringify(join(root, 'created.md'))}, text))`,
+                "        .then(() => ({ action: 'complete', receipt: { status: 'INTAKE_COMPLETE' }, issue: 'ChipIn-one/chipin-frontend#50' }));",
+                '}',
+                '',
+            ].join('\n'),
+        ).then(() => {
+            events.push('shared');
+            return root;
+        }),
+    );
+}
+
+function uiQaApis(assignment, issues = []) {
+    const evidence = evidenceApi({
+        files: ['apps/app/src/App.tsx', 'apps/app/vercel.json'],
+        prFiles: ['apps/app/src/App.tsx', 'apps/app/vercel.json'],
+    });
+    return {
+        ...evidence,
+        request: path => {
+            if (path.endsWith('/issues/12'))
+                return Promise.resolve({
+                    number: 12,
+                    repository_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend',
+                    body: '## Acceptance\n- [ ] QA: open the app => it loads',
+                });
+            if (path.endsWith('/issues/50') || /\/assignees\/[^/]+$/.test(path))
+                return assignment.readApi.request(path);
+            return evidence.request(path);
+        },
+        list: path =>
+            path.includes('/issues?state=all') ? Promise.resolve(issues) : evidence.list(path),
+    };
+}
+
+const uiEnv = dir => ({
+    ...ownerEnv,
+    CANDIDATE_SHA: SHA,
+    PREVIEW_DEPLOYMENT_ID: '42',
+    QA_PRIORITY: 'P2',
+    QA_LOGIN: 'SoRawSteak',
+    CHIPIN_ISSUE_WRITE_TOKEN: 'write',
+    SLACK_WEBHOOK_CI: WEBHOOK,
+    SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}',
+    E2E_MATRIX_DIR: dir,
+});
+
+test('a new QA Issue states a failed matrix at the top, per profile, before the tester is pinged', () => {
+    const events = [];
+    const assignment = assignmentApi(['syllik']);
+    const posted = [];
+    const post = (url, payload) => {
+        events.push('slack');
+        posted.push(payload.text);
+        return Promise.resolve(true);
+    };
+    let root = null;
+    let dir = null;
+    return matrixDir({
+        chromium: matrixResult('chromium'),
+        firefox: matrixResult('firefox'),
+        webkit: matrixResult('webkit', { status: 'failed', passed: 9, failed: 3 }),
+        pixel: matrixResult('pixel'),
+        iphone: matrixResult('iphone', { skipped: 1, passed: 11 }),
+    })
+        .then(created => {
+            dir = created;
+            return creatingSharedRoot(events);
+        })
+        .then(shared => {
+            root = shared;
+            return prepareReleaseQa({
+                env: uiEnv(dir),
+                readApi: withJobs(uiQaApis(assignment), matrixJobs({ webkit: 'failure' })),
+                writeApi: assignment.writeApi,
+                sharedRoot: root,
+                post,
+                probe: () => Promise.resolve(),
+            }).then(value =>
+                readFile(join(root, 'created.md'), 'utf8').then(body => ({ value, body })),
+            );
+        })
+        .finally(() =>
+            Promise.all([
+                root ? rm(root, { recursive: true, force: true }) : undefined,
+                dir ? rm(dir, { recursive: true, force: true }) : undefined,
+            ]),
+        )
+        .then(({ value, body }) => {
+            expect(value).toMatchObject({ outcome: 'QA_ISSUE_READY', slack: { delivered: true } });
+            expect(value.matrix.profiles.map(profile => profile.status)).toEqual([
+                'passed',
+                'passed',
+                'failed',
+                'passed',
+                'passed',
+            ]);
+            expect(body.split('\n').slice(1, 3)).toEqual([
+                '> [!CAUTION]',
+                `> **The automated browser matrix did not pass.** Failed: Desktop WebKit. See the [run](${MATRIX_RUN_URL}).`,
+            ]);
+            expect(body).toContain('| Desktop WebKit | **failed** | 9 | 3 | 0 | 0 |');
+            expect(body).toContain('| iPhone 15 (WebKit) | passed | 11 | 0 | 0 | 1 |');
+            expect(body.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(6);
+            expect(posted).toEqual([
+                [
+                    `<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка`,
+                    `Автотесты в браузерах НЕ прошли (упали: Desktop WebKit) — <${MATRIX_RUN_URL}|Run>`,
+                    ...LINK_LINES,
+                ].join('\n'),
+            ]);
+            expect(events.at(-1)).toBe('slack');
+        });
+});
+
+test('a missing matrix (no artifacts, jobs unreadable) still creates the QA Issue with the failure at the top', () => {
+    const events = [];
+    const assignment = assignmentApi(['syllik']);
+    const posted = [];
+    let root = null;
+    let dir = null;
+    return mkdtemp(join(tmpdir(), 'release-qa-matrix-'))
+        .then(created => {
+            dir = created;
+            return creatingSharedRoot(events);
+        })
+        .then(shared => {
+            root = shared;
+            return prepareReleaseQa({
+                env: uiEnv(dir),
+                readApi: withJobs(uiQaApis(assignment), new Error('HTTP 500')),
+                writeApi: assignment.writeApi,
+                sharedRoot: root,
+                post: (url, payload) => {
+                    posted.push(payload.text);
+                    return Promise.resolve(true);
+                },
+                probe: () => Promise.resolve(),
+            }).then(value =>
+                readFile(join(root, 'created.md'), 'utf8').then(body => ({ value, body })),
+            );
+        })
+        .finally(() =>
+            Promise.all([
+                root ? rm(root, { recursive: true, force: true }) : undefined,
+                dir ? rm(dir, { recursive: true, force: true }) : undefined,
+            ]),
+        )
+        .then(({ value, body }) => {
+            expect(value.outcome).toBe('QA_ISSUE_READY');
+            expect(body.split('\n')[2]).toBe(
+                `> **The automated browser matrix did not pass.** No result: Desktop Chromium, Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit). See the [run](${MATRIX_RUN_URL}).`,
+            );
+            expect(posted[0].split('\n')[1]).toBe(
+                `Автотесты в браузерах НЕ прошли (без результата: Desktop Chromium, Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit)) — <${MATRIX_RUN_URL}|Run>`,
+            );
+        });
+});
+
+test('a same-SHA rerun keeps the Issue body and posts the new matrix result as a comment before Slack', () => {
+    const events = [];
+    const assignment = assignmentApi(['syllik', 'SoRawSteak']);
+    const existing = {
+        ...assignment.issue(),
+        title: `Release QA ${SHA}`,
+        state: 'open',
+        body: `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->\n- Immutable Preview URL: ${PREVIEW_URL}\n`,
+    };
+    const comments = [];
+    const writeApi = {
+        request: (path, options) => {
+            if (path.endsWith('/issues/50/comments')) {
+                events.push('comment');
+                comments.push(options);
+                return Promise.resolve({ id: 1 });
+            }
+            return assignment.writeApi.request(path, options);
+        },
+    };
+    let root = null;
+    let dir = null;
+    return matrixDir(Object.fromEntries(PROFILE_IDS.map(id => [id, matrixResult(id)])))
+        .then(created => {
+            dir = created;
+            return sharedRoot();
+        })
+        .then(shared => {
+            root = shared;
+            return prepareReleaseQa({
+                env: uiEnv(dir),
+                readApi: withJobs(uiQaApis(assignment, [existing]), matrixJobs()),
+                writeApi,
+                sharedRoot: root,
+                post: () => {
+                    events.push('slack');
+                    return Promise.resolve(true);
+                },
+                probe: () => Promise.resolve(),
+            });
+        })
+        .finally(() =>
+            Promise.all([
+                root ? rm(root, { recursive: true, force: true }) : undefined,
+                dir ? rm(dir, { recursive: true, force: true }) : undefined,
+            ]),
+        )
+        .then(value => {
+            expect(value.outcome).toBe('QA_ISSUE_READY');
+            expect(value.matrix.passed).toBe(true);
+            expect(events).toEqual(['comment', 'slack']);
+            expect(comments).toHaveLength(1);
+            expect(comments[0].method).toBe('POST');
+            const text = comments[0].body.body;
+            expect(
+                text.startsWith(
+                    '> [!NOTE]\n> The automated browser matrix passed on all 5 profiles',
+                ),
+            ).toBe(true);
+            expect(text).toContain('| Pixel 7 (Chromium) | passed | 12 | 0 | 0 | 0 |');
+            // The result reader never takes it for a QA result or a near-miss.
+            return import('./core.mjs').then(core => {
+                expect(core.resultOutcome(text)).toBeNull();
+                expect(core.isNearMissResult(text)).toBe(false);
+            });
+        });
+});
+
+test('the resolve job returns the candidate, its immutable Preview and the fallback; prepare reuses the fallback', () => {
+    const env = { ...ownerEnv, CANDIDATE_SHA: '', PREVIEW_DEPLOYMENT_ID: '' };
+    return resolveReleaseCandidate({
+        env,
+        api: evidenceApi({ head: { sha: HEAD, preview: false } }),
+        probe: () => Promise.resolve(),
+    }).then(resolved => {
+        expect(resolved).toEqual({
+            sha: SHA,
+            deploymentId: 42,
+            url: PREVIEW_URL,
+            fallbackHead: HEAD,
+            fallbackMissing: 'Preview',
+        });
+        expect(formatResolveOutputs(resolved)).toBe(
+            `sha=${SHA}\ndeployment_id=42\nurl=${PREVIEW_URL}\nfallback_head=${HEAD}\nfallback_missing=Preview\n`,
+        );
+        expect(
+            fallbackFromEnv({ CANDIDATE_FALLBACK_HEAD: HEAD, CANDIDATE_FALLBACK_MISSING: 'CI' }),
+        ).toEqual({ fallback: true, head: HEAD, headMissing: 'CI' });
+        expect(fallbackFromEnv({ CANDIDATE_FALLBACK_HEAD: '' })).toEqual({});
+        expect(() =>
+            fallbackFromEnv({ CANDIDATE_FALLBACK_HEAD: HEAD, CANDIDATE_FALLBACK_MISSING: 'x' }),
+        ).toThrow(/CI or Preview/);
+        expect(() =>
+            fallbackFromEnv({ CANDIDATE_FALLBACK_HEAD: 'abc', CANDIDATE_FALLBACK_MISSING: 'CI' }),
+        ).toThrow(/full lowercase/);
+        const posted = [];
+        return prepareReleaseQa({
+            env: {
+                ...ownerEnv,
+                CANDIDATE_SHA: SHA,
+                PREVIEW_DEPLOYMENT_ID: '42',
+                CANDIDATE_FALLBACK_HEAD: HEAD,
+                CANDIDATE_FALLBACK_MISSING: 'CI',
+                SLACK_WEBHOOK_CI: WEBHOOK,
+            },
+            readApi: evidenceApi(),
+            writeApi: null,
+            post: (url, payload) => {
+                posted.push(payload.text);
+                return Promise.resolve(true);
+            },
+            probe: () => Promise.resolve(),
+        }).then(() =>
+            expect(posted[0].split('\n')[0]).toBe(
+                `Релиз-кандидат ${COMMIT_LINK} — QA не нужен, UI не менялся (не последний коммит master ${HEAD.slice(0, 7)}: ждёт CI)`,
+            ),
+        );
+    });
+});
+
+test('the resolve job refuses other actors, a candidate outside master and unsafe outputs', () => {
+    const rejects = (promise, pattern) =>
+        promise.then(
+            () => {
+                throw new Error('accepted');
+            },
+            error => expect(error.message).toMatch(pattern),
+        );
+    const outside = evidenceApi();
+    const outsideApi = {
+        ...outside,
+        request: path =>
+            path.includes(`/compare/${SHA}...master`)
+                ? Promise.resolve({ status: 'diverged' })
+                : outside.request(path),
+    };
+    return rejects(
+        resolveReleaseCandidate({
+            env: { ...ownerEnv, GITHUB_ACTOR: 'someone' },
+            api: evidenceApi(),
+            probe: () => Promise.resolve(),
+        }),
+        /Only release owner syllik/,
+    )
+        .then(() =>
+            rejects(
+                resolveReleaseCandidate({
+                    env: { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42' },
+                    api: outsideApi,
+                    probe: () => Promise.resolve(),
+                }),
+                /outside current master/,
+            ),
+        )
+        .then(() => {
+            const good = { sha: SHA, deploymentId: 42, url: PREVIEW_URL, fallbackHead: '' };
+            for (const bad of [
+                { ...good, sha: 'main' },
+                { ...good, deploymentId: 0 },
+                { ...good, url: 'https://chipin.one' },
+                { ...good, url: `${PREVIEW_URL}\nurl=https://chipin.one` },
+                { ...good, url: 'https://chipin-frontend-git-x-sylliks-projects.vercel.app/' },
+                { ...good, fallbackHead: HEAD, fallbackMissing: 'CI\nsha=x' },
+            ]) {
+                expect(() => formatResolveOutputs(bad), JSON.stringify(bad)).toThrow();
+            }
+        });
 });

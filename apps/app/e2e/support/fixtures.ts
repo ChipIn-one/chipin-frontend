@@ -12,7 +12,14 @@ import {
 
 import { LS_KEY_AUTH_SESSION_HINT } from '../../src/constants/localstorage';
 
-import { E2E_RUN_ID_VARIABLE, readE2eEnvironment, resolveE2eBasicAuth } from './config';
+import {
+    E2E_RUN_ID_VARIABLE,
+    isPreviewOriginRequest,
+    readE2eEnvironment,
+    resolveE2eBasicAuth,
+    resolveE2eTarget,
+    resolvePreviewBypass,
+} from './config';
 import {
     createProvisioningClient,
     type ProvisionedUser,
@@ -81,6 +88,8 @@ export const test = base.extend<E2eFixtures>({
         }
 
         const videoDir = testInfo.outputPath('video');
+        const environment = readE2eEnvironment();
+        const bypass = resolvePreviewBypass(environment, resolveE2eTarget(environment));
         const contexts: BrowserContext[] = [];
         const pages: Page[] = [];
 
@@ -90,6 +99,15 @@ export const test = base.extend<E2eFixtures>({
                 recordVideo: { dir: videoDir },
             });
             contexts.push(context);
+            if (bypass) {
+                await context.route(
+                    url => isPreviewOriginRequest(bypass, url.href),
+                    route =>
+                        route.continue({
+                            headers: { ...route.request().headers(), ...bypass.headers },
+                        }),
+                );
+            }
             const page = await context.newPage();
             pages.push(page);
 

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { LOCAL_DEV_SERVER_ORIGIN, resolveE2eBasicAuth, resolveE2eTarget } from './config';
+import {
+    isPreviewOriginRequest,
+    LOCAL_DEV_SERVER_ORIGIN,
+    resolveE2eBasicAuth,
+    resolveE2eTarget,
+    resolvePreviewBypass,
+} from './config';
 
 describe('resolveE2eTarget', () => {
     it('starts the local dev server when no target is given', () => {
@@ -100,5 +106,47 @@ describe('resolveE2eBasicAuth', () => {
         expect(() => resolveE2eBasicAuth(environment)).toThrow(
             'E2E provisioning requires the staging Basic credentials CHIPIN_CONTRACT_SWAGGER_USER and CHIPIN_CONTRACT_SWAGGER_PASSWORD',
         );
+    });
+});
+
+describe('resolvePreviewBypass', () => {
+    const preview = 'https://chipin-frontend-fzwunx6is-sylliks-projects.vercel.app';
+
+    it('sends the bypass header to the Preview origin only', () => {
+        const environment = {
+            CHIPIN_E2E_BASE_URL: preview,
+            VERCEL_AUTOMATION_BYPASS_SECRET: 's3cr3t',
+        };
+        const bypass = resolvePreviewBypass(environment, resolveE2eTarget(environment));
+
+        expect(bypass).toEqual({
+            origin: preview,
+            headers: { 'x-vercel-protection-bypass': 's3cr3t' },
+        });
+        if (!bypass) {
+            return;
+        }
+        expect(isPreviewOriginRequest(bypass, `${preview}/group/1`)).toBe(true);
+        expect(isPreviewOriginRequest(bypass, `${preview}/api/groups`)).toBe(true);
+        for (const other of [
+            'https://api-dev.chipin.one/groups',
+            'https://chipin.one/',
+            'http://chipin-frontend-fzwunx6is-sylliks-projects.vercel.app/',
+            `${preview}:8443/`,
+            'https://chipin-frontend-fzwunx6is-sylliks-projects.vercel.app.example.com/',
+            'https://vercel.live/_next-live/feedback.js',
+            'not a url',
+        ]) {
+            expect(isPreviewOriginRequest(bypass, other), other).toBe(false);
+        }
+    });
+
+    it.each([
+        { CHIPIN_E2E_BASE_URL: preview },
+        { CHIPIN_E2E_BASE_URL: preview, VERCEL_AUTOMATION_BYPASS_SECRET: '  ' },
+        { VERCEL_AUTOMATION_BYPASS_SECRET: 's3cr3t' },
+        { CHIPIN_E2E_BASE_URL: 'http://localhost:4173', VERCEL_AUTOMATION_BYPASS_SECRET: 's3cr3t' },
+    ])('sends nothing without a secret or to a non-Preview target', environment => {
+        expect(resolvePreviewBypass(environment, resolveE2eTarget(environment))).toBeNull();
     });
 });
