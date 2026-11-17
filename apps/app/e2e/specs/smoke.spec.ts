@@ -47,7 +47,8 @@ test.describe('SMOKE-SHORT', () => {
 
         const balancesBefore = await openGroupTab(page, groupId, 'Balances');
         await expect(balancesBefore.getByText(friend.displayName)).toBeVisible();
-        await expect(balancesBefore.getByText('Settled up')).toBeVisible();
+        // "Settled up" is both the friend's row status and the disabled settle button's name.
+        await expect(balancesBefore.getByRole('button', { name: 'Settled up' })).toBeDisabled();
 
         // The desktop sidebar's button: at this viewport the floating and mobile-bar variants are
         // `display: none`, so they are not in the accessibility tree (strict mode would catch a
@@ -68,7 +69,7 @@ test.describe('SMOKE-SHORT', () => {
 
         await page.getByRole('tab', { name: 'Balances' }).click();
         const balancesAfter = page.getByRole('tabpanel', { name: 'Balances' });
-        await expect(balancesAfter.getByText('Settled up')).toBeHidden();
+        await expect(balancesAfter.getByText('Settled up')).toHaveCount(0);
         await expect(balancesAfter.getByText(/^You are owed/)).toHaveText(
             exactBalance('You are owed', '5'),
         );
