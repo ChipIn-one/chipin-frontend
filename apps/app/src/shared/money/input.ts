@@ -6,12 +6,13 @@ import { fromUnits, LEDGER_SCALE, minorUnits, unitsToDecimal } from './money';
 // narrow NBSP that locales use as a group separator.
 const MAX_INTEGER_DIGITS = 15;
 const SPACES = /\s/g;
-const INPUT = /^(\d*)(?:[.,](\d*))?$/;
+const INPUT = /^(\d*)(?:([.,])(\d*))?$/;
 
 /**
  * Parses user input into a non-negative amount, or `null` when it is not a valid amount:
- * spaces are dropped, one `,` or `.` is the decimal separator, at most 15 integer digits and at
- * most `minorUnits(currency)` fraction digits ("1.234" is 1.234 KWD, never one thousand USD).
+ * spaces are dropped, one `,` or `.` is the decimal separator (none for a currency without
+ * fraction digits), at most 15 integer digits and at most `minorUnits(currency)` fraction digits
+ * ("1.234" is 1.234 KWD, never one thousand USD).
  * An empty string is `null`, not zero.
  */
 export const parseMoneyInput = (raw: string, currency: CurrencyCode): Money | null => {
@@ -20,14 +21,16 @@ export const parseMoneyInput = (raw: string, currency: CurrencyCode): Money | nu
     if (!match) {
         return null;
     }
-    const [, digits = '', fraction = ''] = match;
+    const [, digits = '', separator, fraction = ''] = match;
     // Leading zeros do not count toward the 15-digit limit ("000…001" is 1).
     const integer = digits.replace(/^0+(?=\d)/, '');
 
     if (
         (integer === '' && fraction === '') ||
         integer.length > MAX_INTEGER_DIGITS ||
-        fraction.length > minorUnits(currency)
+        fraction.length > minorUnits(currency) ||
+        // A currency without fraction digits takes no separator at all ("12." in JPY, #706).
+        (separator !== undefined && minorUnits(currency) === 0)
     ) {
         return null;
     }

@@ -19,7 +19,11 @@ const AmountInput = ({
     ...rest
 }: Props) => {
     const onValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const parsed = parseAmountInput(event.target.value, maxFractionDigits);
+        const parsed = parseAmountInput(
+            event.target.value,
+            maxFractionDigits,
+            typeof value === 'string' ? value : '',
+        );
 
         if (parsed !== null) {
             onChange(parsed);
@@ -39,4 +43,4 @@ const AmountInput = ({
     );
 };
 
-export default AmountInput;
+export { AmountInput };

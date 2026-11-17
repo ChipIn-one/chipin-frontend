@@ -742,7 +742,7 @@ test('the field refuses more fraction digits than the currency has, so 0.0000001
         });
 });
 
-test('a JPY amount takes no fraction digits', () => {
+test('a JPY amount takes no fraction digits and no decimal separator (#706)', () => {
     const user = userEvent.setup();
 
     renderFriendSettleUp(undefined, [balance('-10.4000', 'JPY')]);
@@ -755,7 +755,12 @@ test('a JPY amount takes no fraction digits', () => {
         .clear(input)
         .then(() => user.type(input, '9.5'))
         .then(() => {
-            expect(input).toHaveProperty('value', '9.');
+            expect(input).toHaveProperty('value', '95');
+            return user.clear(input);
+        })
+        .then(() => user.type(input, '9,'))
+        .then(() => {
+            expect(input).toHaveProperty('value', '9');
             expect(recordPayment()).toHaveProperty('disabled', false);
         });
 });

@@ -24,11 +24,6 @@
       "count": 3
     }
   },
-  "apps/app/src/basics/AmountInput.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/BackgroundBox.tsx": {
     "import-x/no-default-export": {
       "count": 1
