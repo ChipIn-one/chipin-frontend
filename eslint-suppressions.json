@@ -517,11 +517,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/activity/ActivityList.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/activity/ActivitySidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
