@@ -6,7 +6,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { ROUTES } from 'constants/routes';
 import { usePwaStore } from 'store/pwaStore';
 
-import HeroSection from './HeroSection';
+import { HeroSection } from './HeroSection';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),

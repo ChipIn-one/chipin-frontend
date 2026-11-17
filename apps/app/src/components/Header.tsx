@@ -26,7 +26,7 @@ import { ModeLogotype } from 'components/mode-logotype';
 import DevMenu from './DevMenu';
 import { LandingMobileMenu } from './header/LandingMobileMenu';
 import { LandingNav } from './header/LandingNav';
-import { AuthModal } from './modals';
+import { SignInEntry } from './modals/auth-modal';
 import HeaderNav from './nav-bars/HeaderNav';
 
 const StickyBox = styled(Box)`
@@ -115,12 +115,12 @@ const Header = () => {
                         {isLoggedIn && canShowDevMenu && <DevMenu />}
                         {!isLoggedIn && isLandingPage && (
                             <Flex align="center" gap="2">
-                                <AuthModal>
+                                <SignInEntry>
                                     <Button size="3" variant="soft" color="green" radius="full">
                                         {t('header.signIn')}
                                         <ArrowRightIcon size={16} />
                                     </Button>
-                                </AuthModal>
+                                </SignInEntry>
                                 <Box display={{ initial: 'block', md: 'none' }}>
                                     <LandingMobileMenu
                                         value={landingLocale}
@@ -138,7 +138,7 @@ const Header = () => {
                             />
                         )}
                         {!isLoggedIn && !isLandingPage && (
-                            <AuthModal>
+                            <SignInEntry>
                                 <Button
                                     size={{
                                         initial: '2',
@@ -149,7 +149,7 @@ const Header = () => {
                                     {t('header.signIn')}
                                     <LogInIcon />
                                 </Button>
-                            </AuthModal>
+                            </SignInEntry>
                         )}
                     </Flex>
                 </Flex>
@@ -158,4 +158,4 @@ const Header = () => {
     );
 };
 
-export default Header;
+export { Header };

@@ -9,7 +9,7 @@ import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { usePwaStore } from 'store/pwaStore';
 
-import CtaSection from './CtaSection';
+import { CtaSection } from './CtaSection';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),

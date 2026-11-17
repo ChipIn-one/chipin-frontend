@@ -8,6 +8,7 @@ import { persistedUserId } from 'app/providers/persistedUserId';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
 import { LS_KEY_THEME } from 'constants/localstorage';
+import { getLegacyHostAppUrl } from 'helpers/legacyHost';
 import { getLocalUser } from 'helpers/localStorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
@@ -28,8 +29,14 @@ const rootElement = document.getElementById('root')!;
 const publicBuildYear = Number(rootElement.dataset.publicBuildYear);
 const prerenderedRoute =
     rootElement.dataset.publicSsg === 'true' ? getPublicRoute(window.location.pathname) : null;
+// Spec 04 §4.1, §4.5 step 1 (04-4a2): the full app never boots on a legacy host. Its session check
+// would refresh there and rotate the old host-only cookie; `vercel.json` already redirects the
+// private paths and `/index.html`-style URLs, this covers any other way to reach the SPA shell.
+const legacyHostAppUrl = prerenderedRoute ? null : getLegacyHostAppUrl(window.location);
 
-if (prerenderedRoute) {
+if (legacyHostAppUrl) {
+    window.location.replace(legacyHostAppUrl);
+} else if (prerenderedRoute) {
     // Hydration preserves static, indexable React markup from the build.
     import('public-routes')
         .then(({ PublicApp }) =>
