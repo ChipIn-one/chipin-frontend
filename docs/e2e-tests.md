@@ -39,6 +39,8 @@ The invite link is `<app origin>/group/join/<token>` (`buildGroupInviteLink`, `g
 
 A page that has just written money data is never reloaded or reopened with `goto`: the persisted cache is written at most once per second and the group detail stays fresh for 30 s, so a reload within a second of a write shows the balance from before it (#724). The writing user stays in the app (switches tabs, goes back in the same document, follows in-app links); the other participant opens a fresh context.
 
+The invite test works around #730 (a Join click before the session restore has finished is silently dropped): it opens the invite link, waits for the groups list (read only once the session is restored on the user's client), and only then clicks Join, asserting that the join request succeeded.
+
 One locator exception: the split-share inputs of the expense editor have no accessible name (#725), so `split.spec.ts` finds them structurally, as the input next to the participant's label.
 
 All specs run on pull requests. Estimate: each money test takes about 8 to 20 s (two registrations, one or two contexts, two to four screens), so the eight add about 55 to 85 s with 2 workers, and the test step stays near 2 to 2.5 minutes, well inside its 10-minute timeout. If the measured job grows beyond that, tag the slowest tests `@release` and exclude them on pull requests with `--grep-invert @release`.

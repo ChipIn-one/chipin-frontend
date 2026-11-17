@@ -23,18 +23,25 @@ const isGroupsListRead = (response: Response): boolean =>
     response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/groups';
 
 /**
- * Opens the group page and resolves once the groups list has loaded. The expense editor (create and
- * edit) reads its groups when it opens; opened before this list, it has no group (#718).
+ * Opens `path` and resolves once the groups list has loaded. That list is read only after the
+ * session is restored on the user's own query client, so it also marks the end of the restore.
  */
-export const openGroupWithGroupsList = async (page: Page, groupId: string): Promise<void> => {
+export const gotoAfterGroupsList = async (page: Page, path: string): Promise<void> => {
     const groupsList = page.waitForResponse(isGroupsListRead);
-    await page.goto(`/group/${groupId}`);
+    await page.goto(path);
     const response = await groupsList;
     // The body is read into the query cache only after it has arrived in full.
     await response.finished();
 
     expect(response.ok(), 'GET /groups status').toBe(true);
 };
+
+/**
+ * Opens the group page and resolves once the groups list has loaded. The expense editor (create and
+ * edit) reads its groups when it opens; opened before this list, it has no group (#718).
+ */
+export const openGroupWithGroupsList = (page: Page, groupId: string): Promise<void> =>
+    gotoAfterGroupsList(page, `/group/${groupId}`);
 
 /**
  * Add mode on a group page: asserts the open expense editor lists `member` as a split row. The rows
