@@ -22,6 +22,10 @@ export const cachesByUser = new Map<string, UserCache>();
 export const isUserCacheClient = (client: QueryClient): boolean =>
     [...cachesByUser.values()].some(entry => entry.client === client);
 
+/** The user whose persisted client `client` is; null for the anonymous client. */
+export const userIdOfClient = (client: QueryClient): string | null =>
+    [...cachesByUser].find(([, entry]) => entry.client === client)?.[0] ?? null;
+
 // Data the legacy stores load before the user's client exists (a first sign-in learns the user id
 // from `users/self`, and the client is created by the remount that id causes): applied when
 // `restore` creates the client, before its restore (a newer entry is not overwritten by it).
