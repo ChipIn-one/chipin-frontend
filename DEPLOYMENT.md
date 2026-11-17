@@ -246,7 +246,8 @@ Rollback criterion: 404 or 5xx on `chipin.one` or `app.chipin.one` rising above
   `chipin.one`/`dev.chipin.one` host condition) and the legacy-host changes of
   04-4a2 (`helpers/legacyHost.ts` users: `root.tsx`, `SignInEntry`,
   `PublicSession`), then Promote. For an immediate stop, use the full rollback
-  below (remove the app domains and Instant Rollback).
+  below (Instant Rollback first, then remove the app domains; in the other
+  order `chipin.one` keeps redirecting to a host that no longer resolves).
   The app hosts keep their `/api` rewrites, `X-Robots-Tag` and domains, so users
   already on `app.chipin.one` keep working; `chipin.one` serves the app again,
   online-only while 04-4a1 stays.

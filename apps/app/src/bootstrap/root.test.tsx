@@ -71,6 +71,17 @@ test.each([
     expect(boot.hydrateRoot).not.toHaveBeenCalled();
 });
 
+test('on a legacy host the plain SPA shell at an unknown path goes to the app host', async () => {
+    const replace = await bootOn('https://chipin.one/estonia', { publicSsg: false });
+
+    expect(replace).toHaveBeenCalledExactlyOnceWith('https://app.chipin.one/estonia');
+    await new Promise(resolve => {
+        setTimeout(resolve, 20);
+    });
+    expect(boot.startCacheRestore).not.toHaveBeenCalled();
+    expect(boot.createRoot).not.toHaveBeenCalled();
+});
+
 test('on a legacy host a known public page hydrates as before', async () => {
     const replace = await bootOn('https://chipin.one/privacy', { publicSsg: true });
 
