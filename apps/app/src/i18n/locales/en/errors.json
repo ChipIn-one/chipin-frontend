@@ -13,7 +13,8 @@
             "FORBIDDEN": "You do not have permission to perform this action",
             "INVALID_TOKEN": "Your session is invalid. Please sign in again.",
             "EXPIRED_TOKEN": "Your session has expired. Please sign in again.",
-            "INVALID_REFRESH_TOKEN": "Your session could not be refreshed. Please sign in again."
+            "INVALID_REFRESH_TOKEN": "Your session could not be refreshed. Please sign in again.",
+            "OAUTH_BROWSER_BINDING_REQUIRED": "Google sign-in could not be finished in this browser. Please start signing in again here."
         },
         "VALIDATION": {
             "INVALID": "Validation failed for the request",
