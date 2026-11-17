@@ -33,12 +33,12 @@ A large release still blocks when:
 - the number of distinct commits read differs from the compare's `total_commits`;
 - one commit's files are unreadable, or that commit reaches GitHub's own 3000-file bound for a single commit.
 
-UI-affecting paths are maintained in `scripts/release-qa/ui-paths.mjs`: `src/**` except `*.test.*` and `src/test/**` (this includes the `src/i18n/locales/**` translations), `public/**`, `index.html`, `app.html`, `vercel.json`, `vite.config.ts`, `pwa-assets.config.ts`, and the service-worker build inputs `scripts/prerender-before-workbox.mjs`, `scripts/prerender-public.mjs` and `scripts/private-spa-navigation.ts`.
+UI-affecting paths are maintained in `scripts/release-qa/ui-paths.mjs`: `apps/app/src/**` except `*.test.*` and `apps/app/src/test/**` (this includes the `apps/app/src/i18n/locales/**` translations), `apps/app/public/**`, `apps/app/index.html`, `apps/app/app.html`, `apps/app/vercel.json`, `apps/app/vite.config.ts`, `apps/app/pwa-assets.config.ts`, and the service-worker build inputs `apps/app/scripts/prerender-before-workbox.mjs`, `apps/app/scripts/prerender-public.mjs` and `apps/app/scripts/private-spa-navigation.ts`.
 
 Build-affecting changes are maintained in the same module. They change the shipped bundle or service worker without a UI path:
 
-- `tsconfig*.json` and `scripts/version-resolver.mjs`;
-- in `package.json`, any change in `dependencies`, or a `devDependencies` change of the build/PWA toolchain. The toolchain is every package `vite.config.ts` and `pwa-assets.config.ts` import (`vite`, `vite-plugin-*`, `vite-tsconfig-paths`, `@vitejs/*`, `@vite-pwa/*`, `@sentry/vite-plugin`) plus `workbox-*`. A test parses both config files, so a new plugin cannot be missed;
+- `tsconfig*.json` (root and `apps/app/`) and `scripts/version-resolver.mjs`;
+- in `package.json`, any change in `dependencies`, or a `devDependencies` change of the build/PWA toolchain. The toolchain is every package `apps/app/vite.config.ts` and `apps/app/pwa-assets.config.ts` import (`vite`, `vite-plugin-*`, `vite-tsconfig-paths`, `@vitejs/*`, `@vite-pwa/*`, `@sentry/vite-plugin`) plus `workbox-*`. A test parses both config files, so a new plugin cannot be missed;
 - in `package-lock.json`, a changed package that ships in the production tree (no `dev` or `devOptional` flag), or one the toolchain pulls in through lockfile `dependencies`, `optionalDependencies` or non-optional `peerDependencies` (for example `rolldown`, `@swc/core`, `lightningcss`, `@svgr/*`). `@types/*` never counts. The project's own entry is ignored, so a change to its `version` alone changes nothing.
 
 Lint, test and types devDependency bumps are not build-affecting. If the two package files cannot be read at both SHAs, the change is treated as build-affecting.
@@ -50,7 +50,7 @@ What goes into the QA Issue:
 - only when neither the Issue nor any of its UI-affecting PRs in the compare has QA steps: `- [ ] #N: check against the Acceptance of #N => <issue link>` and a "Missing QA steps" section (Slack does not repeat it);
 - commits and PRs without a linked Issue that touch no UI-affecting file (Dependabot, docs, CI) are listed as "No QA needed";
 - a "Build-affecting changes" list when there are any;
-- **SMOKE-SHORT** (`scripts/release-qa/impact-rules.mjs`) when there is a build-affecting change or the compare touches routing, auth/session, `src/api/**`, store bootstrap, service worker/PWA, theme switching or `vercel.json`. Five checks are appended once: Google sign-in opens Dashboard; a group expense split equally is listed and changes the balance; the other participant sees the matching balance in Balances/Settle up; switching language and theme applies without a flash and survives reload; log out, then reload a protected page (fresh login required, [AUTH-041](https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md)). Without SMOKE-SHORT, the AUTH-041 rule alone adds that last check for changes to the auth store, auth session or protected route. It is never added twice.
+- **SMOKE-SHORT** (`scripts/release-qa/impact-rules.mjs`) when there is a build-affecting change or the compare touches routing, auth/session, `apps/app/src/api/**`, store bootstrap, service worker/PWA, theme switching or `vercel.json`. Five checks are appended once: Google sign-in opens Dashboard; a group expense split equally is listed and changes the balance; the other participant sees the matching balance in Balances/Settle up; switching language and theme applies without a flash and survives reload; log out, then reload a protected page (fresh login required, [AUTH-041](https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md)). Without SMOKE-SHORT, the AUTH-041 rule alone adds that last check for changes to the auth store, auth session or protected route. It is never added twice.
 
 ## Slack messages
 

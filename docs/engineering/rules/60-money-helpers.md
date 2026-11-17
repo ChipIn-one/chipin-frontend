@@ -7,7 +7,7 @@
 - Conversion between wire and domain happens only at the API boundary: `moneyFromWire`/`moneyToWire` in
   the `entities/*/model` mappers. Arithmetic runs on `bigint` ledger units; currency minor units are used
   only for display and input limits.
-- New code parses, rounds, sums, and formats money only in `src/shared/money/`. Legacy code that has not migrated yet keeps its current amounts and the
+- New code parses, rounds, sums, and formats money only in `apps/app/src/shared/money/`. Legacy code that has not migrated yet keeps its current amounts and the
   shared helpers in `helpers/numbers.ts` (`parseAmountInput`, `roundHalfUp`, `normalizeApiMoneyAmount`); do
   not add new money parsing, rounding, or arithmetic anywhere else.
 - Keep the public `Amount` component as the shared display boundary; backend-confirmed values remain the financial source of truth.
@@ -45,7 +45,7 @@ outbox lands.
 
 - Do not round intermediate calculations.
 - Rounding is `roundToMinor` (half-up away from zero to the currency minor units), only for display, and
-  only inside `src/shared/money/`.
+  only inside `apps/app/src/shared/money/`.
 - Do not make a financial decision from a visually rounded value.
 - Missing exchange rates return `null`, never a silent zero or fabricated rate.
 - Currency conversion helpers receive rates/base/source/target explicitly and do not read stores.
@@ -67,7 +67,7 @@ outbox lands.
 - Pass locale, rates, time, and other dependencies explicitly.
 - Browser boundary helpers such as storage, clipboard, and service worker modules may have side effects, which must be clear from their module/function names.
 - Use `null` for an expected absent result and throw/reject for an unexpected state that cannot safely continue.
-- Shared domain constants live in `src/constants`; one-module constants stay local.
+- Shared domain constants live in `apps/app/src/constants`; one-module constants stay local.
 - Name business-significant magic values and use existing time constants.
 
 ## localStorage

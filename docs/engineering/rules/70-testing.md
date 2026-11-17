@@ -90,7 +90,7 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   (no type-aware rules): `eslint --fix`, then Prettier, on staged files; remaining errors are printed
   and lint never blocks the commit (only a syntax error that Prettier cannot parse does). There is no `pre-push` hook.
 - `npm run build` runs `tsc -b`, the Vite production build, and the public precache check; it does not run tests.
-- `npm run vercel-build` (wired through `vercel.json`) is the Vercel deployment build: Vite production
+- `npm run vercel-build` (wired through `apps/app/vercel.json`) is the Vercel deployment build: Vite production
   build and public precache check, no tests and no icon generation.
 
 ## Legacy Baseline
