@@ -1,7 +1,8 @@
-name: E2E Smoke
+name: E2E
 
-# Chromium smoke (SMOKE-SHORT b-e, docs/e2e-tests.md) on the commit's code, served by the Vite dev
-# server that proxies `/api` to the staging API. A non-required check (#665).
+# Chromium e2e (SMOKE-SHORT b-e and the money-critical flows, docs/e2e-tests.md) on the commit's
+# code, served by the Vite dev server that proxies `/api` to the staging API. A non-required check
+# (#665).
 on:
   pull_request:
     branches:
@@ -115,7 +116,7 @@ jobs:
           fi
       # The run's purge is the global teardown inside this step, so it has finished, after a pass
       # or a failure, before any artifact step below.
-      - name: Run Chromium smoke
+      - name: Run Chromium e2e (smoke + money flows)
         id: smoke
         timeout-minutes: 10
         env:

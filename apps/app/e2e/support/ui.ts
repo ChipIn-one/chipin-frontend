@@ -1,0 +1,120 @@
+// UI helpers of the e2e specs (docs/e2e-tests.md). They avoid layout assumptions: a control that
+// exists once per layout (desktop sidebar, mobile bar, header) is taken from the visible ones.
+import { expect, type Locator, type Page, type Response } from '@playwright/test';
+
+/** Every name is unique per test, so a leftover of another run can never match. */
+export const uniqueSuffix = (): string => crypto.randomUUID().slice(0, 8);
+
+/** `text` as a literal inside a RegExp: display names and labels may hold regex characters. */
+export const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The whole balance line, e.g. "You are owed 7.5 USD" (basics/BalanceSummaryText), and nothing
+ * more: a wrong amount, an extra currency or a missing one fails it.
+ */
+export const exactBalance = (label: string, amount: string, currency = 'USD'): RegExp =>
+    new RegExp(`^${escapeRegExp(label)}\\s+${escapeRegExp(amount)}\\s+${currency}$`);
+
+/** The one control of several layout variants that is shown at this viewport. */
+export const visibleOne = (locator: Locator): Locator => locator.filter({ visible: true }).first();
+
+/** The groups list read at session start (`GET /groups`), which the expense editor takes its groups from. */
+const isGroupsListRead = (response: Response): boolean =>
+    response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/groups';
+
+/**
+ * Opens `path` and resolves once the groups list has loaded. That list is read only after the
+ * session is restored on the user's own query client, so it also marks the end of the restore.
+ */
+export const gotoAfterGroupsList = async (page: Page, path: string): Promise<void> => {
+    const groupsList = page.waitForResponse(isGroupsListRead);
+    await page.goto(path);
+    const response = await groupsList;
+    // The body is read into the query cache only after it has arrived in full.
+    await response.finished();
+
+    expect(response.ok(), 'GET /groups status').toBe(true);
+};
+
+/**
+ * Opens the group page and resolves once the groups list has loaded. The expense editor (create and
+ * edit) reads its groups when it opens; opened before this list, it has no group (#718).
+ */
+export const openGroupWithGroupsList = (page: Page, groupId: string): Promise<void> =>
+    gotoAfterGroupsList(page, `/group/${groupId}`);
+
+/**
+ * Add mode on a group page: asserts the open expense editor lists `member` as a split row. The rows
+ * come from the selected group's members; opened before the groups list, the editor has no group
+ * and no rows (#718), so this fails before any field is filled.
+ */
+export const expectExpenseDialogMembers = async (
+    dialog: Locator,
+    member: string,
+): Promise<void> => {
+    await expect(dialog.locator('label').filter({ hasText: member })).toBeVisible();
+};
+
+/**
+ * Edit mode: the scope line names the group ("Group expense: <name>"). It shows the edit context,
+ * not that the groups list was loaded (it does not prove #718).
+ */
+export const expectExpenseDialogGroup = async (
+    dialog: Locator,
+    groupName: string,
+): Promise<void> => {
+    await expect(dialog.getByText(groupName).first()).toBeVisible();
+};
+
+/** Selects a tab of the open group page and returns its panel. */
+export const selectGroupTab = async (page: Page, tab: string): Promise<Locator> => {
+    await page.getByRole('tab', { name: tab }).click();
+
+    return page.getByRole('tabpanel', { name: tab });
+};
+
+/** Opens the group page on one of its tabs and returns the tab's panel. */
+export const openGroupTab = async (page: Page, groupId: string, tab: string): Promise<Locator> => {
+    await page.goto(`/group/${groupId}`);
+
+    return selectGroupTab(page, tab);
+};
+
+/**
+ * Asserts the Balances panel of a two-member group: the other member is listed and the current
+ * user's balance line reads exactly `label amount USD`.
+ */
+export const expectBalance = async (
+    balances: Locator,
+    otherMember: string,
+    label: 'You are owed' | 'You owe',
+    amount: string,
+): Promise<void> => {
+    await expect(balances.getByText(otherMember)).toBeVisible();
+    await expect(balances.getByText(new RegExp(`^${escapeRegExp(label)}\\b`))).toHaveText(
+        exactBalance(label, amount),
+    );
+};
+
+/** Asserts the Balances panel shows no debt with the other member. */
+export const expectSettledUp = async (balances: Locator, otherMember: string): Promise<void> => {
+    await expect(balances.getByText(otherMember)).toBeVisible();
+    // "Settled up" is both the member's status and the disabled settle button's name.
+    await expect(balances.getByRole('button', { name: 'Settled up' })).toBeDisabled();
+    await expect(balances.getByText(/^You (owe|are owed)\b/)).toHaveCount(0);
+};
+
+/** The settings write (entities/users/api/mutations.ts: `PATCH /users/self`). */
+const isSelfSettingsWrite = (response: Response): boolean =>
+    response.request().method() === 'PATCH' &&
+    new URL(response.url()).pathname === '/api/users/self';
+
+/** Clicks and waits until the settings write it causes has succeeded on the server. */
+export const clickAndSaveSettings = async (
+    page: Page,
+    click: () => Promise<void>,
+): Promise<void> => {
+    const [response] = await Promise.all([page.waitForResponse(isSelfSettingsWrite), click()]);
+
+    expect(response.status(), 'PATCH /users/self status').toBeLessThan(300);
+};

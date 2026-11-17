@@ -1,6 +1,6 @@
-# Frontend e2e smoke (Playwright)
+# Frontend e2e tests (Playwright)
 
-The Chromium smoke checks the app in a real browser against the staging API (#663). It mirrors items b to e of `SMOKE-SHORT` ([`release-qa.md`](engineering/release-qa.md), `scripts/release-qa/impact-rules.mjs`); item a, the Google sign-in, stays manual because Google OAuth cannot be automated.
+The Chromium e2e suite checks the app in a real browser against the staging API (#663): the smoke below and the [money-critical flows](#money-critical-flows). The smoke mirrors items b to e of `SMOKE-SHORT` ([`release-qa.md`](engineering/release-qa.md), `scripts/release-qa/impact-rules.mjs`); item a, the Google sign-in, stays manual because Google OAuth cannot be automated.
 
 | Test                                                            | SMOKE-SHORT |
 | --------------------------------------------------------------- | ----------- |
@@ -9,7 +9,41 @@ The Chromium smoke checks the app in a real browser against the staging API (#66
 | language and theme apply without a flash and survive a reload   | d           |
 | after log out, reloading a protected page asks to sign in again | e           |
 
-Code: `apps/app/playwright.config.ts`, `apps/app/e2e/specs/` (tests), `apps/app/e2e/support/` (target guard, provisioning, fixtures, global setup).
+Code: `apps/app/playwright.config.ts`, `apps/app/e2e/specs/` (tests), `apps/app/e2e/support/` (target guard, provisioning, fixtures, global setup, UI helpers).
+
+## Money-critical flows
+
+`apps/app/e2e/specs/money/` covers the flows of #667, named by KB requirement IDs where one exists. Each test arranges its preconditions through the staging API, does the checked action in the UI and asserts the amounts as shown, for both participants where two are involved (each in its own signed-in context).
+
+| Test                                                                                        | Flow                       |
+| ------------------------------------------------------------------------------------------- | -------------------------- |
+| EXP-011: an expense split by amounts gives each participant their own share                 | unequal split              |
+| SET-007: a partial payment leaves the remaining debt and appears in both activities         | settle up, activity        |
+| SET-007, BAL-003: paying the full debt settles both participants                            | settle up                  |
+| EXP-044: editing the amount recalculates both balances                                      | edit an expense            |
+| BAL-004, EXP-050: deleting the expense settles both participants                            | delete an expense          |
+| GRP-030: a second user joins through the invite link and both see each other                | join by invite link        |
+| going offline shows the banner over the saved balance, and reconnecting hides it (Chromium) | offline banner             |
+| a balance with cents reads the same amount in English and in Russian                        | money in both UI languages |
+
+Not covered because the app does not have them with the production flags:
+
+- **A note on a settle-up.** The API accepts an optional `note` (`CreateLedgerSettlementPayload` in the generated schema), but the settle-up form has only the amount (`components/modals/settle-up-modal`).
+- **A change made offline that syncs after reconnect.** Offline expense writes are behind `VITE_FEATURE_OFFLINE_WRITES` (off), and every ledger, group and user write is refused while offline (`hooks/useLedgerMutations.ts`, `useGroupMutations.ts`, `useUserMutations.ts`), so nothing waits to be sent. The offline test checks the banner only.
+
+The offline spec checks only data held in memory by the open page: no service worker registers on the dev server, so nothing is served from a worker cache.
+
+The offline spec allows service workers (`test.use({ serviceWorkers: 'allow' })`) and skips every browser but Chromium; the other specs keep service workers blocked and make no desktop-only layout assumptions (a control that exists per layout is taken from the visible ones), so the release matrix (#666) can run them on every profile. On the Vite dev server no service worker registers (`devOptions.enabled: false` in `vite.config.ts`); on a Vercel Preview target the app's worker does.
+
+The invite link is `<app origin>/group/join/<token>` (`buildGroupInviteLink`, `getChipInAppUrl` is `window.location.origin`). The app hands it out only through the native share sheet or the clipboard, which a test cannot read in every browser, so the invite test reads the token through the staging API and opens the link on the target. The token appears in the `goto` URL, traces and failure output; it is dead after the run's purge.
+
+A page that has just written money data is never reloaded or reopened with `goto`: the persisted cache is written at most once per second and the group detail stays fresh for 30 s, so a reload within a second of a write shows the balance from before it (#724). The writing user stays in the app (switches tabs, goes back in the same document, follows in-app links); the other participant opens a fresh context.
+
+The invite test works around #730 (a Join click before the session restore has finished is silently dropped): it opens the invite link, waits for the groups list (read only once the session is restored on the user's client), and only then clicks Join, asserting that the join request succeeded.
+
+One locator exception: the split-share inputs of the expense editor have no accessible name (#725), so `split.spec.ts` finds them structurally, as the input next to the participant's label.
+
+All specs run on pull requests. Estimate: each money test takes about 8 to 20 s (two registrations, one or two contexts, two to four screens), so the eight add about 55 to 85 s with 2 workers, and the test step stays near 2 to 2.5 minutes, well inside its 10-minute timeout. If the measured job grows beyond that, tag the slowest tests `@release` and exclude them on pull requests with `--grep-invert @release`.
 
 ## Commands
 
@@ -47,11 +81,11 @@ The run stays self-contained: no test user or its data is ever connected to an a
 
 ## Browser settings
 
-Chromium only (`Desktop Chrome`), `en-US`, light color scheme at start. Service workers are blocked. Tests run fully parallel (each registers its own users), with 2 workers in CI. Trace, screenshot and video are kept only for failed tests, in `apps/app/test-results/`; the video is recorded by the `signIn` fixture for each user's context (Playwright's `use.video` does not cover contexts made with `browser.newContext()`) and deleted when the test passes; the HTML report goes to `apps/app/playwright-report/` and is never opened automatically. Both folders are git-ignored. Locators use role, label, placeholder and visible text; there are no fixed sleeps.
+Chromium only (`Desktop Chrome`), `en-US`, light color scheme at start. Service workers are blocked, except in the offline spec. Tests run fully parallel (each registers its own users), with 2 workers in CI. Trace, screenshot and video are kept only for failed tests, in `apps/app/test-results/`; the video is recorded by the `signIn` fixture for each user's context (Playwright's `use.video` does not cover contexts made with `browser.newContext()`) and deleted when the test passes; the HTML report goes to `apps/app/playwright-report/` and is never opened automatically. Both folders are git-ignored. Locators use role, label, placeholder and visible text; there are no fixed sleeps.
 
 ## CI
 
-`.github/workflows/e2e-smoke.yml` runs the smoke on pull requests to `master` and on pushes to `master`, on the commit's code with the dev server and the staging API. It is not a required check.
+`.github/workflows/e2e-smoke.yml` (workflow `E2E`, job and check `e2e-smoke`) runs the whole suite, the smoke and the money flows, on pull requests to `master` and on pushes to `master`, on the commit's code with the dev server and the staging API. It is not a required check.
 
 - A `check` job reports whether the staging Basic secrets are available. Without them (forks, Dependabot) the `e2e-smoke` job is shown as skipped, with a notice saying why.
 - In `e2e-smoke` the secrets are passed only to the steps that need them (the test run, the artifact scan and the final purge), never as an environment variable of `npm ci`.
