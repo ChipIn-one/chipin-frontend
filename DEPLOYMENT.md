@@ -28,6 +28,10 @@ integration builds use the normal Vercel environment configuration; only a
 tagged production build (the automatic redeploy after the release tag) creates
 the Sentry release and uploads source maps (see Build toolchain below).
 
+`VITE_FEATURE_OFFLINE_WRITES` turns on offline expense writes through the
+outbox (spec 03 §2.7) only when it is exactly `true`; it is unset (off) in every
+environment until PR 03-17 enables it.
+
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.
 
@@ -52,7 +56,7 @@ Hook or Vercel token secrets
 | Release                  | none in GitHub            | the owner runs **Promote to Production** on a chosen `master` deployment                               |
 
 - `master` builds are Preview deployments: the Vercel Production Branch stays
-  `main` (Vercel rejects a non-existent branch), and `vercel.json` disables Git
+  `main` (Vercel rejects a non-existent branch), and `apps/app/vercel.json` disables Git
   deployments for `main`, so no push creates a production build.
   `dev.chipin.one` is attached to `master` and serves the Preview build with
   development environment variables.
@@ -86,7 +90,7 @@ Hook or Vercel token secrets
   dispatch is missing or fails, the next sweep run on a `.github` push or its
   GitHub-throttled schedule (observed every ~5–6 hours) closes it. FE Issues
   are never closed by hand; GitHub auto-close is off.
-- `vercel.json` keeps `git.deploymentEnabled` off for the retired `dev` and
+- `apps/app/vercel.json` keeps `git.deploymentEnabled` off for the retired `dev` and
   `main` branches. `dev` was deleted on 2026-10-22 (the owner cancelled the
   rollback window); `main` stays only as the Vercel Production Branch
   placeholder and receives no pushes. The Vercel Deploy Hooks and their
@@ -128,7 +132,7 @@ No paid custom Vercel environment is required.
   prebuilt binary). Review any new entry from
   `npm approve-scripts --allow-scripts-pending` before adding it.
 - The npm warning `Unknown env config "cache-dir"` comes from the Vercel build
-  image environment, not from this repository (no `.npmrc`, `vercel.json` or
+  image environment, not from this repository (no `.npmrc`, `apps/app/vercel.json` or
   project environment variable sets it). It is harmless and cannot be changed
   here.
 - Sentry: the Rolldown runtime chunk (`assets/rolldown-runtime-*.js`) has no
@@ -138,7 +142,7 @@ No paid custom Vercel environment is required.
   production build (`VERCEL_ENV=production` with a version tag on the commit:
   the automatic redeploy after the release tag). The Promote build is untagged
   and uploads nothing; preview, local and CI builds skip the upload and emit no
-  source maps (`scripts/sentry-sourcemaps.ts`).
+  source maps (`apps/app/scripts/sentry-sourcemaps.ts`).
 
 ### Rollback
 

@@ -49,7 +49,7 @@ closed by hand.
 2. The Vercel Git integration builds that `master` commit as a Preview with
    development environment variables; `dev.chipin.one` is attached to
    `master`. The Vercel Production Branch stays `main` (a placeholder
-   that receives no pushes) and `vercel.json` disables Git deployments for it, so no
+   that receives no pushes) and `apps/app/vercel.json` disables Git deployments for it, so no
    push creates a production build. Preview builds of `master` create only
    GitHub Deployments `Preview`.
 3. The owner opens the chosen commit's deployment and runs **Promote to

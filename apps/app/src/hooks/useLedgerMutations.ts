@@ -1,11 +1,12 @@
 // The ledger mutations for the UI (spec 03 §6 row 6): create and update an expense, record a
 // settlement (settle-up), delete a ledger entry. Like the group mutations, they run only while
 // signed in on the user's persisted client, and offline they are refused before `mutate` (online
-// only until the outbox, spec 03 §2.1), so nothing waits paused for a reconnect. A write of a kind
-// that is already running is refused as well (a double submit sends one request), and so is the
-// answer of a write whose session ended meanwhile. A refusal or a failure rejects: the caller
-// shows it with `toastLedgerWriteError`. `isPending` is true while a write of that kind runs on
-// the user's client: until what shows the entry has reloaded, or until the write failed.
+// only while offline writes are off, spec 03 §2.1), so nothing waits paused for a reconnect. With
+// `VITE_FEATURE_OFFLINE_WRITES` on, an expense is queued in the outbox instead (03-15a). A write of
+// a kind that is already running is refused as well (a double submit sends one request), and so
+// is the answer of a write whose session ended meanwhile. A refusal or a failure rejects: the
+// caller shows it with `toastLedgerWriteError`. `isPending` is true while a write of that kind
+// runs on the user's client: until what shows the entry has reloaded, or until the write failed.
 import { useCallback } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,15 +16,19 @@ import { invalidateActivityChildren, invalidateSelfActivity } from 'entities/act
 import {
     createExpenseMutationOptions,
     type CreateExpenseParams,
+    createExpenseViaOutbox,
     createSettlementMutationOptions,
     type CreateSettlementParams,
+    deleteExpenseViaOutbox,
     deleteLedgerEntryMutationOptions,
     type DeleteLedgerEntryParams,
     ledgerOnlineMutationKeys,
     type LedgerWriteContext,
     type LedgerWriteEffects,
+    type QueueLedgerWrite,
     updateExpenseMutationOptions,
     type UpdateExpenseParams,
+    updateExpenseViaOutbox,
 } from 'entities/ledger';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
@@ -137,15 +142,50 @@ const inItsSession = (
 const useIsWriting = (mutationKey: LedgerMutationKey): boolean =>
     useIsMutating({ mutationKey }) > 0;
 
-// One write of a kind at a time on the user's client, bound to the session it was made in.
+/** The outbox path of a write (spec 03 §2.1), or null for the online path (always, flag off). */
+type ViaOutbox<Params> = (
+    client: QueryClient,
+    effects: LedgerWriteEffects,
+    params: Params,
+) => QueueLedgerWrite | null;
+
+// The writes of a kind being queued on a client: a repeated submit while one is queued is refused
+// as busy, as on the online path, so one submit queues one op (one client entry id).
+const queuing = new WeakMap<QueryClient, Set<LedgerMutationKey>>();
+
+const queueOnce = (
+    client: QueryClient,
+    mutationKey: LedgerMutationKey,
+    queue: QueueLedgerWrite,
+): Promise<void> => {
+    const kinds = queuing.get(client) ?? new Set<LedgerMutationKey>();
+
+    if (kinds.has(mutationKey) || client.isMutating({ mutationKey }) > 0) {
+        return Promise.reject(new LedgerWriteRefusedError('busy'));
+    }
+    kinds.add(mutationKey);
+    queuing.set(client, kinds);
+    return queue().finally(() => {
+        kinds.delete(mutationKey);
+    });
+};
+
+// One write of a kind at a time on the user's client, bound to the session it was made in. An
+// expense may instead be queued in the outbox (it resolves once queued, and is sent later).
 const useLedgerWrite = <Params>(
     mutationKey: LedgerMutationKey,
     mutateAsync: (variables: Params & { sessionVersion: number }) => Promise<void>,
+    viaOutbox?: ViaOutbox<Params>,
 ) => {
     const client = useQueryClient();
     const isEnabled = useIsUserWriteEnabled();
     const write = useCallback(
         (params: Params): Promise<void> => {
+            const queue = isEnabled ? viaOutbox?.(client, storeEffects, params) : null;
+
+            if (queue) {
+                return queueOnce(client, mutationKey, queue);
+            }
             const refusal = refusalBeforeMutate(client, isEnabled, mutationKey);
 
             if (refusal) {
@@ -155,7 +195,7 @@ const useLedgerWrite = <Params>(
 
             return inItsSession(client, sessionVersion, mutateAsync({ ...params, sessionVersion }));
         },
-        [client, isEnabled, mutateAsync, mutationKey],
+        [client, isEnabled, mutateAsync, mutationKey, viaOutbox],
     );
 
     return { write, isPending: useIsWriting(mutationKey) };
@@ -167,6 +207,7 @@ export const useCreateExpense = () => {
     const { write, isPending } = useLedgerWrite<CreateExpenseParams>(
         ledgerOnlineMutationKeys.createEntry,
         mutateAsync,
+        createExpenseViaOutbox,
     );
 
     return { createExpense: write, isPending };
@@ -178,6 +219,7 @@ export const useUpdateExpense = () => {
     const { write, isPending } = useLedgerWrite<UpdateExpenseParams>(
         ledgerOnlineMutationKeys.updateEntry,
         mutateAsync,
+        updateExpenseViaOutbox,
     );
 
     return { updateExpense: write, isPending };
@@ -204,6 +246,7 @@ export const useDeleteLedgerEntry = () => {
     const { write, isPending } = useLedgerWrite<DeleteLedgerEntryParams>(
         ledgerOnlineMutationKeys.deleteEntry,
         mutateAsync,
+        deleteExpenseViaOutbox,
     );
 
     return { deleteLedgerEntry: write, isPending };

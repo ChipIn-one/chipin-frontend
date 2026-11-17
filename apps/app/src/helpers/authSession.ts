@@ -178,6 +178,10 @@ export const getAccessTokenSubject = (token: string): string | null => {
         : null;
 };
 
+/** The user id (`sub`) of the current access token, or null without one (the outbox owner check). */
+export const getAccessTokenUserId = (): string | null =>
+    accessToken === null ? null : getAccessTokenSubject(accessToken);
+
 const isAccessTokenExpiring = (token: string): boolean => {
     const expiration = getJwtExpiration(token);
 

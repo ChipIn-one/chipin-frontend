@@ -1,6 +1,7 @@
 // The backend capabilities (spec 03 §2.7): the optional contract features this deployment has
-// switched on, read from `GET /health`. They decide whether offline writes are available; until
-// the outbox (03-15a) nothing mounts the query, and a create never carries a client `id`.
+// switched on, read from `GET /health`. They decide whether offline writes are available; nothing
+// mounts the query: the outbox path reads it from the cache (and fetches it) only while
+// `VITE_FEATURE_OFFLINE_WRITES` is on, and an online create never carries a client `id`.
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { publicApi } from 'shared/api/client';
