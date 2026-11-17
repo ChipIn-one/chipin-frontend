@@ -109,8 +109,9 @@ interface Drain {
     release: (() => void) | null;
     /** A release is pending (hidden, waiting for the request in flight): no new session starts. */
     releasing: boolean;
-    /** Failed re-reads in a row (the retry backs off). */
+    /** Failed re-reads in a row (the retry backs off); one retry is pending at most. */
     rereadFailures: number;
+    rereadRetry: ReturnType<typeof setTimeout> | null;
     /** Settles once this drain's lock request has ended (granted and released, or withdrawn). */
     settled: Promise<void>;
     syncing: Promise<void>;
@@ -178,8 +179,9 @@ const sync = (current: Drain): Promise<void> => {
         .then(read => {
             if (!read) {
                 current.rereadFailures += 1;
-                setTimeout(
+                current.rereadRetry ??= setTimeout(
                     () => {
+                        current.rereadRetry = null;
                         if (drain === current) {
                             void sync(current);
                         }
@@ -223,17 +225,21 @@ const onMessage = (current: Drain, message: OutboxChannelMessage): void => {
     }
 };
 
-// The drain session: it lasts while the lock is held. A tab hidden (or stopped) when the lock comes,
-// or whose outbox is not restored (§1.6), does not drain: it releases it at once.
-const hold = (current: Drain, started: () => void): Promise<void> => {
-    if (
-        drain !== current ||
-        current.stopped ||
-        page.isHidden() ||
-        outboxRestoreState(current.userId) !== 'ok'
-    ) {
+// Whether this tab may drain now: its current, visible, not frozen, restored outbox (§1.6). The
+// same check guards the lock request and the hold, so a grant never spins.
+const canDrain = (current: Drain): boolean =>
+    drain === current &&
+    !current.stopped &&
+    !current.frozen &&
+    !page.isHidden() &&
+    outboxRestoreState(current.userId) === 'ok';
+
+// The drain session: it lasts while the lock is held. A tab that may not drain when the lock comes
+// (hidden, stopped, not restored) releases it at once. Resolves whether a session ran.
+const hold = (current: Drain, started: () => void): Promise<boolean> => {
+    if (!canDrain(current)) {
         started();
-        return Promise.resolve();
+        return Promise.resolve(false);
     }
     current.holding = true;
     remoteStatuses.clear();
@@ -245,43 +251,46 @@ const hold = (current: Drain, started: () => void): Promise<void> => {
                     return undefined;
                 }
                 announceStatuses();
-                return applyQueue(current);
+                // Restored and adopted: the second pass (orphan cancellations) needs no wait.
+                void sync(current);
+                return undefined;
             })
             .catch(report)
             .finally(started);
-    }).finally(() => {
-        current.holding = false;
-        current.releasing = false;
-        current.release = null;
-    });
+    })
+        .finally(() => {
+            current.holding = false;
+            current.releasing = false;
+            current.release = null;
+        })
+        .then(() => true);
 };
 
 const requestLock = (current: Drain): Promise<void> => {
-    if (
-        drain !== current ||
-        current.stopped ||
-        current.frozen ||
-        current.holding ||
-        current.request ||
-        page.isHidden() ||
-        outboxRestoreState(current.userId) !== 'ok'
-    ) {
+    if (!canDrain(current) || current.holding || current.request) {
         return Promise.resolve();
     }
     if (!hasWebLocks()) {
         return new Promise(started => {
-            void hold(current, started).then(() => requestLock(current));
+            void hold(current, started).then(ran => (ran ? requestLock(current) : undefined));
         });
     }
     const controller = new AbortController();
     const name = outboxDrainLockName(current.userId);
 
     current.request = controller;
+    let ran = false;
+    const session = (started: () => void): Promise<boolean> =>
+        hold(current, started).then(didRun => {
+            ran = didRun;
+            return true;
+        });
+
     return new Promise<void>(started => {
         // Granted at once (the restore is awaited by the caller), else queued behind the holder.
         const granted: Promise<unknown> = navigator.locks
             .request(name, { ifAvailable: true }, lock =>
-                lock === null ? false : hold(current, started).then(() => true),
+                lock === null ? false : session(started),
             )
             .then(wasGranted => {
                 if (wasGranted !== false) {
@@ -289,7 +298,7 @@ const requestLock = (current: Drain): Promise<void> => {
                 }
                 started();
                 return navigator.locks.request(name, { signal: controller.signal }, () =>
-                    hold(current, () => undefined),
+                    session(() => undefined),
                 );
             })
             .catch(() => {
@@ -300,8 +309,8 @@ const requestLock = (current: Drain): Promise<void> => {
                 if (current.request === controller) {
                     current.request = null;
                 }
-                // Released while the tab became visible again: it queues for the lock again.
-                if (drain === current && !current.stopped) {
+                // A session ended (released while the tab became visible again): queue again.
+                if (ran) {
                     void requestLock(current);
                 }
             });
@@ -381,6 +390,7 @@ export const startOutboxDrain = (
         release: null,
         releasing: false,
         rereadFailures: 0,
+        rereadRetry: null,
         settled: Promise.resolve(),
         syncing: Promise.resolve(),
         stopped: false,

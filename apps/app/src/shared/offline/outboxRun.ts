@@ -275,6 +275,34 @@ const timeout =
         return () => clearTimeout(timer);
     };
 
+// Requests (and their removal writes) of this tab in flight: the drain lock is released on hidden
+// only once none is (§2.3).
+let inFlight = 0;
+const idleListeners = new Set<() => void>();
+
+/** Resolves once no request of this tab is in flight. */
+export const whenOutboxIdle = (): Promise<void> =>
+    inFlight === 0
+        ? Promise.resolve()
+        : new Promise(resolve => {
+              idleListeners.add(resolve);
+          });
+
+const endSend = (): void => {
+    inFlight -= 1;
+    if (inFlight === 0) {
+        const listeners = [...idleListeners];
+
+        idleListeners.clear();
+        listeners.forEach(listener => listener());
+    }
+};
+
+const trackSend = <T>(send: Promise<T>): Promise<T> => {
+    inFlight += 1;
+    return send.finally(endSend);
+};
+
 // A 2xx or a no-op answer: our version first, then the slot goes to the next op. The removal
 // write (it also clears the claim) needs no turn and keeps retrying after the drain stops, until
 // the owner's data changes (03-15a R2: a same-owner answer after a stop is processed). An answer
@@ -295,11 +323,15 @@ const onSent = (
     if (isDrainFence(fence)) {
         outboxGate.releaseTurn(op.opId);
     }
-    void retryWrite(
-        op,
-        () => removeOutboxOp(op, fence),
-        // Until the owner's data changes (a token that is momentarily missing does not stop it).
-        () => !isOwnerFence(fence),
+    // Counted as in flight: a hidden tab releases the drain lock only once its removal (and the
+    // version it keeps) landed, before the next holder clears the claim (R2).
+    void trackSend(
+        retryWrite(
+            op,
+            () => removeOutboxOp(op, fence),
+            // Until the owner's data changes (a token that is momentarily missing does not stop it).
+            () => !isOwnerFence(fence),
+        ),
     ).then(landed => {
         if (landed && isRetry && !isStale(op, fence) && hasNoFailureOf(op.entryId)) {
             outboxGate.unblock(op.entryId);
@@ -373,31 +405,6 @@ const onSendError = async (
     }
 };
 
-// Requests of this tab in flight: the drain lock is released on hidden only once none is (§2.3).
-let inFlight = 0;
-const idleListeners = new Set<() => void>();
-
-/** Resolves once no request of this tab is in flight. */
-export const whenOutboxIdle = (): Promise<void> =>
-    inFlight === 0
-        ? Promise.resolve()
-        : new Promise(resolve => {
-              idleListeners.add(resolve);
-          });
-
-const trackSend = <T>(send: Promise<T>): Promise<T> => {
-    inFlight += 1;
-    return send.finally(() => {
-        inFlight -= 1;
-        if (inFlight === 0) {
-            const listeners = [...idleListeners];
-
-            idleListeners.clear();
-            listeners.forEach(listener => listener());
-        }
-    });
-};
-
 // The failed ops whose Retry runs in this tab now; cleared when the run settles.
 const retryingOpIds = new Set<string>();
 
@@ -466,18 +473,24 @@ const attempt = async <Op extends OutboxOpBase>(
         outboxGate.close('auth');
         return retry();
     }
-    const outcome = await trackSend(deps.send(op, getOutboxVersion(op.entryId), signal)).then(
+    inFlight += 1;
+    const outcome = await deps.send(op, getOutboxVersion(op.entryId), signal).then(
         (sent: OutboxSent) => ({ sent }),
         (error: unknown) => ({ error }),
     );
+    // Still in flight until the answer is processed: a success has started its removal (counted
+    // on its own) before the tab may count as idle.
+    const result =
+        'sent' in outcome
+            ? onSent(op, outcome.sent, ignoreEntryBlock, fence)
+            : onSendError(op, outcome.error, retry, {
+                  attempt: count,
+                  isRetry: ignoreEntryBlock,
+                  fence,
+              });
 
-    return 'sent' in outcome
-        ? onSent(op, outcome.sent, ignoreEntryBlock, fence)
-        : onSendError(op, outcome.error, retry, {
-              attempt: count,
-              isRetry: ignoreEntryBlock,
-              fence,
-          });
+    endSend();
+    return result;
 };
 
 /**

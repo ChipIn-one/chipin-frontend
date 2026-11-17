@@ -823,7 +823,8 @@ describe('03-15c2 the drain lock release (hidden, freeze, pagehide)', () => {
         // releases and takes the lock again.
         onlineManager.setOnline(false);
         await queueUpdate(tab, 'entry-x');
-        tab.page.hide();
+        // A hidden release would wait for the removal: a freeze releases at once.
+        tab.page.freeze();
         await vi.waitFor(() => expect(isDrainHeld()).toBe(false));
         tab.page.show();
         await vi.waitFor(() => expect(tab.drain.outboxDrainState()).toBe('holding'));
@@ -1088,5 +1089,55 @@ describe('03-15c2 R1', () => {
         await expect(queueCreate(tab)).resolves.toBeUndefined();
         remove();
         expect(tab.store.pendingOutboxOps()).toHaveLength(1);
+    });
+
+    test('R2 M-new: a hidden handover with an edit in flight: the next holder sends the next edit with its version', async () => {
+        const answer = deferred();
+        const ledger = serveLedger({ holds: [answer] });
+
+        ledger.entries.set('entry-x', 1);
+        await storeOutbox([updateOp(1, 'entry-x', 'v1'), updateOp(2, 'entry-x', 'v1')]);
+        const tabA = await openTab();
+
+        await tabA.started;
+        const tabB = await openTab();
+
+        await tabB.started;
+        await vi.waitFor(() => expect(ledger.requests).toEqual(['PATCH entry-x If-Match "v1"']));
+        tabA.page.hide();
+        answer.resolve();
+
+        await vi.waitFor(() => expect(tabB.drain.outboxDrainState()).toBe('holding'));
+        await vi.waitFor(() =>
+            expect(ledger.requests).toEqual([
+                'PATCH entry-x If-Match "v1"',
+                'PATCH entry-x If-Match "v2"',
+            ]),
+        );
+        await vi.waitFor(async () => expect((await readOutboxKey())?.ops).toEqual([]));
+        expect(await readFailedKey()).toEqual([]);
+    });
+
+    test('R2 N-a: a restore that is no longer ok when the lock is granted: released at once, no drain', async () => {
+        const ledger = serveLedger();
+
+        onlineManager.setOnline(false);
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        const tabA = await openTab();
+
+        await tabA.started;
+        const tabB = await openTab();
+
+        await tabB.started;
+        // B's queued request stays; its outbox is no longer the restored one of the user.
+        tabB.store.bindOutboxOwner('user-2');
+        onlineManager.setOnline(true);
+        await tabA.drain.stopOutboxDrain();
+        await flush();
+
+        expect(tabB.drain.outboxDrainState()).toBe('waiting');
+        expect(isDrainHeld()).toBe(false);
+        expect(tabB.client.getMutationCache().getAll()).toEqual([]);
+        expect(ledger.requests).toEqual([]);
     });
 });

@@ -741,12 +741,14 @@ export const removeOutboxOp = (op: OutboxOpBase, fence: OutboxFence): Promise<vo
             draft.ops = draft.ops.filter(({ opId }) => opId !== op.opId);
             draft.failed.delete(op.opId);
             draft.retryRequested = draft.retryRequested.filter(opId => opId !== op.opId);
-            if (isClaimOf(draft, op.opId, fence)) {
+            const ownsClaim = isClaimOf(draft, op.opId, fence);
+
+            if (ownsClaim) {
                 draft.sending = null;
             }
-            // A run of a drain session that is no longer current leaves `versions` to the
-            // current holder (its version may be older than the one the holder wrote since).
-            if (!isDrainFence(fence)) {
+            // A run of a drain session that is no longer current and no longer holds the claim (a
+            // newer holder claimed since) leaves `versions` to that holder: its version may be newer.
+            if (!isDrainFence(fence) && !ownsClaim) {
                 return { isLeft: true, version: undefined };
             }
             const version = outboxVersions.get(op.entryId);

@@ -759,7 +759,8 @@ drain lock. A failed re-read is retried with a backoff; when the clear write on 
 again before the adoption. (2) The release on hidden stops the
 drain session at once (no new claim; a run in backoff or in the turn resolves `stopped` and the re-acquisition
 adopts its op again, so it is still sent once, not "continues"; its backoff starts again and the `outdated` gate
-reopens until the next 426) and releases the lock once the request in flight settled, at the latest after
+reopens until the next 426) and releases the lock once the request in flight and its removal write settled (so the next holder reads the
+version it keeps), at the latest after
 `OUTBOX_HIDDEN_RELEASE_MS` (15 s), when the request is aborted; a queued request stays queued while hidden and,
 granted while hidden, is released at once.
 freeze/pagehide aborts the request in flight (`send` gets the session's `AbortSignal`, also the GET of an unknown
@@ -774,7 +775,7 @@ append prefers it to the cached version; 03-16a replaces it with the `setQueryDa
 (pending, no status yet); receivers overwrite per op and drop ops no longer pending on each re-read; the new
 holder clears its received map. `changed` is posted after every landed write of a tab (a send
 costs the other tabs two re-reads: the claim and the removal). A removal from a drain session that is no longer
-current leaves `versions` to the current holder. (5) Retry/Cancel from any
+current and no longer holds its claim leaves `versions` to the current holder. (5) Retry/Cancel from any
 tab: `retryOutboxOps` (`retryRequested`; an op of another owner or not an expense is not requested) and
 `discardOutboxOps` (no UI caller until 03-16a). The claim accepts a
 failed op only under `retryRequested`; the removal, the failed-list write and a discard drop it from there. A
