@@ -17,7 +17,7 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { Amount, Checkbox, UserAvatar } from 'basics';
 
-import ExpenseInputActions from '../expense-input-actions/ExpenseInputActions';
+import { ExpenseInputActions } from '../expense-input-actions/ExpenseInputActions';
 
 import { getSplitParticipantControlData } from './helpers';
 import { CheckSpacer, Controls, ParticipantLabel } from './styled';
@@ -76,6 +76,11 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
         shareValue,
         amountStep,
         labels: {
+            amountInput: t('expenses.modal.split.participantAmount', { name: member.displayName }),
+            percentInput: t('expenses.modal.split.participantPercent', {
+                name: member.displayName,
+            }),
+            shareInput: t('expenses.modal.split.participantShares', { name: member.displayName }),
             decreasePercent: t('expenses.modal.split.decreasePercent'),
             increasePercent: t('expenses.modal.split.increasePercent'),
             decreaseAmount: t('expenses.modal.split.decreaseAmount'),
@@ -135,6 +140,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
                         inputMode={controlData.inputMode}
                         isDisabled={!isUserIncluded}
                         stepSize={controlData.stepSize}
+                        inputLabel={controlData.inputLabel}
                         minLabel={controlData.decreaseLabel}
                         plusLabel={controlData.increaseLabel}
                         onChange={nextValue => setSplitValue(participantId, nextValue)}
@@ -162,4 +168,4 @@ const ExpenseUsersList = () => {
     );
 };
 
-export default ExpenseUsersList;
+export { ExpenseUsersList };

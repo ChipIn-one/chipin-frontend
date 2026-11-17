@@ -87,3 +87,33 @@ test('EXP-064 reports only the first cause even when the payer control is visibl
     expect(screen.getByRole('status').textContent).toBe('Enter an amount greater than zero.');
     expect(screen.queryByText(i18n.t('group:expenses.modal.submitFeedback.noDebt'))).toBeNull();
 });
+
+test.each([
+    [EXPENSE_SPLIT_MODES.AMOUNTS, 'participantAmount'],
+    [EXPENSE_SPLIT_MODES.PERCENT, 'participantPercent'],
+    [EXPENSE_SPLIT_MODES.SHARES, 'participantShares'],
+] as const)('#725 names each %s split input after its participant', (splitMode, labelKey) => {
+    const store = useExpenseModalStore.getState();
+    store.initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser, friend] }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    });
+    store.setAmount('30');
+    store.setSplitMode(splitMode);
+    renderSplitCard();
+
+    for (const participant of [currentUser, friend]) {
+        const name = i18n.t(`group:expenses.modal.split.${labelKey}`, {
+            name: participant.displayName,
+        });
+
+        expect(name).toContain(participant.displayName);
+        expect(screen.getByRole('textbox', { name })).toBeTruthy();
+    }
+});

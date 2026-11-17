@@ -6,12 +6,12 @@ import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import ExpenseUsersList from './ExpenseUsersList';
+import { ExpenseUsersList } from './ExpenseUsersList';
 
 const stepperRender = vi.hoisted(() => vi.fn());
 
 vi.mock('../expense-input-actions/ExpenseInputActions', () => ({
-    default: () => {
+    ExpenseInputActions: () => {
         stepperRender();
 
         return <input aria-label="Value" />;

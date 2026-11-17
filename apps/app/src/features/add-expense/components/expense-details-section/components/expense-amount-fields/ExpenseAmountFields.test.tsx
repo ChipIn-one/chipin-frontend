@@ -3,9 +3,10 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
+import i18n from 'i18n/index';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import ExpenseAmountFields from './ExpenseAmountFields';
+import { ExpenseAmountFields } from './ExpenseAmountFields';
 
 const currentUser = { id: 'self', displayName: 'You', picture: null };
 const friend = { id: 'friend', displayName: 'Friend', picture: null };
@@ -68,4 +69,19 @@ test('EXP-064 keeps a USD total on a switch to JPY and still lets it be erased',
     fireEvent.change(amountInput(), { target: { value: '100.5' } });
     fireEvent.change(amountInput(), { target: { value: '100.' } });
     expect(useExpenseModalStore.getState().amount).toBe('100.');
+});
+
+test('#725 names the amount and description inputs for assistive technology', () => {
+    renderFields();
+
+    const amount = screen.getByRole('textbox', { name: i18n.t('common:fields.amount') });
+    const description = screen.getByRole('textbox', {
+        name: i18n.t('common:fields.description'),
+    });
+
+    expect(amount).toBe(amountInput());
+    expect(screen.getByLabelText(i18n.t('common:fields.amount'))).toBe(amount);
+    expect(description).toBe(
+        screen.getByPlaceholderText(i18n.t('group:expenses.modal.fields.descriptionPlaceholder')),
+    );
 });

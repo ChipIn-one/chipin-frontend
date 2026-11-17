@@ -32,20 +32,13 @@ test.describe('EXP-011 unequal split', () => {
         ).click();
         const dialog = payerPage.getByRole('dialog', { name: 'Add an expense' });
         await expectExpenseDialogMembers(dialog, friend.displayName);
-        // Neither field has an accessible label, so the placeholders are their only stable handles.
-        await dialog.getByPlaceholder('0.00').fill('30');
-        await dialog.getByPlaceholder('e.g. Hotel booking, dinner...').fill(description);
+        await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill('30');
+        await dialog.getByRole('textbox', { name: 'Description', exact: true }).fill(description);
         await dialog.getByRole('radio', { name: 'Amounts' }).click();
 
-        // Each split row is the participant's label (name and computed share) next to its input.
-        // The input has no accessible name (#725), so this structural locator is the one
-        // exception to role/label locators (docs/e2e-tests.md).
+        // Each split input is named after its participant (#725).
         const shareInput = (name: string) =>
-            dialog
-                .locator('label')
-                .filter({ hasText: name })
-                .locator('xpath=..')
-                .getByRole('textbox');
+            dialog.getByRole('textbox', { name: `${name} amount`, exact: true });
         await shareInput(payer.displayName).fill('10');
         await shareInput(friend.displayName).fill('20');
 
