@@ -33,21 +33,40 @@ export const OutboxOpBaseSchema = z.looseObject({
 });
 
 /**
- * One key per user. `ops` are read one by one (an invalid op does not make the key unreadable).
- * `retryRequested` and `sending` are the multi-tab fields of 03-15c, `conflictDrafts` of 03-16b:
- * 03-15b keeps what it reads and writes them empty.
+ * One key per user. `nextSeq`, `ops` and `cancelled` are strict (a key without them is unreadable as
+ * a whole); `ops` are read one by one (an invalid op does not make the key unreadable). The other
+ * fields are checked per value on read, so one bad value never locks the queue: an invalid version
+ * is dropped (the op then asks the server for it, §2.1), an invalid `sending` claim or
+ * `retryRequested` list is reset, `conflictDrafts` (03-16b) is kept as read. Unknown keys of a
+ * newer build are kept and written back. `retryRequested` and `sending` are the multi-tab fields of
+ * 03-15c, `conflictDrafts` of 03-16b.
  */
-export const OutboxStateSchema = z.object({
+export const OutboxStateSchema = z.looseObject({
     nextSeq: z.number().int().positive(),
     ops: z.array(z.unknown()),
-    versions: z.record(z.string(), z.string()),
+    versions: z.unknown(),
     cancelled: z.array(z.string()),
-    retryRequested: z.array(z.string()),
-    sending: z.object({ opId: z.string(), session: z.string() }).nullable(),
-    conflictDrafts: z.record(z.string(), z.unknown()),
+    retryRequested: z.unknown(),
+    sending: z.unknown(),
+    conflictDrafts: z.unknown(),
 });
 
-export type PersistedOutboxState = z.infer<typeof OutboxStateSchema>;
+export const SendingSchema = z.object({ opId: z.string(), session: z.string() }).nullable();
+
+export const RetryRequestedSchema = z.array(z.string());
+
+export const VersionsSchema = z.record(z.string(), z.unknown());
+
+/** What 03-15b writes; unknown keys read from the key are added back. */
+export interface PersistedOutboxState {
+    nextSeq: number;
+    ops: unknown[];
+    versions: Record<string, string>;
+    cancelled: string[];
+    retryRequested: string[];
+    sending: z.infer<typeof SendingSchema>;
+    conflictDrafts: unknown;
+}
 
 /** A failed record; `op` is checked separately (an `unreadable` op is kept as it was read). */
 export const FailedOpSchema = z.object({

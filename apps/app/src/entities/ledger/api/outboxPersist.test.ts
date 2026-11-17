@@ -12,10 +12,12 @@ import { currencyCode, fromUnits } from 'shared/money';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
 import { outboxGate } from 'shared/offline/outboxGate';
+import { OutboxWriteStoppedError } from 'shared/offline/outboxIo';
 import { enqueueOutboxOp, resetStoragePersistRequest } from 'shared/offline/outboxRegistry';
 import { recheckOutboxOwner } from 'shared/offline/outboxRun';
 import { FailedOpSchema } from 'shared/offline/outboxSchema';
 import {
+    appendOutboxOp,
     discardOps,
     failedOutboxOps,
     outboxEntryIds,
@@ -627,4 +629,225 @@ test('03 §1.5: clearUserData deletes both outbox keys after the write in flight
     expect(idbLog.slice(lastDel).filter(line => line.startsWith('set chipin:outbox'))).toEqual([]);
     expect(vi.mocked(del)).toHaveBeenCalledWith(FAILED_KEY);
     expect(outboxRestoreState(USER)).toBe('pending');
+});
+
+// The PATCH requests: `<entry id> If-Match <value>`.
+const servePatches = (): string[] => {
+    const patched: string[] = [];
+
+    server.use(
+        http.patch('*/ledger/entries/:id', ({ request, params }) => {
+            patched.push(`${String(params.id)} If-Match ${request.headers.get('If-Match')}`);
+            return HttpResponse.json({ id: String(params.id), type: 'EXPENSE', version: 'v-new' });
+        }),
+    );
+    return patched;
+};
+
+const updateOp = (seq: number, entryId: string, baseVersion: string | null) =>
+    storedOp(seq, entryId, {
+        kind: 'updateExpense',
+        baseVersion,
+        patch: { description: 'changed' },
+        draft: undefined,
+    });
+
+// Appends a create op directly (synchronously queued in the outbox IO order).
+const appendCreate = (entryId: string) =>
+    appendOutboxOp(seq => ({
+        ...storedOp(seq, entryId),
+        kind: 'createExpense' as const,
+        entryKind: 'expense' as const,
+        schema: 1 as const,
+    }));
+
+describe('03-15b R1', () => {
+    test('M1: a discard whose write is in flight wins over the run reaching its claim: 0 requests, cancelled', async () => {
+        const created = serveLedger();
+        const hold = deferred();
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        await queueCreate(client);
+        const [op] = pendingOutboxOps();
+        const [mutation] = client.getMutationCache().getAll();
+
+        vi.mocked(set).mockImplementation((key, value) =>
+            key === OUTBOX_KEY ? hold.promise.then(() => idb.set(key, value)) : idb.set(key, value),
+        );
+        const discard = discardOps([op?.opId ?? '']);
+
+        await wait(30);
+        // The run takes its turn and waits for its claim behind the discard's write.
+        onlineManager.setOnline(true);
+        await wait(30);
+        hold.resolve();
+
+        await expect(discard).resolves.toEqual({ discarded: [op?.opId], refused: [] });
+        await vi.waitFor(() => expect(mutation?.state.data).toEqual({ kind: 'cancelled' }));
+        await wait(50);
+        expect(created).toEqual([]);
+    });
+
+    test('L1: a failed record with a reason this build does not know still blocks its entry', async () => {
+        const created = serveLedger();
+
+        await storeFailed([{ op: storedOp(1, 'entry-x'), reason: 'future', failedAt: 1 }]);
+        await storeOutbox([updateOp(2, 'entry-x', '1'), storedOp(3, 'entry-y')]);
+        servePatches();
+        await openTab();
+
+        await vi.waitFor(() => expect(created).toEqual(['entry-y']));
+        await wait(50);
+        expect(outboxGate.isBlocked('entry-x')).toBe(true);
+        expect(pendingOutboxOps().map(op => op.opId)).toEqual(['op-2']);
+        expect(await readStored(FAILED_KEY)).toEqual([
+            expect.objectContaining({ reason: 'future' }),
+        ]);
+    });
+
+    test('L2: a bad version, claim or retry list is dropped and reported, the restore stays ok, unknown keys are kept', async () => {
+        const patched = servePatches();
+
+        onlineManager.setOnline(false);
+        await storeOutbox([updateOp(1, 'entry-y', '1'), updateOp(2, 'entry-x', '1')], {
+            versions: { 'entry-y': 'v3', 'entry-x': 42 },
+            sending: 'not a claim',
+            retryRequested: 5,
+            fromANewerBuild: { kept: true },
+        });
+        await openTab();
+
+        expect(outboxRestoreState(USER)).toBe('ok');
+        expect(Sentry.captureMessage).toHaveBeenCalledWith('outbox.invalid_field', {
+            level: 'warning',
+        });
+        await vi.waitFor(async () =>
+            expect(await readStored(OUTBOX_KEY)).toMatchObject({
+                versions: { 'entry-y': 'v3' },
+                sending: null,
+                retryRequested: [],
+                fromANewerBuild: { kept: true },
+            }),
+        );
+        onlineManager.setOnline(true);
+        // The dropped version falls back to the op's base version (or the GET of §2.1).
+        await vi.waitFor(() =>
+            expect(patched).toEqual(['entry-y If-Match "v3"', 'entry-x If-Match "1"']),
+        );
+    });
+
+    test('N1: an unreadable op already moved to failed is not added twice', async () => {
+        const bad = { opId: 'bad-1', entryId: 'entry-z' };
+
+        await storeFailed([{ op: bad, reason: 'unreadable', failedAt: 1 }]);
+        await storeOutbox([bad]);
+        await openTab();
+
+        await vi.waitFor(async () =>
+            expect(await readStored(OUTBOX_KEY)).toMatchObject({ ops: [] }),
+        );
+        expect(await readStored(FAILED_KEY)).toEqual([
+            { op: bad, reason: 'unreadable', failedAt: 1 },
+        ]);
+    });
+
+    test('L3: before the restore is ok every outbox write is refused without IO, and the auth gate is closed', async () => {
+        const hold = deferred();
+
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        vi.mocked(get).mockImplementation(key =>
+            key === OUTBOX_KEY ? hold.promise.then(() => idb.get(key)) : idb.get(key),
+        );
+        const client = await newTab();
+
+        outboxGate.open('auth');
+        const restored = startLedgerOutbox(client, USER, effects);
+
+        expect(outboxGate.isClosed('auth')).toBe(true);
+        const refusals = Promise.all([
+            appendCreate('entry-b').then(
+                () => 'written',
+                (error: unknown) => error,
+            ),
+            discardOps(['op-1']).then(
+                () => 'written',
+                (error: unknown) => error,
+            ),
+        ]);
+        const settled = await Promise.race([refusals, wait(50).then(() => 'pending')]);
+
+        expect(settled).toEqual([
+            expect.any(OutboxWriteStoppedError),
+            expect.any(OutboxWriteStoppedError),
+        ]);
+        hold.resolve();
+        await restored;
+        expect(idbLog).toEqual([]);
+        expect(pendingOutboxOps().map(op => op.opId)).toEqual(['op-1']);
+    });
+
+    test('L3: clearUserData refuses a queued write that has not started; nothing is written after the del', async () => {
+        const hold = deferred();
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        vi.mocked(set).mockImplementation((key, value) =>
+            (key === OUTBOX_KEY ? hold.promise : Promise.resolve()).then(() => {
+                idbLog.push(`set ${String(key)}`);
+                return idb.set(key, value);
+            }),
+        );
+        const first = queueCreate(client);
+
+        await wait(20);
+        // Queued behind the first append, not started yet.
+        const second = appendCreate('entry-second').then(
+            () => 'written',
+            (error: unknown) => error,
+        );
+        const cleared = clearUserData(USER, () => undefined);
+
+        hold.resolve();
+        await cleared;
+        await first.catch(() => undefined);
+        expect(await second).toBeInstanceOf(OutboxWriteStoppedError);
+        await wait(50);
+
+        expect(idbLog.filter(line => line === `set ${OUTBOX_KEY}`)).toHaveLength(1);
+        expect(idbLog.indexOf(`del ${OUTBOX_KEY}`)).toBeGreaterThan(
+            idbLog.indexOf(`set ${OUTBOX_KEY}`),
+        );
+        expect(await idb.get(OUTBOX_KEY)).toBeUndefined();
+    });
+
+    test('L3: clearUserData during the retry of a 2xx removal write: the retry writes nothing after the del', async () => {
+        const created = serveLedger();
+        let failRemoval = true;
+
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        vi.mocked(set).mockImplementation((key, value) => {
+            if (key === OUTBOX_KEY && failRemoval) {
+                return Promise.reject(new DOMException('quota', 'QuotaExceededError'));
+            }
+            idbLog.push(`set ${String(key)}`);
+            return idb.set(key, value);
+        });
+        await openTab();
+        await vi.waitFor(() => expect(created).toEqual(['entry-a']));
+        await wait(50);
+
+        await clearUserData(USER, () => undefined);
+        failRemoval = false;
+        // The removal retries after its backoff (1 s ± 20 %).
+        await wait(1_500);
+
+        const lastDel = idbLog.lastIndexOf(`del ${OUTBOX_KEY}`);
+
+        expect(lastDel).toBeGreaterThan(-1);
+        expect(idbLog.slice(lastDel).filter(line => line.startsWith('set chipin:outbox'))).toEqual(
+            [],
+        );
+        expect(await idb.get(OUTBOX_KEY)).toBeUndefined();
+    });
 });

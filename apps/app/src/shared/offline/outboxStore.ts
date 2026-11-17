@@ -18,6 +18,9 @@ import {
     OutboxOpBaseSchema,
     OutboxStateSchema,
     type PersistedOutboxState,
+    RetryRequestedSchema,
+    SendingSchema,
+    VersionsSchema,
 } from './outboxSchema';
 import { persistCodec } from './persistCodec';
 
@@ -77,7 +80,9 @@ export interface OutboxState {
     versions: Map<string, string>;
     retryRequested: string[];
     sending: PersistedOutboxState['sending'];
-    conflictDrafts: Record<string, unknown>;
+    conflictDrafts: unknown;
+    /** Keys of a newer build: kept and written back. */
+    unknownFields: Record<string, unknown>;
 }
 
 /** §2.8: at most this many pending and failed ops per user. */
@@ -114,6 +119,7 @@ const emptyState = (): OutboxState => ({
     retryRequested: [],
     sending: null,
     conflictDrafts: {},
+    unknownFields: {},
 });
 
 const bySeq = (a: OutboxOpBase, b: OutboxOpBase): number => a.seq - b.seq;
@@ -138,6 +144,15 @@ const parseStored = (value: unknown): unknown => {
 // Throws when a key is unreadable as a whole (`outboxRestore = 'failed'`, the key is kept). An
 // op that is not readable moves to failed `unreadable`; an op both pending and failed is failed
 // (C3-05: a crash between the two writes of a move to failed).
+const recordOp = (record: unknown): unknown =>
+    typeof record === 'object' && record !== null ? Reflect.get(record, 'op') : null;
+
+// An auxiliary field held an invalid value: it was dropped (reported once per read, the queue keeps
+// working). No value is sent.
+const reportInvalidFields = (): void => {
+    Sentry.captureMessage('outbox.invalid_field', { level: 'warning' });
+};
+
 const toState = (outboxValue: unknown, failedValue: unknown): OutboxState => {
     const state = emptyState();
     const persisted =
@@ -157,18 +172,25 @@ const toState = (outboxValue: unknown, failedValue: unknown): OutboxState => {
                 failedAt: parsed.data.failedAt,
             });
         } else {
-            state.unreadable.push({
-                record,
-                entryId: stringField(parsed.success ? parsed.data.op : undefined, 'entryId'),
-            });
+            // Also a reason this build does not know (a newer one wrote it): its entry stays blocked.
+            state.unreadable.push({ record, entryId: stringField(recordOp(record), 'entryId') });
         }
     });
     if (!persisted) {
         return state;
     }
+    // An unreadable op already moved to failed (a crash before the `ops` write) is not added twice.
+    const unreadableOpIds = new Set(
+        state.unreadable.flatMap(({ record }) => stringField(recordOp(record), 'opId') ?? []),
+    );
+
     persisted.ops.forEach(raw => {
         const op = OutboxOpBaseSchema.safeParse(raw);
+        const rawOpId = stringField(raw, 'opId');
 
+        if (!op.success && rawOpId !== null && unreadableOpIds.has(rawOpId)) {
+            return;
+        }
         if (!op.success) {
             state.unreadable.push({
                 record: { op: raw, reason: 'unreadable', failedAt: now },
@@ -180,11 +202,37 @@ const toState = (outboxValue: unknown, failedValue: unknown): OutboxState => {
     });
     state.ops.sort(bySeq);
     state.nextSeq = Math.max(persisted.nextSeq, ...state.ops.map(op => op.seq + 1));
-    state.versions = new Map(Object.entries(persisted.versions));
-    state.cancelled = new Set(persisted.cancelled);
-    state.retryRequested = persisted.retryRequested;
-    state.sending = persisted.sending;
-    state.conflictDrafts = persisted.conflictDrafts;
+    const {
+        nextSeq: _nextSeq,
+        ops: _ops,
+        versions,
+        cancelled,
+        retryRequested,
+        sending,
+        conflictDrafts,
+        ...unknownFields
+    } = persisted;
+    const versionEntries = Object.entries(VersionsSchema.catch({}).parse(versions ?? {}));
+    const validVersions = versionEntries.flatMap(([entryId, version]): [string, string][] =>
+        typeof version === 'string' ? [[entryId, version]] : [],
+    );
+    const parsedSending = SendingSchema.safeParse(sending ?? null);
+    const parsedRetries = RetryRequestedSchema.safeParse(retryRequested ?? []);
+
+    if (
+        !VersionsSchema.safeParse(versions ?? {}).success ||
+        validVersions.length !== versionEntries.length ||
+        !parsedSending.success ||
+        !parsedRetries.success
+    ) {
+        reportInvalidFields();
+    }
+    state.versions = new Map(validVersions);
+    state.cancelled = new Set(cancelled);
+    state.retryRequested = parsedRetries.success ? parsedRetries.data : [];
+    state.sending = parsedSending.success ? parsedSending.data : null;
+    state.conflictDrafts = conflictDrafts ?? {};
+    state.unknownFields = unknownFields;
     return state;
 };
 
@@ -197,6 +245,7 @@ const toPersisted = (draft: OutboxState): PersistedOutboxState => {
     const entries = entryIdsOf(draft);
 
     return {
+        ...draft.unknownFields,
         nextSeq: draft.nextSeq,
         ops: [...draft.ops].sort(bySeq),
         // A version is kept only while an op of its entry is left.
@@ -567,10 +616,28 @@ export const setOutboxStatus = (opId: string, status: OutboxStatus): void => {
 
 export const outboxStatus = (opId: string): OutboxStatus | undefined => statusByOpId.get(opId);
 
-/** The op whose request is going out (the `sending` claim of §2.3, one tab, in memory). */
-export const claimOutboxOp = (opId: string): void => {
-    sendingOpId = opId;
-};
+/** Why a claim was refused: the drain stopped (or the owner changed), or the op left the queue. */
+export type OutboxClaim = 'claimed' | 'stopped' | 'gone';
+
+/**
+ * The `sending` claim of §2.3 (one tab, in memory), taken in this tab's IO order: a discard whose
+ * write is in flight lands first and the claim sees the op gone (`gone`: no request), or the claim
+ * lands first and the discard refuses the op ("already sending"). A Retry claims a failed op.
+ */
+export const claimOutboxOp = (op: OutboxOpBase): Promise<OutboxClaim> =>
+    runOutboxIo(op.owner, () => {
+        if (!running || ownerId !== op.owner) {
+            return Promise.resolve<OutboxClaim>('stopped');
+        }
+        const isQueued =
+            state.ops.some(({ opId }) => opId === op.opId) || state.failed.has(op.opId);
+
+        if (!isQueued || cancelledOpIds.has(op.opId) || state.cancelled.has(op.opId)) {
+            return Promise.resolve<OutboxClaim>('gone');
+        }
+        sendingOpId = op.opId;
+        return Promise.resolve<OutboxClaim>('claimed');
+    }).catch((): OutboxClaim => 'stopped');
 
 /** Clears the claim only while it is this op's: a stale run never clears a newer run's claim. */
 export const releaseOutboxClaim = (opId: string): void => {

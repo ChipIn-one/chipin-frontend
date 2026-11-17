@@ -172,7 +172,8 @@ describe('C1-10 two create paths', () => {
             { groupId: 'group-1', parentActivityId: undefined },
             client,
         );
-        expect(pendingOutboxOps()).toEqual([]);
+        // The removal is its own IndexedDB write after the 2xx.
+        await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
     });
 });
 
@@ -242,7 +243,8 @@ test('03 §2.1/§2.5 (N3, N4): a delete with an unknown version whose entry is g
     );
     expect(sent).toEqual(['GET']);
     expect(failedOutboxOps()).toEqual([]);
-    expect(pendingOutboxOps()).toEqual([]);
+    // The removal is its own IndexedDB write after the 2xx.
+    await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
 });
 
 describe('C2-02 settlement guard', () => {

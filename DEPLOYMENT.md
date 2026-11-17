@@ -32,9 +32,12 @@ the Sentry release and uploads source maps (see Build toolchain below).
 outbox (spec 03 §2.7) only when it is exactly `true`; it is unset (off) in every
 environment until PR 03-17 enables it. Since 03-15b the outbox is persisted in
 IndexedDB (`chipin:outbox:<userId>`, `chipin:outbox-failed:<userId>`), but it
-still coordinates one tab only (Web Locks arrive in 03-15c): keep the flag unset
-in every deploy, previews included. Off, the outbox code is not loaded and its
-keys are neither read nor written (only `clearUserData` deletes them, as before).
+still coordinates one tab only (Web Locks arrive in 03-15c): with the flag on,
+two open tabs both drain and both read-modify-write the keys without a lock, so
+concurrent appends can overwrite each other and lose an op. Keep the flag unset in
+every deploy, previews included, until 03-15c. Off, the outbox modules are loaded
+but inert: nothing of the outbox is started, read or written (only `clearUserData`
+deletes its keys, as before).
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.

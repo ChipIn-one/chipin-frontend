@@ -24,6 +24,8 @@ import {
     failedOutboxOps,
     getOutboxVersion,
     hasPendingCreateOf,
+    markPendingRemoval,
+    noteOutboxVersion,
     type OutboxKind,
     type OutboxOpBase,
     pendingOutboxOps,
@@ -31,7 +33,9 @@ import {
     recordFailedOp,
     removeOutboxOp,
     resetOutbox,
+    restoreOutboxVersions,
     stopOutbox,
+    writeOutbox,
 } from './outboxStore';
 import { isEntryWithPendingOp } from './pendingOps';
 
@@ -744,4 +748,21 @@ test('03 §1.4 C2-08: an entry with a pending or failed op is not persisted', as
     expect(isEntryWithPendingOp(['ledger', 'entry', 'entry-x'])).toBe(true);
     expect(isEntryWithPendingOp(['ledger', 'entry', 'entry-y'])).toBe(false);
     expect(isEntryWithPendingOp(['groups', 'entry', 'entry-x'])).toBe(false);
+});
+
+test('03-15b L3: the restore takes the persisted versions, except of an entry whose sent op waits for its removal', async () => {
+    const first = await queue('entry-x');
+
+    await queue('entry-x');
+    await writeOutbox(draft => {
+        draft.versions.set('entry-x', 'v-persisted');
+    });
+    restoreOutboxVersions();
+    expect(getOutboxVersion('entry-x')).toBe('v-persisted');
+
+    // The first op was sent (in-memory version), its removal write is still pending.
+    noteOutboxVersion(first, 'v-newer');
+    markPendingRemoval(first.opId);
+    restoreOutboxVersions();
+    expect(getOutboxVersion('entry-x')).toBe('v-newer');
 });

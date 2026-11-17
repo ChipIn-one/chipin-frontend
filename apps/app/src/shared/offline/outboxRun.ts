@@ -247,12 +247,7 @@ const timeout =
 // A 2xx or a no-op answer: our version first, then the slot goes to the next op. The removal
 // write needs no turn and keeps retrying after the drain stops, until the user changes. Only a
 // Retry of a failed op (or a discard) unblocks an entry, never any other success (D29, M4).
-const onSent = <Op extends OutboxOpBase>(
-    op: Op,
-    deps: OutboxDeps<Op>,
-    sent: OutboxSent,
-    isRetry: boolean,
-): OutboxResult => {
+const onSent = (op: OutboxOpBase, sent: OutboxSent, isRetry: boolean): OutboxResult => {
     if (isStale(op)) {
         releaseOutboxClaim(op.opId);
         return STOPPED;
@@ -264,7 +259,8 @@ const onSent = <Op extends OutboxOpBase>(
     void retryWrite(
         op,
         () => removeOutboxOp(op),
-        () => deps.sessionUserId() !== op.owner,
+        // Until the owner changes (a token that is momentarily missing does not stop it).
+        () => outboxOwner() !== op.owner,
     ).then(landed => {
         if (landed && isRetry && !isStale(op) && hasNoFailureOf(op.entryId)) {
             outboxGate.unblock(op.entryId);
@@ -275,9 +271,8 @@ const onSent = <Op extends OutboxOpBase>(
 
 // The claim is cleared before a backoff or a gate wait (a discard is allowed meanwhile) and only
 // after the failed-list write for a final answer (a discard never races it).
-const onSendError = async <Op extends OutboxOpBase>(
-    op: Op,
-    deps: OutboxDeps<Op>,
+const onSendError = async (
+    op: OutboxOpBase,
     error: unknown,
     retry: () => Promise<OutboxResult>,
     { attempt, isRetry }: { attempt: number; isRetry: boolean },
@@ -289,7 +284,7 @@ const onSendError = async <Op extends OutboxOpBase>(
     const errorClass = classifyOutboxError(error, op.kind);
 
     if (errorClass.kind === 'noop') {
-        return onSent(op, deps, NO_OP, isRetry);
+        return onSent(op, NO_OP, isRetry);
     }
     if (errorClass.kind !== 'final') {
         releaseOutboxClaim(op.opId);
@@ -355,15 +350,20 @@ const attempt = async <Op extends OutboxOpBase>(
         outboxGate.close('auth');
         return retry();
     }
-    claimOutboxOp(op.opId);
+    // M1: ordered after a discard whose write is in flight (§2.3: a discard never races a request).
+    const claim = await claimOutboxOp(op);
+
+    if (claim !== 'claimed') {
+        return claim === 'gone' && !isStale(op) ? CANCELLED : STOPPED;
+    }
     const outcome = await deps.send(op, getOutboxVersion(op.entryId)).then(
         (sent: OutboxSent) => ({ sent }),
         (error: unknown) => ({ error }),
     );
 
     return 'sent' in outcome
-        ? onSent(op, deps, outcome.sent, ignoreEntryBlock)
-        : onSendError(op, deps, outcome.error, retry, {
+        ? onSent(op, outcome.sent, ignoreEntryBlock)
+        : onSendError(op, outcome.error, retry, {
               attempt: count,
               isRetry: ignoreEntryBlock,
           });
