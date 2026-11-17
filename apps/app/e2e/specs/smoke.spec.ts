@@ -69,9 +69,8 @@ test.describe('SMOKE-SHORT', () => {
         const payer = await provisioning.register('E2E Payer');
         const friend = await provisioning.register('E2E Friend');
         await provisioning.makeFriends(payer, friend);
-        const groupId = await provisioning.createGroup(payer, `E2E Group ${uniqueSuffix()}`, [
-            friend,
-        ]);
+        const groupName = `E2E Group ${uniqueSuffix()}`;
+        const groupId = await provisioning.createGroup(payer, groupName, [friend]);
         const description = `E2E dinner ${uniqueSuffix()}`;
         const page = await signIn(payer);
 
@@ -79,6 +78,10 @@ test.describe('SMOKE-SHORT', () => {
         await expect(balancesBefore.getByText(friend.displayName)).toBeVisible();
         // "Settled up" is both the friend's row status and the disabled settle button's name.
         await expect(balancesBefore.getByRole('button', { name: 'Settled up' })).toBeDisabled();
+
+        // The modal takes its groups from the groups list, read when it opens: wait until that list
+        // (the page's group links) holds this group, else the modal opens with no group.
+        await expect(page.getByRole('link', { name: new RegExp(groupName) }).first()).toBeVisible();
 
         // The desktop sidebar's button: at this viewport the floating and mobile-bar variants are
         // `display: none`, so they are not in the accessibility tree (strict mode would catch a
@@ -89,7 +92,9 @@ test.describe('SMOKE-SHORT', () => {
         // the placeholders are their only stable handles.
         await dialog.getByPlaceholder('0.00').fill('10');
         await dialog.getByPlaceholder('e.g. Hotel booking, dinner...').fill(description);
-        await dialog.getByRole('button', { name: 'Add expense', exact: true }).click();
+        const submit = dialog.getByRole('button', { name: 'Add expense', exact: true });
+        await expect(submit).toBeEnabled();
+        await submit.click();
         await expect(dialog).toBeHidden();
 
         await page.getByRole('tab', { name: 'Expenses' }).click();
