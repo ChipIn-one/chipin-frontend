@@ -31,6 +31,36 @@ const clickAndSaveSettings = async (page: Page, click: () => Promise<void>): Pro
     expect(response.status(), 'PATCH /users/self status').toBeLessThan(300);
 };
 
+/**
+ * The user's persisted query cache (shared/offline/queryPersister.ts: idb-keyval, key
+ * `chipin:rq:<userId>`) as text, or null. Its writes are throttled by 1 s, so a reload sooner
+ * restores the previous settings for a moment; a person reloading is never that fast.
+ */
+const readPersistedCache = (page: Page, userId: string): Promise<string | null> =>
+    page.evaluate(
+        async key =>
+            new Promise<string | null>(resolve => {
+                const open = indexedDB.open('keyval-store');
+                open.onerror = () => resolve(null);
+                open.onsuccess = () => {
+                    const db = open.result;
+                    if (!db.objectStoreNames.contains('keyval')) {
+                        db.close();
+                        resolve(null);
+                        return;
+                    }
+                    const read = db.transaction('keyval').objectStore('keyval').get(key);
+                    read.onerror = () => resolve(null);
+                    read.onsuccess = () => {
+                        const value: unknown = read.result;
+                        db.close();
+                        resolve(typeof value === 'string' ? value : null);
+                    };
+                };
+            }),
+        `chipin:rq:${userId}`,
+    );
+
 test.describe('SMOKE-SHORT', () => {
     test('an equal-split group expense is listed and changes the balance', async ({
         provisioning,
@@ -125,6 +155,20 @@ test.describe('SMOKE-SHORT', () => {
             page.getByRole('button', { name: 'Russian', exact: true }).click(),
         );
         await expect(page.getByText('Язык интерфейса')).toBeVisible();
+        await expect
+            .poll(
+                async () => {
+                    const cache = await readPersistedCache(page, user.id);
+
+                    return (
+                        cache !== null &&
+                        /"language":"ru/i.test(cache) &&
+                        /"theme":"dark"/i.test(cache)
+                    );
+                },
+                { message: 'the new settings reach the persisted query cache' },
+            )
+            .toBe(true);
 
         // From the next document on, record what the first frames show: a light theme root or an
         // English settings label at any point before the final state would be a flash.
