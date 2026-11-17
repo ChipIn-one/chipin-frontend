@@ -643,11 +643,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/add-expense/AddExpenseModal.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/add-expense/components/expense-buttons/ExpenseButtons.tsx": {
     "import-x/no-default-export": {
       "count": 1

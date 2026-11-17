@@ -1,3 +1,3 @@
-import AddExpenseModal from './AddExpenseModal';
+import { AddExpenseModal } from './AddExpenseModal';
 
 export { AddExpenseModal };
