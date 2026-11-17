@@ -3,17 +3,19 @@
 The browser uses only the same-origin `/api/*` path for ChipIn backend traffic.
 Vercel owns the deployment-to-backend mapping:
 
-| Frontend host    | Runtime environment | `/api/*` backend               |
-| ---------------- | ------------------- | ------------------------------ |
-| `chipin.one`     | production          | `https://api.chipin.one/*`     |
-| `dev.chipin.one` | development         | `https://api-dev.chipin.one/*` |
-| `*.vercel.app`   | development         | `https://api-dev.chipin.one/*` |
+| Frontend host        | Runtime environment | `/api/*` backend               |
+| -------------------- | ------------------- | ------------------------------ |
+| `chipin.one`         | production          | `https://api.chipin.one/*`     |
+| `dev.chipin.one`     | development         | `https://api-dev.chipin.one/*` |
+| `app.chipin.one`     | production          | `https://api.chipin.one/*`     |
+| `app-dev.chipin.one` | development         | `https://api-dev.chipin.one/*` |
+| `*.vercel.app`       | development         | `https://api-dev.chipin.one/*` |
 
 All Vercel-generated domains are development surfaces, including the default
 production `.vercel.app` domain. A production build opened through a
 `.vercel.app` hostname is therefore treated as development at runtime so its
 same-origin API traffic cannot reach production data. Only `chipin.one` maps
-to the production API.
+to the production API (and `app.chipin.one`, see Domains and rollback).
 
 Vercel hosts still require an explicit `VITE_CHIPIN_ENV` configuration. A
 missing or invalid value fails closed as defined by #180. Custom
@@ -144,3 +146,92 @@ No paid custom Vercel environment is required.
 
 Production rollback is a Vercel action independent of git: Instant Rollback, or
 Promote of the previous production deployment.
+Before rolling back past 04-4a2, read [Domains and rollback](#domains-and-rollback).
+
+## Domains and rollback
+
+The app moves to its own host in two steps (spec 04 §4.5,
+`docs/superpowers/specs/2026-10-28-frontend-refactor/04-routing-monorepo-site.md`).
+Step 1 (04-4a2) is below; step 2 (the site takes `chipin.one`, 04-4b) adds its
+own section.
+
+### Step 1: the app moves to `app.chipin.one`
+
+After 04-4a2 the existing app project serves both host groups from one build:
+
+| Host                                          | Serves                                                                                                                                    |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.chipin.one`, `app-dev.chipin.one`        | the app, `/api/*` → `api.chipin.one` / `api-dev.chipin.one`, the app worker at `/sw.js`, `X-Robots-Tag: noindex, nofollow`                |
+| `*.vercel.app` (previews)                     | the same as the app hosts, `/api/*` → `api-dev.chipin.one`                                                                                |
+| `chipin.one`, `dev.chipin.one` (legacy hosts) | today's landing (`/`, `/privacy`, `/terms`, `/ru/*`), the worker kill-switch at `/sw.js` (04-4a1), `302` of private paths to the app host |
+
+On the legacy hosts `/dashboard*`, `/solo*`, `/activity*`, `/settings*`,
+`/group*`, `/friends*`, `/oauth*`, `/not-found` and `/app.html` answer `302` to
+the app host of the same environment (`chipin.one` → `app.chipin.one`,
+`dev.chipin.one` → `app-dev.chipin.one`) with the same path and query. The
+status stays `302` for the whole life of these rules. The landing there signs
+nobody in: its sign-in buttons open `<app host>/dashboard`, and a visitor with a
+session hint is sent there without any `/api` auth call.
+
+Preconditions:
+
+- 04-4a1 (service worker host gate and kill-switch) is in Production.
+- BE-04-2 is applied on dev and prod before the merge: `OAUTH_ALLOWED_REDIRECT_ORIGINS`
+  and `CORS_ALLOWED_ORIGINS` contain `https://app-dev.chipin.one` (dev) and
+  `https://app.chipin.one` (prod); the old origins stay.
+
+Order:
+
+1. Merge 04-4a2 into `master`.
+2. Owner: Vercel → the existing app project → Settings → Domains → add
+   `app-dev.chipin.one`, Git branch `master`. Do not rename the project: the
+   backend preview allowlists (`OAUTH_ALLOWED_VERCEL_PREVIEW_PROJECTS`,
+   `CORS_ALLOWED_VERCEL_PREVIEW_PROJECTS`) are bound to its name.
+3. DNS: if the `chipin.one` zone is on Vercel, the record is added
+   automatically; if DNS is hosted elsewhere, add `CNAME app-dev` →
+   `cname.vercel-dns.com` (the same for `app` in step 5). Wait until Vercel
+   shows the domain as valid with a certificate.
+4. Smoke on dev, the dev variant of criterion 10 below on `app-dev.chipin.one`
+   and `dev.chipin.one`.
+5. Promote the `master` deployment to Production, then add `app.chipin.one`
+   (Production) to the same project.
+6. Smoke on prod (criterion 10 of spec 04):
+   - `curl -sI https://chipin.one/dashboard` → `302`, `Location: https://app.chipin.one/dashboard`;
+   - `https://chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1` → `302` with the same query;
+   - `https://chipin.one/group/join/x` → `302` to `https://app.chipin.one/group/join/x`;
+   - `https://chipin.one/`, `/privacy`, `/ru/`, `/robots.txt`, `/.well-known/assetlinks.json` → `200`, no redirect, no `X-Robots-Tag`;
+   - `https://chipin.one/sw.js` → `200`, `Cache-Control: no-cache`, the kill-switch body; `https://app.chipin.one/sw.js` → the app worker;
+   - `https://app.chipin.one/` and `/dashboard` → `200` with `X-Robots-Tag: noindex, nofollow`; `https://app.chipin.one/api/health` → `200`;
+   - `assetlinks.json` lists `chipin.one`, `dev.chipin.one`, `app.chipin.one`, `app-dev.chipin.one`;
+   - on `app.chipin.one`: Google sign-in, a deep link reload (`/group/<uuid>`), an offline reload of `/dashboard` from precache, and `Set-Cookie` of sign-in and refresh with the `__Host-` prefix and no `Domain=`;
+   - the landing sign-in on `chipin.one` opens `app.chipin.one`; a browser with a session hint opening `https://chipin.one/` makes no `/api/auth` request there and lands on `https://app.chipin.one/dashboard`; no `chipin.one` response sets a cookie.
+
+Users sign in again once on the app host: the refresh cookie is host-only, and
+local data of the old origin (drafts, theme, language) is not carried over.
+
+OAuth at the moment of the switch: the backend may return a user to
+`https://chipin.one/oauth/callback?code=…`, which the `302` forwards to the app
+host with `code` and `returnTo`. chipin-backend#196 (BE-01-1, binding the
+one-time code to the browser) is still open; if it lands before step 1, the
+exchange on the new origin fails for such an in-flight sign-in and the user
+signs in once more. The old-host callback smoke must then expect that extra
+sign-in.
+
+### Rollback of step 1
+
+Rollback criterion: 404 or 5xx on `chipin.one` or `app.chipin.one` rising above
+1 % per hour, an OAuth sign-in error, or the app host unavailable.
+
+- Targeted (minutes): a PR that deletes only the step-1 legacy redirects in
+  `apps/app/vercel.json` (the `302` rows with a `chipin.one`/`dev.chipin.one`
+  host condition) and the legacy-host landing changes of 04-4a2
+  (`helpers/legacyHost.ts` users: `SignInEntry`, `PublicSession`), then Promote.
+  The app hosts keep their `/api` rewrites, `X-Robots-Tag` and domains, so users
+  already on `app.chipin.one` keep working; `chipin.one` serves the app again,
+  online-only while 04-4a1 stays.
+- A full revert of 04-4a2, or an Instant Rollback to a build before it, also
+  drops the `/api` rewrites of the app hosts: do it only together with removing
+  `app.chipin.one` and `app-dev.chipin.one` from the project.
+- Once the offline-write flag (03-17) is enabled in prod, step 1 is not rolled
+  back without first disabling the flag and letting the outbox queues drain:
+  the outbox lives in the IndexedDB of `app.chipin.one`.

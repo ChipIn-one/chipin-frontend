@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { usePwaStore } from 'store/pwaStore';
 
-import { AuthModal } from 'components/modals/auth-modal';
+import { SignInEntry } from 'components/modals/auth-modal';
 
 import { LandingStats } from './components';
 
@@ -52,12 +52,12 @@ const HeroSection = () => {
                     </Box>
 
                     <Flex gap="3" wrap="wrap" justify="center" pt="2">
-                        <AuthModal>
+                        <SignInEntry>
                             <Button size={{ initial: '3', sm: '4' }} variant="solid" color="green">
                                 {t('common:buttons.getStarted')}
                                 <ArrowRightIcon />
                             </Button>
-                        </AuthModal>
+                        </SignInEntry>
 
                         {pwaAction}
                     </Flex>
@@ -69,4 +69,4 @@ const HeroSection = () => {
     );
 };
 
-export default HeroSection;
+export { HeroSection };

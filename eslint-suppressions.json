@@ -213,11 +213,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/Header.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/LanguageSelector.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -728,17 +723,7 @@
       "count": 1
     }
   },
-  "apps/app/src/features/landing/cta-section/CtaSection.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/landing/features-section/FeaturesSection.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/hero-section/HeroSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }

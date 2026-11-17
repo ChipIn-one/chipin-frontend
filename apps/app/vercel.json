@@ -13,6 +13,50 @@
             "source": "/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/].*?)}?{/}?",
             "destination": "/:path",
             "statusCode": 301
+        },
+        {
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "chipin.one"
+                }
+            ],
+            "destination": "https://app.chipin.one/:path",
+            "statusCode": 302
+        },
+        {
+            "source": "/app.html",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "chipin.one"
+                }
+            ],
+            "destination": "https://app.chipin.one/",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "dev.chipin.one"
+                }
+            ],
+            "destination": "https://app-dev.chipin.one/:path",
+            "statusCode": 302
+        },
+        {
+            "source": "/app.html",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "dev.chipin.one"
+                }
+            ],
+            "destination": "https://app-dev.chipin.one/",
+            "statusCode": 302
         }
     ],
     "rewrites": [
@@ -32,6 +76,26 @@
                 {
                     "type": "host",
                     "value": "dev.chipin.one"
+                }
+            ],
+            "destination": "https://api-dev.chipin.one/:path*"
+        },
+        {
+            "source": "/api/:path*",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "app.chipin.one"
+                }
+            ],
+            "destination": "https://api.chipin.one/:path*"
+        },
+        {
+            "source": "/api/:path*",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "app-dev.chipin.one"
                 }
             ],
             "destination": "https://api-dev.chipin.one/:path*"
@@ -183,6 +247,62 @@
                 {
                     "key": "Cache-Control",
                     "value": "public, max-age=3600, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/(.*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "app.chipin.one"
+                }
+            ],
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/(.*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "app-dev.chipin.one"
+                }
+            ],
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/(.*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "suf": ".vercel.app"
+                    }
+                }
+            ],
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/sw.js",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache"
                 }
             ]
         }

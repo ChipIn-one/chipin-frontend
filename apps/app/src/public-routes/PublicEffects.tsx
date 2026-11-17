@@ -15,15 +15,15 @@ import { getPreferredModeRoute } from 'helpers/routes';
 import { useCheckPwa } from 'hooks/pwaHooks';
 import { updateSeoMetadata } from 'hooks/seoMetadata';
 import { useAuthToasts } from 'hooks/useAuthToasts';
-import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useScrollToTop } from 'hooks/useScrollToTop';
 import { useCanAccessSolo, useSessionSelfLoad, useUserSetting } from 'hooks/useSelfUser';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import type { PublicRoute } from 'types/publicRoutes';
 
+import { PublicSession } from './PublicSession';
+
 const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean }) => {
-    useCheckSignIn();
     useAuthToasts();
     useScrollToTop();
     useCheckPwa();
@@ -113,14 +113,17 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     }, [i18n, isAuthResolved, isLoggedIn, route.locale, route.page]);
 
     return (
-        <Toaster
-            theme={isDark ? 'dark' : 'light'}
-            richColors
-            closeButton
-            position="bottom-left"
-            offset={16}
-            mobileOffset={12}
-        />
+        <>
+            <PublicSession />
+            <Toaster
+                theme={isDark ? 'dark' : 'light'}
+                richColors
+                closeButton
+                position="bottom-left"
+                offset={16}
+                mobileOffset={12}
+            />
+        </>
     );
 };
 

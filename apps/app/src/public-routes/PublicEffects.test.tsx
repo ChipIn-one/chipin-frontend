@@ -4,8 +4,9 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import type { SelfUser } from 'entities/users';
-import { saveLocalUser } from 'helpers/localStorage';
+import { saveLocalUser, setAuthSessionHint } from 'helpers/localStorage';
 import { useAuthToasts } from 'hooks/useAuthToasts';
+import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useScrollToTop } from 'hooks/useScrollToTop';
 import { useAuthStore } from 'store/authStore';
 import { getOrThrow } from 'test/getOrThrow';
@@ -81,7 +82,73 @@ test('mounts the existing session-feedback and scroll-restoration hooks on publi
 
     expect(useAuthToasts).toHaveBeenCalledOnce();
     expect(useScrollToTop).toHaveBeenCalledOnce();
+    expect(useCheckSignIn).toHaveBeenCalledOnce();
 });
+
+// 04-4a2 (spec 04 §4.5 step 1): on a legacy host the landing makes no auth call; a visitor with a
+// session hint goes straight to the app host of the same environment.
+const renderHomeOn = (hostname: string) => {
+    const replace = vi.fn();
+    vi.stubGlobal('location', { ...window.location, hostname, replace });
+    const home = getOrThrow(
+        PUBLIC_ROUTE_ENTRIES.filter(item => item.page === 'home' && item.locale === 'en'),
+        0,
+    );
+
+    render(<PublicEffects route={home} isDark={false} />);
+    return replace;
+};
+
+test.each([
+    ['chipin.one', 'https://app.chipin.one/dashboard'],
+    ['dev.chipin.one', 'https://app-dev.chipin.one/dashboard'],
+])('on %s a visitor with a session hint goes to %s without a session check', (host, target) => {
+    useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+    const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
+    useAuthStore.setState({ refreshAuthTokens });
+    setAuthSessionHint(true);
+
+    const replace = renderHomeOn(host);
+
+    expect(replace).toHaveBeenCalledExactlyOnceWith(target);
+    expect(useCheckSignIn).not.toHaveBeenCalled();
+    expect(refreshAuthTokens).not.toHaveBeenCalled();
+    setAuthSessionHint(false);
+    vi.unstubAllGlobals();
+});
+
+test('on a legacy host a visitor without a hint stays on the landing, anonymous, with no check', () => {
+    useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+    const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
+    useAuthStore.setState({ refreshAuthTokens });
+    setAuthSessionHint(false);
+
+    const replace = renderHomeOn('chipin.one');
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(useCheckSignIn).not.toHaveBeenCalled();
+    expect(refreshAuthTokens).not.toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({
+        status: 'unauthenticated',
+        unauthReason: 'missing',
+    });
+    vi.unstubAllGlobals();
+});
+
+test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
+    'on %s the session check runs as before',
+    host => {
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+        setAuthSessionHint(true);
+
+        const replace = renderHomeOn(host);
+
+        expect(useCheckSignIn).toHaveBeenCalled();
+        expect(replace).not.toHaveBeenCalled();
+        setAuthSessionHint(false);
+        vi.unstubAllGlobals();
+    },
+);
 
 test('English privacy offers a localized persistent Sonner action only once', () => {
     vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);

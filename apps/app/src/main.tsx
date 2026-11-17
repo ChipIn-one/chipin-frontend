@@ -19,7 +19,7 @@ import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
-import Header from 'components/Header';
+import { Header } from 'components/Header';
 import { ModalOverlayGlobalStyles } from 'components/modals/components';
 import { EarlySupporterPromoModal } from 'components/modals/early-supporter-promo-modal';
 

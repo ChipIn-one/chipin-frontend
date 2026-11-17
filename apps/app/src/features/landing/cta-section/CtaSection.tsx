@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { usePwaStore } from 'store/pwaStore';
 
-import { AuthModal } from 'components/modals/auth-modal';
+import { SignInEntry } from 'components/modals/auth-modal';
 
 import { CTA_BULLET_KEYS } from './internal';
 import { CtaCard } from './styled';
@@ -52,7 +52,7 @@ const CtaSection = () => {
                         </Box>
 
                         <Flex direction={{ initial: 'column', sm: 'row' }} gap="3" justify="center">
-                            <AuthModal>
+                            <SignInEntry>
                                 <Button
                                     size={{ initial: '3', sm: '4' }}
                                     variant="solid"
@@ -61,7 +61,7 @@ const CtaSection = () => {
                                     {t('cta.getStartedFree')}
                                     <ArrowRightIcon />
                                 </Button>
-                            </AuthModal>
+                            </SignInEntry>
                             {secondaryAction}
                         </Flex>
 
@@ -84,4 +84,4 @@ const CtaSection = () => {
     );
 };
 
-export default CtaSection;
+export { CtaSection };
