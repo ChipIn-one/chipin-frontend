@@ -56,5 +56,10 @@
   "public": {
       "languageSuggestion": "ChipIn is available in English",
       "languageSuggestionAction": "Switch to English"
+  },
+  "offline": {
+    "saved": "Saved, we will send it when the network is back",
+    "saveFailed": "Could not save on the device — connect to the network",
+    "limitReached": "Too many unsent operations — connect to the network"
   }
 }

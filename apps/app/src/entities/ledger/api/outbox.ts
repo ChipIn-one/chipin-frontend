@@ -1,9 +1,12 @@
-// The ledger outbox (spec 03 §2.1, 03-15a): expenses only, one tab, in memory, behind
-// `VITE_FEATURE_OFFLINE_WRITES` (off: every write takes the online path, as before). On the outbox
-// path a write creates no mutation itself: it appends an op (the registry checks it is an
-// expense) and the adoption creates the op's mutation with the outbox key and its defaults. A
-// settlement and settle-up never take this path (§2.9).
+// The ledger outbox (spec 03 §2.1, 03-15a/b): expenses only, one tab, persisted in IndexedDB,
+// behind `VITE_FEATURE_OFFLINE_WRITES` (off: every write takes the online path and nothing of the
+// outbox is read or written, as before). With the flag on a user's new client registers the outbox
+// defaults and then restores the persisted ops (`startLedgerOutbox`). On the outbox path a write
+// creates no mutation itself: it appends an op (the registry checks it is an expense) and the
+// adoption creates the op's mutation with the outbox key and its defaults. A settlement and
+// settle-up never take this path (§2.9).
 import type { QueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import { getAccessTokenUserId } from 'helpers/authSession';
 import { api, ApiError } from 'shared/api/client';
@@ -17,13 +20,23 @@ import {
 } from 'shared/offline/outboxRegistry';
 import {
     adoptOutboxOps,
+    type OutboxAdoption,
     type OutboxDeps,
     OutboxEntryGoneError,
     type OutboxResult,
     type OutboxSent,
+    restoreOutbox,
     runOutboxOp,
 } from 'shared/offline/outboxRun';
-import { type OutboxOpBase, startOutbox } from 'shared/offline/outboxStore';
+import { OutboxOpBaseSchema } from 'shared/offline/outboxSchema';
+import {
+    isOutboxFull,
+    isOutboxPersistFailed,
+    type OutboxOpBase,
+    outboxOwner,
+    type OutboxRestore,
+    outboxRestoreState,
+} from 'shared/offline/outboxStore';
 import { userIdOfClient } from 'shared/offline/userCaches';
 
 import {
@@ -66,16 +79,39 @@ export type DeleteExpenseOp = OutboxOpBase &
     LedgerOpFields & { readonly kind: 'deleteExpense'; readonly baseVersion: string | null };
 export type LedgerOutboxOp = CreateExpenseOp | UpdateExpenseOp | DeleteExpenseOp;
 
-const OUTBOX_KINDS: readonly unknown[] = Object.keys(ledgerOutboxMutationKeys);
+// The wire draft and patch are checked as objects: the server validates their fields (a 400 is
+// failed `validation`), and they were built by this app's mappers.
+const isWireObject = (value: unknown): boolean =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
 
-// The ops are this tab's own objects until 03-15b validates the persisted ones with zod.
+const ledgerOpFields = {
+    groupId: z.string().nullable(),
+    parentActivityId: z.string().nullable(),
+};
+
+/** `OutboxOpSchema` of §2.1 for the ledger: a union by `kind` (`entryKind: 'expense'`, `schema: 1`). */
+export const LedgerOutboxOpSchema = z.discriminatedUnion('kind', [
+    OutboxOpBaseSchema.extend({
+        ...ledgerOpFields,
+        kind: z.literal('createExpense'),
+        draft: z.custom<ExpenseDraftWire>(isWireObject),
+    }),
+    OutboxOpBaseSchema.extend({
+        ...ledgerOpFields,
+        kind: z.literal('updateExpense'),
+        baseVersion: z.string().nullable(),
+        patch: z.custom<ExpensePatchWire>(isWireObject),
+    }),
+    OutboxOpBaseSchema.extend({
+        ...ledgerOpFields,
+        kind: z.literal('deleteExpense'),
+        baseVersion: z.string().nullable(),
+    }),
+]);
+
+// A persisted op is read from IndexedDB: checked with zod before it is adopted or sent.
 const isLedgerOutboxOp = (value: unknown): value is LedgerOutboxOp =>
-    typeof value === 'object' &&
-    value !== null &&
-    'kind' in value &&
-    OUTBOX_KINDS.includes(value.kind) &&
-    'opId' in value &&
-    'entryId' in value;
+    LedgerOutboxOpSchema.safeParse(value).success;
 
 /** The version an edit or a delete is checked against: ours, else the base; unknown → GET. */
 const resolveVersion = (
@@ -167,8 +203,9 @@ const OFFLINE_WRITE_CAPABILITIES: readonly BackendCapability[] = [
 ];
 
 /**
- * `offlineWritesAvailable` of §2.7 as far as 03-15a goes: the flag and the backend capabilities
- * (03-15b/c add the restore, Web Locks and storage conditions). Flag off: nothing is read.
+ * `offlineWritesAvailable` of §2.7 as far as 03-15b goes: the flag, the backend capabilities, this
+ * tab's `outboxRestore === 'ok'` for the client's user, no failed append write this session, and
+ * fewer than 50 ops (§2.8; 03-15c adds Web Locks and `BroadcastChannel`). Flag off: nothing is read.
  */
 export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
     if (!isOfflineWritesFlagOn()) {
@@ -180,7 +217,15 @@ export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
         void client.prefetchQuery(capabilitiesQueryOptions());
         return false;
     }
-    return OFFLINE_WRITE_CAPABILITIES.every(name => capabilities.includes(name));
+    const owner = userIdOfClient(client);
+
+    return (
+        OFFLINE_WRITE_CAPABILITIES.every(name => capabilities.includes(name)) &&
+        owner !== null &&
+        outboxRestoreState(owner) === 'ok' &&
+        !isOutboxPersistFailed() &&
+        !isOutboxFull()
+    );
 };
 
 export type LedgerWritePath = 'online' | 'outbox';
@@ -208,15 +253,21 @@ const isAcceptableLedgerOp = (client: QueryClient, op: OutboxOpBase): boolean =>
     );
 };
 
+const registeredClients = new WeakSet<QueryClient>();
+
 /**
- * The outbox mutation defaults (§2.1), every callback included: after 03-15b a restored mutation
- * has only these. `networkMode: 'always'` and `retry: false`: `runOutboxOp` waits and retries
- * itself (owner item 35). No `scope`: the order is the drain turn.
+ * The outbox mutation defaults (§2.1), every callback included: a restored mutation has only
+ * these. `networkMode: 'always'` and `retry: false`: `runOutboxOp` waits and retries itself
+ * (owner item 35). No `scope`: the order is the drain turn. Once per client.
  */
 export const registerLedgerOutboxDefaults = (
     client: QueryClient,
     effects: LedgerWriteEffects,
 ): void => {
+    if (registeredClients.has(client)) {
+        return;
+    }
+    registeredClients.add(client);
     Object.values(ledgerOutboxMutationKeys).forEach(mutationKey => {
         client.setMutationDefaults<OutboxResult, Error, unknown>(mutationKey, {
             mutationFn: variables =>
@@ -249,31 +300,45 @@ export const registerLedgerOutboxDefaults = (
     });
 };
 
-const registeredClients = new WeakSet<QueryClient>();
+const ledgerAdoption = (client: QueryClient): OutboxAdoption => ({
+    mutationKeyFor: kind => ledgerOutboxMutationKeys[kind],
+    isAcceptable: op => isAcceptableLedgerOp(client, op),
+    sessionUserId: () => getAccessTokenUserId(),
+});
 
-// One tab, in memory: the tab that appends is the tab that drains (03-15c: the drain lock).
+/**
+ * Starts the outbox of the user's new client (§2.1, §2.3; `bootstrap` wires it to `clientFor`):
+ * the defaults are registered first, then the persisted ops are hydrated as paused mutations and
+ * resumed (`restoreOutbox`). Flag off: nothing is registered, read or written.
+ */
+export const startLedgerOutbox = (
+    client: QueryClient,
+    userId: string,
+    effects: LedgerWriteEffects,
+): Promise<OutboxRestore> => {
+    if (!isOfflineWritesFlagOn()) {
+        return Promise.resolve('pending');
+    }
+    registerLedgerOutboxDefaults(client, effects);
+    return restoreOutbox(client, userId, ledgerAdoption(client));
+};
+
+// One tab: the tab that appends is the tab that drains (03-15c: the drain lock). The path choice
+// required this tab's restored outbox of the client's user, so its defaults are registered.
 const enqueueLedgerOp = <Op extends LedgerOutboxOp>(
     client: QueryClient,
-    effects: LedgerWriteEffects,
     target: Omit<OutboxOpRequest, 'owner'>,
     build: (seed: OutboxOpSeed) => Op,
 ): Promise<void> => {
     const owner = userIdOfClient(client);
 
-    if (owner === null) {
+    if (owner === null || owner !== outboxOwner()) {
         return Promise.reject(new Error('No signed-in user client'));
     }
-    if (!registeredClients.has(client)) {
-        registerLedgerOutboxDefaults(client, effects);
-        registeredClients.add(client);
-    }
-    startOutbox(owner);
     return enqueueOutboxOp(client, { ...target, owner }, build).then(() => {
-        adoptOutboxOps(
-            client,
-            kind => ledgerOutboxMutationKeys[kind],
-            op => isAcceptableLedgerOp(client, op),
-        );
+        const { mutationKeyFor, isAcceptable } = ledgerAdoption(client);
+
+        adoptOutboxOps(client, mutationKeyFor, isAcceptable);
     });
 };
 
@@ -283,7 +348,6 @@ export type QueueLedgerWrite = () => Promise<void>;
 /** The outbox path of an expense create, or null for the online path. */
 export const createExpenseViaOutbox = (
     client: QueryClient,
-    effects: LedgerWriteEffects,
     { expense, parentActivityId }: CreateExpenseParams,
 ): QueueLedgerWrite | null =>
     chooseLedgerWritePath(client, { kind: 'create' }) !== 'outbox'
@@ -295,25 +359,19 @@ export const createExpenseViaOutbox = (
               return Promise.resolve()
                   .then(() => toCreateLedgerEntryWire(expense, { clientEntryId: entryId }))
                   .then(wire =>
-                      enqueueLedgerOp(
-                          client,
-                          effects,
-                          { kind: 'createExpense', entryId },
-                          ({ base }) => ({
-                              ...base,
-                              kind: 'createExpense',
-                              groupId: wire.groupId ?? null,
-                              parentActivityId: parentActivityId ?? null,
-                              draft: wire.expense,
-                          }),
-                      ),
+                      enqueueLedgerOp(client, { kind: 'createExpense', entryId }, ({ base }) => ({
+                          ...base,
+                          kind: 'createExpense',
+                          groupId: wire.groupId ?? null,
+                          parentActivityId: parentActivityId ?? null,
+                          draft: wire.expense,
+                      })),
                   );
           };
 
 /** The outbox path of an expense edit, or null for the online path. */
 export const updateExpenseViaOutbox = (
     client: QueryClient,
-    effects: LedgerWriteEffects,
     { entryId, entry, groupId, parentActivityId }: UpdateExpenseParams,
 ): QueueLedgerWrite | null =>
     chooseLedgerWritePath(client, { kind: 'update', entryId }) !== 'outbox'
@@ -324,7 +382,6 @@ export const updateExpenseViaOutbox = (
                   .then(patch =>
                       enqueueLedgerOp(
                           client,
-                          effects,
                           { kind: 'updateExpense', entryId },
                           ({ base, baseVersion }) => ({
                               ...base,
@@ -340,7 +397,6 @@ export const updateExpenseViaOutbox = (
 /** The outbox path of an expense delete, or null (a settlement, or offline writes off). */
 export const deleteExpenseViaOutbox = (
     client: QueryClient,
-    effects: LedgerWriteEffects,
     { entryId, groupId, parentActivityId }: DeleteLedgerEntryParams,
 ): QueueLedgerWrite | null =>
     chooseLedgerWritePath(client, { kind: 'delete', entryId }) !== 'outbox'
@@ -348,7 +404,6 @@ export const deleteExpenseViaOutbox = (
         : () =>
               enqueueLedgerOp(
                   client,
-                  effects,
                   { kind: 'deleteExpense', entryId },
                   ({ base, baseVersion }) => ({
                       ...base,

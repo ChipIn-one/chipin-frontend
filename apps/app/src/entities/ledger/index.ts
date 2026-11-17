@@ -1,7 +1,7 @@
 // Public entry of entities/ledger: the online ledger mutations (an expense create and update, a
-// settlement create, an entry delete), the expense outbox path (03-15a, behind its flag), the
-// expense draft and patch and the settlement draft with their wire mappers, and the backend
-// capabilities query.
+// settlement create, an entry delete), the expense outbox path and its start (03-15a/b, behind
+// its flag), the expense draft and patch and the settlement draft with their wire mappers, and the
+// backend capabilities query.
 export type {
     CreateExpenseParams,
     CreateSettlementParams,
@@ -33,6 +33,7 @@ export {
     isOfflineWriteAvailable,
     ledgerOutboxMutationKeys,
     registerLedgerOutboxDefaults,
+    startLedgerOutbox,
     updateExpenseViaOutbox,
 } from './api/outbox';
 export type { BackendCapability } from './api/queries';

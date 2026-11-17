@@ -1,4 +1,5 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { onlineManager, type QueryClient } from '@tanstack/react-query';
+import { clear } from 'idb-keyval';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -9,7 +10,6 @@ import {
     failedOutboxOps,
     pendingOutboxOps,
     resetOutbox,
-    startOutbox,
 } from 'shared/offline/outboxStore';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -24,9 +24,12 @@ import {
     createExpenseViaOutbox,
     deleteExpenseViaOutbox,
     ledgerOutboxMutationKeys,
+    startLedgerOutbox,
     updateExpenseViaOutbox,
 } from './outbox';
 import { capabilitiesQueryOptions } from './queries';
+
+import 'fake-indexeddb/auto';
 
 vi.mock('helpers/authSession', async importOriginal => ({
     ...(await importOriginal<typeof import('helpers/authSession')>()),
@@ -98,11 +101,19 @@ const withCapabilities = (client: QueryClient): void => {
 
 let client: QueryClient;
 
-beforeEach(() => {
+// With the flag on: the user's outbox starts as `clientFor` starts it (defaults, then restore).
+const startOutbox = (): Promise<unknown> => {
+    vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+    return startLedgerOutbox(client, 'user-1', effects);
+};
+
+beforeEach(async () => {
     client = mountAsUserClient('user-1', getDefaultTestQueryClient());
+    await clear();
 });
 
 afterEach(() => {
+    onlineManager.setOnline(true);
     resetOutbox();
     vi.unstubAllEnvs();
 });
@@ -112,7 +123,7 @@ describe('C1-10 two create paths', () => {
         withCapabilities(client);
         const fetches = vi.spyOn(client, 'prefetchQuery');
 
-        expect(createExpenseViaOutbox(client, effects, { expense })).toBeNull();
+        expect(createExpenseViaOutbox(client, { expense })).toBeNull();
         expect(chooseLedgerWritePath(client, { kind: 'create' })).toBe('online');
         expect(fetches).not.toHaveBeenCalled();
         expect(client.getMutationCache().getAll()).toEqual([]);
@@ -128,10 +139,10 @@ describe('C1-10 two create paths', () => {
     });
 
     test('flag on: no mutation in the calling code, one op queued, the adopted mutation has the outbox key, no scope, retry false', async () => {
-        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        await startOutbox();
         withCapabilities(client);
         const sent = serveLedger();
-        const queue = createExpenseViaOutbox(client, effects, { expense });
+        const queue = createExpenseViaOutbox(client, { expense });
 
         expect(queue).not.toBeNull();
         expect(client.getMutationCache().getAll()).toEqual([]);
@@ -161,22 +172,27 @@ describe('C1-10 two create paths', () => {
             { groupId: 'group-1', parentActivityId: undefined },
             client,
         );
-        expect(pendingOutboxOps()).toEqual([]);
+        // The removal is its own IndexedDB write after the 2xx.
+        await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
     });
 });
 
 test('03 §2.1: an edit and a delete go out with If-Match and X-Client-Op-Id, the second with the version of the first', async () => {
-    vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+    await startOutbox();
     withCapabilities(client);
     client.setQueryData(ledgerEntryKey('entry-x'), { type: 'EXPENSE', version: '41' });
     const sent = serveLedger();
 
-    await updateExpenseViaOutbox(client, effects, {
+    // Both queued before the first is sent (an IndexedDB append takes longer than a mocked answer;
+    // the 2xx entry reaches the cache only with 03-16a).
+    onlineManager.setOnline(false);
+    await updateExpenseViaOutbox(client, {
         entryId: 'entry-x',
         entry: { description: 'Lunch' },
         groupId: 'group-1',
     })?.();
-    await deleteExpenseViaOutbox(client, effects, { entryId: 'entry-x', groupId: 'group-1' })?.();
+    await deleteExpenseViaOutbox(client, { entryId: 'entry-x', groupId: 'group-1' })?.();
+    onlineManager.setOnline(true);
     await vi.waitFor(() => expect(sent).toHaveLength(2));
 
     const opIds = sent.map(request => request.headers['X-Client-Op-Id']);
@@ -197,7 +213,7 @@ test('03 §2.1: an edit and a delete go out with If-Match and X-Client-Op-Id, th
 });
 
 test('03 §2.1/§2.5 (N3, N4): a delete with an unknown version whose entry is gone is a success; the open history is read again', async () => {
-    vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+    await startOutbox();
     withCapabilities(client);
     // Cached without a version: the outbox asks the server for it.
     client.setQueryData(ledgerEntryKey('entry-x'), { type: 'EXPENSE' });
@@ -214,7 +230,7 @@ test('03 §2.1/§2.5 (N3, N4): a delete with an unknown version whose entry is g
         }),
     );
 
-    await deleteExpenseViaOutbox(client, effects, {
+    await deleteExpenseViaOutbox(client, {
         entryId: 'entry-x',
         groupId: 'group-1',
         parentActivityId: 'activity-1',
@@ -227,7 +243,8 @@ test('03 §2.1/§2.5 (N3, N4): a delete with an unknown version whose entry is g
     );
     expect(sent).toEqual(['GET']);
     expect(failedOutboxOps()).toEqual([]);
-    expect(pendingOutboxOps()).toEqual([]);
+    // The removal is its own IndexedDB write after the 2xx.
+    await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
 });
 
 describe('C2-02 settlement guard', () => {
@@ -239,21 +256,18 @@ describe('C2-02 settlement guard', () => {
         expect(chooseLedgerWritePath(client, { kind: 'delete', entryId: 'entry-s' })).toBe(
             'online',
         );
-        expect(deleteExpenseViaOutbox(client, effects, { entryId: 'entry-s' })).toBeNull();
-        expect(
-            updateExpenseViaOutbox(client, effects, { entryId: 'entry-s', entry: {} }),
-        ).toBeNull();
+        expect(deleteExpenseViaOutbox(client, { entryId: 'entry-s' })).toBeNull();
+        expect(updateExpenseViaOutbox(client, { entryId: 'entry-s', entry: {} })).toBeNull();
         expect(pendingOutboxOps()).toEqual([]);
         expect(ledgerOnlineMutationKeys.deleteEntry).toEqual(['ledger', 'online', 'deleteEntry']);
     });
 
     test('a queued op of an entry cached as a settlement is moved to failed on adoption and never sent', async () => {
-        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        await startOutbox();
         withCapabilities(client);
         const sent = serveLedger();
 
         // As another tab would have written it before the entry was known to be a settlement.
-        startOutbox('user-1');
         const foreign = await appendOutboxOp(seq => ({
             opId: 'op-settlement',
             seq,
@@ -269,7 +283,7 @@ describe('C2-02 settlement guard', () => {
         }));
 
         client.setQueryData(ledgerEntryKey('entry-s'), { type: 'SETTLEMENT', version: '3' });
-        await createExpenseViaOutbox(client, effects, { expense })?.();
+        await createExpenseViaOutbox(client, { expense })?.();
         await vi.waitFor(() => expect(sent).toHaveLength(1));
 
         expect(sent.map(request => request.line)).toEqual(['POST /ledger/entries']);

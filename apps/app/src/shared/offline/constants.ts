@@ -10,9 +10,15 @@ export const QUERY_CACHE_EPOCH = 1;
 /** The IndexedDB key of a user's query cache (§1.2). */
 export const queryCacheKey = (userId: string): string => `chipin:rq:${userId}`;
 
-/** The outbox keys of a user (§2.3); written from 03-15b, deleted by `clearUserData` already. */
+/** The outbox key of a user (§2.3): the `OutboxState`. */
+export const outboxStateKey = (userId: string): string => `chipin:outbox:${userId}`;
+
+/** The failed ops of a user (§2.5). */
+export const outboxFailedKey = (userId: string): string => `chipin:outbox-failed:${userId}`;
+
+/** Every outbox key of a user, deleted by `clearUserData` (the inbox key is a pre-D29 leftover). */
 export const outboxKeys = (userId: string): string[] => [
-    `chipin:outbox:${userId}`,
-    `chipin:outbox-failed:${userId}`,
+    outboxStateKey(userId),
+    outboxFailedKey(userId),
     `chipin:outbox-inbox:${userId}`,
 ];

@@ -15,28 +15,38 @@ import {
 import { ApiError } from 'shared/lib/apiError';
 
 import { outboxGate } from './outboxGate';
+import { OutboxWriteStoppedError } from './outboxIo';
+import { ledgerEntryKey } from './outboxRegistry';
 import {
     claimOutboxOp,
+    failedEntryIds,
     type FailedReason,
     forgetCancelled,
     getOutboxVersion,
     hasNoFailureOf,
     isOpCancelled,
+    isOpCancelledInKey,
     isOpFailed,
     isOutboxStopped,
     isPendingRemoval,
     markPendingRemoval,
     noteOutboxVersion,
     onOutboxWake,
+    outboxEntryIds,
     type OutboxKind,
     type OutboxOpBase,
     outboxOwner,
+    type OutboxRestore,
     pendingOutboxOps,
+    readOutbox,
     recordFailedOp,
     releaseOutboxClaim,
     removeOutboxOp,
+    restoreOutboxVersions,
     setOutboxStatus,
+    startOutbox,
     trackFailureWrite,
+    writeOutbox,
 } from './outboxStore';
 import { reportPersistFailed } from './queryPersister';
 
@@ -148,7 +158,8 @@ const sleep = (ms: number): Promise<void> =>
 
 /**
  * Repeats a failed queue write with backoff until it lands (true) or `shouldStop` (false: the op
- * stays queued and the next drain sends it again, idempotent). The request is never repeated.
+ * stays queued and the next drain sends it again, idempotent). The request is never repeated. A
+ * write refused because the owner's outbox stopped (cleared, another owner) is not repeated.
  */
 export const retryWrite = (
     op: OutboxOpBase,
@@ -159,6 +170,9 @@ export const retryWrite = (
     write().then(
         () => true,
         (error: unknown) => {
+            if (error instanceof OutboxWriteStoppedError) {
+                return false;
+            }
             setOutboxStatus(op.opId, 'failed-unsaved');
             reportPersistFailed(error);
             return sleep(backoff(attempt)).then(() =>
@@ -233,12 +247,7 @@ const timeout =
 // A 2xx or a no-op answer: our version first, then the slot goes to the next op. The removal
 // write needs no turn and keeps retrying after the drain stops, until the user changes. Only a
 // Retry of a failed op (or a discard) unblocks an entry, never any other success (D29, M4).
-const onSent = <Op extends OutboxOpBase>(
-    op: Op,
-    deps: OutboxDeps<Op>,
-    sent: OutboxSent,
-    isRetry: boolean,
-): OutboxResult => {
+const onSent = (op: OutboxOpBase, sent: OutboxSent, isRetry: boolean): OutboxResult => {
     if (isStale(op)) {
         releaseOutboxClaim(op.opId);
         return STOPPED;
@@ -250,7 +259,8 @@ const onSent = <Op extends OutboxOpBase>(
     void retryWrite(
         op,
         () => removeOutboxOp(op),
-        () => deps.sessionUserId() !== op.owner,
+        // Until the owner changes (a token that is momentarily missing does not stop it).
+        () => outboxOwner() !== op.owner,
     ).then(landed => {
         if (landed && isRetry && !isStale(op) && hasNoFailureOf(op.entryId)) {
             outboxGate.unblock(op.entryId);
@@ -261,9 +271,8 @@ const onSent = <Op extends OutboxOpBase>(
 
 // The claim is cleared before a backoff or a gate wait (a discard is allowed meanwhile) and only
 // after the failed-list write for a final answer (a discard never races it).
-const onSendError = async <Op extends OutboxOpBase>(
-    op: Op,
-    deps: OutboxDeps<Op>,
+const onSendError = async (
+    op: OutboxOpBase,
     error: unknown,
     retry: () => Promise<OutboxResult>,
     { attempt, isRetry }: { attempt: number; isRetry: boolean },
@@ -275,7 +284,7 @@ const onSendError = async <Op extends OutboxOpBase>(
     const errorClass = classifyOutboxError(error, op.kind);
 
     if (errorClass.kind === 'noop') {
-        return onSent(op, deps, NO_OP, isRetry);
+        return onSent(op, NO_OP, isRetry);
     }
     if (errorClass.kind !== 'final') {
         releaseOutboxClaim(op.opId);
@@ -341,15 +350,20 @@ const attempt = async <Op extends OutboxOpBase>(
         outboxGate.close('auth');
         return retry();
     }
-    claimOutboxOp(op.opId);
+    // M1: ordered after a discard whose write is in flight (§2.3: a discard never races a request).
+    const claim = await claimOutboxOp(op);
+
+    if (claim !== 'claimed') {
+        return claim === 'gone' && !isStale(op) ? CANCELLED : STOPPED;
+    }
     const outcome = await deps.send(op, getOutboxVersion(op.entryId)).then(
         (sent: OutboxSent) => ({ sent }),
         (error: unknown) => ({ error }),
     );
 
     return 'sent' in outcome
-        ? onSent(op, deps, outcome.sent, ignoreEntryBlock)
-        : onSendError(op, deps, outcome.error, retry, {
+        ? onSent(op, outcome.sent, ignoreEntryBlock)
+        : onSendError(op, outcome.error, retry, {
               attempt: count,
               isRetry: ignoreEntryBlock,
           });
@@ -366,14 +380,15 @@ export const runOutboxOp = <Op extends OutboxOpBase>(
 ): Promise<OutboxResult> =>
     attempt(op, deps, ignoreEntryBlock, 0).finally(() => {
         outboxGate.releaseTurn(op.opId);
-        if (isOpCancelled(op.opId)) {
-            void forgetCancelled(op.opId);
+        if (isOpCancelled(op.opId) || isOpCancelledInKey(op.opId)) {
+            void forgetCancelled(op.opId).catch(reportWriteFailure);
         }
     });
 
 /**
  * Re-checks the owner (§2.3): the `auth` gate opens only while the token's `sub` is the outbox
- * owner. Called on a new access token (wired in 03-15b).
+ * owner. Called at the restore and on every new access token (`bootstrap`, the interceptor's
+ * `onAccessTokenChanged`).
  */
 export const recheckOutboxOwner = (sessionUserId: string | null): void => {
     const owner = outboxOwner();
@@ -384,6 +399,16 @@ export const recheckOutboxOwner = (sessionUserId: string | null): void => {
         outboxGate.close('auth');
     }
 };
+
+// A write the outbox refused (stopped, cleared) is no persistence failure.
+const reportWriteFailure = (error: unknown): void => {
+    if (!(error instanceof OutboxWriteStoppedError)) {
+        reportPersistFailed(error);
+    }
+};
+
+/** §2.8: an op older than this (by `createdAt`) is failed `stale` instead of being sent. */
+export const OUTBOX_STALE_MS = 14 * 24 * 60 * 60 * 1000;
 
 const opIdOf = (variables: unknown): unknown =>
     typeof variables === 'object' && variables !== null && 'opId' in variables
@@ -396,8 +421,9 @@ export type OutboxOpCheck = (op: OutboxOpBase) => boolean;
 /**
  * Creates the outbox mutations (the only place, §2.1): each pending op not yet running, by `seq`,
  * as a paused mutation without a scope that continues at once (the drain turn orders them). An
- * op of another owner or not an expense moves to failed `unreadable`; skipped: cancelled, failed,
- * already sent (`pendingRemovals`) and already running ops (idempotent on a repeated call).
+ * op of another owner or not an expense moves to failed `unreadable`, an op older than 14 days to
+ * failed `stale` (§2.8); skipped: cancelled (in memory or in the key), failed, already sent
+ * (`pendingRemovals`) and already running ops (idempotent on a repeated call).
  */
 export const adoptOutboxOps = (
     client: QueryClient,
@@ -415,15 +441,26 @@ export const adoptOutboxOps = (
     pendingOutboxOps().forEach(op => {
         if (
             isOpCancelled(op.opId) ||
+            isOpCancelledInKey(op.opId) ||
             isOpFailed(op.opId) ||
             isPendingRemoval(op.opId) ||
             running.has(op.opId)
         ) {
             return;
         }
-        if (op.owner !== outboxOwner() || !isAcceptable(op)) {
+        const failure =
+            op.owner !== outboxOwner() || !isAcceptable(op)
+                ? 'unreadable'
+                : Date.now() - op.createdAt > OUTBOX_STALE_MS
+                  ? 'stale'
+                  : null;
+
+        if (failure) {
             outboxGate.block(op.entryId);
-            void retryWrite(op, () => recordFailedOp(op, 'unreadable'));
+            void trackFailureWrite(
+                op.entryId,
+                retryWrite(op, () => recordFailedOp(op, failure)),
+            );
             return;
         }
         outboxGate.adopt(op);
@@ -448,5 +485,55 @@ export const adoptOutboxOps = (
         void mutation.continue().catch(() => {
             outboxGate.releaseTurn(op.opId);
         });
+    });
+};
+
+/** What the restore and the adoption need of the outbox's entity (`entities/ledger`). */
+export interface OutboxAdoption {
+    mutationKeyFor: (kind: OutboxKind) => MutationKey;
+    isAcceptable: OutboxOpCheck;
+    /** The `sub` of the current access token. */
+    sessionUserId: () => string | null;
+}
+
+/**
+ * The start of the outbox in this tab (§1.6, §2.3; one tab, no drain lock until 03-15c): the
+ * `auth` gate is closed, `readOutbox` sets `outboxRestore`; only when it is `ok`: one write clears
+ * a stale `sending` claim and moves the unreadable ops to failed, the versions are restored, every
+ * entry with a failed op is blocked, the ops are adopted as paused mutations (by `seq`, skipping
+ * cancelled, failed, pending-removal and running ops), the outbox entries are invalidated (§1.4)
+ * and the `auth` gate opens if the token's `sub` is the owner. The defaults of the outbox keys
+ * must be registered before. Idempotent per op (a repeated call adopts nothing twice). Never
+ * rejects.
+ */
+export const restoreOutbox = (
+    client: QueryClient,
+    userId: string,
+    adoption: OutboxAdoption,
+): Promise<OutboxRestore> => {
+    startOutbox(userId);
+    outboxGate.close('auth');
+    return readOutbox(userId).then(result => {
+        if (result !== 'ok' || outboxOwner() !== userId) {
+            return result;
+        }
+        return writeOutbox(draft => {
+            draft.sending = null;
+        })
+            .catch(reportWriteFailure)
+            .then(() => {
+                if (outboxOwner() !== userId || isOutboxStopped()) {
+                    return result;
+                }
+                restoreOutboxVersions();
+                failedEntryIds().forEach(entryId => outboxGate.block(entryId));
+                adoptOutboxOps(client, adoption.mutationKeyFor, adoption.isAcceptable);
+                // The persisted cache and the outbox are written independently: the server decides.
+                outboxEntryIds().forEach(entryId => {
+                    void client.invalidateQueries({ queryKey: ledgerEntryKey(entryId) });
+                });
+                recheckOutboxOwner(adoption.sessionUserId());
+                return result;
+            });
     });
 };

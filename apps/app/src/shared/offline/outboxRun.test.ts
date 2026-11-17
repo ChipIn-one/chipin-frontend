@@ -1,4 +1,5 @@
 import { onlineManager, QueryClient } from '@tanstack/react-query';
+import { clear } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { ApiResponseFormatError, AuthRequestCancelledError } from 'shared/api/client';
@@ -23,18 +24,42 @@ import {
     failedOutboxOps,
     getOutboxVersion,
     hasPendingCreateOf,
+    markPendingRemoval,
+    noteOutboxVersion,
     type OutboxKind,
     type OutboxOpBase,
     pendingOutboxOps,
+    readOutbox,
     recordFailedOp,
     removeOutboxOp,
     resetOutbox,
-    startOutbox,
+    restoreOutboxVersions,
     stopOutbox,
+    writeOutbox,
 } from './outboxStore';
 import { isEntryWithPendingOp } from './pendingOps';
 
 vi.mock('./queryPersister', () => ({ reportPersistFailed: vi.fn() }));
+// The outbox keys in memory: the queue writes are real read-modify-writes, without IndexedDB timers.
+vi.mock('idb-keyval', () => {
+    const store = new Map<string, unknown>();
+
+    return {
+        get: (key: string) => Promise.resolve(store.get(key)),
+        set: (key: string, value: unknown) => {
+            store.set(key, value);
+            return Promise.resolve();
+        },
+        del: (key: string) => {
+            store.delete(key);
+            return Promise.resolve();
+        },
+        clear: () => {
+            store.clear();
+            return Promise.resolve();
+        },
+    };
+});
 // The queue writes stay real; a test can make one fail or hang (the IndexedDB writes of 03-15b).
 vi.mock('./outboxStore', async importOriginal => {
     const actual = await importOriginal<typeof import('./outboxStore')>();
@@ -72,7 +97,7 @@ const networkError = (): Error =>
 const queue = (
     entryId: string,
     kind: OutboxKind = 'updateExpense',
-    { owner = OWNER, createdAt = 1_000 }: { owner?: string; createdAt?: number } = {},
+    { owner = OWNER, createdAt = Date.now() }: { owner?: string; createdAt?: number } = {},
 ): Promise<OutboxOpBase> =>
     appendOutboxOp(seq => ({
         opId: `op-${seq}`,
@@ -156,10 +181,11 @@ const runAll = (
 
 const tick = (ms = 1_000): Promise<void> => vi.advanceTimersByTimeAsync(ms).then(() => undefined);
 
-beforeEach(() => {
+beforeEach(async () => {
     vi.useFakeTimers();
     resetOutbox();
-    startOutbox(OWNER);
+    await clear();
+    await readOutbox(OWNER);
 });
 
 afterEach(() => {
@@ -605,7 +631,7 @@ describe('03 §2.3 owner check (C3-07)', () => {
 
         await tick();
         session = 'user-2';
-        startOutbox('user-2');
+        await readOutbox('user-2');
         const own = await queue('entry-y', 'createExpense', { owner: 'user-2' });
         const ownRun = runOutboxOp(own, deps);
 
@@ -658,7 +684,7 @@ describe('03 §2.3 owner check (C3-07)', () => {
         expect([...answers.keys()]).toEqual([stale.opId]);
 
         session = 'user-2';
-        startOutbox('user-2');
+        await readOutbox('user-2');
         const own = await appendOutboxOp(seq => ({
             opId: 'op-of-user-2',
             seq,
@@ -722,4 +748,21 @@ test('03 §1.4 C2-08: an entry with a pending or failed op is not persisted', as
     expect(isEntryWithPendingOp(['ledger', 'entry', 'entry-x'])).toBe(true);
     expect(isEntryWithPendingOp(['ledger', 'entry', 'entry-y'])).toBe(false);
     expect(isEntryWithPendingOp(['groups', 'entry', 'entry-x'])).toBe(false);
+});
+
+test('03-15b L3: the restore takes the persisted versions, except of an entry whose sent op waits for its removal', async () => {
+    const first = await queue('entry-x');
+
+    await queue('entry-x');
+    await writeOutbox(draft => {
+        draft.versions.set('entry-x', 'v-persisted');
+    });
+    restoreOutboxVersions();
+    expect(getOutboxVersion('entry-x')).toBe('v-persisted');
+
+    // The first op was sent (in-memory version), its removal write is still pending.
+    noteOutboxVersion(first, 'v-newer');
+    markPendingRemoval(first.opId);
+    restoreOutboxVersions();
+    expect(getOutboxVersion('entry-x')).toBe('v-newer');
 });

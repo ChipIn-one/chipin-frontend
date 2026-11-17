@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { clear } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 import {
@@ -7,7 +8,9 @@ import {
     OnlineOnlyError,
     type OutboxOpRequest,
 } from './outboxRegistry';
-import { type OutboxOpBase, pendingOutboxOps, resetOutbox, startOutbox } from './outboxStore';
+import { type OutboxOpBase, pendingOutboxOps, readOutbox, resetOutbox } from './outboxStore';
+
+import 'fake-indexeddb/auto';
 
 type TestOp = OutboxOpBase & { baseVersion: string | null };
 
@@ -19,9 +22,10 @@ const enqueue = (client: QueryClient, request: Omit<OutboxOpRequest, 'owner'>): 
 
 let client: QueryClient;
 
-beforeEach(() => {
+beforeEach(async () => {
     client = new QueryClient();
-    startOutbox('user-1');
+    await clear();
+    await readOutbox('user-1');
 });
 
 afterEach(() => {

@@ -61,10 +61,47 @@ export interface OutboxOpSeed {
     baseVersion: string | null;
 }
 
+let storagePersistRequested = false;
+let storagePersisted: boolean | null = null;
+
+const storageManager = (): StorageManager | null =>
+    typeof navigator !== 'undefined' && 'storage' in navigator ? navigator.storage : null;
+
+// C3-10: asks once per session that the browser keep the outbox, on the first op saved. The
+// answer of `persisted()` is kept for the caption of 03-16a; a failed request counts as not kept.
+const requestPersistentStorage = (): void => {
+    const storage = storageManager();
+
+    if (storagePersistRequested || !storage || typeof storage.persist !== 'function') {
+        return;
+    }
+    storagePersistRequested = true;
+    void storage
+        .persist()
+        .then(() => storage.persisted())
+        .then(
+            persisted => {
+                storagePersisted = persisted;
+            },
+            () => {
+                storagePersisted = false;
+            },
+        );
+};
+
+/** `navigator.storage.persisted()` after the first op of the session; null until then. */
+export const isStoragePersisted = (): boolean | null => storagePersisted;
+
+/** Tests only: a new session (persistence not requested yet). */
+export const resetStoragePersistRequest = (): void => {
+    storagePersistRequested = false;
+    storagePersisted = null;
+};
+
 /**
- * Appends one op: `build` adds the payload of its kind to the seed. Rejects with
- * `OnlineOnlyError` (nothing appended) for an edit or a delete of an entry that is not a cached
- * expense.
+ * Appends one op: `build` adds the payload of its kind to the seed; resolves once the append write
+ * has landed. Rejects with `OnlineOnlyError` (nothing appended) for an edit or a delete of an entry
+ * that is not a cached expense, and as `appendOutboxOp` does (the limit, a rejected write).
  */
 export const enqueueOutboxOp = <Op extends OutboxOpBase>(
     client: QueryClient,
@@ -85,5 +122,8 @@ export const enqueueOutboxOp = <Op extends OutboxOpBase>(
             base: { opId, seq, owner, entryKind, createdAt, schema: 1, kind, entryId },
             baseVersion: hasPendingCreateOf(entryId) ? null : (cached?.version ?? null),
         }),
-    );
+    ).then(op => {
+        requestPersistentStorage();
+        return op;
+    });
 };

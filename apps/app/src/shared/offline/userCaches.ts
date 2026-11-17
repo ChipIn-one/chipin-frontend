@@ -52,6 +52,22 @@ export const takePendingSeed = (userId: string): CacheSeed | undefined => {
     return seed;
 };
 
+// What starts with a user's new client, wired by `bootstrap/initializeApi`: the outbox (spec 03
+// §2.1: its mutation defaults are registered before its ops are hydrated; nothing with the flag
+// off). `shared` cannot import the ledger entity or the hooks' effects itself.
+type UserClientSetup = (client: QueryClient, userId: string) => void;
+
+let userClientSetup: UserClientSetup | null = null;
+
+export const setUserClientSetup = (setup: UserClientSetup | null): void => {
+    userClientSetup = setup;
+};
+
+/** Runs the wired setup for a user's new client (`clientFor`). */
+export const runUserClientSetup = (client: QueryClient, userId: string): void => {
+    userClientSetup?.(client, userId);
+};
+
 // IndexedDB keys whose writes are dropped: a throttled persist scheduled before `clearUserData`
 // would otherwise bring the user's data back after the `del`.
 const blockedWriteKeys = new Set<string>();
