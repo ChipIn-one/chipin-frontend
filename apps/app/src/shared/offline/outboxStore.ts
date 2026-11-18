@@ -669,8 +669,9 @@ export interface OutboxAppendView {
  * Appends the op that `build` makes with the next `seq` (C2-16), resolving once the write has
  * landed. A create of an entry that already has the same create in the queue (a repeated submit of
  * the same form, §2.7) is not appended: it resolves with the built op and writes nothing; with
- * another draft it is refused (`OutboxCreateSentError`), nothing is appended. Refused at the limit (`OutboxLimitError`). A rejected write (`OutboxPersistError`): the op does not exist
- * and offline writing is off until restart (§2.8, Sentry `outbox.persist_failed`). A write-lock
+ * another draft it is refused (`OutboxCreateSentError`), nothing is appended. Refused at the
+ * limit (`OutboxLimitError`). A rejected write (`OutboxPersistError`): the op does not exist and
+ * offline writing is off until restart (§2.8, Sentry `outbox.persist_failed`). A write-lock
  * timeout is a transient `OutboxPersistError` (the `saveRetry` toast): offline writing stays on
  * (Sentry `outbox.write_lock_timeout`).
  */
@@ -784,6 +785,21 @@ export const noteOutboxVersion = (op: OutboxOpBase, version: string | null): voi
     } else {
         outboxVersions.set(op.entryId, version);
     }
+};
+
+/**
+ * R2-L2, R3-L1: forgets the version of every entry with no op left in the queue or the failed list
+ * (as last read) and none being appended here: a later write of it is based on the cache. After a
+ * discard in this tab and after every re-read (another tab's discard).
+ */
+export const forgetOrphanVersions = (): void => {
+    const left = entryIdsOf(state);
+
+    [...outboxVersions.keys()].forEach(entryId => {
+        if (!left.has(entryId) && !appendsInFlight.has(entryId)) {
+            outboxVersions.delete(entryId);
+        }
+    });
 };
 
 /**
@@ -1038,18 +1054,12 @@ export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
         return { discarded, refused, entries, pendingIds };
     }).then(({ discarded, refused, entries, pendingIds }) => {
         pendingIds.forEach(opId => cancelledOpIds.add(opId));
-        const leftEntries = entryIdsOf(state);
-
         entries.forEach(entryId => {
             if (hasNoFailureOf(entryId)) {
                 outboxGate.unblock(entryId);
             }
-            // R2-L2: no op of the entry is left (nor being appended): a later write of it is based
-            // on the cache.
-            if (!leftEntries.has(entryId) && !appendsInFlight.has(entryId)) {
-                outboxVersions.delete(entryId);
-            }
         });
+        forgetOrphanVersions();
         wake();
         return { discarded, refused };
     });

@@ -544,6 +544,52 @@ describe('03-15c2 two tabs: append in any tab, one drain tab (D29)', () => {
         expect(await readFailedKey()).toEqual([]);
     });
 
+    test('03-16a R3-L1: a discard in B forgets the version the drain tab A kept: the next edit goes with the refreshed cache (If-Match v3)', async () => {
+        const ledger = serveLedger();
+
+        ledger.entries.set('entry-x', 1);
+        await idb.set(
+            FAILED_KEY,
+            persistCodec.stringify(
+                [updateOp(1, 'entry-x', 'v1'), updateOp(2, 'entry-x', 'v1')].map(op => ({
+                    op,
+                    reason: 'validation',
+                    failedAt: 1,
+                })),
+            ),
+        );
+        await storeOutbox([], { nextSeq: 3 });
+        const tabA = await openTab();
+
+        await tabA.started;
+        const tabB = await openTab();
+
+        await tabB.started;
+        // A sends the Retry of op-1 (v2); the failed op-2 of the entry keeps that version in A.
+        await tabA.drain.retryOutboxOps(['op-1']);
+        await vi.waitFor(() => expect(ledger.requests).toEqual(['PATCH entry-x If-Match "v1"']));
+        await vi.waitFor(() => expect(tabA.store.getOutboxVersion('entry-x')).toBe('v2'));
+
+        await tabB.drain.discardOutboxOps(['op-2']);
+        await vi.waitFor(() => expect(tabA.store.getOutboxVersion('entry-x')).toBeNull());
+        // The entry was edited elsewhere and read again.
+        ledger.entries.set('entry-x', 3);
+        tabB.client.setQueryData(tabB.registry.ledgerEntryKey('entry-x'), {
+            type: 'EXPENSE',
+            version: 'v3',
+        });
+        await queueUpdate(tabB, 'entry-x');
+
+        await vi.waitFor(() =>
+            expect(ledger.requests).toEqual([
+                'PATCH entry-x If-Match "v1"',
+                'PATCH entry-x If-Match "v3"',
+            ]),
+        );
+        await vi.waitFor(async () => expect((await readOutboxKey())?.ops).toEqual([]));
+        expect(await readFailedKey()).toEqual([]);
+    });
+
     test('a failed op of entry X in A does not block entry Y appended in B', async () => {
         const ledger = serveLedger();
 

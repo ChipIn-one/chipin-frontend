@@ -808,7 +808,8 @@ in backoff may already be on the server, so it is never replaced. (3) Resolves 0
 the entry from its call until it settles; while one is counted, the removal of a sent op of the entry keeps the
 version (in memory; persisted only once an op of the entry is in the key), and it is forgotten when the last append
 settles with no op of the entry queued or failed; a failed op of the entry keeps it too (its Retry is sent with it), and
-a discard that leaves no op of the entry forgets it (a later write is based on the refreshed cache).
+a discard that leaves no op of the entry forgets it, in the discarding tab and in the drain tab after its re-read
+(`forgetOrphanVersions`; a later write is based on the refreshed cache).
 Across tabs the count is per tab: an append in tab B while A's removal lands relies on B having written A's
 `settled` entry first (the message is posted before the removal write lands), a residual window with no data loss. (4) Resolves 03-15c2 (3) (R1 L3): `settledVersions` is gone; the version
 lives only in `ledger.entry(id)`, so a fresher read wins. (5) L5: a ledger write resolves `{ queued }`; a queued write
