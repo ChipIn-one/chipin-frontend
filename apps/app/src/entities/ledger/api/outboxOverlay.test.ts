@@ -11,6 +11,7 @@ import {
     notifyOutboxChange,
     pendingOutboxOps,
     resetOutbox,
+    writeOutbox,
 } from 'shared/offline/outboxStore';
 import { persistCodec } from 'shared/offline/persistCodec';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -19,9 +20,9 @@ import { mountAsUserClient } from 'test/userClient';
 import type { ExpenseDraft } from '../model/types';
 
 import type { LedgerWriteEffects } from './mutations';
-import { createExpenseViaOutbox, startLedgerOutbox } from './outbox';
+import { createExpenseViaOutbox, startLedgerOutbox, updateExpenseViaOutbox } from './outbox';
 import { discardOutboxItem, retryOutboxItem, useOutboxOverlay } from './outboxOverlay';
-import { capabilitiesQueryOptions } from './queries';
+import { capabilitiesQueryOptions, ledgerKeys } from './queries';
 
 import 'fake-indexeddb/auto';
 
@@ -98,6 +99,17 @@ const queueCreate = (entryId: string): Promise<void> => {
     return queue();
 };
 
+const queueEdit = (entryId: string, description: string): Promise<void> => {
+    const queue = updateExpenseViaOutbox(client, { entryId, entry: { description } });
+
+    if (!queue) {
+        throw new Error('Expected the outbox path');
+    }
+    return queue();
+};
+
+const opIds = (): string[] => pendingOutboxOps().map(({ opId }) => opId);
+
 beforeEach(async () => {
     client = mountAsUserClient('user-1', getDefaultTestQueryClient());
     await clear();
@@ -168,7 +180,7 @@ describe('03-16a part B overlay', () => {
         if (!item) {
             throw new Error('Expected a pending item');
         }
-        await act(() => discardOutboxItem(item));
+        await act(() => discardOutboxItem(client, item));
 
         await waitFor(() => {
             expect(result.current.count).toBe(0);
@@ -203,7 +215,7 @@ describe('03-16a part B overlay', () => {
         if (!create) {
             throw new Error('Expected the failed create');
         }
-        await act(() => discardOutboxItem(create));
+        await act(() => discardOutboxItem(client, create));
 
         await waitFor(() => {
             expect(result.current.count).toBe(0);
@@ -235,4 +247,127 @@ describe('03-16a part B overlay', () => {
             expect(result.current.failed[0]?.isRetrying ?? true).toBe(true);
         });
     });
+});
+
+describe('03-16a part B R1 M1/L1: a create is cancelled with its entry, all or nothing', () => {
+    // A queued create of `entry-a` and one edit of it, offline; the create's item as rendered.
+    const queueCreateAndEdit = async () => {
+        await startOutbox();
+        onlineManager.setOnline(false);
+        const { result } = renderHook(useOutboxOverlay);
+
+        await act(() => queueCreate('entry-a'));
+        await act(() => queueEdit('entry-a', 'Dinner, edited'));
+        await waitFor(() => {
+            expect(result.current.pending).toHaveLength(2);
+        });
+        const create = result.current.pending.find(({ kind }) => kind === 'createExpense');
+
+        if (!create) {
+            throw new Error('Expected the pending create');
+        }
+        return { create, before: opIds() };
+    };
+
+    test('the create claimed (being sent) between render and confirm: nothing is cancelled', async () => {
+        const { create, before } = await queueCreateAndEdit();
+
+        // Another tab claims the create after this tab rendered its row.
+        await writeOutbox(draft => {
+            draft.sending = { opId: create.opId, session: 'another-tab' };
+        });
+
+        await expect(discardOutboxItem(client, create)).resolves.toBe(false);
+        expect(opIds()).toEqual(before);
+    });
+
+    test('the create already sent and removed before confirm: its edit is kept', async () => {
+        const { create, before } = await queueCreateAndEdit();
+
+        await writeOutbox(draft => {
+            draft.ops = draft.ops.filter(({ opId }) => opId !== create.opId);
+        });
+
+        await expect(discardOutboxItem(client, create)).resolves.toBe(false);
+        expect(opIds()).toEqual(before.filter(opId => opId !== create.opId));
+    });
+
+    test('an edit appended after the row was rendered is cancelled with the create', async () => {
+        await startOutbox();
+        onlineManager.setOnline(false);
+        const { result } = renderHook(useOutboxOverlay);
+
+        await act(() => queueCreate('entry-a'));
+        await waitFor(() => {
+            expect(result.current.pending).toHaveLength(1);
+        });
+        const [create] = result.current.pending;
+
+        if (!create) {
+            throw new Error('Expected the pending create');
+        }
+        expect(create.relatedOpIds).toEqual([]);
+        await act(() => queueEdit('entry-a', 'Dinner, edited'));
+
+        await expect(act(() => discardOutboxItem(client, create))).resolves.toBe(true);
+        expect(opIds()).toEqual([]);
+        // R1 N4: no optimistic entry of a create that will not exist.
+        expect(client.getQueryData(ledgerKeys.entry('entry-a'))).toBeUndefined();
+    });
+});
+
+describe('03-16a part B R1 L2: unreadable and blocked', () => {
+    test('an unreadable record counts toward the badge; an op behind a failed record is blocked', async () => {
+        await set(
+            outboxFailedKey('user-1'),
+            persistCodec.stringify([
+                failedRecord('op-create', 'entry-c', 'createExpense', 'validation'),
+                { op: { entryId: 'entry-u' }, reason: 'validation', failedAt: 1 },
+            ]),
+        );
+        await startOutbox();
+        onlineManager.setOnline(false);
+        client.setQueryData(ledgerKeys.entry('entry-c'), {
+            id: 'entry-c',
+            type: 'EXPENSE',
+            version: '1',
+            groupId: 'group-1',
+            expense: null,
+        });
+        const { result } = renderHook(useOutboxOverlay);
+
+        await act(() => queueEdit('entry-c', 'Taxi home'));
+
+        await waitFor(() => {
+            expect(result.current.pending).toHaveLength(1);
+        });
+        expect(result.current.unreadableCount).toBe(1);
+        expect(result.current.count).toBe(3);
+        expect(result.current.pending[0]?.status).toBe('blocked');
+    });
+});
+
+test('03-16a part B R1 N4: a cancelled edit has its cached entry read again', async () => {
+    await startOutbox();
+    onlineManager.setOnline(false);
+    client.setQueryData(ledgerKeys.entry('entry-e'), {
+        id: 'entry-e',
+        type: 'EXPENSE',
+        version: '1',
+        groupId: 'group-1',
+        expense: null,
+    });
+    const { result } = renderHook(useOutboxOverlay);
+
+    await act(() => queueEdit('entry-e', 'Edited'));
+    await waitFor(() => {
+        expect(result.current.pending).toHaveLength(1);
+    });
+    const [edit] = result.current.pending;
+
+    if (!edit) {
+        throw new Error('Expected the pending edit');
+    }
+    await expect(act(() => discardOutboxItem(client, edit))).resolves.toBe(true);
+    expect(client.getQueryState(ledgerKeys.entry('entry-e'))?.isInvalidated).toBe(true);
 });

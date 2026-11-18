@@ -1,4 +1,4 @@
-import { Callout, Flex, Heading, Text } from '@radix-ui/themes';
+import { Callout, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import type { OutboxOverlay } from 'entities/ledger';
@@ -21,7 +21,7 @@ export const OutboxSheet = ({ overlay }: Props) => {
     const { t } = useTranslation('common');
     const isOpen = useOutboxSheetStore(state => state.isOpen);
     const setIsOpen = useOutboxSheetStore(state => state.setIsOpen);
-    const { pending, failed, isStorageNotPersisted } = overlay;
+    const { pending, failed, unreadableCount, isStorageNotPersisted } = overlay;
 
     return (
         <BaseModal
@@ -36,7 +36,14 @@ export const OutboxSheet = ({ overlay }: Props) => {
                             <Callout.Text>{t('outbox.storageNotPersisted')}</Callout.Text>
                         </Callout.Root>
                     )}
-                    {pending.length === 0 && failed.length === 0 && (
+                    {unreadableCount > 0 && (
+                        <Card size="1">
+                            <Text size="1" color="gray">
+                                {t('outbox.unreadable', { count: unreadableCount })}
+                            </Text>
+                        </Card>
+                    )}
+                    {pending.length === 0 && failed.length === 0 && unreadableCount === 0 && (
                         <Text color="gray">{t('outbox.empty')}</Text>
                     )}
                     {failed.length > 0 && (

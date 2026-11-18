@@ -174,7 +174,6 @@
     },
     "outbox": {
         "badge": "Unsent: {{count}}",
-        "badgeLabel": "Unsent operations: {{count}}. Open the list",
         "title": "Unsent operations",
         "description": "Operations saved on this device that the server has not received yet",
         "empty": "Nothing waits to be sent",
@@ -192,7 +191,8 @@
             "server-unavailable": "Server unavailable",
             "sign-in-required": "Sign-in required",
             "update-required": "Update required",
-            "failed-unsaved": "Sent, saving the result on the device"
+            "failed-unsaved": "Sent, saving the result on the device",
+            "blocked": "Waiting: an earlier operation of this expense was not sent"
         },
         "reason": {
             "validation": "The server rejected the data",
@@ -216,6 +216,9 @@
         "storageNotPersisted": "The browser may delete unsaved data of this device (Safari — after 7 days without opening; a private window — on close)",
         "unavailable": "Offline saving is unavailable. Operations on the device are preserved — restart the app",
         "balanceExcludesPending": "Excluding unsent operations",
-        "balanceCounterLabel": "Unsent operations: {{count}}. Open the list"
+        "badgeHint": ", open the list",
+        "balanceCounterHint": "unsent operations, open the list",
+        "unreadable_one": "{{count}} record can't be read on this device (maybe from a newer app version); it is kept",
+        "unreadable_other": "{{count}} records can't be read on this device (maybe from a newer app version); they are kept"
     }
 }

@@ -1,4 +1,4 @@
-import { Button, Callout, Flex } from '@radix-ui/themes';
+import { Button, Callout, Flex, VisuallyHidden } from '@radix-ui/themes';
 import { CloudUploadIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -39,13 +39,13 @@ export const OutboxControls = () => {
                         size="1"
                         variant="soft"
                         color="amber"
-                        aria-label={t('outbox.badgeLabel', { count })}
                         onClick={() => {
                             setIsOpen(true);
                         }}
                     >
                         <CloudUploadIcon size={14} aria-hidden="true" />
                         {t('outbox.badge', { count })}
+                        <VisuallyHidden>{t('outbox.badgeHint')}</VisuallyHidden>
                     </Button>
                 </Flex>
             )}

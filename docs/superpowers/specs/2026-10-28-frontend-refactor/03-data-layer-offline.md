@@ -826,12 +826,20 @@ Deviation (03-16a part B): the outbox UI. (1) `useOutboxOverlay()` (`entities/le
 re-read, the restore, an owner change, a status, the drain lock taken or released, the `persisted()` answer); flag off
 it is a constant empty view with no subscription. It has no `conflictDrafts` until 03-16b. "Sending" is the
 `OutboxState.sending` claim; an op claimed, or sent and waiting for its removal, offers no Cancel (`discardOps`
-refuses it anyway). The Cancel of a create, pending as well as failed, takes the other ops of its entry (the reason of
-C2-15 holds for both) and confirms "and N related edits". Retry is not offered for `unreadable` and the interim
-`conflict`; `stale` reads "Send anyway". (2) Internal pages have no top header (a sidebar and a bottom bar), so the
+refuses it anyway); a pending op of an entry blocked by a failed or unreadable record is `blocked`. The Cancel of a
+create, pending as well as failed, confirms "and N related edits" and goes through `discardEntryOps(createOpId)`
+(R1 M1/L1): under the write lock it takes the group of the create's entry from the draft (ops + failed, so an op
+another tab appended since this tab's last read is in it) and discards all of it in one write (the outbox key first,
+N2), or nothing when the create is no longer queued or failed or any op of the group is claimed or waits for its
+removal. Whenever the item itself was not discarded the sheet says it can no longer be cancelled. A cancelled create
+leaves `ledger.entry(id)`, a cancelled edit or delete invalidates it (R1 N4). Retry is not offered for `unreadable`
+and the interim `conflict`; `stale` reads "Send anyway". (2) Internal pages have no top header (a sidebar and a bottom bar), so the
 badge is a button at the top of the content column of `InternalPageLayout`, mounted by the app layer only with the
-flag on, shown while pending + failed > 0; a failed restore shows only the `outboxUnavailable` banner. Failed records
-whose op is unreadable count toward the limit but are not listed. (3) The amount and "your share" are shown for a
+flag on, shown while pending + failed + unreadable > 0 (what the limit counts); a failed restore shows only the
+`outboxUnavailable` banner. Failed records whose op is unreadable have one row without actions ("N records can't be
+read on this device… they are kept", R1 L2). An edit without a new description and a delete are named by the cached
+`ledger.entry(id)` (R1 N3). The sheet's open state is reset with the user stores on logout and an owner change (R1
+N2). (3) The amount and "your share" are shown for a
 create only. The friend balances get the caption once per currency card. (4) Deferred: "Create as a new expense" for
 `deletedRemotely` (needs the edit form prefilled from the cached entry and the patch; a TODO on the row) and the
 "updated <relative time>" caption of a balance cache older than 24 h (the balances still come from legacy stores

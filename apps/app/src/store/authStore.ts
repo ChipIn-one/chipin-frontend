@@ -31,6 +31,7 @@ import {
 } from './authConstants';
 import { useExpenseModalStore } from './expenseModalStore';
 import { loadGroupsListForSession } from './groupsList';
+import { useOutboxSheetStore } from './outboxSheetStore';
 import {
     cachedUserId,
     loadKnownUsersForSession,
@@ -68,10 +69,11 @@ const resetAuthScopedStores = () => {
     resetSessionSelfLoad();
 };
 
-// Step (2a) of `clearUserData`: the legacy stores and the expense draft.
+// Step (2a) of `clearUserData`: the legacy stores, the expense draft and the open `OutboxSheet`.
 const resetUserStores = () => {
     resetAuthScopedStores();
     useExpenseModalStore.getState().reset();
+    useOutboxSheetStore.getState().setIsOpen(false);
 };
 
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).

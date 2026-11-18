@@ -1,4 +1,4 @@
-import { Button, Flex, Text } from '@radix-ui/themes';
+import { Button, Flex, Text, VisuallyHidden } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { useOutboxOverlay } from 'entities/ledger';
@@ -27,12 +27,11 @@ export const OutboxBalanceCaption = () => {
                 size="1"
                 variant="soft"
                 color="amber"
-                aria-label={t('outbox.balanceCounterLabel', { count })}
                 onClick={() => {
                     setIsOpen(true);
                 }}
             >
-                {count}
+                {count} <VisuallyHidden>{t('outbox.balanceCounterHint')}</VisuallyHidden>
             </Button>
         </Flex>
     );

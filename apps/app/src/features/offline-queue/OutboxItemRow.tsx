@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Card, Flex, Text } from '@radix-ui/themes';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -7,6 +8,8 @@ import { legacyAmountFromMoney } from 'entities/balance';
 import {
     discardOutboxItem,
     type FailedOutboxItem,
+    type LedgerEntry,
+    ledgerKeys,
     type PendingOutboxItem,
     retryOutboxItem,
 } from 'entities/ledger';
@@ -23,17 +26,19 @@ const MoneyText = ({ money }: { money: Money }) => (
     <Amount value={legacyAmountFromMoney(money)} tokenCode={money.currency} />
 );
 
-// "Cancel operation" (§2.5): confirmed; a create names the edits of its entry cancelled with it.
-// The store refuses an op being sent: the toast says so and nothing is cancelled.
+// "Cancel operation" (§2.5): confirmed; a create names the edits of its entry, cancelled with it
+// all or nothing. When the item was not cancelled (being sent, already sent or gone; for a create,
+// nothing of its entry is cancelled then) the toast says it can no longer be cancelled.
 const CancelOperation = ({ item }: { item: Item }) => {
     const { t } = useTranslation(['common', 'toasts']);
+    const client = useQueryClient();
     const [isOpened, setIsOpened] = useState(false);
     const related = item.relatedOpIds.length;
 
     const onAction = (): Promise<void> =>
-        discardOutboxItem(item).then(
-            refused => {
-                if (refused.length > 0) {
+        discardOutboxItem(client, item).then(
+            isDiscarded => {
+                if (!isDiscarded) {
                     toast.error(t('toasts:offline.cancelRefused'));
                 }
             },
@@ -104,7 +109,18 @@ const RetryOperation = ({ item }: { item: FailedOutboxItem }) => {
 /** One op of `OutboxSheet`: what it is, its status or failure, and what may be done with it. */
 export const OutboxItemRow = ({ item }: { item: Item }) => {
     const { t } = useTranslation('common');
+    const client = useQueryClient();
     const failed = isFailed(item) ? item : null;
+    // R1 N3: an edit without a new description and a delete name the expense as cached.
+    const description =
+        item.description ??
+        client.getQueryData<LedgerEntry>(ledgerKeys.entry(item.entryId))?.expense?.description ??
+        null;
+    const state = failed
+        ? t(`outbox.reason.${failed.reason}`)
+        : 'status' in item
+          ? t(`outbox.status.${item.status}`)
+          : '';
 
     return (
         <Card size="1">
@@ -112,14 +128,12 @@ export const OutboxItemRow = ({ item }: { item: Item }) => {
                 <Flex justify="between" align="start" gap="3">
                     <Flex direction="column" gap="1" minWidth="0">
                         <Text size="2" weight="medium" truncate>
-                            {item.description ?? t(`outbox.kind.${item.kind}`)}
+                            {description ?? t(`outbox.kind.${item.kind}`)}
                         </Text>
                         <Text size="1" color="gray">
-                            {t(`outbox.kind.${item.kind}`)}
-                            {' · '}
-                            {failed
-                                ? t(`outbox.reason.${failed.reason}`)
-                                : 'status' in item && t(`outbox.status.${item.status}`)}
+                            {description === null
+                                ? state
+                                : `${t(`outbox.kind.${item.kind}`)} · ${state}`}
                         </Text>
                     </Flex>
                     {item.amount && (

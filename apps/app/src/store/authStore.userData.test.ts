@@ -17,6 +17,7 @@ import { fakeAccessToken } from 'test/fakeAccessToken';
 
 import { onAccessTokenRefreshed, useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
+import { useOutboxSheetStore } from './outboxSheetStore';
 import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 
 import 'fake-indexeddb/auto';
@@ -266,6 +267,27 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
         expect(getTabUserId()).toBe(USER_Y);
         expect(getLocalUser()).toEqual({ id: USER_Y, role: 'USER', settings });
         expect(useAuthStore.getState().status).toBe('authenticated');
+    });
+});
+
+describe('03-16a part B R1 N2: OutboxSheet does not stay open for the next user', () => {
+    test('signOut() closes it', async () => {
+        await signInX();
+        useOutboxSheetStore.setState({ isOpen: true });
+
+        await useAuthStore.getState().signOut();
+
+        expect(useOutboxSheetStore.getState().isOpen).toBe(false);
+    });
+
+    test('sign-in of Y over X closes it', async () => {
+        await signInX();
+        useOutboxSheetStore.setState({ isOpen: true });
+        useAuthStore.getState().expireSession();
+
+        await signInWith(USER_Y, 'switch-code-sheet');
+
+        expect(useOutboxSheetStore.getState().isOpen).toBe(false);
     });
 });
 

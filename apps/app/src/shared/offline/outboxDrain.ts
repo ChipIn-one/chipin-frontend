@@ -30,6 +30,7 @@ import {
     abortOutboxSends,
     cancelledInKey,
     currentOutboxFence,
+    discardEntryOps,
     discardOps,
     type DiscardResult,
     failedEntryIds,
@@ -510,6 +511,10 @@ const syncIfHolder = (): Promise<void> => {
 /** "Cancel" from any tab (C3-04): a claimed op is refused; the holder applies it at once. */
 export const discardOutboxOps = (opIds: readonly string[]): Promise<DiscardResult> =>
     discardOps(opIds).then(result => syncIfHolder().then(() => result));
+
+/** "Cancel" of a create with the ops of its entry, all or nothing (C2-15, 03-16a part B R1). */
+export const discardOutboxEntry = (createOpId: string): Promise<DiscardResult> =>
+    discardEntryOps(createOpId).then(result => syncIfHolder().then(() => result));
 
 /** "Retry" from any tab (§2.3): the holder adopts the failed ops; resolves with the requested ids. */
 export const retryOutboxOps = (opIds: readonly string[]): Promise<string[]> => {

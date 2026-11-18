@@ -43,6 +43,6 @@ test('§3: with unsent ops the balance says it excludes them; the counter opens 
     expect(screen.getByText('Excluding unsent operations')).toBeTruthy();
     await userEvent
         .setup()
-        .click(screen.getByRole('button', { name: 'Unsent operations: 2. Open the list' }));
+        .click(screen.getByRole('button', { name: '2 unsent operations, open the list' }));
     expect(useOutboxSheetStore.getState().isOpen).toBe(true);
 });
