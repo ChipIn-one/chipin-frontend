@@ -6,7 +6,8 @@
 // appends an op (the registry checks it is an expense) and the drain tab's adoption creates the
 // op's mutation with the outbox key and its defaults. A settlement and
 // settle-up never take this path (§2.9).
-import type { QueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { notifyManager, type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { getAccessTokenUserId } from 'helpers/authSession';
@@ -249,6 +250,36 @@ export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
     );
 };
 
+/**
+ * `isOfflineWriteAvailable` for a component, read again on every query cache change (the
+ * capabilities are fetched once when missing). Flag off: false, nothing is read or fetched.
+ */
+export const useIsOfflineWriteAvailable = (): boolean => {
+    const client = useQueryClient();
+    const [isAvailable, setIsAvailable] = useState(false);
+
+    useEffect(() => {
+        if (!isOfflineWritesFlagOn()) {
+            return undefined;
+        }
+        const capabilitiesKey = capabilitiesQueryOptions().queryKey;
+        // Only with the capabilities cached: a missing one is fetched once here, not on every change.
+        const check = (): void => {
+            setIsAvailable(
+                client.getQueryData(capabilitiesKey) !== undefined &&
+                    isOfflineWriteAvailable(client),
+            );
+        };
+
+        void client.prefetchQuery(capabilitiesQueryOptions());
+        check();
+        // Deferred: a cache change may come from another component's render.
+        return client.getQueryCache().subscribe(notifyManager.batchCalls(check));
+    }, [client]);
+
+    return isAvailable;
+};
+
 export type LedgerWritePath = 'online' | 'outbox';
 
 export type LedgerWriteTarget = { kind: 'create' } | { kind: 'update' | 'delete'; entryId: string };
@@ -277,20 +308,27 @@ const isAcceptableLedgerOp = (client: QueryClient, op: OutboxOpBase): boolean =>
 const registeredClients = new WeakSet<QueryClient>();
 
 // §2.2/§2.5 2xx: the answered entry (with its new version) into `ledger.entry(id)` before the
-// invalidation, so the next edit appended here is based on it; a deleted entry leaves the cache. An
-// answer that is not readable is read again by the invalidation.
-const writeAnsweredEntry = (client: QueryClient, op: LedgerOutboxOp, entry: unknown): void => {
+// invalidation, so the next edit appended here is based on it. A read in flight is cancelled first:
+// its older answer must not land over this one (R1 L1). A deleted entry, and an answer without a
+// readable version (R1 L2: neither the optimistic nor an older version may stay), leave the cache.
+const writeAnsweredEntry = (
+    client: QueryClient,
+    op: LedgerOutboxOp,
+    entry: unknown,
+): Promise<void> => {
     const queryKey = ledgerKeys.entry(op.entryId);
+    const answered = op.kind === 'deleteExpense' ? null : readLedgerEntry(entry);
 
-    if (op.kind === 'deleteExpense') {
-        client.removeQueries({ queryKey, exact: true });
-        return;
-    }
-    const answered = readLedgerEntry(entry);
-
-    if (answered) {
-        client.setQueryData<LedgerEntry>(queryKey, answered);
-    }
+    return client
+        .cancelQueries({ queryKey, exact: true })
+        .catch(() => undefined)
+        .then(() => {
+            if (answered) {
+                client.setQueryData<LedgerEntry>(queryKey, answered);
+            } else {
+                client.removeQueries({ queryKey, exact: true });
+            }
+        });
 };
 
 // What is read again after the op settled (`invalidateAfterLedgerOp`): its views and its entry.
@@ -337,14 +375,14 @@ export const registerLedgerOutboxDefaults = (
                     return undefined;
                 }
                 const entry = result?.kind === 'sent' ? result.entry : null;
-
-                if (!error) {
-                    writeAnsweredEntry(client, variables, entry);
-                }
-                announceOutboxSettled(variables, error ? 'failed' : 'sent', entry);
                 const refresh = error ? effects.onWriteFailed : effects.onEntryWritten;
 
-                return refresh(opContext(variables), client).catch(() => undefined);
+                return (error ? Promise.resolve() : writeAnsweredEntry(client, variables, entry))
+                    .then(() => {
+                        announceOutboxSettled(variables, error ? 'failed' : 'sent', entry);
+                        return refresh(opContext(variables), client);
+                    })
+                    .catch(() => undefined);
             },
         });
     });
@@ -370,8 +408,9 @@ const ledgerDrainHooks = (
             return;
         }
         if (result === 'sent') {
-            writeAnsweredEntry(client, op, entry);
-            void effects.onEntryWritten(opContext(op), client).catch(() => undefined);
+            void writeAnsweredEntry(client, op, entry)
+                .then(() => effects.onEntryWritten(opContext(op), client))
+                .catch(() => undefined);
             return;
         }
         void client.invalidateQueries({ queryKey: ledgerKeys.entry(op.entryId) });

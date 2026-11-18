@@ -45,11 +45,16 @@ const ExpenseWireSchema = z.object({
     participants: z.array(z.object({ id: z.string() })),
 });
 
-const LedgerEntryWireSchema = z.object({
+// What decides the outbox path and its `If-Match`: read on its own, so an expense this app cannot
+// read still leaves the answered version (R1 L2).
+const LedgerEntryHeadSchema = z.object({
     id: z.string(),
     type: z.enum(['EXPENSE', 'SETTLEMENT']),
     version: z.string(),
     groupId: z.string().nullish(),
+});
+
+const LedgerEntryWireSchema = LedgerEntryHeadSchema.extend({
     expense: ExpenseWireSchema.nullish(),
 });
 
@@ -76,12 +81,25 @@ export const toLedgerEntry = (wire: unknown): LedgerEntry => {
     };
 };
 
-/** The entry, or null when it is not readable (the caller reads it again instead). */
+/**
+ * The entry; without its expense when only that is not readable; null when not even its type and
+ * version are (the caller drops the cached entry and reads it again).
+ */
 export const readLedgerEntry = (wire: unknown): LedgerEntry | null => {
     try {
         return toLedgerEntry(wire);
     } catch {
-        return null;
+        const head = LedgerEntryHeadSchema.safeParse(wire);
+
+        return head.success
+            ? {
+                  id: head.data.id,
+                  type: head.data.type,
+                  version: head.data.version,
+                  groupId: head.data.groupId ?? null,
+                  expense: null,
+              }
+            : null;
     }
 };
 

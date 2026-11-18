@@ -1,6 +1,7 @@
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { clear } from 'idb-keyval';
 import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -9,21 +10,27 @@ import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { activityKeys } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
-import { ledgerKeys } from 'entities/ledger';
+import { capabilitiesQueryOptions, ledgerKeys } from 'entities/ledger';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
-import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
+import {
+    LedgerWriteRefusedError,
+    startUserLedgerOutbox,
+    toastLedgerWriteError,
+} from 'hooks/useLedgerMutations';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { domainExpenseEvent, domainSettlementEvent } from 'test/activityFixtures';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
+import { resetOutbox } from 'test/outbox';
 import { mountAsUserClient } from 'test/userClient';
 
 import { ActivitySubeventsButtons } from './ActivitySubeventsButtons';
 
+import 'fake-indexeddb/auto';
 import 'i18n/index';
 
 vi.mock('sonner', () => ({
@@ -590,11 +597,27 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
         expect(client.getQueryState(ledgerKeys.entry('expense-id'))).toBeUndefined();
     });
 
-    test('offline writes on: the expense is read into the cache, a settlement is not', async () => {
+    // Offline writes available: the flag, the outbox of the user restored, the capabilities.
+    const withOfflineWrites = async (client: QueryClient): Promise<void> => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        await clear();
+        await startUserLedgerOutbox(client, 'user-id');
+        client.setQueryData(capabilitiesQueryOptions().queryKey, [
+            'ledger.clientEntryId',
+            'ledger.entryVersion',
+            'client.minVersion',
+        ]);
+    };
+
+    afterEach(() => {
+        resetOutbox();
+    });
+
+    test('offline writes available: the expense is observed in the cache, a settlement and an unchangeable entry are not', async () => {
         const client = signIn();
         const reads = serveEntry();
 
+        await withOfflineWrites(client);
         render(
             <>
                 <ActivitySubeventsButtons
@@ -606,6 +629,16 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
                     parentEvent={settlementEvent(false)}
                     parentActivityId="settlement-activity-id"
                     childEvents={[]}
+                />
+                <ActivitySubeventsButtons
+                    parentEvent={domainExpenseEvent({
+                        ...legacyParentEvent,
+                        id: 'other-activity-id',
+                        metadata: { ...legacyParentEvent.metadata, entryId: 'other-id' },
+                    })}
+                    parentActivityId="other-activity-id"
+                    childEvents={[]}
+                    canChange={false}
                 />
             </>,
         );
@@ -619,6 +652,37 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
                 expense: null,
             });
         });
+        // An observer: the entry is read again with the views (focus, reconnect, invalidation).
+        expect(
+            client
+                .getQueryCache()
+                .find({ queryKey: ledgerKeys.entry('expense-id') })
+                ?.getObserversCount(),
+        ).toBe(1);
         expect(reads).toEqual(['expense-id']);
+    });
+
+    test('flag on but offline writes unavailable (no backend capabilities): no ledger entry is read or cached', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        const client = signIn();
+        const reads = serveEntry();
+
+        server.use(http.get('*/health', () => HttpResponse.json({ status: 'UP' })));
+        await clear();
+        await startUserLedgerOutbox(client, 'user-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await waitFor(() => {
+            expect(client.getQueryData(capabilitiesQueryOptions().queryKey)).toEqual([]);
+        });
+        await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+
+        expect(reads).toEqual([]);
+        expect(client.getQueryState(ledgerKeys.entry('expense-id'))).toBeUndefined();
     });
 });

@@ -35,6 +35,7 @@ export {
     registerLedgerOutboxDefaults,
     startLedgerOutbox,
     updateExpenseViaOutbox,
+    useIsOfflineWriteAvailable,
 } from './api/outbox';
 export type { BackendCapability } from './api/queries';
 export {
@@ -43,7 +44,7 @@ export {
     ledgerEntryQueryOptions,
     ledgerKeys,
     useBackendCapability,
-    useLedgerEntryForWrites,
+    useLedgerEntryObserver,
 } from './api/queries';
 export type {
     CreateLedgerEntryWireOptions,

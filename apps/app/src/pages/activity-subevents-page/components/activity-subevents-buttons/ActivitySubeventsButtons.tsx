@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 import type { ActivityEvent } from 'entities/activity';
-import { useLedgerEntryForWrites } from 'entities/ledger';
+import { useIsOfflineWriteAvailable, useLedgerEntryObserver } from 'entities/ledger';
 import {
     getActivityCategory,
     getActivityLedgerEntryId,
@@ -16,6 +16,13 @@ import { prepareExpenseEdit } from 'store/activityExpenseEdit';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
+
+// Keeps the expense's `ledger.entry(id)` read while it is shown (spec 03 §2.9 C2-33: an outbox edit
+// or delete needs it). Rendered only while offline writes are available.
+const LedgerEntryObserver = ({ entryId }: { entryId: string }) => {
+    useLedgerEntryObserver(entryId);
+    return null;
+};
 
 interface Props {
     parentEvent: ActivityEvent;
@@ -47,9 +54,9 @@ const ActivitySubeventsButtons = ({
         currentEvent.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED ||
         currentEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
-
-    // Spec 03 §2.9 C2-33: an outbox edit or delete needs the cached entry (offline writes on).
-    useLedgerEntryForWrites(isExpense && !isEntryReversed ? (parentEntryId ?? null) : null);
+    const isOfflineWritable = useIsOfflineWriteAvailable();
+    const observedEntryId =
+        isOfflineWritable && isExpense && canChange && !isEntryReversed ? parentEntryId : undefined;
 
     const onEdit = (): void => {
         if (!parentEntryId || !isExpense || !canChange) {
@@ -95,6 +102,7 @@ const ActivitySubeventsButtons = ({
 
     return (
         <Flex align="center" gap="2" wrap="wrap">
+            {observedEntryId ? <LedgerEntryObserver entryId={observedEntryId} /> : null}
             <Button
                 size="1"
                 variant="soft"

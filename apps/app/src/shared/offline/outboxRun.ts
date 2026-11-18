@@ -474,12 +474,15 @@ const attempt = async <Op extends OutboxOpBase>(
     inFlight += 1;
     // Still in flight until the answer is processed: a success has started its removal (counted
     // on its own) before the tab may count as idle. `finally`: a throwing send never leaves the
-    // count up (03-15c2 R3 N2: every hidden release would wait for the timeout).
+    // count up (03-15c2 R3 N2: every hidden release would wait for the timeout). A send that throws
+    // synchronously is classified like a rejected one, so its claim is cleared (R1 N4).
     try {
-        const outcome = await deps.send(op, getOutboxVersion(op.entryId), signal).then(
-            (sent: OutboxSent) => ({ sent }),
-            (error: unknown) => ({ error }),
-        );
+        const outcome = await Promise.resolve()
+            .then(() => deps.send(op, getOutboxVersion(op.entryId), signal))
+            .then(
+                (sent: OutboxSent) => ({ sent }),
+                (error: unknown) => ({ error }),
+            );
 
         return 'sent' in outcome
             ? onSent(op, outcome.sent, ignoreEntryBlock, fence)

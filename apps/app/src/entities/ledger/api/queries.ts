@@ -2,11 +2,9 @@
 // switched on, read from `GET /health`. They decide whether offline writes are available; nothing
 // mounts the query: the outbox path reads it from the cache (and fetches it) only while
 // `VITE_FEATURE_OFFLINE_WRITES` is on, and an online create never carries a client `id`.
-import { useEffect } from 'react';
-import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { api, publicApi } from 'shared/api/client';
-import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
 import { ledgerEntryKey } from 'shared/offline/outboxRegistry';
 
 import { type LedgerEntry, toLedgerEntry } from '../model/toLedgerEntry';
@@ -59,16 +57,11 @@ export const ledgerEntryQueryOptions = (entryId: string) =>
     });
 
 /**
- * Reads the expense the user may edit or delete into `ledger.entry(id)` (§2.9 C2-33: an outbox
- * edit or delete needs it; a fresh entry is not read again). Only with the flag
- * `VITE_FEATURE_OFFLINE_WRITES` on: off, nothing is read or added to the cache.
+ * Observes `ledger.entry(id)` of an expense the user may edit or delete (§2.9 C2-33: an outbox edit
+ * or delete needs it), so it is read again with the views that show it (focus, reconnect, an
+ * invalidation; R1 L3). The result is not used. The caller mounts it only while offline writes are
+ * available (`useIsOfflineWriteAvailable`): otherwise nothing is read or added to the cache.
  */
-export const useLedgerEntryForWrites = (entryId: string | null): void => {
-    const client = useQueryClient();
-
-    useEffect(() => {
-        if (entryId !== null && isOfflineWritesFlagOn()) {
-            void client.prefetchQuery(ledgerEntryQueryOptions(entryId));
-        }
-    }, [client, entryId]);
+export const useLedgerEntryObserver = (entryId: string): void => {
+    useQuery(ledgerEntryQueryOptions(entryId));
 };

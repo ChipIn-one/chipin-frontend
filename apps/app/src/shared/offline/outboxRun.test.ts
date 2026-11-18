@@ -22,6 +22,7 @@ import {
 } from './outboxRun';
 import {
     appendOutboxOp,
+    currentOutboxFence,
     discardOps,
     failedOutboxOps,
     getOutboxVersion,
@@ -886,7 +887,66 @@ describe('03-16a part A', () => {
         expect(getOutboxVersion('entry-e')).toBeNull();
     });
 
-    test('03-15c2 R3 N2: a send that throws synchronously does not leave the tab counted as sending', async () => {
+    // The entry has a failed op (op-2) while an earlier op (op-1) of it is answered.
+    const failedBehindSent = async () => {
+        const sent = await queue('entry-e');
+        const failed = await queue('entry-e');
+
+        await recordFailedOp(failed, 'validation', currentOutboxFence());
+        return { sent, failed };
+    };
+
+    // The Retry of the failed op: its `If-Match` is the version it is sent with.
+    const retryFailed = async (failed: OutboxOpBase, deps: OutboxDeps<OutboxOpBase>) => {
+        await requestRetry([failed.opId], () => true);
+        const [run] = runAll([failed], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+    };
+
+    test('03-16a R1 L4: a failed op of the entry keeps the answered version: its Retry is sent with it', async () => {
+        const { sent, failed } = await failedBehindSent();
+        const { deps, versions } = harness();
+        const [run] = runAll([sent], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+        await retryFailed(failed, deps);
+        expect(versions).toEqual([null, 'v-op-1']);
+    });
+
+    test('03-16a R1 L4: a Retry of a failed op after a rejected append keeps the answered version', async () => {
+        const client = new QueryClient();
+
+        client.setQueryData(ledgerEntryKey('entry-e'), { type: 'EXPENSE', version: 'v41' });
+        const { sent, failed } = await failedBehindSent();
+        const { deps, versions } = harness();
+        const removeActual = vi.mocked(removeOutboxOp).getMockImplementation();
+        const appended: { edit?: Promise<unknown> } = {};
+
+        vi.mocked(removeOutboxOp).mockImplementationOnce((target, fence) => {
+            const removal = removeActual?.(target, fence) ?? Promise.resolve();
+
+            appended.edit = enqueueOutboxOp(
+                client,
+                { kind: 'updateExpense', entryId: 'entry-e', owner: OWNER },
+                () => {
+                    throw new Error('could not build');
+                },
+            ).catch((error: unknown) => error);
+            return removal;
+        });
+        const [run] = runAll([sent], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+        await expect(appended.edit).resolves.toBeInstanceOf(Error);
+        await retryFailed(failed, deps);
+        expect(versions).toEqual([null, 'v-op-1']);
+    });
+
+    test('03-15c2 R3 N2, 03-16a R1 N4: a send that throws synchronously is classified like a rejected one: failed, no claim left, the tab not counted as sending', async () => {
         const op = await queue('entry-a', 'createExpense');
         const deps: OutboxDeps<OutboxOpBase> = {
             sessionUserId: () => OWNER,
@@ -894,10 +954,14 @@ describe('03-16a part A', () => {
                 throw new Error('sync');
             },
         };
-        const run = runOutboxOp(op, deps).catch(() => 'rejected');
+        const run = runOutboxOp(op, deps).catch((error: unknown) => error);
 
         await tick();
-        await expect(run).resolves.toBe('rejected');
+        await expect(run).resolves.toBeInstanceOf(OutboxTerminalError);
+        expect(failedOutboxOps().map(failed => [failed.op.opId, failed.reason])).toEqual([
+            ['op-1', 'rejected'],
+        ]);
+        await expect(writeOutbox(draft => draft.sending)).resolves.toBeNull();
         let isIdle = false;
 
         void whenOutboxIdle().then(() => {
