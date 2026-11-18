@@ -123,7 +123,9 @@ jobs:
           CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
           CHIPIN_CONTRACT_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
           CHIPIN_E2E_RUN_ID: ${{ steps.run.outputs.id }}
-        run: npm run test:e2e
+        # Only the desktop Chromium project; the other profiles run on release candidates
+        # (prepare-release-qa.yml).
+        run: npm run test:e2e -- --project=chromium
       # The teardown writes the marker, holding the run id, only after its second purge found no
       # user of the run left. Without it nothing is scanned or uploaded.
       - name: Check verified purge

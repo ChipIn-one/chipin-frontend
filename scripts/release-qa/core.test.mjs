@@ -7,13 +7,18 @@ import {
     currentQaLogins,
     findQaIssue,
     formatInvalidationLine,
+    formatMatrixLine,
     formatResultLine,
     hasGreenFrontendCiRun,
     isNearMissResult,
+    MATRIX_PROFILES,
+    parseMatrixResult,
     parseQaResult,
     prQaSteps,
+    renderMatrixChecks,
     resultOutcome,
     slackLink,
+    summarizeMatrix,
     validateDeployment,
     verifyCi,
 } from './core.mjs';
@@ -461,7 +466,7 @@ describe('scope and canonical QA identity', () => {
         ]);
     });
 
-    test('a risky path appends the five SMOKE-SHORT checks once and AUTH-041 is not duplicated', () => {
+    test('a risky path appends the six SMOKE-SHORT checks once and AUTH-041 is not duplicated', () => {
         const result = buildChecklist({
             files: [
                 'apps/app/src/store/authStore.ts',
@@ -490,11 +495,20 @@ describe('scope and canonical QA identity', () => {
         expect(result.smoke).toBe(true);
         expect(result.checks[0]).toEqual(primary);
         const smoke = result.checks.filter(item => item.smoke);
-        expect(smoke).toHaveLength(5);
-        expect(result.checks).toHaveLength(6);
+        expect(smoke).toHaveLength(6);
+        expect(result.checks).toHaveLength(7);
         expect(smoke.map(item => item.step).join('\n')).toMatch(
-            /Google sign-in[\s\S]*split equally[\s\S]*other participant[\s\S]*language and theme[\s\S]*Log out/,
+            /Google sign-in[\s\S]*split equally[\s\S]*other participant[\s\S]*language and theme[\s\S]*Log out[\s\S]*real phone/,
         );
+        // Google sign-in and the real phone stay manual; the Playwright suite covers the rest.
+        expect(smoke.map(item => Boolean(item.automated))).toEqual([
+            false,
+            true,
+            true,
+            true,
+            true,
+            false,
+        ]);
         const auth = result.checks.filter(item => item.source === 'AUTH-041');
         expect(auth).toHaveLength(1);
         expect(auth[0]).toMatchObject({
@@ -557,7 +571,7 @@ describe('scope and canonical QA identity', () => {
             included: [],
             buildAffecting: ['package.json dependencies: i18next', 'package-lock.json: i18next'],
         });
-        expect(result.checks).toHaveLength(5);
+        expect(result.checks).toHaveLength(6);
         expect(result.checks.every(item => item.smoke)).toBe(true);
         const body = buildIssueBody({
             sha: SHA,
@@ -569,7 +583,7 @@ describe('scope and canonical QA identity', () => {
         expect(body).toContain(
             '### Build-affecting changes\n- package.json dependencies: i18next\n- package-lock.json: i18next',
         );
-        expect(body.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(5);
+        expect(body.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(6);
     });
 
     test('a lint/test devDependency bump with no build change stays NO_MANUAL_QA_REQUIRED', () => {
@@ -613,7 +627,7 @@ describe('scope and canonical QA identity', () => {
         });
         expect(result.smoke).toBe(true);
         expect(result.checks[0]).toEqual(primary);
-        expect(result.checks.filter(item => item.smoke)).toHaveLength(5);
+        expect(result.checks.filter(item => item.smoke)).toHaveLength(6);
         expect(result.checks.filter(item => item.source === 'AUTH-041')).toHaveLength(1);
     });
 
@@ -645,7 +659,7 @@ describe('scope and canonical QA identity', () => {
         expect(body).toContain(
             '- [ ] #13: check against the Acceptance of #13 => https://github.com/ChipIn-one/chipin-frontend/issues/13\n',
         );
-        expect(body.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(5);
+        expect(body.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(6);
         expect(body).toMatch(/QA PASS/);
     });
 
@@ -1180,5 +1194,273 @@ describe('authorized QA result', () => {
         expect(() => assertConfiguration({ ...full, SLACK_USER_MAP: 'nope' }, 'syllik')).toThrow(
             /JSON/,
         );
+    });
+});
+
+describe('release browser matrix', () => {
+    const IDS = ['chromium', 'firefox', 'webkit', 'pixel', 'iphone'];
+    const result = (profile, overrides = {}) =>
+        JSON.stringify({
+            version: 1,
+            profile,
+            status: 'passed',
+            passed: 12,
+            failed: 0,
+            flaky: 0,
+            skipped: 0,
+            ...overrides,
+        });
+    const allPassed = () =>
+        summarizeMatrix({
+            results: Object.fromEntries(IDS.map(id => [id, parseMatrixResult(result(id), id)])),
+            conclusions: Object.fromEntries(IDS.map(id => [id, 'success'])),
+            runId: 4242,
+        });
+    const RUN_URL = 'https://github.com/ChipIn-one/chipin-frontend/actions/runs/4242';
+    const smokePlan = () =>
+        buildChecklist({
+            files: ['package.json'],
+            commits: [SHA],
+            pulls: [],
+            issues: [],
+            commitFiles: { [SHA]: ['package.json'] },
+            buildChanges: ['package.json dependencies: i18next'],
+        });
+    const body = matrix =>
+        buildIssueBody({
+            sha: SHA,
+            baselineSha: BASE,
+            deploymentId: 42,
+            url: status.environment_url,
+            plan: smokePlan(),
+            matrix,
+        });
+
+    test('profiles are the five Playwright projects of the release matrix', () => {
+        expect(MATRIX_PROFILES.map(profile => profile.id)).toEqual(IDS);
+    });
+
+    test('a result file is accepted only in its exact shape, for its own profile', () => {
+        expect(parseMatrixResult(result('webkit', { skipped: 1 }), 'webkit')).toEqual({
+            status: 'passed',
+            passed: 12,
+            failed: 0,
+            flaky: 0,
+            skipped: 1,
+        });
+        for (const text of [
+            '',
+            'not json',
+            'null',
+            '[]',
+            result('firefox'),
+            result('webkit', { version: 2 }),
+            result('webkit', { status: 'PASSED' }),
+            result('webkit', { status: 'skipped' }),
+            result('webkit', { passed: -1 }),
+            result('webkit', { passed: 1.5 }),
+            result('webkit', { passed: '12' }),
+            result('webkit', { failed: 10001 }),
+            result('webkit', { note: '<!-- chipin-release-qa:v1 -->' }),
+            JSON.stringify({ version: 1, profile: 'webkit', status: 'passed' }),
+        ]) {
+            expect(parseMatrixResult(text, 'webkit'), text).toBeNull();
+        }
+    });
+
+    test('a profile passes only with a green job and a passing result; anything else fails or has no result', () => {
+        const results = {
+            chromium: parseMatrixResult(result('chromium'), 'chromium'),
+            firefox: parseMatrixResult(
+                result('firefox', { status: 'failed', passed: 10, failed: 2 }),
+                'firefox',
+            ),
+            // The result file claims a pass, but the job failed (e.g. the purge step).
+            webkit: parseMatrixResult(result('webkit'), 'webkit'),
+            pixel: parseMatrixResult(result('pixel', { status: 'error', passed: 0 }), 'pixel'),
+            iphone: null,
+        };
+        const matrix = summarizeMatrix({
+            results,
+            conclusions: {
+                chromium: 'success',
+                firefox: 'failure',
+                webkit: 'failure',
+                pixel: 'failure',
+                iphone: 'cancelled',
+            },
+            runId: 4242,
+        });
+        expect(matrix.runUrl).toBe(RUN_URL);
+        expect(matrix.passed).toBe(false);
+        expect(matrix.profiles.map(profile => [profile.id, profile.status])).toEqual([
+            ['chromium', 'passed'],
+            ['firefox', 'failed'],
+            ['webkit', 'failed'],
+            ['pixel', 'not_run'],
+            ['iphone', 'not_run'],
+        ]);
+        // A claimed pass without a verified job conclusion, or with no test at all, is no pass.
+        const unverified = summarizeMatrix({
+            results: {
+                chromium: parseMatrixResult(result('chromium'), 'chromium'),
+                firefox: parseMatrixResult(result('firefox', { passed: 0 }), 'firefox'),
+            },
+            conclusions: { firefox: 'success' },
+            runId: 4242,
+        });
+        expect(unverified.profiles[0].status).toBe('not_run');
+        expect(unverified.profiles[1].status).toBe('not_run');
+        expect(() => summarizeMatrix({ runId: Number.NaN })).toThrow(/GITHUB_RUN_ID/);
+    });
+
+    test('a passed matrix is stated first in the QA Issue, per profile, and marks SMOKE-SHORT b-e as automated', () => {
+        const text = body(allPassed());
+        const [marker, ...rest] = text.split('\n');
+        expect(marker).toMatch(/^<!-- chipin-release-qa:v1 /);
+        expect(rest.slice(0, 2)).toEqual([
+            '> [!NOTE]',
+            `> The automated browser matrix passed on all 5 profiles ([run](${RUN_URL})). The SMOKE-SHORT checks it covers are marked as automated.`,
+        ]);
+        expect(text.indexOf('> [!NOTE]')).toBeLessThan(text.indexOf('## Problem'));
+        expect(text).toContain(
+            [
+                '### Automated browser matrix',
+                `Playwright smoke and money flows against the immutable Preview URL ([run](${RUN_URL})).`,
+                '',
+                '| Profile | Result | Passed | Failed | Flaky | Skipped |',
+                '| --- | --- | --- | --- | --- | --- |',
+                '| Desktop Chromium | passed | 12 | 0 | 0 | 0 |',
+                '| Desktop Firefox | passed | 12 | 0 | 0 | 0 |',
+                '| Desktop WebKit | passed | 12 | 0 | 0 | 0 |',
+                '| Pixel 7 (Chromium) | passed | 12 | 0 | 0 | 0 |',
+                '| iPhone 15 (WebKit) | passed | 12 | 0 | 0 | 0 |',
+            ].join('\n'),
+        );
+        // Manual: Google sign-in and the real phone; covered: b-e, after the manual ones.
+        expect(text.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(2);
+        expect(text).toContain(
+            '- [ ] SMOKE-SHORT: Google sign-in on the Preview => Dashboard opens',
+        );
+        expect(text).toMatch(/- \[ \] SMOKE-SHORT: On a real phone: /);
+        expect(text.match(/^- SMOKE-SHORT \(automated\): /gm) ?? []).toHaveLength(4);
+        expect(text).toContain(
+            '#### SMOKE-SHORT covered by the browser matrix\n- SMOKE-SHORT (automated): Create a group expense split equally',
+        );
+        expect(text.indexOf('On a real phone')).toBeLessThan(
+            text.indexOf('#### SMOKE-SHORT covered by the browser matrix'),
+        );
+        expect(text).toMatch(/\(automated\): Log out, then reload .*\(\[AUTH-041\]\(/);
+    });
+
+    test('a failed or missing matrix is stated at the top and gives SMOKE-SHORT b-e back to the tester', () => {
+        const matrix = summarizeMatrix({
+            results: {
+                chromium: parseMatrixResult(result('chromium'), 'chromium'),
+                firefox: parseMatrixResult(
+                    result('firefox', { status: 'failed', passed: 11, failed: 1 }),
+                    'firefox',
+                ),
+                webkit: parseMatrixResult(result('webkit', { skipped: 1, passed: 11 }), 'webkit'),
+                pixel: parseMatrixResult(result('pixel'), 'pixel'),
+            },
+            conclusions: {
+                chromium: 'success',
+                firefox: 'failure',
+                webkit: 'success',
+                pixel: 'success',
+            },
+            runId: 4242,
+        });
+        const text = body(matrix);
+        expect(text.split('\n').slice(1, 4)).toEqual([
+            '> [!CAUTION]',
+            `> **The automated browser matrix did not pass.** Failed: Desktop Firefox. No result: iPhone 15 (WebKit). See the [run](${RUN_URL}).`,
+            '> The SMOKE-SHORT checks it covers stay in the manual list.',
+        ]);
+        expect(text).toContain('| Desktop Firefox | **failed** | 11 | 1 | 0 | 0 |');
+        expect(text).toContain('| Desktop WebKit | passed | 11 | 0 | 0 | 1 |');
+        expect(text).toContain('| iPhone 15 (WebKit) | **no result** | - | - | - | - |');
+        expect(text).not.toContain('(automated)');
+        expect(text.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(6);
+        expect(
+            text.match(/\(the browser matrix did not pass: check by hand\)/g) ?? [],
+        ).toHaveLength(4);
+        expect(text).toContain(
+            '- [ ] SMOKE-SHORT: Google sign-in on the Preview => Dashboard opens\n',
+        );
+    });
+
+    test('without a matrix the QA Issue is unchanged', () => {
+        const text = body(null);
+        expect(text).not.toContain('browser matrix');
+        expect(text.split('\n')[1]).toBe('## Problem');
+        expect(text.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(6);
+    });
+
+    test('the Slack matrix line names failed and missing profiles and links the run', () => {
+        expect(formatMatrixLine(allPassed())).toBe(
+            `Автотесты в браузерах прошли на всех 5 профилях — <${RUN_URL}|Run>`,
+        );
+        const failed = summarizeMatrix({
+            results: { chromium: parseMatrixResult(result('chromium', { failed: 1 }), 'chromium') },
+            conclusions: { chromium: 'failure' },
+            runId: 4242,
+        });
+        expect(formatMatrixLine(failed)).toBe(
+            `Автотесты в браузерах НЕ прошли (упали: Desktop Chromium; без результата: Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit)) — <${RUN_URL}|Run>`,
+        );
+    });
+
+    test('a candidate from before the matrix is stated as such, not as failed or no result', () => {
+        const unsupported = id =>
+            parseMatrixResult(result(id, { status: 'unsupported', passed: 0 }), id);
+        expect(unsupported('firefox')).toMatchObject({ status: 'unsupported' });
+        const matrix = summarizeMatrix({
+            results: {
+                chromium: parseMatrixResult(result('chromium'), 'chromium'),
+                firefox: unsupported('firefox'),
+                webkit: unsupported('webkit'),
+                pixel: unsupported('pixel'),
+                iphone: unsupported('iphone'),
+            },
+            // The unsupported jobs succeed: nothing ran.
+            conclusions: Object.fromEntries(IDS.map(id => [id, 'success'])),
+            runId: 4242,
+        });
+        expect(matrix.passed).toBe(false);
+        expect(matrix.profiles.map(profile => profile.status)).toEqual([
+            'passed',
+            'predates',
+            'predates',
+            'predates',
+            'predates',
+        ]);
+        const text = body(matrix);
+        expect(text.split('\n')[2]).toBe(
+            `> **The automated browser matrix did not pass.** The candidate predates the browser matrix (no Playwright project): Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit). See the [run](${RUN_URL}).`,
+        );
+        expect(text).toContain('| Desktop Firefox | **not in this candidate** | 0 | 0 | 0 | 0 |');
+        expect(text).not.toMatch(/Failed:|No result:/);
+        expect(formatMatrixLine(matrix)).toBe(
+            `Автотесты в браузерах НЕ прошли (кандидат старше этих профилей: Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit)) — <${RUN_URL}|Run>`,
+        );
+    });
+
+    test('rerun checks: a failed matrix hands b-e back as boxes, a passed one lists them as covered, none without SMOKE-SHORT', () => {
+        const failed = summarizeMatrix({ results: {}, conclusions: {}, runId: 4242 });
+        const back = renderMatrixChecks(smokePlan(), failed);
+        expect(back.match(/^- \[ \] SMOKE-SHORT: /gm) ?? []).toHaveLength(4);
+        expect(back).not.toContain('Google sign-in');
+        const covered = renderMatrixChecks(smokePlan(), allPassed());
+        expect(covered.match(/^- SMOKE-SHORT \(automated\): /gm) ?? []).toHaveLength(4);
+        const plain = buildChecklist({
+            files: ['apps/app/src/App.tsx'],
+            commits: [SHA],
+            pulls: [{ number: 20, issues: [12], commits: [SHA], files: ['apps/app/src/App.tsx'] }],
+            issues: [{ number: 12, body: '- [ ] QA: Open settings => Settings page appears' }],
+        });
+        expect(renderMatrixChecks(plain, failed)).toBe('');
+        expect(renderMatrixChecks({ kind: 'none' }, failed)).toBe('');
     });
 });

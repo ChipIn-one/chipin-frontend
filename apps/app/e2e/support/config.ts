@@ -6,6 +6,7 @@ export interface E2eEnvironment {
     CHIPIN_E2E_BASE_URL?: string;
     CHIPIN_CONTRACT_SWAGGER_USER?: string;
     CHIPIN_CONTRACT_SWAGGER_PASSWORD?: string;
+    VERCEL_AUTOMATION_BYPASS_SECRET?: string;
 }
 
 export interface E2eTarget {
@@ -117,6 +118,71 @@ export const resolveE2eBasicAuth = (environment: E2eEnvironment): E2eBasicAuth =
     return { password, username };
 };
 
+/** Vercel's headers for Protection Bypass for Automation. */
+export const VERCEL_BYPASS_HEADER = 'x-vercel-protection-bypass';
+export const VERCEL_SET_BYPASS_COOKIE_HEADER = 'x-vercel-set-bypass-cookie';
+
+export interface PreviewBypass {
+    /** Only document navigations to exactly this origin get the headers; no other host ever does. */
+    origin: string;
+    secret: string;
+}
+
+/**
+ * The optional Vercel deployment-protection bypass: only for a Vercel Preview target and only when
+ * the secret is set (an unprotected Preview needs none).
+ */
+export const resolvePreviewBypass = (
+    environment: E2eEnvironment,
+    target: E2eTarget,
+): PreviewBypass | null => {
+    const secret = environment.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+
+    if (!secret || target.kind !== 'vercel-preview') {
+        return null;
+    }
+
+    return { origin: target.baseUrl, secret };
+};
+
+export interface BypassRequest {
+    url: string;
+    /** Playwright's `request.isNavigationRequest()`: a document load of a frame. */
+    isNavigation: boolean;
+}
+
+/**
+ * The bypass headers for one request, or null. They go only on document navigations to exactly the
+ * Preview origin (scheme, host and port), never to `/api/...` (vercel.json rewrites it to the
+ * staging API) and never through `extraHTTPHeaders`, which would reach every host. Vercel answers
+ * the navigation with its bypass cookie, which then covers the page's other requests to the Preview.
+ */
+export const previewBypassHeaders = (
+    bypass: PreviewBypass,
+    request: BypassRequest,
+): Record<string, string> | null => {
+    if (!request.isNavigation) {
+        return null;
+    }
+
+    let url: URL;
+    try {
+        url = new URL(request.url);
+    } catch {
+        return null;
+    }
+
+    if (
+        url.origin !== bypass.origin ||
+        url.pathname === '/api' ||
+        url.pathname.startsWith('/api/')
+    ) {
+        return null;
+    }
+
+    return { [VERCEL_BYPASS_HEADER]: bypass.secret, [VERCEL_SET_BYPASS_COOKIE_HEADER]: 'true' };
+};
+
 /** The e2e variables of `process.env` (Node: the Playwright config, global setup and workers). */
 export const readE2eEnvironment = (): E2eEnvironment => {
     const read = (key: keyof E2eEnvironment): string | undefined => {
@@ -129,5 +195,6 @@ export const readE2eEnvironment = (): E2eEnvironment => {
         CHIPIN_E2E_BASE_URL: read('CHIPIN_E2E_BASE_URL'),
         CHIPIN_CONTRACT_SWAGGER_USER: read('CHIPIN_CONTRACT_SWAGGER_USER'),
         CHIPIN_CONTRACT_SWAGGER_PASSWORD: read('CHIPIN_CONTRACT_SWAGGER_PASSWORD'),
+        VERCEL_AUTOMATION_BYPASS_SECRET: read('VERCEL_AUTOMATION_BYPASS_SECRET'),
     };
 };
