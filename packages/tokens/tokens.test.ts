@@ -204,9 +204,11 @@ describe('2. tokens.css references', () => {
             --cp-ok: var(--olive-a6);
             --cp-media-on: #ffffff;
             --cp-media-scrim: black;
+            --cp-x: var(--accent-9);
         }
         .dark {
             --cp-ok: var(--gray-1);
+            --cp-x: var(--olive-9);
         }`;
         expect(tokenViolations(css)).toEqual([
             '--cp-a: --accent-9',
@@ -218,6 +220,7 @@ describe('2. tokens.css references', () => {
             '--cp-g: not a scale step transparent',
             '--cp-h: --olive-13 (no such step)',
             '--cp-media-scrim: not a hex literal black',
+            '--cp-x: --accent-9',
             '--cp-ok: --gray-1',
         ]);
     });
