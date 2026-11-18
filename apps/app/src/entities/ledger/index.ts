@@ -5,6 +5,7 @@
 // overlay with its Retry and Cancel (03-16a part B), the conflict drafts and their notices (03-16b).
 export type { LedgerConflictNotice } from './api/conflictDrafts';
 export {
+    clearUndeliveredConflictNotices,
     conflictDraftPatch,
     discardConflictDraft,
     dropDeletedConflictDraft,

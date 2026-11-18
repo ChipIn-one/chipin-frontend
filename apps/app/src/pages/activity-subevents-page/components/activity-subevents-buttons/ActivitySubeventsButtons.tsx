@@ -52,7 +52,7 @@ const useIsHistoryFresh = (parentActivityId: string | undefined, isWaiting: bool
         return (
             !state ||
             state.fetchStatus === 'paused' ||
-            state.status === 'error' ||
+            (state.status === 'error' && state.fetchStatus === 'idle') ||
             (state.fetchStatus === 'idle' && !state.isInvalidated)
         );
     }, [client, parentActivityId]);

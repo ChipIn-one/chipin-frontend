@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react';
 import { create } from 'zustand';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
+import { clearUndeliveredConflictNotices } from 'entities/ledger';
 import {
     AuthSessionExpiredError,
     AuthSessionPersistenceError,
@@ -99,6 +100,7 @@ const resetUserStores = () => {
     useExpenseModalStore.getState().reset();
     useOutboxSheetStore.getState().setIsOpen(false);
     useConflictDraftStore.getState().reset();
+    clearUndeliveredConflictNotices();
 };
 
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).

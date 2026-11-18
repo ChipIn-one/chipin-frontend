@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/react';
 import { expect, test, vi } from 'vitest';
 
 import {
+    clearUndeliveredConflictNotices,
     type LedgerConflictNotice,
     noticeLedgerConflict,
     onLedgerConflictNotice,
@@ -43,5 +44,15 @@ test('R2-N2: a throwing listener is reported and the others still get the notice
     expect(got).toEqual(['entry-c']);
     expect(Sentry.captureException).toHaveBeenCalledOnce();
     stopThrowing();
+    stop();
+});
+
+test('R3-N1: notices queued for a previous user are dropped on a user change', () => {
+    noticeLedgerConflict(notice('entry-old-user'));
+    clearUndeliveredConflictNotices();
+    const got: string[] = [];
+    const stop = onLedgerConflictNotice(item => got.push(item.entryId));
+
+    expect(got).toEqual([]);
     stop();
 });

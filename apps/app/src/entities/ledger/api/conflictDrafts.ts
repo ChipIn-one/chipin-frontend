@@ -51,6 +51,11 @@ export const noticeLedgerConflict = (notice: LedgerConflictNotice): void => {
     listeners.forEach(listener => deliver(listener, notice));
 };
 
+/** R3-N1: a user change drops the notices nobody saw (they belong to the previous user). */
+export const clearUndeliveredConflictNotices = (): void => {
+    undelivered.length = 0;
+};
+
 /**
  * A draft write that failed (R1 N3, invariant 7): reported like every outbox write failure (a
  * refused write of a stopped outbox is not one; a lock timeout and an IDB error are).

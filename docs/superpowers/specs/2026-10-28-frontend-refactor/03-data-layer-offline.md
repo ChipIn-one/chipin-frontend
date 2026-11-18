@@ -995,8 +995,9 @@ that state, so Save sends the draft's fields as an ordinary edit whose `baseVers
 unchanged). Only a Save from a form opened on the draft replaces it: its edit carries `replacesConflictDraft` and the
 append write drops the draft; any other queued edit (a form opened before the conflict, or on an unreadable draft) keeps
 it; a queued delete drops it (moot). A Save answered online, or with nothing left to change, removes the draft after it
-(no append). "Open my changes" opens the form only once the expense history is fresh (not being read, not
-invalidated), and the request is consumed only by an editor that opened. (5) `LedgerEntryInfo` has no
+(no append). "Open my changes" opens the form once the expense history is fresh (not being read, not
+invalidated) or its read cannot answer (paused offline or errored: the cached history is used); the request is consumed
+by that first attempt or by a manual Edit that opened the form, and undelivered notices wait for the first listener. (5) `LedgerEntryInfo` has no
 reversed state (a reversed entry reads 404): "a `REVERSED` entry" is the expense history whose latest event is
 `EXPENSE_REVERSED`; the 404 drop runs in the `ledger.entry(id)` query function. (6) Old failed `conflict` records are
 converted in the drain-lock restore write: an edit → a draft (`createdAt` = `failedAt`), a delete → dropped with the

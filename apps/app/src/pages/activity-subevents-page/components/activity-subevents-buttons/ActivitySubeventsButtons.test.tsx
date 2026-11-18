@@ -925,6 +925,34 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
         },
     );
 
+    test('03-16b R3-N2: an errored history that is refetching waits for the refetch', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+        client
+            .getQueryCache()
+            .find({ queryKey: historyKey })
+            ?.setState({
+                status: 'error',
+                error: new Error('read failed'),
+                fetchStatus: 'fetching',
+            });
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+        expect(useConflictDraftStore.getState().requestedEntryId).toBe('expense-id');
+    });
+
     test('03-16b R1 M1: an unreadable draft opens the ordinary editor, not marked as opened on a draft', async () => {
         const client = signIn();
 
