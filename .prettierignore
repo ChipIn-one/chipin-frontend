@@ -8,7 +8,6 @@ package-lock.json
 # Generated files: generators write the final output, checks compare it byte for byte
 **/vercel.json
 **/routing.generated.ts
-packages/tokens/generated/**
 apps/app/src/shared/api/generated/**
 apps/app/openapi/chipin.yaml
 eslint-suppressions.json

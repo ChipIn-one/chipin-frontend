@@ -8,9 +8,10 @@
  * `.light`/`.dark` rules of the scale files, so the later rule wins.
  */
 
-/* Radix color scales used by the app. Temporary inline list: PR 05-2a moves this block
- * to `packages/tokens/radix-colors.css`. Not imported: bronze iris lime mauve plum ruby
- * sage sand slate. Same order as in the full `styles.css`: gray scales, then accents. */
+/* Radix color scales used by the app. Temporary inline list: PR 05-2b switches the app to
+ * `@chipin/tokens/radix-colors.css` and deletes this list. Not imported: bronze iris lime
+ * mauve plum ruby sage sand slate. Same order as in the full `styles.css`: gray scales, then
+ * accents. */
 @import '@radix-ui/themes/tokens/colors/gray.css';
 @import '@radix-ui/themes/tokens/colors/olive.css';
 

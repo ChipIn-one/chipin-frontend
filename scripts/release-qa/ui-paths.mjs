@@ -5,6 +5,7 @@ export const UI_PATH_PREFIXES = Object.freeze([
     'apps/app/src/', // application code, styles and src/i18n/locales/** translations
     'apps/app/public/', // static assets, icons, robots.txt and sitemap.xml
     'packages/i18n-content/', // the shared locale list and the `common` translations the app bundles
+    'packages/tokens/', // design tokens, Radix color scales and the theme constants and script
 ]);
 
 export const UI_PATH_FILES = new Set([

@@ -16,7 +16,7 @@ export const RADIX_THEME = {
  * `RADIX_THEME.grayColor` inside `<Theme>`).
  */
 export const PROP_COLOR = {
-    accent: 'grass',
+    accent: RADIX_THEME.accentColor,
     neutral: 'gray',
     debtOwed: 'green',
     debtOwing: 'red',
