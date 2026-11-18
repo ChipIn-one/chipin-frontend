@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,6 +22,9 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const savedLanguage = useUserSetting(pickLanguage);
     const resolvedLanguage = i18n.resolvedLanguage;
+    // The URL language whose chunks failed to load (spec 04 §2.10): the page renders in the
+    // active language instead of a loader that never ends.
+    const [failedLocale, setFailedLocale] = useState<PublicLocale | null>(null);
     const isLoggedInRef = useRef(isLoggedIn);
     const savedLanguageRef = useRef(savedLanguage);
 
@@ -37,6 +40,7 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
         if (resolvedLanguage !== locale) {
             applyLanguage(locale).catch((error: unknown) => {
                 Sentry.captureException(error);
+                setFailedLocale(locale);
             });
         }
     }, [i18n, locale, resolvedLanguage]);
@@ -56,7 +60,7 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
         };
     }, [i18n]);
 
-    if (resolvedLanguage !== locale) {
+    if (resolvedLanguage !== locale && failedLocale !== locale) {
         return <PageLoader />;
     }
     return children;

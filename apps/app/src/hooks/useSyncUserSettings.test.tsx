@@ -14,6 +14,8 @@ const setTheme = vi.hoisted(() => vi.fn());
 const setAppLanguage = vi.hoisted(() => vi.fn((_: string) => Promise.resolve()));
 // The language i18next runs in now (`i18n.resolvedLanguage`).
 const i18n = vi.hoisted(() => ({ resolvedLanguage: undefined as string | undefined }));
+// The target of a language switch still in flight (`getPendingLanguage()`).
+const pending = vi.hoisted(() => ({ language: null as string | null }));
 const captureException = vi.hoisted(() => vi.fn());
 const locale = vi.hoisted(() => ({
     matchLocale: vi.fn<(raw: string) => string | null>(() => 'en'),
@@ -33,7 +35,10 @@ vi.mock('helpers/locale', () => ({
     saveLocalePreference: locale.saveLocalePreference,
 }));
 
-vi.mock('helpers/setAppLanguage', () => ({ setAppLanguage }));
+vi.mock('helpers/setAppLanguage', () => ({
+    getPendingLanguage: () => pending.language,
+    setAppLanguage,
+}));
 
 vi.mock('i18n', () => ({ i18n }));
 
@@ -53,6 +58,7 @@ const settings = {
 beforeEach(() => {
     vi.clearAllMocks();
     i18n.resolvedLanguage = undefined;
+    pending.language = null;
     saveLocalUser({ role: 'ADMIN', settings });
 });
 
@@ -111,6 +117,29 @@ test('applies cached user theme settings while the authenticated user is loading
 // the preference is still saved, as before.
 test('keeps the current language when the server language equals it', () => {
     i18n.resolvedLanguage = 'en';
+    useAuthStore.setState({ status: 'authenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(setAppLanguage).not.toHaveBeenCalled();
+    expect(locale.saveLocalePreference).toHaveBeenCalledExactlyOnceWith('en');
+});
+
+// R1 L1: leaving a public page started a switch to `ru` (still loading) when the server says `en`,
+// the active language: the UI must end in `en`, so `en` is switched to (the latest switch wins).
+test('switches when the server language differs from a switch in flight', () => {
+    i18n.resolvedLanguage = 'en';
+    pending.language = 'ru';
+    useAuthStore.setState({ status: 'authenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(setAppLanguage).toHaveBeenCalledExactlyOnceWith('en');
+});
+
+test('does not switch again to the target of a switch in flight', () => {
+    i18n.resolvedLanguage = 'ru';
+    pending.language = 'en';
     useAuthStore.setState({ status: 'authenticated' });
 
     renderHook(() => useSyncUserSettings());

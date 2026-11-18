@@ -89,35 +89,54 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
         if (suggestedLocale === DEFAULT_LOCALE || isPublicLocaleSuggestionSuppressed()) {
             return;
         }
-        // Suppress before emitting: revisiting any English page must never re-offer.
-        suppressPublicLocaleSuggestion();
-        // The suggested language is a lazy chunk not loaded on this page yet (spec 04 §2.10).
-        i18n.loadLanguages(suggestedLocale)
-            .then(() => {
-                const translate = i18n.getFixedT(suggestedLocale, 'toasts');
-                toast.message(translate('public.languageSuggestion'), {
-                    id: 'public-locale-suggestion',
-                    duration: Infinity,
-                    dismissible: true,
-                    action: {
-                        label: translate('public.languageSuggestionAction'),
-                        onClick: () => {
-                            suppressPublicLocaleSuggestion();
-                            const destination = getPublicLocaleSuggestionTarget(
-                                window.location.pathname,
-                                suggestedLocale,
-                            );
-                            if (destination) {
-                                window.location.assign(destination);
-                            }
-                        },
+        // The suggested language is a lazy chunk not loaded on this page yet (spec 04 §2.10): only
+        // its `toasts` namespace is read, and the toast shows only if that read succeeded and the
+        // page is still mounted.
+        let cancelled = false;
+        const offer = () => {
+            if (
+                cancelled ||
+                isPublicLocaleSuggestionSuppressed() ||
+                !i18n.hasResourceBundle(suggestedLocale, 'toasts')
+            ) {
+                return;
+            }
+            // Suppress before emitting: revisiting any English page must never re-offer.
+            suppressPublicLocaleSuggestion();
+            const translate = i18n.getFixedT(suggestedLocale, 'toasts');
+            toast.message(translate('public.languageSuggestion'), {
+                id: 'public-locale-suggestion',
+                duration: Infinity,
+                dismissible: true,
+                action: {
+                    label: translate('public.languageSuggestionAction'),
+                    onClick: () => {
+                        suppressPublicLocaleSuggestion();
+                        const destination = getPublicLocaleSuggestionTarget(
+                            window.location.pathname,
+                            suggestedLocale,
+                        );
+                        if (destination) {
+                            window.location.assign(destination);
+                        }
                     },
-                    onDismiss: suppressPublicLocaleSuggestion,
-                });
-            })
-            .catch((error: unknown) => {
-                Sentry.captureException(error);
+                },
+                onDismiss: suppressPublicLocaleSuggestion,
             });
+        };
+
+        if (i18n.hasResourceBundle(suggestedLocale, 'toasts')) {
+            offer();
+        } else {
+            i18n.reloadResources([suggestedLocale], ['toasts'])
+                .then(offer)
+                .catch((error: unknown) => {
+                    Sentry.captureException(error);
+                });
+        }
+        return () => {
+            cancelled = true;
+        };
     }, [i18n, isAuthResolved, isLoggedIn, route.locale, route.page]);
 
     return (

@@ -1,3 +1,4 @@
+import { captureException } from '@sentry/react';
 import { act, render, screen } from '@testing-library/react';
 import type { i18n as I18n } from 'i18next';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
@@ -13,7 +14,10 @@ const PAGE_TEXT = 'Public page';
 
 // A real i18next instance behind `useTranslation`: `<html lang>` is written only by its
 // `languageChanged` listener (`syncHtmlLang`, #708), as at boot.
-const i18nMock = vi.hoisted(() => ({ instance: null as I18n | null }));
+const i18nMock = vi.hoisted(() => ({
+    instance: null as I18n | null,
+    failure: null as Error | null,
+}));
 
 vi.mock('react-i18next', () =>
     Promise.all([import('react'), import('i18next')]).then(
@@ -51,11 +55,19 @@ vi.mock('react-i18next', () =>
 
 // The real `applyLanguage` loads the language's lazy chunks first (its own test); here it switches
 // the test instance at once, as `changeLanguage` did before.
+// A set `failure` is a language whose chunks cannot load: the switch rejects without switching.
 vi.mock('helpers/setAppLanguage', () => ({
-    applyLanguage: (lng: string) =>
-        i18nMock.instance?.changeLanguage(lng).then(() => undefined) ??
-        Promise.reject(new Error('react-i18next mock not loaded')),
+    applyLanguage: (lng: string) => {
+        if (i18nMock.failure) {
+            return Promise.reject(i18nMock.failure);
+        }
+        return (
+            i18nMock.instance?.changeLanguage(lng).then(() => undefined) ??
+            Promise.reject(new Error('react-i18next mock not loaded'))
+        );
+    },
 }));
+vi.mock('@sentry/react', () => ({ captureException: vi.fn() }));
 
 const i18n = (): I18n => {
     if (!i18nMock.instance) {
@@ -168,4 +180,25 @@ test('after leaving a public page the html lang is the UI language', () => {
 
     expect(document.documentElement.lang).toBe(i18n().resolvedLanguage);
     expect(document.documentElement.lang).toBe('en');
+});
+
+// R1 M1: when the URL language cannot load, the page shows in the active language instead of a
+// loader that never ends, and the failure is reported.
+test('renders children in the active language when the URL language fails to load', async () => {
+    const error = new Error('Locale ru not loaded');
+    i18nMock.failure = error;
+
+    try {
+        render(
+            <PublicLocaleRoute locale="ru">
+                <p>{PAGE_TEXT}</p>
+            </PublicLocaleRoute>,
+        );
+
+        expect(await screen.findByText(PAGE_TEXT)).toBeTruthy();
+        expect(i18n().resolvedLanguage).toBe('en');
+        expect(captureException).toHaveBeenCalledWith(error);
+    } finally {
+        i18nMock.failure = null;
+    }
 });

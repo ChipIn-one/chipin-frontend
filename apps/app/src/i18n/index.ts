@@ -21,7 +21,24 @@ const loadNamespace = (lng: string, ns: string): Promise<unknown> => {
     return ns === 'common' ? loadCommon(lng) : import(`./locales/${lng}/${ns}.json`);
 };
 
-/** Resolves once the initial language (and the fallback) has all its namespaces loaded. */
+/** Every namespace of a language: the language is usable only when all of them are loaded. */
+const I18N_NAMESPACES = [
+    'common',
+    'auth',
+    'errors',
+    'currencies',
+    'toasts',
+    'landing',
+    'activity',
+    'group',
+    'dashboard',
+    'settings',
+    'friends',
+    'skeletons',
+    'meta',
+] as const;
+
+/** Settles once the initial language and the fallback were read; a failed namespace shows `en` or keys. */
 const i18nReady = i18n
     .use(resourcesToBackend(loadNamespace))
     .use(initReactI18next)
@@ -33,22 +50,10 @@ const i18nReady = i18n
         supportedLngs: SUPPORTED_LOCALES,
         nonExplicitSupportedLngs: false,
         load: 'languageOnly',
+        // The initial language and the fallback (13 namespaces each) load in one wave.
+        maxParallelReads: 32,
 
-        ns: [
-            'common',
-            'auth',
-            'errors',
-            'currencies',
-            'toasts',
-            'landing',
-            'activity',
-            'group',
-            'dashboard',
-            'settings',
-            'friends',
-            'skeletons',
-            'meta',
-        ],
+        ns: [...I18N_NAMESPACES],
         defaultNS: 'common',
 
         interpolation: {
@@ -57,4 +62,4 @@ const i18nReady = i18n
     })
     .then(() => undefined);
 
-export { i18n, i18nReady };
+export { i18n, I18N_NAMESPACES, i18nReady };

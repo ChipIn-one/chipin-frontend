@@ -57,18 +57,32 @@ vi.mock('hooks/pwaHooks', () => ({
     useCheckPwa: vi.fn(),
 }));
 vi.mock('hooks/seoMetadata', () => ({ updateSeoMetadata: vi.fn() }));
-const loadLanguages = vi.hoisted(() => vi.fn((_: string) => Promise.resolve()));
+// The `lng|ns` bundles i18next holds; a read through `reloadResources` adds them (a test may make
+// it wait or fail).
+const bundles = vi.hoisted(() => new Set<string>());
+const readBundles = (lngs: readonly string[], namespaces: readonly string[]) => {
+    lngs.forEach(lng => {
+        namespaces.forEach(ns => bundles.add(`${lng}|${ns}`));
+    });
+    return Promise.resolve();
+};
+const reloadResources = vi.hoisted(() =>
+    vi.fn((_lngs: readonly string[], _namespaces: readonly string[]) => Promise.resolve()),
+);
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         t: (key: string) => key,
         i18n: {
             resolvedLanguage: 'en',
-            loadLanguages,
+            reloadResources,
+            hasResourceBundle: (lng: string, ns: string) => bundles.has(`${lng}|${ns}`),
             getFixedT: () => (key: string) => key,
         },
     }),
 }));
 beforeEach(() => {
+    bundles.clear();
+    reloadResources.mockImplementation(readBundles);
     sessionLoad.set({ status: 'idle', user: null });
     window.sessionStorage.clear();
     vi.clearAllMocks();
@@ -245,7 +259,8 @@ test('English privacy offers a localized persistent Sonner action only once', as
     await vi.waitFor(() => {
         expect(toast.message).toHaveBeenCalledOnce();
     });
-    expect(loadLanguages).toHaveBeenCalledExactlyOnceWith('ru');
+    // Only the `toasts` namespace of the suggested language is read.
+    expect(reloadResources).toHaveBeenCalledExactlyOnceWith(['ru'], ['toasts']);
     expect(vi.mocked(toast.message).mock.calls[0]?.[1]).toMatchObject({
         duration: Infinity,
         dismissible: true,
@@ -255,7 +270,50 @@ test('English privacy offers a localized persistent Sonner action only once', as
     render(<PublicEffects route={route} isDark={false} />);
     await Promise.resolve();
     expect(toast.message).toHaveBeenCalledOnce();
-    expect(loadLanguages).toHaveBeenCalledOnce();
+    expect(reloadResources).toHaveBeenCalledOnce();
+});
+
+// R1 L3: the persistent toast never appears on a page the visitor already left.
+test('no suggestion toast when the page unmounts before the strings load', async () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);
+    let finishRead: () => void = () => undefined;
+    reloadResources.mockImplementation(
+        (lngs, namespaces) =>
+            new Promise(resolve => {
+                finishRead = () => {
+                    void readBundles(lngs, namespaces).then(resolve);
+                };
+            }),
+    );
+    const route = getOrThrow(
+        PUBLIC_ROUTE_ENTRIES.filter(item => item.path === '/privacy'),
+        0,
+    );
+    const mounted = render(<PublicEffects route={route} isDark={false} />);
+
+    mounted.unmount();
+    finishRead();
+    await new Promise(resolve => {
+        setTimeout(resolve, 0);
+    });
+    expect(toast.message).not.toHaveBeenCalled();
+});
+
+test('no suggestion toast in English when the suggested strings fail to load', async () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);
+    // i18next resolves a failed read; the bundle is just not there.
+    reloadResources.mockImplementation(() => Promise.resolve());
+    const route = getOrThrow(
+        PUBLIC_ROUTE_ENTRIES.filter(item => item.path === '/privacy'),
+        0,
+    );
+
+    render(<PublicEffects route={route} isDark={false} />);
+    await new Promise(resolve => {
+        setTimeout(resolve, 0);
+    });
+    expect(reloadResources).toHaveBeenCalledOnce();
+    expect(toast.message).not.toHaveBeenCalled();
 });
 
 test('explicit locale URL never offers a competing browser language', () => {

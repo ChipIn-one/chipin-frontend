@@ -1,6 +1,7 @@
 // Spec 04 §2.10, audit 02 §5: every supported locale has the same namespaces and the same keys as
 // the default one. Plural forms differ by language (`en` `_one/_other`, `ru` `_one/_few/_many/_other`),
-// so a key is compared without its i18next plural suffix.
+// so a key is compared without its i18next plural suffix; every plural key of a locale must have
+// each plural category that locale's CLDR rules use (`Intl.PluralRules`).
 import { describe, expect, test } from 'vitest';
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from 'constants/locales';
@@ -26,6 +27,57 @@ const flattenKeys = (value: Json, prefix = ''): string[] =>
 
         return isObject(child) ? flattenKeys(child, `${path}.`) : [path.replace(PLURAL_SUFFIX, '')];
     });
+
+/** Dotted paths of every leaf, as written. */
+const leafPaths = (value: Json, prefix = ''): string[] =>
+    Object.entries(value).flatMap(([key, child]) => {
+        const path = prefix + key;
+
+        return isObject(child) ? leafPaths(child, `${path}.`) : [path];
+    });
+
+/** Namespace → its content, for one locale. */
+const contentsOf = (lng: string): Map<string, Json> => {
+    const contents = new Map<string, Json>();
+
+    for (const [file, content] of Object.entries(APP_FILES)) {
+        const [, fileLng, ns] = /^\.\/locales\/([^/]+)\/([^/]+)\.json$/.exec(file) ?? [];
+
+        if (fileLng === lng && ns) {
+            contents.set(ns, content);
+        }
+    }
+    const common = Object.entries(COMMON_FILES).find(([file]) => file.endsWith(`/${lng}.json`));
+
+    if (common) {
+        contents.set('common', common[1]);
+    }
+    return contents;
+};
+
+/** `ns:key` of every plural key that lacks a plural category `lng` uses. */
+const missingPluralForms = (lng: string): string[] => {
+    const categories = new Intl.PluralRules(lng).resolvedOptions().pluralCategories;
+    const missing: string[] = [];
+
+    for (const [ns, content] of contentsOf(lng)) {
+        const paths = new Set(leafPaths(content));
+        const bases = new Set(
+            [...paths]
+                .filter(path => PLURAL_SUFFIX.test(path))
+                .map(path => path.replace(PLURAL_SUFFIX, '')),
+        );
+
+        for (const base of bases) {
+            for (const category of categories) {
+                if (!paths.has(`${base}_${category}`)) {
+                    missing.push(`${ns}:${base}_${category}`);
+                }
+            }
+        }
+    }
+    return missing.sort();
+};
 
 /** Namespace → its flattened key set, for one locale. */
 const namespacesOf = (lng: string): Map<string, string[]> => {
@@ -70,4 +122,10 @@ describe.each(OTHER_LOCALES)('%s', lng => {
     test.each([...reference.keys()])('%s has the same keys as the default locale', ns => {
         expect(namespaces.get(ns)).toEqual(reference.get(ns));
     });
+});
+
+// R1 L5: folding the suffixes alone would pass a `ru` key with only `_one`; at runtime it would
+// fall back to the English `_other`.
+test.each([...SUPPORTED_LOCALES])('%s has every plural form its language uses', lng => {
+    expect(missingPluralForms(lng)).toEqual([]);
 });

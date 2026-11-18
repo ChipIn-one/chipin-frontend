@@ -148,6 +148,35 @@ test('a public page hydrates after its route language is applied', async () => {
     );
 });
 
+// R1 L4: the first render waits for the initial language's lazy chunks, so it never shows raw keys.
+test.each([
+    ['https://app.chipin.one/dashboard', false],
+    ['https://app.chipin.one/ru/privacy', true],
+])('%s renders only after the i18n init settles', async (url, publicSsg) => {
+    let settle: () => void = () => undefined;
+    boot.i18nReady = () =>
+        new Promise<void>(resolve => {
+            settle = resolve;
+        });
+    const mount = publicSsg ? boot.hydrateRoot : boot.createRoot;
+
+    try {
+        await bootOn(url, { publicSsg });
+        // Every other step of the boot (dynamic imports, the cache restore) has had its time.
+        await new Promise(resolve => {
+            setTimeout(resolve, 20);
+        });
+        expect(mount).not.toHaveBeenCalled();
+
+        settle();
+        await vi.waitFor(() => {
+            expect(mount).toHaveBeenCalledOnce();
+        });
+    } finally {
+        boot.i18nReady = () => Promise.resolve();
+    }
+});
+
 // A failed i18n init never leaves a blank page: the app mounts and the public page hydrates anyway.
 test.each([
     ['https://app.chipin.one/dashboard', false],
