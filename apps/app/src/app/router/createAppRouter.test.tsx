@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { UserSettings } from 'api/chipin.types';
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRoutes';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 import { UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 import { createTestQueryClient } from 'test/renderWithQueryClient';

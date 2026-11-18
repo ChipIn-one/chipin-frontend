@@ -16,7 +16,7 @@ import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { fetchSelfUser } from 'entities/users';
 import { establishAuthSession } from 'helpers/authSession';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 import { UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 import { resetSessionSelfLoad } from 'store/sessionUser';
