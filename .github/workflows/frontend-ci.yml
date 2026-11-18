@@ -14,7 +14,8 @@ permissions:
 
 concurrency:
   group: frontend-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Master pushes are never cancelled: each push run is release-QA evidence for its exact SHA.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   frontend-ci:
@@ -60,38 +61,86 @@ jobs:
             mode="$(git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" | node scripts/ci-gate-policy.mjs)"
           fi
 
+          case "$mode" in
+            docs-only | app | site | full) ;;
+            *)
+              echo "::error::unknown verification mode: $mode"
+              exit 1
+              ;;
+          esac
+
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+      # Modes (scripts/ci-gate-policy.mjs, spec 04 §1.4): docs-only runs nothing below; app runs the
+      # app gate; site runs the site gate; full runs both. The app gate is the root verify:full
+      # (root ESLint, Prettier, packages typecheck, tests, build), so app and full run it unchanged.
       - name: Install dependencies
-        if: steps.gate.outputs.mode == 'full'
+        if: steps.gate.outputs.mode != 'docs-only'
         run: npm ci
       - name: Check lint baseline does not grow
-        if: github.event_name == 'pull_request' && steps.gate.outputs.mode == 'full'
+        if: github.event_name == 'pull_request' && (steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full')
         env:
           BASE_SHA: ${{ steps.gate.outputs.base_sha }}
         run: node scripts/check-baseline.mjs --base "$BASE_SHA"
       - name: Check file layout baseline does not grow
-        if: github.event_name == 'pull_request' && steps.gate.outputs.mode == 'full'
+        if: github.event_name == 'pull_request' && (steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full')
         env:
           BASE_SHA: ${{ steps.gate.outputs.base_sha }}
         run: node scripts/check-file-layout.mjs --base "$BASE_SHA"
       - name: Check generated API types
-        if: steps.gate.outputs.mode == 'full'
+        if: steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full'
         # Offline: regenerates from the committed apps/app/openapi/chipin.yaml and fails on any diff (spec 03 §5.5).
         run: npm run api:check
       - name: Verify frontend
-        if: steps.gate.outputs.mode == 'full'
+        if: steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full'
         # Step timeout (not only the job's) so a hang counts as a failure and notifies #chipin-ci.
         timeout-minutes: 18
         env:
           CHIPIN_TASK_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           CHIPIN_TASK_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
         run: npm run verify:full
-      - name: Record cheap required-check path
-        if: steps.gate.outputs.mode != 'full'
+      - name: Verify site
+        if: steps.gate.outputs.mode == 'site' || steps.gate.outputs.mode == 'full'
+        timeout-minutes: 10
         env:
           MODE: ${{ steps.gate.outputs.mode }}
-        run: echo "frontend-ci completed via $MODE path; verify:full was not required for this event."
+          BASE_SHA: ${{ steps.gate.outputs.base_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # apps/site arrives in 04-3a. Fail closed: site mode always needs the workspace, and full
+          # mode needs it whenever the base already had it (a PR must not delete the site gate).
+          if [[ ! -f apps/site/package.json ]]; then
+            if [[ "$MODE" == site ]]; then
+              echo "::error::site mode without apps/site/package.json"
+              exit 1
+            fi
+            if [[ "$BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$BASE_SHA" =~ ^0+$ ]] &&
+              git cat-file -e "$BASE_SHA:apps/site/package.json" 2> /dev/null; then
+              echo "::error::apps/site/package.json existed at $BASE_SHA but is missing now"
+              exit 1
+            fi
+            echo "apps/site/package.json is absent; site checks skipped (workspace not created yet)."
+            exit 0
+          fi
+
+          # Mirrors the root lint:full / format:check over apps/site, so a green site run
+          # implies full would be green for these files.
+          npx --no-install prettier --check apps/site
+          CHIPIN_ESLINT_FULL=1 npx --no-install eslint apps/site --max-warnings 0
+          npm exec --no -w @chipin/site -- astro check
+          npm run test -w @chipin/site --if-present
+          npm exec --no -w @chipin/site -- astro build
+      - name: Record verification mode
+        env:
+          MODE: ${{ steps.gate.outputs.mode }}
+        run: |
+          if [ "$MODE" = "docs-only" ]; then
+            echo "frontend-ci completed via docs-only path; verify:full was not required for this event."
+          else
+            echo "frontend-ci completed via $MODE path."
+          fi
 
   notify-master-failure:
     # Separate job: the Slack webhook never shares a runner with npm install scripts.
