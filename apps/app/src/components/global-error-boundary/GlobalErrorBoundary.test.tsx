@@ -20,7 +20,7 @@ vi.mock('@sentry/react', () =>
 );
 
 vi.mock('i18n', () => ({
-    default: {
+    i18n: {
         t: (key: string) => key,
     },
 }));

@@ -1,8 +1,10 @@
 import { createElement, type JSXElementConstructor, type ReactNode } from 'react';
 import { cleanup, type RenderHookOptions, type RenderOptions } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeAll, vi } from 'vitest';
 
+import { SUPPORTED_LOCALES } from 'constants/locales';
 import { resetTabUserId } from 'helpers/localStorage';
+import { i18n, i18nReady } from 'i18n';
 
 import { installFakeBroadcastChannel } from './broadcastChannel';
 import { DefaultTestQueryProvider, resetTestQueryClients } from './renderWithQueryClient';
@@ -72,6 +74,10 @@ Object.defineProperties(HTMLElement.prototype, {
         value: () => undefined,
     },
 });
+
+// Every locale namespace is a lazy chunk (spec 04 §2.10): tests render with both languages loaded,
+// as the synchronous resources did before, so a test can switch to `ru` without waiting.
+beforeAll(() => i18nReady.then(() => i18n.loadLanguages([...SUPPORTED_LOCALES])));
 
 // jsdom has no Web Locks: the outbox write lock (spec 03 §2.3) runs on an in-memory one; the
 // outbox ping between tabs on an in-memory `BroadcastChannel`.

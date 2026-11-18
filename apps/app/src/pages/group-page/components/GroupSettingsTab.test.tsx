@@ -223,7 +223,11 @@ test('shows one localized toast and keeps the confirmed value after update failu
         waitFor(() => {
             expect(updateGroup).toHaveBeenCalledOnce();
             expect(toast.error).toHaveBeenCalledOnce();
-            expect(toast.error).toHaveBeenCalledWith('Could not update the group.');
+            // The backend code's own message (`errors:apiErrors.SYSTEM.INTERNAL`): i18next is
+            // initialized in every test now (spec 04 §2.10, test/setup.ts).
+            expect(toast.error).toHaveBeenCalledWith(
+                'Something went wrong. Please try again later.',
+            );
             expect(
                 screen
                     .getByRole('switch', { name: 'Simplify group debts' })

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { ledgerOnlineMutationKeys } from 'entities/ledger';
-import i18n from 'i18n/index';
+import { i18n } from 'i18n';
 import { currencyCode, fromUnits } from 'shared/money';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';

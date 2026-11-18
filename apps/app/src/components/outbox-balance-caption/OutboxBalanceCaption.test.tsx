@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import type { OutboxOverlay } from 'entities/ledger';
-import i18n from 'i18n/index';
+import { i18n } from 'i18n';
 import { useOutboxSheetStore } from 'store/outboxSheetStore';
 
 import { OutboxBalanceCaption } from './index';
