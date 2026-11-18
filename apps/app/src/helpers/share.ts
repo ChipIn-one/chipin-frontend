@@ -1,3 +1,5 @@
+import { copyTextToClipboard } from 'helpers/clipboard';
+
 export type ShareResult = 'shared' | 'copied' | 'cancelled' | 'unsupported';
 
 export interface InviteShareContent {
@@ -24,24 +26,13 @@ export const detectNativeShare = (): boolean => {
     return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 };
 
-const copyShareUrl = (url: string): Promise<ShareResult> => {
-    if (!navigator.clipboard?.writeText) {
-        return Promise.resolve('unsupported');
-    }
-
-    return navigator.clipboard.writeText(url).then(
-        () => 'copied',
-        () => 'unsupported',
-    );
-};
-
 /**
  * Attempts to share via the Web Share API, falling back to clipboard copy.
  * Never rejects — all outcomes are encoded as a ShareResult.
  */
 export const shareInvite = (options: ShareOptions): Promise<ShareResult> => {
     if (!detectNativeShare()) {
-        return copyShareUrl(options.url);
+        return copyTextToClipboard(options.url);
     }
 
     return navigator
@@ -57,7 +48,7 @@ export const shareInvite = (options: ShareOptions): Promise<ShareResult> => {
                     return 'cancelled';
                 }
 
-                return copyShareUrl(options.url);
+                return copyTextToClipboard(options.url);
             },
         );
 };

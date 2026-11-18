@@ -144,9 +144,119 @@ test('shows an error and keeps copied feedback off when invite link copy fails',
 
     return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
         expect(result.current.isCopied).toBe(false);
-        expect(vi.mocked(toast.error)).toHaveBeenCalledWith('toasts:group.inviteLinkCopyError');
+        expect(vi.mocked(toast.error)).toHaveBeenCalledWith('toasts:group.inviteLinkCopyError', {
+            duration: 10 * SECOND,
+            action: { label: 'toasts:common.copyLinkAction', onClick: expect.any(Function) },
+        });
         expect(vi.mocked(toast.success)).not.toHaveBeenCalled();
     });
+});
+
+interface ToastAction {
+    label: unknown;
+    onClick: () => void;
+}
+
+const isToastAction = (value: unknown): value is ToastAction =>
+    typeof value === 'object' &&
+    value !== null &&
+    'label' in value &&
+    'onClick' in value &&
+    typeof value.onClick === 'function';
+
+const readCopyRetryAction = (): ToastAction => {
+    const action = vi.mocked(toast.error).mock.calls[0]?.[1]?.action;
+
+    if (!isToastAction(action)) {
+        throw new Error('The copy error toast has no action');
+    }
+
+    return action;
+};
+
+test('DSH-015 offers a Copy link action when the share sheet fails and the copy fallback fails', () => {
+    hookMocks.shareInvite.mockResolvedValueOnce('unsupported');
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(act(() => result.current.onShare())).then(() => {
+        expect(vi.mocked(toast.error)).toHaveBeenCalledWith('toasts:group.inviteLinkCopyError', {
+            duration: 10 * SECOND,
+            action: { label: 'toasts:common.copyLinkAction', onClick: expect.any(Function) },
+        });
+        expect(result.current.isCopied).toBe(false);
+    });
+});
+
+test('DSH-015 copies the invite link again from the toast action and shows copied feedback', () => {
+    hookMocks.copyTextToClipboard.mockResolvedValueOnce('unsupported');
+    const { result } = renderHook(() => useFriendInvite('friend-invite-token'));
+
+    return Promise.resolve(act(() => result.current.onCopyLink()))
+        .then(() => {
+            const action = readCopyRetryAction();
+            expect(action.label).toBe('toasts:common.copyLinkAction');
+
+            return act(() => {
+                action.onClick();
+                // The retry copies inside the click, before any await.
+                expect(hookMocks.copyTextToClipboard).toHaveBeenCalledTimes(2);
+
+                return Promise.resolve();
+            });
+        })
+        .then(() => {
+            expect(hookMocks.copyTextToClipboard).toHaveBeenLastCalledWith(
+                expect.stringContaining('/friends/join/friend-invite-token'),
+            );
+            expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:friend.inviteLinkCopied');
+            expect(result.current.isCopied).toBe(true);
+        });
+});
+
+test('DSH-015 shows the copy error without an action when the toast action copy fails again', () => {
+    hookMocks.shareInvite.mockResolvedValueOnce('unsupported');
+    hookMocks.copyTextToClipboard.mockResolvedValueOnce('unsupported');
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(act(() => result.current.onShare()))
+        .then(() =>
+            act(() => {
+                readCopyRetryAction().onClick();
+
+                return Promise.resolve();
+            }),
+        )
+        .then(() => {
+            expect(vi.mocked(toast.error)).toHaveBeenCalledTimes(2);
+            expect(vi.mocked(toast.error)).toHaveBeenLastCalledWith(
+                'toasts:group.inviteLinkCopyError',
+            );
+            expect(vi.mocked(toast.success)).not.toHaveBeenCalled();
+            expect(result.current.isCopied).toBe(false);
+        });
+});
+
+test('DSH-015 shows the copied toast when the toast action copies after the invite surface unmounted', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    hookMocks.copyTextToClipboard.mockResolvedValueOnce('unsupported');
+    const { result, unmount } = renderHook(() => useFriendInvite('friend-invite-token'));
+
+    return Promise.resolve(act(() => result.current.onCopyLink()))
+        .then(() => {
+            const action = readCopyRetryAction();
+            unmount();
+            action.onClick();
+            expect(hookMocks.copyTextToClipboard).toHaveBeenCalledTimes(2);
+
+            return Promise.resolve();
+        })
+        .then(() => {
+            const consoleErrorCalls = [...consoleError.mock.calls];
+            consoleError.mockRestore();
+
+            expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:friend.inviteLinkCopied');
+            expect(consoleErrorCalls).toEqual([]);
+        });
 });
 
 test('uses friend-specific share and QR copy', () => {

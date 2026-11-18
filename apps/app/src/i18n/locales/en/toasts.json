@@ -5,7 +5,8 @@
     "tokenPersistenceFailed": "Other sessions were ended, but this device couldn’t stay signed in. Please sign in again."
   },
   "common": {
-    "requestFailed": "Something went wrong. Please try again."
+    "requestFailed": "Something went wrong. Please try again.",
+    "copyLinkAction": "Copy link"
   },
   "group": {
     "inviteJoinWarning": "Please sign in before joining the group.",
@@ -21,12 +22,12 @@
     "kicked": "Member \"{{name}}\" was removed from the group.",
     "inviteLinkNotReady": "Invite link is not ready yet",
     "inviteLinkCopied": "Group invite link copied",
-    "inviteLinkCopyError": "Failed to copy link"
+    "inviteLinkCopyError": "Couldn't copy the link."
   },
   "friend": {
     "removed": "\"{{name}}\" was removed from your friends.",
     "inviteLinkCopied": "Friend invite link copied",
-    "inviteLinkCopyError": "Failed to copy link",
+    "inviteLinkCopyError": "Couldn't copy the link.",
     "inviteAcceptedWithName": "You and {{name}} are now friends.",
     "inviteAccepted": "Friend added.",
     "inviteJoinError": "Failed to add friend. Check the invite link and try again."
