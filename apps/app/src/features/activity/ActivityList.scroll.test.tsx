@@ -14,7 +14,7 @@ import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
-import ActivityList from './ActivityList';
+import { ActivityList } from './ActivityList';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),

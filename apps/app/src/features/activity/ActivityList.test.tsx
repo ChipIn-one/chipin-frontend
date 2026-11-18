@@ -16,7 +16,7 @@ import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQue
 import { mountAsUserClient } from 'test/userClient';
 
 import type { ActivityFilter } from './ActivityHeader';
-import ActivityList from './ActivityList';
+import { ActivityList } from './ActivityList';
 
 const useInfiniteScrollMock = vi.hoisted(() =>
     vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
