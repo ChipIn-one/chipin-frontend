@@ -72,6 +72,7 @@ interface UseInviteParams {
     inviteLink: string;
     copySuccessMessage: string;
     copyErrorMessage: string;
+    copyRetryLabel: string;
     shareContent: InviteShareContent;
     qr: InviteQrContent;
 }
@@ -80,6 +81,7 @@ const useInvite = ({
     inviteLink,
     copySuccessMessage,
     copyErrorMessage,
+    copyRetryLabel,
     shareContent,
     qr,
 }: UseInviteParams): UseInviteResult => {
@@ -122,6 +124,40 @@ const useInvite = ({
         }, INVITE_FEEDBACK_DELAY_MS);
     };
 
+    const showCopyError = (canRetry: boolean): void => {
+        if (!canRetry) {
+            toast.error(copyErrorMessage);
+            return;
+        }
+
+        // A failed copy (or a failed share sheet) has used up the user activation, so the retry
+        // needs a fresh click: the toast action copies again inside that click.
+        toast.error(copyErrorMessage, {
+            action: {
+                label: copyRetryLabel,
+                onClick: () => {
+                    void retryCopyFromToast();
+                },
+            },
+        });
+    };
+
+    const retryCopyFromToast = (): Promise<void> => {
+        return copyTextToClipboard(inviteLink).then(result => {
+            if (result !== 'copied') {
+                showCopyError(false);
+                return;
+            }
+
+            if (!isMounted.current) {
+                toast.success(copySuccessMessage);
+                return;
+            }
+
+            showCopiedFeedback();
+        });
+    };
+
     const onShare = (): Promise<void> => {
         return shareInvite({
             url: inviteLink,
@@ -138,7 +174,7 @@ const useInvite = ({
             }
 
             if (result === 'unsupported') {
-                toast.error(copyErrorMessage);
+                showCopyError(true);
                 return;
             }
 
@@ -166,7 +202,7 @@ const useInvite = ({
             }
 
             if (result !== 'copied') {
-                toast.error(copyErrorMessage);
+                showCopyError(true);
                 return;
             }
 
@@ -190,6 +226,7 @@ export const useGroupInvite = (group: Group): UseInviteResult => {
         inviteLink: buildGroupInviteLink({ inviteToken: group.inviteToken }),
         copySuccessMessage: i18n.t('toasts:group.inviteLinkCopied'),
         copyErrorMessage: i18n.t('toasts:group.inviteLinkCopyError'),
+        copyRetryLabel: i18n.t('toasts:common.copyLinkAction'),
         shareContent: {
             title: i18n.t('group:qr.shareTitle', { groupName: group.name }),
             text: i18n.t('group:qr.shareText', { groupName: group.name }),
@@ -210,6 +247,7 @@ export const useFriendInvite = (inviteToken: string): UseInviteResult => {
         inviteLink: buildFriendInviteLink({ inviteToken }),
         copySuccessMessage: i18n.t('toasts:friend.inviteLinkCopied'),
         copyErrorMessage: i18n.t('toasts:friend.inviteLinkCopyError'),
+        copyRetryLabel: i18n.t('toasts:common.copyLinkAction'),
         shareContent: {
             title: i18n.t('friends:invite.shareTitle'),
             text: i18n.t('friends:invite.shareText'),

@@ -1,9 +1,56 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { copyTextToClipboard } from './clipboard';
 
+interface CopyCommandBehaviour {
+    isCopied: boolean;
+    hasClipboardData: boolean;
+}
+
+const copyCommand: CopyCommandBehaviour = { isCopied: true, hasClipboardData: true };
+const copiedTexts: string[] = [];
+const selectedTextsAtCopy: string[] = [];
+
+// jsdom has no `execCommand` or `ClipboardEvent`: emulate the browser dispatching a `copy` event
+// with (or without) `clipboardData`, recording what was written or selected at copy time.
+// jsdom's Selection#toString ignores ranges while a non-text element is focused; read the range.
+const readSelectedText = (): string => {
+    const selection = document.getSelection();
+
+    return selection && selection.rangeCount > 0 ? selection.getRangeAt(0).toString() : '';
+};
+
+const execCommand = vi.fn((_command: string): boolean => {
+    const setData = (_format: string, data: string): void => {
+        copiedTexts.push(data);
+    };
+    const copyEvent = new Event('copy', { cancelable: true });
+    Object.defineProperty(copyEvent, 'clipboardData', {
+        value: copyCommand.hasClipboardData ? { setData } : null,
+    });
+    selectedTextsAtCopy.push(readSelectedText());
+    document.dispatchEvent(copyEvent);
+
+    return copyCommand.isCopied;
+});
+
+beforeEach(() => {
+    vi.clearAllMocks();
+    copyCommand.isCopied = true;
+    copyCommand.hasClipboardData = true;
+    copiedTexts.length = 0;
+    selectedTextsAtCopy.length = 0;
+    Object.defineProperty(document, 'execCommand', {
+        configurable: true,
+        value: execCommand,
+    });
+});
+
 afterEach(() => {
     vi.unstubAllGlobals();
+    Reflect.deleteProperty(document, 'execCommand');
+    document.getSelection()?.removeAllRanges();
+    document.body.innerHTML = '';
 });
 
 test('returns copied after the clipboard write completes', () => {
@@ -12,34 +59,133 @@ test('returns copied after the clipboard write completes', () => {
 
     return copyTextToClipboard('invite-link').then(result => {
         expect(writeText).toHaveBeenCalledWith('invite-link');
+        expect(execCommand).not.toHaveBeenCalled();
         expect(result).toBe('copied');
     });
 });
 
-test('returns unsupported when the clipboard write rejects', () => {
-    const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+test('DSH-015 writes the value through the copy event when the clipboard write is denied', () => {
+    const writeText = vi.fn(() => Promise.reject(new Error('Write permission denied')));
     vi.stubGlobal('navigator', { clipboard: { writeText } });
 
     return copyTextToClipboard('invite-link').then(result => {
-        expect(result).toBe('unsupported');
+        expect(execCommand).toHaveBeenCalledWith('copy');
+        expect(copiedTexts).toEqual(['invite-link']);
+        expect(result).toBe('copied');
     });
 });
 
-test('returns unsupported when the clipboard API is unavailable', () => {
+test('DSH-015 copies synchronously within the call when the clipboard API is unavailable', () => {
     vi.stubGlobal('navigator', {});
 
-    return copyTextToClipboard('invite-link').then(result => {
-        expect(result).toBe('unsupported');
+    const pendingResult = copyTextToClipboard('invite-link');
+
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(copiedTexts).toEqual(['invite-link']);
+
+    return pendingResult.then(result => {
+        expect(result).toBe('copied');
     });
 });
 
-test('returns unsupported when the clipboard API throws synchronously', () => {
+test('falls back to the copy command when the clipboard API throws synchronously', () => {
     const writeText = vi.fn(() => {
         throw new Error('clipboard unavailable');
     });
     vi.stubGlobal('navigator', { clipboard: { writeText } });
 
     return copyTextToClipboard('invite-link').then(result => {
+        expect(copiedTexts).toEqual(['invite-link']);
+        expect(result).toBe('copied');
+    });
+});
+
+test('DSH-015 returns unsupported when the clipboard write is denied and the copy command fails', () => {
+    const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    copyCommand.isCopied = false;
+
+    return copyTextToClipboard('invite-link').then(result => {
         expect(result).toBe('unsupported');
+    });
+});
+
+test('returns unsupported when the copy command throws', () => {
+    vi.stubGlobal('navigator', {});
+    execCommand.mockImplementationOnce(() => {
+        throw new Error('copy blocked');
+    });
+
+    return copyTextToClipboard('invite-link').then(result => {
+        expect(result).toBe('unsupported');
+    });
+});
+
+test('returns unsupported when neither the clipboard API nor the copy command exists', () => {
+    vi.stubGlobal('navigator', {});
+    Reflect.deleteProperty(document, 'execCommand');
+
+    return copyTextToClipboard('invite-link').then(result => {
+        expect(result).toBe('unsupported');
+    });
+});
+
+test('removes the copy listener after copying', () => {
+    vi.stubGlobal('navigator', {});
+
+    return copyTextToClipboard('invite-link').then(() => {
+        const laterCopyEvent = new Event('copy', { cancelable: true });
+        Object.defineProperty(laterCopyEvent, 'clipboardData', {
+            value: { setData: vi.fn() },
+        });
+        document.dispatchEvent(laterCopyEvent);
+
+        expect(laterCopyEvent.defaultPrevented).toBe(false);
+        expect(copiedTexts).toEqual(['invite-link']);
+    });
+});
+
+test('copies a temporary selection without moving focus when the copy event has no clipboard data', () => {
+    vi.stubGlobal('navigator', {});
+    copyCommand.hasClipboardData = false;
+    const paragraph = document.createElement('p');
+    paragraph.textContent = 'Selected text';
+    const button = document.createElement('button');
+    document.body.append(paragraph, button);
+    button.focus();
+    const previousRange = document.createRange();
+    previousRange.selectNodeContents(paragraph);
+    document.getSelection()?.removeAllRanges();
+    document.getSelection()?.addRange(previousRange);
+
+    return copyTextToClipboard('invite-link').then(result => {
+        expect(result).toBe('copied');
+        expect(selectedTextsAtCopy).toEqual(['Selected text', 'invite-link']);
+        expect(document.body.textContent).toBe('Selected text');
+        expect(document.activeElement).toBe(button);
+        expect(readSelectedText()).toBe('Selected text');
+    });
+});
+
+test('places the temporary selection inside the focused dialog', () => {
+    vi.stubGlobal('navigator', {});
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    const button = document.createElement('button');
+    dialog.append(button);
+    document.body.append(dialog);
+    button.focus();
+    let isSelectionInsideDialog = false;
+    execCommand.mockImplementation(() => {
+        const anchorNode = document.getSelection()?.anchorNode ?? null;
+        isSelectionInsideDialog = anchorNode !== null && dialog.contains(anchorNode);
+        return true;
+    });
+
+    return copyTextToClipboard('invite-link').then(result => {
+        expect(result).toBe('copied');
+        expect(isSelectionInsideDialog).toBe(true);
+        expect(dialog.textContent).toBe('');
+        expect(document.activeElement).toBe(button);
     });
 });
