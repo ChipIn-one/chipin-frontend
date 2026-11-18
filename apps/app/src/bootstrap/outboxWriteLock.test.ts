@@ -1,7 +1,7 @@
 // Spec 03 §8 outbox, the rows of PR 03-15c1: the write lock (`navigator.locks`, an in-memory
 // manager shared by the "tabs" of a test), the persisted `sending` claim, the drain-session fence
-// (M2), the queue read under the lock (N3) and the owner check under the claim's lock (N4). Every
-// tab still drains (the drain lock is 03-15c2). IndexedDB through `fake-indexeddb`.
+// (M2), the queue read under the lock (N3) and the owner check under the claim's lock (N4). The
+// tab holds the drain lock (03-15c2, `outboxDrain.test.ts`). IndexedDB through `fake-indexeddb`.
 import * as Sentry from '@sentry/react';
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { clear, get, set } from 'idb-keyval';
@@ -20,6 +20,7 @@ import { saveLocalUser } from 'helpers/localStorage';
 import { createQueryClient } from 'shared/api/queryClient';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
+import { setOutboxPage } from 'shared/offline/outboxDrain';
 import { outboxGate } from 'shared/offline/outboxGate';
 import { outboxWriteLockName, OutboxWriteStoppedError } from 'shared/offline/outboxIo';
 import {
@@ -46,6 +47,7 @@ import { reportPersistFailed } from 'shared/offline/queryPersister';
 import { onAccessTokenRefreshed } from 'store/authStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { setupMswServer } from 'test/mswServer';
+import { fakeOutboxPage } from 'test/outboxPage';
 import { mountAsUserClient } from 'test/userClient';
 import { holdWebLock, removeWebLocks } from 'test/webLocks';
 
@@ -280,6 +282,8 @@ beforeEach(async () => {
     auth.session = USER;
     idbLog.length = 0;
     resetStoragePersistRequest();
+    // Each test's tab is visible (the drain lock, 03-15c2).
+    setOutboxPage(fakeOutboxPage().page);
     await clear();
 });
 
@@ -457,23 +461,31 @@ describe('03-15c1 the persisted claim (§2.3)', () => {
         expect((await readOutboxKey())?.sending).toEqual({ opId: 'op-1', session: 'newer' });
     });
 
-    test("a stale holder's late clear after a 5xx leaves the new holder's claim", async () => {
+    test("N5: the drain release aborts the request in flight; a stale holder's late clear leaves the new holder's claim", async () => {
         const first = deferred();
         const second = deferred();
         const requests = serveLedger(index => (index === 0 ? 503 : 200), [first, second]);
+        const page = fakeOutboxPage();
 
+        setOutboxPage(page.page);
         await storeOutbox([storedOp(1, 'entry-a')]);
-        await openTab();
+        const client = await openTab();
+
         await vi.waitFor(() => expect(requests).toHaveLength(1));
-        // The drain stops and starts again (a new session); a new client adopts and claims the op.
-        stopOutbox();
-        await startLedgerOutbox(newClient(), USER, effects);
+        // The drain lock is released on freeze (the request is aborted first) and taken again:
+        // a new session adopts and claims the op.
+        page.freeze();
+        await vi.waitFor(() =>
+            expect(firstMutation(client)?.state.data).toEqual({ kind: 'stopped' }),
+        );
+        page.show();
         await vi.waitFor(() => expect(requests).toHaveLength(2));
         const claim = (await readOutboxKey())?.sending;
 
         expect(claim).toMatchObject({ opId: 'op-1' });
+        // The aborted request's late 503 reaches nobody.
         first.resolve();
-        await wait(50);
+        await vi.waitFor(() => expect(outboxGate.isClosed('auth')).toBe(false));
         expect((await readOutboxKey())?.sending).toEqual(claim);
         second.resolve();
         await vi.waitFor(async () => expect((await readOutboxKey())?.ops).toEqual([]));

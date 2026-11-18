@@ -1,5 +1,7 @@
 import { beforeEach, expect, test } from 'vitest';
 
+import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+
 import { type ExpenseParticipant, useExpenseModalStore } from './expenseModalStore';
 
 const currentUser = {
@@ -131,4 +133,33 @@ test('keeps a manually selected currency after initialization', () => {
     store.setGroupId('group-1');
 
     expect(useExpenseModalStore.getState().currency).toBe('EUR');
+});
+
+test('#706 EXP-064 a USD split amount "100." switched to JPY can still be edited around its separator', () => {
+    const store = useExpenseModalStore.getState();
+    store.initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser, groupMember] }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    });
+    store.setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+    store.setSplitValue(currentUser.id, '100.');
+    store.setCurrency('JPY');
+
+    const share = () => useExpenseModalStore.getState().amountShares[currentUser.id];
+
+    useExpenseModalStore.getState().setSplitValue(currentUser.id, '10.');
+    expect(share()).toBe('10.');
+    useExpenseModalStore.getState().setSplitValue(currentUser.id, '10.5');
+    expect(share()).toBe('10.');
+    useExpenseModalStore.getState().setSplitValue(currentUser.id, '200');
+    expect(share()).toBe('200');
+    // Once the separator is gone, a JPY split amount does not take it back (#706).
+    useExpenseModalStore.getState().setSplitValue(currentUser.id, '200.');
+    expect(share()).toBe('200');
 });

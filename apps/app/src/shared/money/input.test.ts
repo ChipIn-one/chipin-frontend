@@ -51,10 +51,17 @@ describe('parseMoneyInput', () => {
         expect(parseMoneyInput(raw, currencyCode(code))).toBeNull();
     });
 
-    test('a trailing separator without digits is accepted', () => {
+    test('a trailing separator without digits is accepted when the currency has fraction digits', () => {
         expect(parseMoneyInput('10.', currencyCode('USD'))?.minor).toBe(100000n);
-        expect(parseMoneyInput('10.', currencyCode('JPY'))?.minor).toBe(100000n);
+        expect(parseMoneyInput('10,', currencyCode('KWD'))?.minor).toBe(100000n);
     });
+
+    test.each(['10.', '10,', '.', ','])(
+        '#706 %j is not a JPY amount: a currency without fraction digits takes no separator',
+        raw => {
+            expect(parseMoneyInput(raw, currencyCode('JPY'))).toBeNull();
+        },
+    );
 });
 
 describe('moneyInputText', () => {

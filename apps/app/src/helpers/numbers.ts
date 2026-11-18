@@ -289,11 +289,14 @@ export const getNumberData = ({
  * Normalises a raw amount input string:
  * - Replaces ',' with '.' as the decimal separator.
  * - Rejects strings that exceed the configured precision or are otherwise invalid.
+ * - With no fraction digits allowed, rejects a separator unless `previous` (the current field text)
+ *   already has one, so a legacy value such as "100." after a switch to JPY stays editable (#706).
  * Returns the normalised string on success, or null when the input should be rejected.
  */
 export const parseAmountInput = (
     raw: string,
     maxFractionDigits: number | null = 2,
+    previous = '',
 ): string | null => {
     const normalised = raw.replace(',', '.');
     const [integerPart = '', fractionalPart] = normalised.split('.');
@@ -301,10 +304,11 @@ export const parseAmountInput = (
         /^\d*$/.test(integerPart) &&
         (fractionalPart === undefined || /^\d*$/.test(fractionalPart)) &&
         normalised.split('.').length <= 2;
+    const isSeparatorAllowed = maxFractionDigits !== 0 || /[.,]/.test(previous);
     const hasValidPrecision =
         maxFractionDigits === null ||
         fractionalPart === undefined ||
-        fractionalPart.length <= maxFractionDigits;
+        (isSeparatorAllowed && fractionalPart.length <= maxFractionDigits);
 
     if (!hasValidShape || !hasValidPrecision) {
         return null;

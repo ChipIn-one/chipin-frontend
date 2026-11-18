@@ -1,4 +1,4 @@
-import AmountInput from './AmountInput';
+import { AmountInput } from './AmountInput';
 import BackgroundBox from './BackgroundBox';
 import { LedgerScopeBadge } from './badges';
 import BalanceBadges from './BalanceBadges';
