@@ -9,6 +9,7 @@ import {
 import { delay, http, HttpResponse } from 'msw';
 import { expect, test, vi } from 'vitest';
 
+import { refetchIfRestored } from 'shared/api/queryClient';
 import { currencyCode, fromUnits } from 'shared/money';
 import { dehydrateOptions, trimInfinitePages } from 'shared/offline/queryPersister';
 import { domainPreview, wirePreview } from 'test/activityFixtures';
@@ -620,4 +621,10 @@ test('invalidating a history marks only that chain stale and keeps what it shows
     expect(client.getQueryState(activityKeys.children('p1'))?.isInvalidated).toBe(true);
     expect(client.getQueryState(activityKeys.children('p2'))?.isInvalidated).toBe(false);
     expect(client.getQueryData(activityKeys.children('p1'))).toEqual(data);
+});
+
+test('#724 the activity amounts restored from before the reload are read again on mount', () => {
+    expect(selfActivityPreviewsQueryOptions().refetchOnMount).toBe(refetchIfRestored);
+    expect(selfActivityEventsQueryOptions().refetchOnMount).toBe(refetchIfRestored);
+    expect(activityChildrenQueryOptions('a-1').refetchOnMount).toBe(refetchIfRestored);
 });

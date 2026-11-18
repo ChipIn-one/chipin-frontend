@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group as LegacyGroup } from 'api/chipin.types';
+import { PAGE_LOADED_AT } from 'shared/api/queryClient';
 import { testGroup, wireGroup } from 'test/groupFixtures';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
@@ -86,6 +87,12 @@ const watchList = (options: { refetchOnReconnect?: boolean } = {}): void => {
 
     stopWatching = observer.subscribe(() => undefined);
 };
+// A list seeded seconds ago must have been read in this page: one older than the page load was
+// restored from the persisted cache, and a mount reads it again (#724).
+const runAMinuteAfterPageLoad = (): void => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+};
 const startListLoad = () => userCache.client.refetchQueries({ queryKey: listKey });
 const listSettled = () =>
     vi.waitFor(() => {
@@ -105,6 +112,7 @@ afterEach(() => {
     stopWatching = undefined;
     userCache.dispose();
     onlineManager.setOnline(true);
+    vi.useRealTimers();
 });
 
 test('a change cancels a running list load and reloads: the older answer is never applied', async () => {
@@ -125,6 +133,7 @@ test('a change cancels a running list load and reloads: the older answer is neve
 });
 
 test('a group read replaces its list entry without a request, keeping the age', async () => {
+    runAMinuteAfterPageLoad();
     const requests = serveGroups([]);
     const updatedAt = Date.now() - 10_000;
     seed([group('a'), group('b')], updatedAt);
@@ -204,6 +213,7 @@ test('a group written while a list load waits offline puts the load back in line
 });
 
 test('a group the user can no longer read leaves the list without a request', async () => {
+    runAMinuteAfterPageLoad();
     const requests = serveGroups([]);
     seed([group('a'), group('b')], Date.now() - 1_000);
     watchList();

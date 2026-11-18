@@ -37,7 +37,7 @@ The offline spec allows service workers (`test.use({ serviceWorkers: 'allow' })`
 
 The invite link is `<app origin>/group/join/<token>` (`buildGroupInviteLink`, `getChipInAppUrl` is `window.location.origin`). The app hands it out only through the native share sheet or the clipboard, which a test cannot read in every browser, so the invite test reads the token through the staging API and opens the link on the target. The token appears in the `goto` URL, traces and failure output; it is dead after the run's purge.
 
-A page that has just written money data is never reloaded or reopened with `goto`: the persisted cache is written at most once per second and the group detail stays fresh for 30 s, so a reload within a second of a write shows the balance from before it (#724). The writing user stays in the app (switches tabs, goes back in the same document, follows in-app links); the other participant opens a fresh context.
+The split, edit/delete-expense and settle-up specs reload the writing user's page right after the write, without waiting for the persisted cache (written at most once per second), through `reloadAndReadGroup` (`e2e/support/ui.ts`): it awaits the group detail read (`GET /api/groups/{id}`) that follows the reload. A group restored from before the write may show first; it is replaced when that read lands, and the balance assertions then wait for the server's value (#724). The other participant opens a fresh context.
 
 The invite test opens the invite link and clicks Join as soon as the confirmation shows: the Join button stays disabled (loading) until the session is restored (#730), and Playwright waits for it to be enabled. The test asserts that the join request succeeded.
 

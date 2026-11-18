@@ -35,6 +35,33 @@ export const queryRetry = (failureCount: number, error: unknown): boolean => {
     return false;
 };
 
+/**
+ * When this page loaded: an entry whose data is older was restored from the persisted cache, not
+ * read in this page.
+ */
+export const PAGE_LOADED_AT = Date.now();
+
+/**
+ * `refetchOnMount` of a query that shows balances, debts or ledger amounts (#724): the persisted
+ * cache is saved throttled, so a reload right after a money write can restore a snapshot taken
+ * before it, and its age alone would count it as fresh. An entry restored from before this page
+ * loaded is read again on mount (still shown meanwhile; offline the read waits for the network);
+ * an entry read in this page follows its `staleTime`. An entry dated in the future (the clock was
+ * moved back) cannot be trusted either and is read again.
+ *
+ * Limits: TanStack applies this only to a query enabled when it mounts; one mounted disabled and
+ * enabled later is judged by its `staleTime` alone. A restored entry whose read fails stays
+ * restored, so every later mount reads it again until a read succeeds (one read, with its
+ * retries, per mount; paused offline).
+ */
+export const refetchIfRestored = (query: {
+    state: { dataUpdatedAt: number };
+}): boolean | 'always' => {
+    const { dataUpdatedAt } = query.state;
+
+    return dataUpdatedAt < PAGE_LOADED_AT || dataUpdatedAt > Date.now() ? 'always' : true;
+};
+
 /** A new client: one per user (`clientFor`), or one without persistence when signed out. */
 export const createQueryClient = (): QueryClient =>
     new QueryClient({
