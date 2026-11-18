@@ -42,8 +42,8 @@ Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.
 - `npm run verify` — format check, lint (`--max-warnings 0`: every rule is error or off), `check:file-layout`, typecheck.
 - `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks. Prune only through this script (it sets `CHIPIN_ESLINT_FULL=1`): a plain `eslint . --prune-suppressions` drops the `import-x/no-cycle` entries and CI `lint:full` goes red.
-- `npm run verify:full` — the full gate: format check, `lint:full`, `check:file-layout`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
-- `npm run typecheck` — `tsc -b`.
+- `npm run verify:full` — the full gate: format check, `lint:full`, `check:file-layout`, `typecheck:packages`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
+- `npm run typecheck` — `tsc -b`, then `typecheck:packages` (`tsc -p` in each `packages/*`).
 - `npm run fix` — `eslint --fix`, then Prettier, over the whole repository (not in a task).
 - Husky `pre-commit` only auto-fixes staged files (`lint-staged`, FAST mode) and does not block on lint (only a syntax error, which Prettier cannot parse, blocks it); there is no `pre-push`, only CI blocks.
 
