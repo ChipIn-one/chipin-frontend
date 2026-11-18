@@ -2,10 +2,11 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 import i18n from 'i18n';
+import { syncHtmlLang } from 'i18n/htmlLang';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
@@ -28,11 +29,18 @@ vi.mock('pages/GroupJoinPage', () => ({
     default: () => <main>{JOIN_ROUTE_CONTENT}</main>,
 }));
 
+let stopHtmlLang: () => void = () => undefined;
+
 beforeEach(() => {
+    stopHtmlLang = syncHtmlLang(i18n);
     document.documentElement.lang = 'en';
     useAuthStore.setState({ status: 'authenticated' });
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     return i18n.changeLanguage('en');
+});
+
+afterEach(() => {
+    stopHtmlLang();
 });
 
 const renderRouter = (route: string) => {
@@ -103,7 +111,9 @@ test('a localized public URL wins over the previous SPA language', () => {
     });
 });
 
-test('SPA public URL updates html lang and restores it after leaving', () => {
+// #708: `<html lang>` is written only by the i18next listener (`syncHtmlLang`, wired at boot), so
+// after a public page it is the UI language, whichever language that page left behind.
+test('SPA public URL updates html lang, and after leaving it is the UI language', () => {
     useAuthStore.setState({ status: 'unauthenticated' });
     const mounted = renderRouter('/ru/privacy');
 
@@ -112,6 +122,22 @@ test('SPA public URL updates html lang and restores it after leaving', () => {
         expect(document.documentElement.lang).toBe('ru');
     }).then(() => {
         mounted.unmount();
-        expect(document.documentElement.lang).toBe('en');
+        expect(document.documentElement.lang).toBe(i18n.resolvedLanguage);
+    });
+});
+
+// #708: signed out with the Russian UI, the logo leads to an English public page and back.
+test('a round trip through an English public page leaves html lang equal to the UI language', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+    return i18n.changeLanguage('ru').then(() => {
+        expect(document.documentElement.lang).toBe('ru');
+        const mounted = renderRouter('/privacy');
+
+        return screen.findByRole('heading', { name: 'Privacy' }).then(() => {
+            expect(document.documentElement.lang).toBe('en');
+            mounted.unmount();
+            expect(i18n.resolvedLanguage).toBe('en');
+            expect(document.documentElement.lang).toBe('en');
+        });
     });
 });

@@ -23,7 +23,6 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
     const resolvedLanguage = i18n.resolvedLanguage;
     const isLoggedInRef = useRef(isLoggedIn);
     const savedLanguageRef = useRef(savedLanguage);
-    const previousDocumentLanguageRef = useRef<string | null>(null);
 
     useEffect(() => {
         isLoggedInRef.current = isLoggedIn;
@@ -32,12 +31,8 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
 
     // Re-asserts the URL language whenever anything else (for example user
     // settings synchronization) switches i18n away from it.
+    // `<html lang>` follows i18next (`i18n/htmlLang`, wired at boot): no write of it here (#708).
     useEffect(() => {
-        if (previousDocumentLanguageRef.current === null) {
-            previousDocumentLanguageRef.current = document.documentElement.lang;
-        }
-
-        document.documentElement.lang = locale;
         if (resolvedLanguage !== locale) {
             i18n.changeLanguage(locale).catch((error: unknown) => {
                 Sentry.captureException(error);
@@ -52,8 +47,6 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
             const userLocale = isLoggedInRef.current
                 ? matchLocale(savedLanguageRef.current ?? '')
                 : null;
-            document.documentElement.lang =
-                userLocale ?? previousDocumentLanguageRef.current ?? document.documentElement.lang;
             if (userLocale && i18n.resolvedLanguage !== userLocale) {
                 i18n.changeLanguage(userLocale).catch((error: unknown) => {
                     Sentry.captureException(error);

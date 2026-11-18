@@ -14,6 +14,7 @@ import { getPublicRoute } from 'helpers/publicRoutes';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
 import { resolveStoredTheme } from 'helpers/theme';
 import i18n from 'i18n';
+import { syncHtmlLang } from 'i18n/htmlLang';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { PublicTelemetry } from 'public-routes/PublicTelemetry';
 
@@ -24,6 +25,8 @@ import 'styles/index.css';
 
 initializeSentry();
 initializeApi();
+// #708: `<html lang>` follows the UI language from the first frame on.
+syncHtmlLang(i18n);
 
 const rootElement = document.getElementById('root')!;
 const publicBuildYear = Number(rootElement.dataset.publicBuildYear);

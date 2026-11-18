@@ -1,46 +1,60 @@
 import { act, render, screen } from '@testing-library/react';
+import type { i18n as I18n } from 'i18next';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { saveLocalUser } from 'helpers/localStorage';
+import { syncHtmlLang } from 'i18n/htmlLang';
 import { useAuthStore } from 'store/authStore';
 
 import { PublicLocaleRoute } from './PublicLocaleRoute';
 
-type Listener = () => void;
-
 const PAGE_TEXT = 'Public page';
 
-const i18nMock = vi.hoisted(() => {
-    const listeners = new Set<Listener>();
-    const instance = {
-        resolvedLanguage: 'en',
-        changeLanguage: (language: string) => {
-            instance.resolvedLanguage = language;
-            listeners.forEach(listener => listener());
-            return Promise.resolve();
-        },
-    };
-
-    return { instance, listeners };
-});
+// A real i18next instance behind `useTranslation`: `<html lang>` is written only by its
+// `languageChanged` listener (`syncHtmlLang`, #708), as at boot.
+const i18nMock = vi.hoisted(() => ({ instance: null as I18n | null }));
 
 vi.mock('react-i18next', () =>
-    import('react').then(({ useEffect, useReducer }) => ({
-        useTranslation: () => {
-            const [, forceRender] = useReducer((count: number) => count + 1, 0);
+    Promise.all([import('react'), import('i18next')]).then(
+        ([{ useEffect, useReducer }, { default: i18next }]) => {
+            const instance = i18next.createInstance();
 
-            useEffect(() => {
-                i18nMock.listeners.add(forceRender);
-                return () => {
-                    i18nMock.listeners.delete(forceRender);
-                };
-            }, []);
+            void instance.init({
+                lng: 'en',
+                fallbackLng: 'en',
+                supportedLngs: ['en', 'ru'],
+                resources: {
+                    en: { common: { page: 'Page' } },
+                    ru: { common: { page: 'Page (ru)' } },
+                },
+            });
+            i18nMock.instance = instance;
 
-            return { i18n: i18nMock.instance };
+            return {
+                useTranslation: () => {
+                    const [, forceRender] = useReducer((count: number) => count + 1, 0);
+
+                    useEffect(() => {
+                        instance.on('languageChanged', forceRender);
+                        return () => {
+                            instance.off('languageChanged', forceRender);
+                        };
+                    }, []);
+
+                    return { i18n: instance };
+                },
+            };
         },
-    })),
+    ),
 );
+
+const i18n = (): I18n => {
+    if (!i18nMock.instance) {
+        throw new Error('react-i18next mock not loaded');
+    }
+    return i18nMock.instance;
+};
 
 const settings = {
     defaultCurrency: 'USD',
@@ -55,15 +69,18 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
+let stopHtmlLang: () => void = () => undefined;
+
 beforeEach(() => {
-    i18nMock.instance.resolvedLanguage = 'en';
+    stopHtmlLang = syncHtmlLang(i18n());
+    void i18n().changeLanguage('en');
     document.documentElement.lang = 'en';
     useAuthStore.setState({ status: 'authenticated' });
     saveLocalUser({ role: 'USER', settings });
 });
 
 afterEach(() => {
-    i18nMock.listeners.clear();
+    stopHtmlLang();
 });
 
 test('renders children after switching to the URL locale', () => {
@@ -74,7 +91,7 @@ test('renders children after switching to the URL locale', () => {
     );
 
     expect(screen.getByText(PAGE_TEXT)).toBeTruthy();
-    expect(i18nMock.instance.resolvedLanguage).toBe('ru');
+    expect(i18n().resolvedLanguage).toBe('ru');
     expect(document.documentElement.lang).toBe('ru');
 });
 
@@ -86,10 +103,10 @@ test('re-asserts the URL locale when settings sync switches the language', () =>
     );
 
     act(() => {
-        void i18nMock.instance.changeLanguage('en');
+        void i18n().changeLanguage('en');
     });
 
-    expect(i18nMock.instance.resolvedLanguage).toBe('ru');
+    expect(i18n().resolvedLanguage).toBe('ru');
     expect(screen.getByText(PAGE_TEXT)).toBeTruthy();
 });
 
@@ -100,16 +117,16 @@ test('restores the saved user language on unmount', () => {
         </PublicLocaleRoute>,
     );
 
-    expect(i18nMock.instance.resolvedLanguage).toBe('ru');
+    expect(i18n().resolvedLanguage).toBe('ru');
 
     unmount();
 
-    expect(i18nMock.instance.resolvedLanguage).toBe('en');
+    expect(i18n().resolvedLanguage).toBe('en');
     expect(document.documentElement.lang).toBe('en');
 });
 
 test('does not restore the user language when switching between public locales', () => {
-    const changeLanguage = vi.spyOn(i18nMock.instance, 'changeLanguage');
+    const changeLanguage = vi.spyOn(i18n(), 'changeLanguage');
     const { rerender } = render(
         <PublicLocaleRoute locale="en">
             <p>{PAGE_TEXT}</p>
@@ -123,5 +140,24 @@ test('does not restore the user language when switching between public locales',
     );
 
     expect(changeLanguage.mock.calls.map(([language]) => language)).toEqual(['ru']);
-    expect(i18nMock.instance.resolvedLanguage).toBe('ru');
+    expect(i18n().resolvedLanguage).toBe('ru');
+});
+
+// #708: signed out with the Russian UI, a visit of an English public page and back. The page
+// switched i18next to English; leaving it must not put back `ru` while the UI stays English.
+test('after leaving a public page the html lang is the UI language', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+    void i18n().changeLanguage('ru');
+    expect(document.documentElement.lang).toBe('ru');
+
+    const { unmount } = render(
+        <PublicLocaleRoute locale="en">
+            <p>{PAGE_TEXT}</p>
+        </PublicLocaleRoute>,
+    );
+    expect(document.documentElement.lang).toBe('en');
+    unmount();
+
+    expect(document.documentElement.lang).toBe(i18n().resolvedLanguage);
+    expect(document.documentElement.lang).toBe('en');
 });
