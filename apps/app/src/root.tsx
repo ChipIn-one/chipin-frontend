@@ -12,9 +12,10 @@ import { getLegacyHostAppUrl, removeLegacyHostWebAppHeadTags } from 'helpers/leg
 import { getLocalUser } from 'helpers/localStorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
 import { checkIsPwaInstalled } from 'helpers/pwa';
+import { applyLanguage } from 'helpers/setAppLanguage';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
 import { resolveStoredTheme } from 'helpers/theme';
-import i18n from 'i18n';
+import { i18n, i18nReady } from 'i18n';
 import { syncHtmlLang } from 'i18n/htmlLang';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { PublicTelemetry } from 'public-routes/PublicTelemetry';
@@ -31,6 +32,13 @@ initializeSentry();
 initializeApi();
 // #708: `<html lang>` follows the UI language from the first frame on.
 syncHtmlLang(i18n);
+
+// Spec 04 §2.10: the first render waits for the initial language's lazy chunks. i18next settles
+// its init even when a chunk fails (offline first visit, a 404 after a deploy: the missing
+// namespaces fall back to `en` or keys); should it ever reject, the page still renders.
+const i18nSettled = i18nReady.catch((error: unknown) => {
+    Sentry.captureException(error);
+});
 
 const rootElement = document.getElementById('root')!;
 const publicBuildYear = Number(rootElement.dataset.publicBuildYear);
@@ -52,10 +60,11 @@ if (legacyHostAppUrl) {
         window.location.replace('/');
     }
 } else if (prerenderedRoute) {
-    // Hydration preserves static, indexable React markup from the build.
-    import('public-routes')
-        .then(({ PublicApp }) =>
-            i18n.changeLanguage(prerenderedRoute.locale).then(() =>
+    // Hydration preserves static, indexable React markup from the build. The route language is
+    // loaded first (spec 04 §2.10: lazy locale chunks), so hydration never renders raw keys.
+    Promise.all([import('public-routes'), i18nSettled])
+        .then(([{ PublicApp }]) =>
+            applyLanguage(prerenderedRoute.locale).then(() =>
                 hydrateRoot(
                     rootElement,
                     <GlobalErrorBoundary>
@@ -78,10 +87,14 @@ if (legacyHostAppUrl) {
         .catch(error => Sentry.captureException(error));
 } else {
     // The user's query cache is restored from IndexedDB before the app (and its router) renders;
-    // the public SSG branch above never touches IndexedDB.
+    // the public SSG branch above never touches IndexedDB. The first render waits for the initial
+    // language's lazy chunks (spec 04 §2.10), so it never shows raw keys.
     Promise.all([import('main'), import('shared/offline/restore')])
         .then(([{ default: Main }, { startCacheRestore }]) => {
             startCacheRestore(persistedUserId(getLocalUser()?.id));
+            return i18nSettled.then(() => Main);
+        })
+        .then(Main => {
             createRoot(rootElement).render(
                 <GlobalErrorBoundary>
                     <ThemeProvider

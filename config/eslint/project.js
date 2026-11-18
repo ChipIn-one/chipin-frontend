@@ -277,6 +277,16 @@ export const projectRules = ({ appDir }) => [
             "Re-export by name: `export { X } from './X'` (or `export type { T }`), not `export *`.",
     },
     {
+        // spec 04 §2.10: the UI language changes in one place, helpers/setAppLanguage.ts, which
+        // loads the language's lazy chunks first. Its one call is an `eslint-disable` with the
+        // reason (no new scope: MAX_SCOPES is full); tests switch the language directly.
+        id: 'change-language',
+        selector: "CallExpression[callee.property.name='changeLanguage']",
+        ignores: ['**/*.test.{ts,tsx}'],
+        message:
+            'Switch the language with setAppLanguage (saves the preference) or applyLanguage from helpers/setAppLanguage.',
+    },
+    {
         id: 'img-element',
         // `<img>`, `styled.img`, `styled('img')`, `createElement('img')`, `React.createElement('img')`.
         selector: [

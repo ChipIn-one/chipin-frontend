@@ -11,7 +11,7 @@ import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { isPublicLocaleSuggestionSuppressed } from 'helpers/publicLocaleSuggestion';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 

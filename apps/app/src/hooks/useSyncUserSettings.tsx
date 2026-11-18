@@ -4,7 +4,8 @@ import { useTheme } from 'next-themes';
 
 import type { SelfUserSettings } from 'entities/users';
 import { matchLocale, saveLocalePreference } from 'helpers/locale';
-import i18n from 'i18n';
+import { setAppLanguage } from 'helpers/setAppLanguage';
+import { i18n } from 'i18n';
 import { AUTH_STATUS } from 'store/authConstants';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -35,11 +36,17 @@ export const useSyncUserSettings = () => {
 
         const locale = matchLocale(language);
 
-        if (locale) {
-            saveLocalePreference(locale);
-            i18n.changeLanguage(locale).catch((error: unknown) => {
-                Sentry.captureException(error);
-            });
+        if (!locale) {
+            return;
         }
+        // Spec 04 §2.10: switch only when the server language differs from the current one; the
+        // preference is saved either way, as before.
+        if (locale === i18n.resolvedLanguage) {
+            saveLocalePreference(locale);
+            return;
+        }
+        setAppLanguage(locale).catch((error: unknown) => {
+            Sentry.captureException(error);
+        });
     }, [isAuthenticated, language]);
 };

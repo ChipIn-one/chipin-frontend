@@ -49,6 +49,14 @@ vi.mock('react-i18next', () =>
     ),
 );
 
+// The real `applyLanguage` loads the language's lazy chunks first (its own test); here it switches
+// the test instance at once, as `changeLanguage` did before.
+vi.mock('helpers/setAppLanguage', () => ({
+    applyLanguage: (lng: string) =>
+        i18nMock.instance?.changeLanguage(lng).then(() => undefined) ??
+        Promise.reject(new Error('react-i18next mock not loaded')),
+}));
+
 const i18n = (): I18n => {
     if (!i18nMock.instance) {
         throw new Error('react-i18next mock not loaded');

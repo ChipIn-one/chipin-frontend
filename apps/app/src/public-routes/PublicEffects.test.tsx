@@ -57,12 +57,13 @@ vi.mock('hooks/pwaHooks', () => ({
     useCheckPwa: vi.fn(),
 }));
 vi.mock('hooks/seoMetadata', () => ({ updateSeoMetadata: vi.fn() }));
+const loadLanguages = vi.hoisted(() => vi.fn((_: string) => Promise.resolve()));
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         t: (key: string) => key,
         i18n: {
             resolvedLanguage: 'en',
-            changeLanguage: () => Promise.resolve(),
+            loadLanguages,
             getFixedT: () => (key: string) => key,
         },
     }),
@@ -236,11 +237,15 @@ test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
     },
 );
 
-test('English privacy offers a localized persistent Sonner action only once', () => {
+test('English privacy offers a localized persistent Sonner action only once', async () => {
     vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);
     const route = PUBLIC_ROUTE_ENTRIES.find(item => item.path === '/privacy')!;
     const mounted = render(<PublicEffects route={route} isDark={false} />);
-    expect(toast.message).toHaveBeenCalledOnce();
+    // The suggested language is a lazy chunk: it is loaded before the toast is translated.
+    await vi.waitFor(() => {
+        expect(toast.message).toHaveBeenCalledOnce();
+    });
+    expect(loadLanguages).toHaveBeenCalledExactlyOnceWith('ru');
     expect(vi.mocked(toast.message).mock.calls[0]?.[1]).toMatchObject({
         duration: Infinity,
         dismissible: true,
@@ -248,7 +253,9 @@ test('English privacy offers a localized persistent Sonner action only once', ()
     });
     mounted.unmount();
     render(<PublicEffects route={route} isDark={false} />);
+    await Promise.resolve();
     expect(toast.message).toHaveBeenCalledOnce();
+    expect(loadLanguages).toHaveBeenCalledOnce();
 });
 
 test('explicit locale URL never offers a competing browser language', () => {

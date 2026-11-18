@@ -3,11 +3,11 @@ import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet } from 'styled-components';
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from 'constants/locales';
-import { resources } from 'i18n/resources';
 import type { PublicRoute } from 'types/publicRoutes';
 
 import { PublicApp } from './PublicApp';
 import { PublicBuildYearContext } from './PublicBuildYearContext';
+import { resources } from './serverResources';
 
 const renderPublicRoute = (
     route: PublicRoute,

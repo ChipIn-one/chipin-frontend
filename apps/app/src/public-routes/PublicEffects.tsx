@@ -12,6 +12,7 @@ import {
     suppressPublicLocaleSuggestion,
 } from 'helpers/publicLocaleSuggestion';
 import { getPreferredModeRoute } from 'helpers/routes';
+import { applyLanguage } from 'helpers/setAppLanguage';
 import { useCheckPwa } from 'hooks/pwaHooks';
 import { updateSeoMetadata } from 'hooks/seoMetadata';
 import { useAuthToasts } from 'hooks/useAuthToasts';
@@ -46,7 +47,7 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
 
     useEffect(() => {
         if (i18n.resolvedLanguage !== route.locale) {
-            i18n.changeLanguage(route.locale).catch((error: unknown) => {
+            applyLanguage(route.locale).catch((error: unknown) => {
                 Sentry.captureException(error);
             });
         }
@@ -90,26 +91,33 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
         }
         // Suppress before emitting: revisiting any English page must never re-offer.
         suppressPublicLocaleSuggestion();
-        const translate = i18n.getFixedT(suggestedLocale, 'toasts');
-        toast.message(translate('public.languageSuggestion'), {
-            id: 'public-locale-suggestion',
-            duration: Infinity,
-            dismissible: true,
-            action: {
-                label: translate('public.languageSuggestionAction'),
-                onClick: () => {
-                    suppressPublicLocaleSuggestion();
-                    const destination = getPublicLocaleSuggestionTarget(
-                        window.location.pathname,
-                        suggestedLocale,
-                    );
-                    if (destination) {
-                        window.location.assign(destination);
-                    }
-                },
-            },
-            onDismiss: suppressPublicLocaleSuggestion,
-        });
+        // The suggested language is a lazy chunk not loaded on this page yet (spec 04 §2.10).
+        i18n.loadLanguages(suggestedLocale)
+            .then(() => {
+                const translate = i18n.getFixedT(suggestedLocale, 'toasts');
+                toast.message(translate('public.languageSuggestion'), {
+                    id: 'public-locale-suggestion',
+                    duration: Infinity,
+                    dismissible: true,
+                    action: {
+                        label: translate('public.languageSuggestionAction'),
+                        onClick: () => {
+                            suppressPublicLocaleSuggestion();
+                            const destination = getPublicLocaleSuggestionTarget(
+                                window.location.pathname,
+                                suggestedLocale,
+                            );
+                            if (destination) {
+                                window.location.assign(destination);
+                            }
+                        },
+                    },
+                    onDismiss: suppressPublicLocaleSuggestion,
+                });
+            })
+            .catch((error: unknown) => {
+                Sentry.captureException(error);
+            });
     }, [i18n, isAuthResolved, isLoggedIn, route.locale, route.page]);
 
     return (

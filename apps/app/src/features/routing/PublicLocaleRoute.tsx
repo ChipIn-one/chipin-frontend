@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { SelfUserSettings } from 'entities/users';
 import { matchLocale } from 'helpers/locale';
+import { applyLanguage } from 'helpers/setAppLanguage';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -34,7 +35,7 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
     // `<html lang>` follows i18next (`i18n/htmlLang`, wired at boot): no write of it here (#708).
     useEffect(() => {
         if (resolvedLanguage !== locale) {
-            i18n.changeLanguage(locale).catch((error: unknown) => {
+            applyLanguage(locale).catch((error: unknown) => {
                 Sentry.captureException(error);
             });
         }
@@ -48,7 +49,7 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
                 ? matchLocale(savedLanguageRef.current ?? '')
                 : null;
             if (userLocale && i18n.resolvedLanguage !== userLocale) {
-                i18n.changeLanguage(userLocale).catch((error: unknown) => {
+                applyLanguage(userLocale).catch((error: unknown) => {
                     Sentry.captureException(error);
                 });
             }
