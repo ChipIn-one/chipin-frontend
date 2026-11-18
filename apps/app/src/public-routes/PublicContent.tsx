@@ -12,6 +12,7 @@ import BackgroundBox from 'basics/BackgroundBox';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page/BackendUnavailableGate';
 import { Header } from 'components/Header';
 
+import { LegacyHostStandaloneNotice } from './LegacyHostStandaloneNotice';
 import { PublicEffects } from './PublicEffects';
 import { PublicLanguageLinks } from './PublicLanguageLinks';
 
@@ -53,6 +54,7 @@ const PublicContent = ({
             {isHydrated && <PublicEffects route={route} isDark={isDark} />}
             <BackendUnavailableGate>
                 <BackgroundBox>
+                    <LegacyHostStandaloneNotice />
                     <Header />
                     {!isHydrated && <PublicLanguageLinks route={route} />}
                     <Box px="4">

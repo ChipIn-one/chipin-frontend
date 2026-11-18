@@ -8,7 +8,7 @@ import { persistedUserId } from 'app/providers/persistedUserId';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
 import { LS_KEY_THEME } from 'constants/localstorage';
-import { getLegacyHostAppUrl } from 'helpers/legacyHost';
+import { getLegacyHostAppUrl, removeLegacyHostWebAppHeadTags } from 'helpers/legacyHost';
 import { getLocalUser } from 'helpers/localStorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
@@ -23,6 +23,9 @@ import { GlobalErrorBoundary } from 'components/global-error-boundary';
 
 import 'styles/index.css';
 
+// #758: first thing on a legacy host, drop the manifest link and the web-app metas of the shared
+// HTML, so the landing there is never installed as the app (no-op on every other host).
+removeLegacyHostWebAppHeadTags(document, window.location.hostname);
 initializeSentry();
 initializeApi();
 // #708: `<html lang>` follows the UI language from the first frame on.

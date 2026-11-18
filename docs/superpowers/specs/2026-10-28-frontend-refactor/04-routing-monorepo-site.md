@@ -566,6 +566,8 @@ Steps:
 2. Prod: remove `chipin.one` from the app project and add it to the site project as the Production domain. DNS records do not change (the zone is on Vercel, both projects are in the same team). Right after — criterion 7 on prod.
 3. 48 h of monitoring against the rollback criterion; 04-5a/b — no earlier than after 7 days without a step-2 rollback.
 
+The site on `chipin.one` stays non-installable as the app, as the legacy hosts are since step 1 (#758): no manifest, no web-app metas, and a notice pointing to the app host in standalone mode (`DEPLOYMENT.md`, "Domains and rollback").
+
 There are no merge freeze windows or Promote ban (C1-07 and A-03 withdrawn by D26): rollback does not depend on which app project deploy is currently in Production. Until 04-5a any prod build of the app project can serve the landing on `chipin.one` (transitional routes §2.2) together with the step-1 and compat redirects (§4.2).
 
 Rollback of step 2 (minutes):

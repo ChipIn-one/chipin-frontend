@@ -67,6 +67,19 @@
             "statusCode": 302
         },
         {
+            "source": "/manifest.webmanifest",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "chipin.one"
+                    }
+                }
+            ],
+            "destination": "/legacy-host-has-no-manifest",
+            "statusCode": 302
+        },
+        {
             "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found)",
             "has": [
                 {
@@ -116,6 +129,19 @@
                 }
             ],
             "destination": "/:path",
+            "statusCode": 302
+        },
+        {
+            "source": "/manifest.webmanifest",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "/legacy-host-has-no-manifest",
             "statusCode": 302
         }
     ],

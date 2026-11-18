@@ -175,6 +175,54 @@ test('on a legacy host a visitor without a hint stays on the landing, anonymous,
     });
 });
 
+// #758: in an icon installed from a legacy host the app host would open in an in-app sheet whose
+// session never reaches the icon, so the home page stays (with the notice), anonymous, no check.
+const stubStandaloneDisplayMode = () => {
+    vi.stubGlobal(
+        'matchMedia',
+        vi.fn((query: string) => ({
+            matches: query === '(display-mode: standalone)',
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+        })),
+    );
+};
+
+test.each(['chipin.one', 'dev.chipin.one'])(
+    'on %s in standalone mode a visitor with a hint stays on the home page, with no check',
+    host => {
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+        const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
+        useAuthStore.setState({ refreshAuthTokens });
+        setAuthSessionHint(true);
+        stubStandaloneDisplayMode();
+
+        const replace = renderHomeOn(host);
+
+        expect(replace).not.toHaveBeenCalled();
+        expect(useCheckSignIn).not.toHaveBeenCalled();
+        expect(refreshAuthTokens).not.toHaveBeenCalled();
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'unauthenticated',
+            unauthReason: 'missing',
+        });
+    },
+);
+
+test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
+    'on %s in standalone mode the session check runs as before',
+    host => {
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+        setAuthSessionHint(true);
+        stubStandaloneDisplayMode();
+
+        const replace = renderHomeOn(host);
+
+        expect(useCheckSignIn).toHaveBeenCalled();
+        expect(replace).not.toHaveBeenCalled();
+    },
+);
+
 test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
     'on %s the session check runs as before',
     host => {

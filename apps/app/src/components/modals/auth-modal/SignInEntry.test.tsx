@@ -9,6 +9,10 @@ vi.mock('assets/google-icon.svg?react', () => ({
     default: () => <svg aria-hidden="true" />,
 }));
 
+const pwa = vi.hoisted(() => ({ isInstalled: false }));
+
+vi.mock('helpers/pwa', () => ({ checkIsPwaInstalled: () => pwa.isInstalled }));
+
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -23,6 +27,7 @@ const stubHost = (hostname: string) => {
 
 afterEach(() => {
     vi.unstubAllGlobals();
+    pwa.isInstalled = false;
 });
 
 const renderEntry = () =>
@@ -67,6 +72,50 @@ test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app', 'l
 
 test('prerenders the modal trigger whatever the host (no host on the server)', () => {
     stubHost('chipin.one');
+
+    const html = renderToString(
+        <SignInEntry>
+            <button type="button">{SIGN_IN}</button>
+        </SignInEntry>,
+    );
+
+    expect(html).toContain('aria-haspopup="dialog"');
+});
+
+// #758: in an icon installed from a legacy host the CTA would open the app host in an in-app sheet,
+// so it is not rendered (the public routes show the notice instead).
+test.each(['chipin.one', 'dev.chipin.one'])(
+    'on the legacy host %s in standalone mode renders no CTA',
+    hostname => {
+        const assign = stubHost(hostname);
+        pwa.isInstalled = true;
+        renderEntry();
+
+        expect(screen.queryByRole('button', { name: SIGN_IN })).toBeNull();
+        expect(assign).not.toHaveBeenCalled();
+    },
+);
+
+test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app', 'localhost'])(
+    'on %s in standalone mode the CTA still opens the auth modal',
+    hostname => {
+        const assign = stubHost(hostname);
+        pwa.isInstalled = true;
+        renderEntry();
+
+        return userEvent
+            .setup()
+            .click(screen.getByRole('button', { name: SIGN_IN }))
+            .then(() => {
+                expect(assign).not.toHaveBeenCalled();
+                expect(screen.getByRole('dialog', { name: 'modal.title' })).toBeTruthy();
+            });
+    },
+);
+
+test('prerenders the modal trigger in standalone mode on a legacy host (no host on the server)', () => {
+    stubHost('chipin.one');
+    pwa.isInstalled = true;
 
     const html = renderToString(
         <SignInEntry>
