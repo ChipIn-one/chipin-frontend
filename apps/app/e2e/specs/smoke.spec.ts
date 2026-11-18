@@ -9,8 +9,9 @@ import {
     clickAndSaveSettings,
     exactBalance,
     openGroupTab,
+    openGroupWithGroupsList,
+    selectGroupTab,
     uniqueSuffix,
-    visibleOne,
 } from '../support/ui';
 
 /**
@@ -56,16 +57,14 @@ test.describe('SMOKE-SHORT', () => {
         const description = `E2E dinner ${uniqueSuffix()}`;
         const page = await signIn(payer);
 
-        const balancesBefore = await openGroupTab(page, groupId, 'Balances');
+        // The modal takes its groups from the groups list, read when it opens: wait until that list
+        // (`GET /groups`) has loaded, else the modal opens with no group (#718). Not the sidebar's
+        // group links: the phone layout has no groups list on the group page (#750).
+        await openGroupWithGroupsList(page, groupId);
+        const balancesBefore = await selectGroupTab(page, 'Balances');
         await expect(balancesBefore.getByText(friend.displayName)).toBeVisible();
         // "Settled up" is both the friend's row status and the disabled settle button's name.
         await expect(balancesBefore.getByRole('button', { name: 'Settled up' })).toBeDisabled();
-
-        // The modal takes its groups from the groups list, read when it opens: wait until that list
-        // (the page's group links) holds this group, else the modal opens with no group.
-        await expect(
-            visibleOne(page.getByRole('link', { name: new RegExp(groupName) })),
-        ).toBeVisible();
 
         // The button of the layout shown at this viewport (desktop sidebar, floating or mobile bar).
         const addExpense = page
