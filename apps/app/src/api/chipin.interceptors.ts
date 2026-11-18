@@ -29,13 +29,13 @@ const HEALTH_PATH = '/health';
 let areChipInApiInterceptorsConfigured = false;
 let onUnauthorizedSession: (() => void) | undefined;
 let onRequestFailure: ((error: unknown, requestStartedAt?: number) => Promise<void>) | undefined;
-let onResponseSuccess: (() => void) | undefined;
+let onResponseSuccess: ((requestStartedAt?: number) => void) | undefined;
 let onAccessTokenChanged: ((token: string) => void) | undefined;
 // The last access token a request carried: a new one is announced once.
 let lastAttachedAccessToken: string | null = null;
 const requestAuthSessionVersions = new WeakMap<object, number>();
 // `performance.now()` when a request was sent: lets the store drop a classification older than its
-// last successful retry.
+// last successful retry, and a success older than the last time the app went offline (#746).
 const requestStartTimes = new WeakMap<object, number>();
 
 export class AuthRequestCancelledError extends Error {
@@ -189,14 +189,15 @@ const announceAccessToken = (token: string): void => {
  * Installs the interceptors once. `onRequestFailureCallback` gets every failed response that is not
  * an auth-flow outcome (and not the `/health` probe itself); the bootstrap wires it to the
  * failed-request classification and the connectivity store. `onResponseSuccessCallback` gets every
- * successful response of either instance: proof that the network is usable again.
+ * successful response of either instance, with when its request was sent: proof that the network
+ * was usable then (the store ignores a request sent before the app last went offline, #746).
  * `onAccessTokenChangedCallback` gets every new access token before a request carries it (a sign-in,
  * a refresh, another tab's account switch): the outbox re-checks its owner (spec 03 §2.3).
  */
 export const initChipInApiInterceptors = (
     onUnauthorizedSessionCallback?: () => void,
     onRequestFailureCallback?: (error: unknown, requestStartedAt?: number) => Promise<void>,
-    onResponseSuccessCallback?: () => void,
+    onResponseSuccessCallback?: (requestStartedAt?: number) => void,
     onAccessTokenChangedCallback?: (token: string) => void,
 ): void => {
     onUnauthorizedSession = onUnauthorizedSessionCallback;
@@ -246,7 +247,7 @@ export const initChipInApiInterceptors = (
     });
 
     apiInstance.interceptors.response.use(response => {
-        onResponseSuccess?.();
+        onResponseSuccess?.(requestStartTimes.get(response.config));
         const requestVersion = requestAuthSessionVersions.get(response.config);
         if (requestVersion !== undefined && !isAuthSessionCurrent(requestVersion)) {
             return Promise.reject(new AuthRequestCancelledError(true));
@@ -258,7 +259,7 @@ export const initChipInApiInterceptors = (
         return config;
     });
     publicApiInstance.interceptors.response.use(response => {
-        onResponseSuccess?.();
+        onResponseSuccess?.(requestStartTimes.get(response.config));
         return response;
     }, processPublicApiResponseError);
 };

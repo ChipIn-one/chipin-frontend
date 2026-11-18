@@ -2,11 +2,12 @@ import { onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { ApiError } from 'shared/lib/apiError';
+import { getLastOfflineAt } from 'shared/offline/network';
 
 import { classifyRequestError } from './errors';
 
 const health = vi.hoisted(() => ({
-    probeBackendHealth: vi.fn<() => Promise<'ok' | 'error' | 'unreachable'>>(),
+    probeBackendHealth: vi.fn<(sentAfter?: number) => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
 vi.mock('api/healthApi', () => ({ probeBackendHealth: health.probeBackendHealth }));
@@ -59,6 +60,17 @@ describe('classifyRequestError (spec 03 §1.8)', () => {
 
         await expect(classifyRequestError(withStatus(status))).resolves.toBe(expected);
         await expect(classifyRequestError(apiError(status))).resolves.toBe(expected);
+    });
+
+    test('the /health probe was sent after the app last went offline, never an older shared one', async () => {
+        onlineManager.setOnline(false);
+        const wentOfflineAt = getLastOfflineAt();
+        onlineManager.setOnline(true);
+
+        await classifyRequestError(networkError());
+        await classifyRequestError(withStatus(503));
+
+        expect(health.probeBackendHealth.mock.calls).toEqual([[wentOfflineAt], [wentOfflineAt]]);
     });
 
     test.each([400, 401, 403, 404, 409, 429])('%i is a client error without a probe', async s => {

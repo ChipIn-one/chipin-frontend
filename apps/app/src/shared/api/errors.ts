@@ -3,7 +3,7 @@
 // wired in `bootstrap/initializeApi`; only `offline` and `backend-down` change app state.
 import { type BackendHealth, probeBackendHealth } from 'api/healthApi';
 import { ApiError } from 'shared/lib/apiError';
-import { isNetworkUsable } from 'shared/offline/network';
+import { getLastOfflineAt, isNetworkUsable } from 'shared/offline/network';
 
 import { isNetworkError } from './client';
 
@@ -49,7 +49,11 @@ const fromHealth = (health: BackendHealth, isNetworkFailure: boolean): RequestEr
     return 'backend-down';
 };
 
-/** Classifies a failed request; probes `/health` only for a network error or a 5xx. */
+/**
+ * Classifies a failed request; probes `/health` only for a network error or a 5xx. The probe is
+ * sent after the app last went offline: an older shared one describes the network before that
+ * outage and its end (#746).
+ */
 export const classifyRequestError = (error: unknown): Promise<RequestErrorClass> => {
     const status = getHttpStatus(error);
 
@@ -58,7 +62,7 @@ export const classifyRequestError = (error: unknown): Promise<RequestErrorClass>
             return Promise.resolve('client-error');
         }
         if (status >= 500 && status < 600) {
-            return probeBackendHealth().then(health => fromHealth(health, false));
+            return probeBackendHealth(getLastOfflineAt()).then(health => fromHealth(health, false));
         }
         return Promise.resolve('request-error');
     }
@@ -68,5 +72,5 @@ export const classifyRequestError = (error: unknown): Promise<RequestErrorClass>
     if (!isNetworkUsable()) {
         return Promise.resolve('offline');
     }
-    return probeBackendHealth().then(health => fromHealth(health, true));
+    return probeBackendHealth(getLastOfflineAt()).then(health => fromHealth(health, true));
 };
