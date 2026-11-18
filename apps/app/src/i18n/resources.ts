@@ -1,6 +1,8 @@
+import enCommon from '@chipin/i18n-content/common/en.json';
+import ruCommon from '@chipin/i18n-content/common/ru.json';
+
 import enActivity from './locales/en/activity.json';
 import enAuth from './locales/en/auth.json';
-import enCommon from './locales/en/common.json';
 import enCurrencies from './locales/en/currencies.json';
 import enDashboard from './locales/en/dashboard.json';
 import enErrors from './locales/en/errors.json';
@@ -13,7 +15,6 @@ import enSkeletons from './locales/en/skeletons.json';
 import enToasts from './locales/en/toasts.json';
 import ruActivity from './locales/ru/activity.json';
 import ruAuth from './locales/ru/auth.json';
-import ruCommon from './locales/ru/common.json';
 import ruCurrencies from './locales/ru/currencies.json';
 import ruDashboard from './locales/ru/dashboard.json';
 import ruErrors from './locales/ru/errors.json';

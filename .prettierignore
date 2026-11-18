@@ -21,6 +21,7 @@ apps/app/ds-gallery/standalone.html
 
 # Locale JSON is not reformatted
 apps/app/src/i18n/locales/**
+packages/i18n-content/common/**
 
 # Synced from ai-workflow: Prettier would fight the sync
 docs/superpowers/**

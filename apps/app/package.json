@@ -25,6 +25,7 @@
         "api:check": "npm run api:gen && node scripts/api/check-generated.mjs"
     },
     "dependencies": {
+        "@chipin/i18n-content": "*",
         "@radix-ui/themes": "^3.3.0",
         "@sentry/react": "^10.75.2",
         "@tanstack/query-async-storage-persister": "5.107.1",

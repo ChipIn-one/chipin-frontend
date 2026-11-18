@@ -18,11 +18,16 @@ import { reactConfig, reactSyntax } from './config/eslint/react.js';
 
 // App directory relative to the repository root (the npm workspace @chipin/app, 04-0a).
 const APP_DIR = 'apps/app';
+// Framework-free workspace packages (spec 04 §1.3): linted by every preset except the React one.
+const PACKAGES = 'packages/**';
 
 export default [
     ...baseConfig({ appDir: APP_DIR }),
     ...typeAwareConfig({ appDir: APP_DIR }),
-    ...reactConfig({ appDir: APP_DIR }),
+    ...reactConfig({ appDir: APP_DIR }).map(block => ({
+        ...block,
+        ignores: [...(block.ignores ?? []), PACKAGES],
+    })),
     ...projectConfig({ appDir: APP_DIR }),
     ...queryConfig(),
     ...layersConfig({ appDir: APP_DIR }),
