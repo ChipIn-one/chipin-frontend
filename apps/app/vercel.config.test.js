@@ -637,7 +637,8 @@ describe('Vercel /manifest.webmanifest by host (#758)', () => {
         expect(Object.keys(LEGACY_HOST_APP_ORIGINS).sort()).toEqual(manifestHosts);
     });
 
-    test.each([...LEGACY_HOSTS, ...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'])(
+    // On the legacy hosts the 302 is terminal, so only the hosts that serve the file are checked.
+    test.each([...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'])(
         'keeps the manifest headers on %s',
         host => {
             expect(resolveHeaders(host, '/manifest.webmanifest')).toMatchObject({

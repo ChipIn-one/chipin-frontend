@@ -11,6 +11,7 @@ import { LS_KEY_THEME } from 'constants/localstorage';
 import { getLegacyHostAppUrl, removeLegacyHostWebAppHeadTags } from 'helpers/legacyHost';
 import { getLocalUser } from 'helpers/localStorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
+import { checkIsPwaInstalled } from 'helpers/pwa';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
 import { resolveStoredTheme } from 'helpers/theme';
 import i18n from 'i18n';
@@ -41,7 +42,15 @@ const prerenderedRoute =
 const legacyHostAppUrl = prerenderedRoute ? null : getLegacyHostAppUrl(window.location);
 
 if (legacyHostAppUrl) {
-    window.location.replace(legacyHostAppUrl);
+    // #758: in an icon installed from the legacy host (standalone) the app host would open in an
+    // in-app sheet whose session never reaches the icon; the landing of the same host shows the
+    // reinstall notice instead. At `/` itself (never the SPA shell in a real deploy) nothing boots,
+    // so the page cannot loop.
+    if (!checkIsPwaInstalled()) {
+        window.location.replace(legacyHostAppUrl);
+    } else if (window.location.pathname !== '/') {
+        window.location.replace('/');
+    }
 } else if (prerenderedRoute) {
     // Hydration preserves static, indexable React markup from the build.
     import('public-routes')
