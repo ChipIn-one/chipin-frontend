@@ -490,9 +490,11 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             // Input is limited to the currency minor units (spec 03 §4.2 `parseMoneyInput`), or to
             // the digits the current text already has, so an edit-loaded value can be erased.
             const draft = get();
+            const current = draft.amountShares[participantId];
             const parsedValue = parseAmountInput(
                 value,
-                selectInputFractionDigits(draft, draft.amountShares[participantId]),
+                selectInputFractionDigits(draft, current),
+                current,
             );
 
             if (parsedValue === null) {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
@@ -85,3 +85,29 @@ test('#725 names the amount and description inputs for assistive technology', ()
         screen.getByPlaceholderText(i18n.t('group:expenses.modal.fields.descriptionPlaceholder')),
     );
 });
+
+test.each([
+    ['100.', ['100.']],
+    ['100.50', ['100.50', '100.5', '100.']],
+])(
+    '#706 EXP-064 a USD total %s switched to JPY can still be edited around its separator',
+    (_, typed) => {
+        renderFields();
+        for (const value of typed) {
+            fireEvent.change(amountInput(), { target: { value } });
+        }
+        act(() => useExpenseModalStore.getState().setCurrency('JPY'));
+
+        fireEvent.change(amountInput(), { target: { value: '10.' } });
+        expect(useExpenseModalStore.getState().amount).toBe('10.');
+        fireEvent.change(amountInput(), { target: { value: '510.' } });
+        expect(useExpenseModalStore.getState().amount).toBe('510.');
+        fireEvent.change(amountInput(), { target: { value: '510.5' } });
+        expect(useExpenseModalStore.getState().amount).toBe('510.');
+        fireEvent.change(amountInput(), { target: { value: '200' } });
+        expect(useExpenseModalStore.getState().amount).toBe('200');
+        // Once the separator is gone, a JPY total does not take it back (#706).
+        fireEvent.change(amountInput(), { target: { value: '200.' } });
+        expect(useExpenseModalStore.getState().amount).toBe('200');
+    },
+);

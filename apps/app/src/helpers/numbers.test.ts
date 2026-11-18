@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { getNumberData, MONEY_INPUT_PRECISION, roundHalfUp } from './numbers';
+import { getNumberData, MONEY_INPUT_PRECISION, parseAmountInput, roundHalfUp } from './numbers';
 
 test('formats zero as a valid number', () => {
     expect(getNumberData({ value: 0, precision: 2 }).numberFormatted).toBe('0');
@@ -132,3 +132,35 @@ test('differs from Math.round only on half-way float values', () => {
         expect(roundHalfUp(value, MONEY_INPUT_PRECISION)).toBe(legacyRoundMoney(value));
     }
 });
+
+test.each(['12.', '12,', '12.5', '12,5', '.', ','])(
+    '#706 refuses the decimal separator in %s for a currency without fraction digits',
+    raw => {
+        expect(parseAmountInput(raw, 0)).toBeNull();
+    },
+);
+
+test.each([
+    ['12', 0, '12'],
+    ['12.', 2, '12.'],
+    ['12,', 2, '12.'],
+    ['12.5', 2, '12.5'],
+    ['12,5', 2, '12.5'],
+    ['12.', null, '12.'],
+] as const)('#706 keeps %s with %s fraction digits as %s', (raw, maxFractionDigits, expected) => {
+    expect(parseAmountInput(raw, maxFractionDigits)).toBe(expected);
+});
+
+test.each([
+    ['10.', '100.', '10.'],
+    ['10.5', '100.', null],
+    ['12.', '12', null],
+    ['12,', '100.', '12.'],
+    ['10.', '100,', '10.'],
+    ['10', '100.', '10'],
+] as const)(
+    '#706 with no fraction digits, %s after the field held %s gives %s',
+    (raw, previous, expected) => {
+        expect(parseAmountInput(raw, 0, previous)).toBe(expected);
+    },
+);
