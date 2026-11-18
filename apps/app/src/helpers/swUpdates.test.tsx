@@ -19,7 +19,7 @@ vi.mock('helpers/serviceWorkerHost', () => ({
 }));
 
 vi.mock('i18n', () => ({
-    default: {
+    i18n: {
         t: (key: string) => key,
     },
 }));

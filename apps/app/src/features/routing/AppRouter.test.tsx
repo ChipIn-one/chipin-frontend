@@ -5,7 +5,7 @@ import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 import { syncHtmlLang } from 'i18n/htmlLang';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';

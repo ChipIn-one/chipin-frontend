@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { InvalidPathSegmentError } from 'api/apiPath';
 import { apiInstance } from 'api/chipin.instance';
 import { lightThemeStyled } from 'constants/styled-themes';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 import { api } from 'shared/api/client';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';

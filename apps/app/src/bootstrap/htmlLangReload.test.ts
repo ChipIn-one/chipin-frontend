@@ -35,12 +35,15 @@ test('a reload with Russian saved starts with html lang ru', () => {
     saveLocalUser({ id: 'user-1', role: 'USER', settings });
 
     return Promise.all([import('i18n'), import('i18n/htmlLang')]).then(
-        ([{ default: i18n }, { syncHtmlLang }]) => {
+        ([{ i18n, i18nReady }, { syncHtmlLang }]) => {
             const stop = syncHtmlLang(i18n);
 
-            expect(i18n.resolvedLanguage).toBe('ru');
-            expect(document.documentElement.lang).toBe('ru');
-            stop();
+            // The locale chunks load lazily (spec 04 §2.10); the boot renders only after this.
+            return i18nReady.then(() => {
+                expect(i18n.resolvedLanguage).toBe('ru');
+                expect(document.documentElement.lang).toBe('ru');
+                stop();
+            });
         },
     );
 });

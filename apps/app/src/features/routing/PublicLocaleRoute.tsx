@@ -1,9 +1,10 @@
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react';
 import { useTranslation } from 'react-i18next';
 
 import type { SelfUserSettings } from 'entities/users';
 import { matchLocale } from 'helpers/locale';
+import { applyLanguage } from 'helpers/setAppLanguage';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -21,6 +22,9 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const savedLanguage = useUserSetting(pickLanguage);
     const resolvedLanguage = i18n.resolvedLanguage;
+    // The URL language whose chunks failed to load (spec 04 §2.10): the page renders in the
+    // active language instead of a loader that never ends.
+    const [failedLocale, setFailedLocale] = useState<PublicLocale | null>(null);
     const isLoggedInRef = useRef(isLoggedIn);
     const savedLanguageRef = useRef(savedLanguage);
 
@@ -34,9 +38,14 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
     // `<html lang>` follows i18next (`i18n/htmlLang`, wired at boot): no write of it here (#708).
     useEffect(() => {
         if (resolvedLanguage !== locale) {
-            i18n.changeLanguage(locale).catch((error: unknown) => {
-                Sentry.captureException(error);
-            });
+            applyLanguage(locale)
+                .then(() => {
+                    setFailedLocale(null);
+                })
+                .catch((error: unknown) => {
+                    Sentry.captureException(error);
+                    setFailedLocale(locale);
+                });
         }
     }, [i18n, locale, resolvedLanguage]);
 
@@ -48,14 +57,14 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
                 ? matchLocale(savedLanguageRef.current ?? '')
                 : null;
             if (userLocale && i18n.resolvedLanguage !== userLocale) {
-                i18n.changeLanguage(userLocale).catch((error: unknown) => {
+                applyLanguage(userLocale).catch((error: unknown) => {
                     Sentry.captureException(error);
                 });
             }
         };
     }, [i18n]);
 
-    if (resolvedLanguage !== locale) {
+    if (resolvedLanguage !== locale && failedLocale !== locale) {
         return <PageLoader />;
     }
     return children;
