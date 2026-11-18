@@ -12,7 +12,8 @@ const copiedTexts: string[] = [];
 const selectedTextsAtCopy: string[] = [];
 
 // jsdom has no `execCommand` or `ClipboardEvent`: emulate the browser dispatching a `copy` event
-// with (or without) `clipboardData`, recording what was written or selected at copy time.
+// with (or without) `clipboardData` at the focused element, recording what was written or selected
+// at copy time.
 // jsdom's Selection#toString ignores ranges while a non-text element is focused; read the range.
 const readSelectedText = (): string => {
     const selection = document.getSelection();
@@ -20,22 +21,25 @@ const readSelectedText = (): string => {
     return selection && selection.rangeCount > 0 ? selection.getRangeAt(0).toString() : '';
 };
 
-const execCommand = vi.fn((_command: string): boolean => {
+const emulateCopyCommand = (_command: string): boolean => {
     const setData = (_format: string, data: string): void => {
         copiedTexts.push(data);
     };
-    const copyEvent = new Event('copy', { cancelable: true });
+    const copyEvent = new Event('copy', { bubbles: true, cancelable: true });
     Object.defineProperty(copyEvent, 'clipboardData', {
         value: copyCommand.hasClipboardData ? { setData } : null,
     });
     selectedTextsAtCopy.push(readSelectedText());
-    document.dispatchEvent(copyEvent);
+    (document.activeElement ?? document).dispatchEvent(copyEvent);
 
     return copyCommand.isCopied;
-});
+};
+
+const execCommand = vi.fn(emulateCopyCommand);
 
 beforeEach(() => {
     vi.clearAllMocks();
+    execCommand.mockImplementation(emulateCopyCommand);
     copyCommand.isCopied = true;
     copyCommand.hasClipboardData = true;
     copiedTexts.length = 0;
@@ -167,25 +171,73 @@ test('copies a temporary selection without moving focus when the copy event has 
     });
 });
 
-test('places the temporary selection inside the focused dialog', () => {
+test.each(['dialog', 'alertdialog'])(
+    'places the temporary selection inside the focused %s',
+    role => {
+        vi.stubGlobal('navigator', {});
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', role);
+        const button = document.createElement('button');
+        dialog.append(button);
+        document.body.append(dialog);
+        button.focus();
+        let isSelectionInsideDialog = false;
+        execCommand.mockImplementation(() => {
+            const anchorNode = document.getSelection()?.anchorNode ?? null;
+            isSelectionInsideDialog = anchorNode !== null && dialog.contains(anchorNode);
+            return true;
+        });
+
+        return copyTextToClipboard('invite-link').then(result => {
+            expect(result).toBe('copied');
+            expect(isSelectionInsideDialog).toBe(true);
+            expect(dialog.textContent).toBe('');
+            expect(document.activeElement).toBe(button);
+        });
+    },
+);
+
+test('writes the clipboard data even when a page listener stops the copy event from bubbling', () => {
     vi.stubGlobal('navigator', {});
-    const dialog = document.createElement('div');
-    dialog.setAttribute('role', 'dialog');
     const button = document.createElement('button');
-    dialog.append(button);
-    document.body.append(dialog);
+    document.body.append(button);
     button.focus();
-    let isSelectionInsideDialog = false;
-    execCommand.mockImplementation(() => {
-        const anchorNode = document.getSelection()?.anchorNode ?? null;
-        isSelectionInsideDialog = anchorNode !== null && dialog.contains(anchorNode);
-        return true;
+    button.addEventListener('copy', event => {
+        event.stopPropagation();
     });
 
     return copyTextToClipboard('invite-link').then(result => {
         expect(result).toBe('copied');
-        expect(isSelectionInsideDialog).toBe(true);
-        expect(dialog.textContent).toBe('');
-        expect(document.activeElement).toBe(button);
+        expect(copiedTexts).toEqual(['invite-link']);
+    });
+});
+
+test('restores the focused text field selection after copying a temporary selection', () => {
+    vi.stubGlobal('navigator', {});
+    copyCommand.hasClipboardData = false;
+    const input = document.createElement('input');
+    input.value = 'typed amount';
+    document.body.append(input);
+    input.focus();
+    input.setSelectionRange(2, 5);
+
+    return copyTextToClipboard('invite-link').then(result => {
+        expect(result).toBe('copied');
+        expect(selectedTextsAtCopy).toEqual(['', 'invite-link']);
+        expect(document.activeElement).toBe(input);
+        expect(input.selectionStart).toBe(2);
+        expect(input.selectionEnd).toBe(5);
+    });
+});
+
+test('clears the temporary selection when nothing was selected before', () => {
+    vi.stubGlobal('navigator', {});
+    copyCommand.hasClipboardData = false;
+    document.getSelection()?.removeAllRanges();
+
+    return copyTextToClipboard('invite-link').then(result => {
+        expect(result).toBe('copied');
+        expect(selectedTextsAtCopy).toEqual(['', 'invite-link']);
+        expect(document.getSelection()?.rangeCount).toBe(0);
     });
 });

@@ -3,7 +3,11 @@ export type ClipboardCopyResult = 'copied' | 'unsupported';
 const toCopyResult = (isCopied: boolean): ClipboardCopyResult =>
     isCopied ? 'copied' : 'unsupported';
 
-const isTextControl = (element: Element | null): boolean =>
+type TextControl = HTMLInputElement | HTMLTextAreaElement;
+
+const DIALOG_SELECTOR = '[role="dialog"],[role="alertdialog"]';
+
+const isTextControl = (element: Element | null): element is TextControl =>
     element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement;
 
 const readSelectionRanges = (selection: Selection): Range[] =>
@@ -13,8 +17,8 @@ const readSelectionRanges = (selection: Selection): Range[] =>
  * WebKit safety net when the copy event carried no `clipboardData` (or did not fire because
  * nothing was selected): temporarily appends a selectable span next to the focused element's
  * dialog (so a focus trap keeps it reachable), selects its text and runs `execCommand('copy')`
- * again. Never moves focus. Always removes the span; restores the previous selection only when
- * it had ranges and no text control is focused.
+ * again. Never moves focus. Always removes the span, then restores the previous selection: the
+ * focused text control's own selection range, otherwise the previous document ranges (or none).
  */
 const copyTextWithTemporarySelection = (value: string): boolean => {
     const selection = document.getSelection();
@@ -25,7 +29,11 @@ const copyTextWithTemporarySelection = (value: string): boolean => {
 
     const activeElement = document.activeElement;
     const previousRanges = readSelectionRanges(selection);
-    const container = activeElement?.closest('[role="dialog"]') ?? document.body;
+    const textControl = isTextControl(activeElement) ? activeElement : null;
+    const textControlSelection = textControl
+        ? { start: textControl.selectionStart, end: textControl.selectionEnd }
+        : null;
+    const container = activeElement?.closest(DIALOG_SELECTOR) ?? document.body;
     const span = document.createElement('span');
     span.textContent = value;
     span.setAttribute('aria-hidden', 'true');
@@ -51,13 +59,19 @@ const copyTextWithTemporarySelection = (value: string): boolean => {
     } finally {
         span.remove();
 
-        if (previousRanges.length > 0 && !isTextControl(activeElement)) {
-            try {
+        try {
+            if (textControl && textControlSelection) {
+                const { start, end } = textControlSelection;
+
+                if (start !== null && end !== null) {
+                    textControl.setSelectionRange(start, end);
+                }
+            } else {
                 selection.removeAllRanges();
                 previousRanges.forEach(previousRange => selection.addRange(previousRange));
-            } catch {
-                // Restoring the selection is best effort.
             }
+        } catch {
+            // Restoring the selection is best effort.
         }
     }
 };
@@ -65,7 +79,7 @@ const copyTextWithTemporarySelection = (value: string): boolean => {
 /**
  * Synchronous legacy copy for contexts where the async Clipboard API is missing or denied
  * (an embedder that denies `clipboard-write`, an unfocused document). Adds a one-time `copy`
- * listener on `document` that writes the value into `clipboardData`, runs
+ * capture-phase listener on `document` that writes the value into `clipboardData`, runs
  * `document.execCommand('copy')` and always removes the listener. Falls back to copying a
  * temporary selection only when the copy event wrote no `clipboardData`. Returns whether the
  * browser reported a successful copy.
@@ -94,7 +108,7 @@ const copyTextWithCopyCommand = (value: string): boolean => {
         hasWrittenClipboardData = true;
     };
 
-    document.addEventListener('copy', onCopy);
+    document.addEventListener('copy', onCopy, { capture: true });
 
     try {
         const isCommandCopied = document.execCommand('copy');
@@ -107,7 +121,7 @@ const copyTextWithCopyCommand = (value: string): boolean => {
     } catch {
         return false;
     } finally {
-        document.removeEventListener('copy', onCopy);
+        document.removeEventListener('copy', onCopy, { capture: true });
     }
 };
 

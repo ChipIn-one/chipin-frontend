@@ -12,6 +12,8 @@ import { buildFriendInviteLink, buildGroupInviteLink } from 'helpers/url';
 import { usePwaStore } from 'store/pwaStore';
 
 const INVITE_FEEDBACK_DELAY_MS = 1.5 * SECOND;
+// The Copy link retry toast stays longer than the default so the user can reach its action.
+const INVITE_COPY_RETRY_TOAST_DURATION_MS = 10 * SECOND;
 
 export const useCheckPwa = () => {
     const { setIsPwaInstalled, setPwaInstallPrompt } = usePwaStore(
@@ -133,6 +135,7 @@ const useInvite = ({
         // A failed copy (or a failed share sheet) has used up the user activation, so the retry
         // needs a fresh click: the toast action copies again inside that click.
         toast.error(copyErrorMessage, {
+            duration: INVITE_COPY_RETRY_TOAST_DURATION_MS,
             action: {
                 label: copyRetryLabel,
                 onClick: () => {
