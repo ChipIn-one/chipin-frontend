@@ -113,6 +113,10 @@ const expectTestsInPlaywrightImage = (job, testStepId, command, names) => {
     const passed = [...test.run.matchAll(/-e ([A-Z0-9_]+)(=\S*)?/g)];
     expect(passed.filter(match => match[2] && !['HOME', 'PATH'].includes(match[1]))).toEqual([]);
     expect(passed.map(match => match[1]).sort()).toEqual(['CI', 'HOME', 'PATH', ...names].sort());
+    expect(test.run).not.toMatch(/--env(-file)?\b/);
+    // Each passed name has its value in this step's env (CI comes from the runner).
+    for (const [, name] of passed.filter(match => !['HOME', 'PATH', 'CI'].includes(match[1])))
+        expect(Object.keys(test.env), name).toContain(name);
     // A container orphaned by a killed docker client is removed right after the test step, before
     // the artifact steps and the purge.
     const stop = steps.find(step => step.name === 'Stop the test container');
@@ -216,6 +220,16 @@ test('the matrix runs five profiles without fail-fast, installs only its own bro
     expect(pull.if).toBe("steps.project.outputs.available == 'true'");
     const test = e2e.steps.find(step => step.id === 'e2e');
     expect(test['working-directory']).toBe('apps/app');
+    // The matrix never falls back to the local dev server: an empty Preview URL fails before docker.
+    const guard = test.run.indexOf('if [[ -z "$CHIPIN_E2E_BASE_URL" ]]; then');
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(test.run.indexOf('docker run'));
+    expect(test.run.slice(guard)).toMatch(
+        /^[^\n]*\n\s*echo "::error::[^"]*CHIPIN_E2E_BASE_URL[^"]*"\n\s*exit 1\n/,
+    );
+    // The result step reads the JSON report where the container wrote it.
+    const write = e2e.steps.find(step => step.name === 'Write profile result');
+    expect(test.env.CHIPIN_E2E_JSON_REPORT).toBe(write.env.REPORT);
     expect(test.env).toMatchObject({
         CHIPIN_E2E_BASE_URL: '${{ needs.resolve.outputs.url }}',
         CHIPIN_E2E_RUN_ID: '${{ steps.run.outputs.id }}',

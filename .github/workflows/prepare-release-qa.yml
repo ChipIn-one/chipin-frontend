@@ -212,6 +212,12 @@ jobs:
             echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
             exit 1
           fi
+          # Without a target the suite would start the local dev server; the matrix tests only the
+          # resolved Preview.
+          if [[ -z "$CHIPIN_E2E_BASE_URL" ]]; then
+            echo "::error::The resolved Preview URL (CHIPIN_E2E_BASE_URL) is empty; the matrix does not run without it."
+            exit 1
+          fi
           # The repository's Node (setup-node, engines 24.x), not the image's own, runs the tests.
           node_home="$(dirname "$(dirname "$(command -v node)")")"
           docker run --rm --ipc=host --init \
