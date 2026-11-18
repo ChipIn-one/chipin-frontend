@@ -1,7 +1,13 @@
 import { onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { bootstrapNetwork, isNetworkUsable, OFFLINE_RECHECK_MS, waitForOnline } from './network';
+import {
+    bootstrapNetwork,
+    getLastOfflineAt,
+    isNetworkUsable,
+    OFFLINE_RECHECK_MS,
+    waitForOnline,
+} from './network';
 
 const health = vi.hoisted(() => ({
     probeBackendHealth: vi.fn<(sentAfter?: number) => Promise<'ok' | 'error' | 'unreachable'>>(),
@@ -53,11 +59,13 @@ describe('bootstrapNetwork', () => {
         teardown = bootstrapNetwork();
 
         onlineManager.setOnline(false);
+        const wentOfflineAt = getLastOfflineAt();
         await vi.advanceTimersByTimeAsync(OFFLINE_RECHECK_MS - 1);
         expect(health.probeBackendHealth).not.toHaveBeenCalled();
 
         await vi.advanceTimersByTimeAsync(1);
-        expect(health.probeBackendHealth).toHaveBeenCalledOnce();
+        // Only a probe sent during this outage counts, never an older shared one.
+        expect(health.probeBackendHealth).toHaveBeenCalledExactlyOnceWith(wentOfflineAt);
         expect(onlineManager.isOnline()).toBe(false);
 
         // A non-2xx answer proves the network (not the backend).

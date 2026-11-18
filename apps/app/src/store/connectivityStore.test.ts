@@ -33,7 +33,6 @@ beforeEach(() => {
 
 afterEach(() => {
     onlineManager.setOnline(true);
-    vi.restoreAllMocks();
 });
 
 test('backend-down changes only connectivity and preserves the authenticated session', () => {

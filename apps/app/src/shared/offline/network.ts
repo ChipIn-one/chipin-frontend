@@ -50,10 +50,11 @@ const stopRecheck = (): void => {
 };
 
 // A request classified `offline` (`setOnline(false)`) on a network the browser still calls online
-// never gets an `online` event: probe `/health` (5 s timeout, shared with every other probe) until
-// any HTTP answer proves the network. The answer proves the network, not the backend: a non-2xx
-// is classified by the reconnect refetch, not here. Only a probe sent during the current outage
-// counts: one that a new outage overtook (back online and offline again while it ran) is ignored.
+// never gets an `online` event: probe `/health` (5 s timeout, shared with other probes sent during
+// this outage) until any HTTP answer proves the network. The answer proves the network, not the
+// backend: a non-2xx is classified by the reconnect refetch, not here. Only a probe sent during
+// the current outage counts: one that a new outage overtook (back online and offline again while
+// it ran) is ignored.
 const recheck = (): void => {
     if (!browserSaysOnline()) {
         // The browser fires `online` itself.
