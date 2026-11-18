@@ -1,7 +1,3 @@
-// Released locales are shared by the public manifest and the client locale resolver.
-const SUPPORTED_LOCALES = ['en', 'ru'] as const;
-type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
-const DEFAULT_LOCALE: SupportedLocale = SUPPORTED_LOCALES[0];
-
-export { DEFAULT_LOCALE, SUPPORTED_LOCALES };
-export type { SupportedLocale };
+// Released locales are shared by the public manifest and the client locale resolver; the source
+// is @chipin/i18n-content (spec 04 §2.10).
+export { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '@chipin/i18n-content';

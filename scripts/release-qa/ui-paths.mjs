@@ -4,6 +4,7 @@
 export const UI_PATH_PREFIXES = Object.freeze([
     'apps/app/src/', // application code, styles and src/i18n/locales/** translations
     'apps/app/public/', // static assets, icons, robots.txt and sitemap.xml
+    'packages/i18n-content/', // the shared locale list and the `common` translations the app bundles
 ]);
 
 export const UI_PATH_FILES = new Set([
@@ -23,11 +24,7 @@ export function isUiAffecting(path) {
     if (typeof path !== 'string' || path.length === 0) return false;
     if (UI_PATH_FILES.has(path)) return true;
     if (!UI_PATH_PREFIXES.some(prefix => path.startsWith(prefix))) return false;
-    if (
-        path.startsWith('apps/app/src/') &&
-        (path.startsWith('apps/app/src/test/') || TEST_FILE.test(path))
-    )
-        return false;
+    if (path.startsWith('apps/app/src/test/') || TEST_FILE.test(path)) return false;
     return true;
 }
 

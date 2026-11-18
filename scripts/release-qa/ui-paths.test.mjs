@@ -11,7 +11,9 @@ import {
 test('application code, static assets, entry HTML, locales, Vercel, PWA and Vite config are UI-affecting', () => {
     for (const path of [
         'apps/app/src/App.tsx',
-        'apps/app/src/i18n/locales/en/common.json',
+        'apps/app/src/i18n/locales/en/auth.json',
+        'packages/i18n-content/common/en.json',
+        'packages/i18n-content/src/locales.ts',
         'apps/app/src/helpers/serviceWorkerRecovery.ts',
         'apps/app/public/favicon.svg',
         'apps/app/index.html',
@@ -30,6 +32,7 @@ test('tests, test setup, CI, workflows, tooling, packages and docs are not UI-af
         'apps/app/src/App.test.tsx',
         'apps/app/src/helpers/theme.test.ts',
         'apps/app/src/test/setup.ts',
+        'packages/i18n-content/src/loadCommon.test.ts',
         '.github/workflows/frontend-ci.yml',
         '.github/dependabot.yml',
         'scripts/release-qa/core.mjs',
