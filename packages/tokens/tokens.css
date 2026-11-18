@@ -1,0 +1,140 @@
+/*
+ * ChipIn design tokens: the hand-written source of truth (spec 05 §1, D31).
+ *
+ * Rules (checked by tokens.test.ts):
+ * - Colors reference a concrete Radix scale imported by radix-colors.css (`var(--olive-11)`),
+ *   never `--accent-*` or `--gray-*`: those exist only inside `.radix-themes`, and a custom
+ *   property on `:root` that references a missing variable is invalid.
+ * - Raw color literals live only here and only for the D23 exceptions:
+ *   `--cp-brand-loader`, `--cp-media-on`, `--cp-media-scrim`.
+ * - Light/dark comes from the scales themselves (they switch on `.dark`/`.dark-theme`), so
+ *   there is no dark override block; add one only for a value that differs by more than that.
+ * - Component tokens are added by the design-phase PR that migrates their file.
+ *
+ * The selector list recomputes the tokens in a nested theme, e.g. `<Theme appearance="dark">`
+ * inside a light page.
+ */
+:root,
+.light,
+.light-theme,
+.dark,
+.dark-theme {
+    /* Space: Radix at scaling 100% */
+    --cp-space-1: 4px;
+    --cp-space-2: 8px;
+    --cp-space-3: 12px;
+    --cp-space-4: 16px;
+    --cp-space-5: 24px;
+    --cp-space-6: 32px;
+    --cp-space-7: 40px;
+    --cp-space-8: 48px;
+    --cp-space-9: 64px;
+
+    /* Radius: Radix base x 1.5 (radius="large") */
+    --cp-radius-1: 4.5px;
+    --cp-radius-2: 6px;
+    --cp-radius-3: 9px;
+    --cp-radius-4: 12px;
+    --cp-radius-5: 18px;
+    --cp-radius-6: 24px;
+    --cp-radius-pill: 9999px;
+
+    /* Typography: the Radix system font stack, no webfont */
+    --cp-font-sans:
+        -apple-system, BlinkMacSystemFont, 'Segoe UI (Custom)', Roboto, 'Helvetica Neue',
+        'Open Sans (Custom)', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --cp-font-size-1: 12px;
+    --cp-font-size-2: 14px;
+    --cp-font-size-3: 16px;
+    --cp-font-size-4: 18px;
+    --cp-font-size-5: 20px;
+    --cp-font-size-6: 24px;
+    --cp-font-size-7: 28px;
+    --cp-font-size-8: 35px;
+    --cp-font-size-9: 60px;
+    --cp-font-weight-regular: 400;
+    --cp-font-weight-medium: 500;
+    --cp-font-weight-bold: 700;
+
+    /* Shadows: the values used by the app today, on the olive alpha scale */
+    --cp-shadow-card: 0 18px 56px var(--olive-a6);
+    --cp-shadow-popover: 0 32px 80px -24px var(--olive-a9), 0 16px 36px -24px var(--olive-a8);
+
+    /* Layers: only the values in the code; modal layers come from Radix portals */
+    --cp-z-content: 0;
+    --cp-z-raised: 1;
+    --cp-z-floating: 2;
+
+    /* Motion: 120/150/160 ms in the code today, 150 folded into 160 */
+    --cp-duration-fast: 120ms;
+    --cp-duration-base: 160ms;
+    --cp-easing-standard: ease;
+    --cp-easing-out: ease-out;
+
+    /* Brand */
+    --cp-brand-primary: var(--grass-9);
+    --cp-brand-loader: #80c837;
+
+    /* Text */
+    --cp-text-primary: var(--olive-12);
+    --cp-text-secondary: var(--olive-11);
+    --cp-text-muted: var(--olive-10);
+    --cp-text-inverse: var(--olive-1);
+
+    /* Surfaces */
+    --cp-surface-base: var(--olive-1);
+    --cp-surface-subtle: var(--olive-2);
+    --cp-surface-muted: var(--olive-3);
+
+    /* Borders */
+    --cp-border-default: var(--olive-6);
+    --cp-border-strong: var(--olive-8);
+    --cp-border-translucent: var(--olive-a6);
+    --cp-border-translucent-strong: var(--olive-a8);
+    --cp-border-brand: var(--green-6);
+
+    /* Fills */
+    --cp-fill-hover: var(--olive-a2);
+    --cp-fill-pressed: var(--olive-a3);
+    --cp-fill-scrim: var(--olive-a9);
+
+    /* Accent */
+    --cp-accent-surface: var(--grass-3);
+    --cp-accent-solid: var(--grass-9);
+    --cp-focus-ring: var(--grass-a8);
+
+    /* Status */
+    --cp-status-success: var(--green-11);
+    --cp-status-info: var(--blue-11);
+    --cp-status-danger-border: var(--red-8);
+    --cp-status-danger-surface: var(--red-a2);
+    --cp-status-warning-text: var(--amber-11);
+    --cp-status-warning-surface: var(--amber-a3);
+
+    /* Debts */
+    --cp-debt-owed: var(--green-11);
+    --cp-debt-owing: var(--red-11);
+    --cp-debt-settled: var(--olive-11);
+
+    /* Selection */
+    --cp-selection-border-subtle: var(--jade-7);
+    --cp-selection-border: var(--jade-8);
+    --cp-selection-solid: var(--jade-9);
+    --cp-selection-surface: var(--jade-a2);
+    --cp-selection-surface-hover: var(--jade-a3);
+
+    /* Media: text over a cover and its scrim, the same in both modes */
+    --cp-media-on: #ffffff;
+    --cp-media-scrim: #000000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root,
+    .light,
+    .light-theme,
+    .dark,
+    .dark-theme {
+        --cp-duration-fast: 0ms;
+        --cp-duration-base: 0ms;
+    }
+}
