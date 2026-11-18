@@ -1,8 +1,8 @@
 // Spec 03 §1.5, the rows `signOut()` and "sign-in of Y" (03-16a part C): a sign-out from the UI
 // deletes this user's unsent operations, and those of the users a refresh switch kept on this
 // device, so it asks first when there are any. The number is read from the stored outbox keys of
-// those users (any tab, restored or not): pending ops, failed and unreadable records; the conflict
-// drafts join it in 03-16b. A remote logout (another tab confirmed it) asks nothing. The
+// those users (any tab, restored or not): pending ops, failed and unreadable records and the
+// conflict drafts (03-16b). A remote logout (another tab confirmed it) asks nothing. The
 // account-switch question itself is asked by the auth store.
 import { getKeptOutboxUsers } from 'helpers/localStorage';
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';

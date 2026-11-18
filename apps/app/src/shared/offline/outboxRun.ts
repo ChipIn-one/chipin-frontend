@@ -20,6 +20,7 @@ import { OutboxLockTimeoutError, OutboxWriteStoppedError } from './outboxIo';
 import { ledgerEntryKey } from './outboxRegistry';
 import {
     claimOutboxOp,
+    convertFailedConflicts,
     currentOutboxFence,
     failedEntryIds,
     type FailedReason,
@@ -37,6 +38,7 @@ import {
     markPendingRemoval,
     noteOutboxVersion,
     onOutboxWake,
+    type OutboxConflict,
     outboxEntryIds,
     type OutboxFence,
     type OutboxKind,
@@ -46,6 +48,7 @@ import {
     outboxSessionSignal,
     pendingOutboxOps,
     readOutbox,
+    recordConflict,
     recordFailedOp,
     refreshOutbox,
     releaseOutboxClaim,
@@ -70,7 +73,13 @@ export type OutboxResult =
     /** The drain stopped: the op stays queued for the next drain. */
     | { kind: 'stopped' }
     /** Discarded: no request was sent. */
-    | { kind: 'cancelled' };
+    | { kind: 'cancelled' }
+    /**
+     * §2.6: a 409 `LEDGER.VERSION_CONFLICT` (or an unknown version the server has): `entry` is its
+     * `current`; the op and the later ops of its entry left the queue, into a conflict draft unless
+     * the run ended with a delete (`isDelete`).
+     */
+    | { kind: 'conflicted'; entry: unknown; isDelete: boolean };
 
 const STOPPED: OutboxResult = { kind: 'stopped' };
 const CANCELLED: OutboxResult = { kind: 'cancelled' };
@@ -104,11 +113,15 @@ export interface OutboxDeps<Op extends OutboxOpBase> {
 
 export type OutboxErrorClass =
     | { kind: 'network' | 'transient' | 'auth' | 'outdated' | 'noop' }
+    | { kind: 'conflict'; current: unknown }
     | { kind: 'final'; reason: FailedReason };
 
 const final = (reason: FailedReason): OutboxErrorClass => ({ kind: 'final', reason });
 
-const classifyStatus = ({ status, code }: ApiError, opKind: OutboxKind): OutboxErrorClass => {
+const classifyStatus = (
+    { status, code, current }: ApiError,
+    opKind: OutboxKind,
+): OutboxErrorClass => {
     if (status >= 500 || status === 429 || (status === 409 && code === 'SYSTEM.CONFLICT')) {
         return { kind: 'transient' };
     }
@@ -131,9 +144,13 @@ const classifyStatus = ({ status, code }: ApiError, opKind: OutboxKind): OutboxE
         case 404:
             return final(opKind === 'updateExpense' ? 'deletedRemotely' : 'rejected');
         case 409:
-            return code === 'LEDGER.VERSION_CONFLICT'
-                ? final('conflict')
-                : final(code === 'LEDGER.ID_CONFLICT' ? 'idConflict' : 'rejected');
+            // §2.6: an edit or a delete; a create has no version to conflict with.
+            if (code === 'LEDGER.VERSION_CONFLICT') {
+                return opKind === 'createExpense'
+                    ? final('rejected')
+                    : { kind: 'conflict', current };
+            }
+            return final(code === 'LEDGER.ID_CONFLICT' ? 'idConflict' : 'rejected');
         default:
             return final('rejected');
     }
@@ -381,6 +398,29 @@ const onSendError = async (
             );
             outboxGate.close(errorClass.kind);
             return retry();
+        case 'conflict': {
+            // §2.6: the server answered for good, only the write is repeated. Nothing is blocked:
+            // the op and the later ops of its entry leave the queue in this write (into the draft).
+            const outcome: { conflict?: OutboxConflict } = {};
+            const landed = await retryWrite(
+                op,
+                () =>
+                    recordConflict(op, fence).then(conflict => {
+                        outcome.conflict = conflict;
+                    }),
+                () => isStale(op, fence),
+            );
+
+            if (!landed || !outcome.conflict) {
+                await releaseClaim(op, fence);
+                return STOPPED;
+            }
+            return {
+                kind: 'conflicted',
+                entry: errorClass.current,
+                isDelete: outcome.conflict.isDelete,
+            };
+        }
         case 'final': {
             // Synchronously, before the write: later ops of this entry are skipped from now on.
             // The server answered for good: only the write is repeated, never the request.
@@ -498,8 +538,9 @@ const attempt = async <Op extends OutboxOpBase>(
 
 /**
  * Sends one op when its turn comes, within the drain session it started in (its fence). Resolves
- * with a success, `stopped` or `cancelled`; rejects only with `OutboxTerminalError`, after the op
- * was recorded as failed. A failed op under "Retry" (`retryRequested`) ignores its entry's block.
+ * with a success, `conflicted` (§2.6, after the draft write), `stopped` or `cancelled`; rejects only
+ * with `OutboxTerminalError`, after the op was recorded as failed. A failed op under "Retry"
+ * (`retryRequested`) ignores its entry's block.
  */
 export const runOutboxOp = <Op extends OutboxOpBase>(
     op: Op,
@@ -670,8 +711,10 @@ export const restoreOutbox = (
             return result;
         }
         // The clear write re-reads the keys; when it fails they are read once more (L5).
+        // 03-16b: the interim failed `conflict` records of older builds become conflict drafts.
         return writeOutbox(draft => {
             draft.sending = null;
+            convertFailedConflicts(draft);
         })
             .catch((error: unknown) => {
                 reportWriteFailure(error);

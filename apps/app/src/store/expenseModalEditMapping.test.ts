@@ -9,7 +9,7 @@ import type {
 import { currencyCode, fromUnits, type Money } from 'shared/money';
 import { getOrThrow } from 'test/getOrThrow';
 
-import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
+import { applyExpensePatchToEdit, mapActivityExpenseToModalState } from './expenseModalEditMapping';
 import {
     selectExpensePayload,
     selectExpenseSubmitFeedback,
@@ -372,4 +372,45 @@ test('an invalid currency disables an edit with the currency reason, not "unchan
     expect(selectExpenseSubmitFeedback(state)).toEqual({
         reason: EXPENSE_SUBMIT_BLOCKERS.CURRENCY,
     });
+});
+
+test('03-16b a conflict draft opens on the expense as it is now with its fields on top; Save sends them', () => {
+    const initialization = mapActivityExpenseToModalState({
+        parentEvent,
+        childEvents: [],
+        source,
+        parentActivityId: parentEvent.id,
+    });
+
+    if (!initialization) {
+        throw new Error('expected an edit initialization');
+    }
+    const onDraft = applyExpensePatchToEdit(initialization, {
+        description: 'Mine',
+        category: null,
+        amount: usd(1_200_000n),
+        participantIds: ['user-1'],
+        sharingMode: { type: 'PERCENTAGE', percentageShares: { 'user-1': '100' } },
+    });
+
+    expect(onDraft).toMatchObject({
+        description: 'Mine',
+        category: '',
+        amount: '120',
+        currency: 'USD',
+        splitMode: EXPENSE_SPLIT_MODES.PERCENT,
+        percentShares: { 'user-1': '100' },
+        includedParticipantIds: { 'user-1': true },
+        isPercentManuallyEdited: true,
+        // The original is the expense as it is now: the draft's fields differ from it.
+        editContext: { original: initialization.editContext.original },
+    });
+    expect(Object.values(onDraft.includedParticipantIds).filter(Boolean)).toEqual([true]);
+    useExpenseModalStore.getState().initializeEdit(onDraft);
+    const payload = selectExpensePayload(useExpenseModalStore.getState());
+
+    expect(payload).not.toBeNull();
+    expect(
+        payload && buildExpenseUpdateParams(onDraft.editContext.original, payload),
+    ).toMatchObject({ description: 'Mine', amount: usd(1_200_000n) });
 });

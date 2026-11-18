@@ -30,6 +30,11 @@ export interface LedgerEntry {
     readonly type: 'EXPENSE' | 'SETTLEMENT';
     /** Null only for an optimistic create the server has not answered yet. */
     readonly version: string | null;
+    /**
+     * Unix seconds of the entry's last event (the server's `updatedAt`); null for an optimistic
+     * create. Versions are opaque (equality only): this orders two answers (§2.6 stale guard).
+     */
+    readonly updatedAt: number | null;
     readonly groupId: string | null;
     /** Null for a settlement, and when the answer carried no expense. */
     readonly expense: LedgerEntryExpense | null;
@@ -52,6 +57,7 @@ const LedgerEntryHeadSchema = z.object({
     type: z.enum(['EXPENSE', 'SETTLEMENT']),
     version: z.string(),
     groupId: z.string().nullish(),
+    updatedAt: z.number().nullish(),
 });
 
 const LedgerEntryWireSchema = LedgerEntryHeadSchema.extend({
@@ -67,6 +73,7 @@ export const toLedgerEntry = (wire: unknown): LedgerEntry => {
         id: entry.id,
         type: entry.type,
         version: entry.version,
+        updatedAt: entry.updatedAt ?? null,
         groupId: entry.groupId ?? null,
         expense: expense
             ? {
@@ -96,6 +103,7 @@ export const readLedgerEntry = (wire: unknown): LedgerEntry | null => {
                   id: head.data.id,
                   type: head.data.type,
                   version: head.data.version,
+                  updatedAt: head.data.updatedAt ?? null,
                   groupId: head.data.groupId ?? null,
                   expense: null,
               }
@@ -108,6 +116,7 @@ export const optimisticCreatedEntry = (entryId: string, draft: ExpenseDraft): Le
     id: entryId,
     type: 'EXPENSE',
     version: null,
+    updatedAt: null,
     groupId: draft.groupId ?? null,
     expense: {
         description: draft.description,
@@ -136,3 +145,14 @@ export const optimisticUpdatedEntry = (entry: LedgerEntry, patch: ExpensePatch):
                   }),
               },
           };
+
+/**
+ * §2.6 stale guard: `next` (a conflict's `current`) is older than the cached entry by the server's
+ * `updatedAt`, so it must not overwrite it. Unknown on either side (an optimistic entry, a cache
+ * written before the field): not older.
+ */
+export const isOlderLedgerEntry = (next: LedgerEntry, cached: LedgerEntry | undefined): boolean => {
+    const cachedAt: unknown = cached?.updatedAt;
+
+    return typeof cachedAt === 'number' && next.updatedAt !== null && next.updatedAt < cachedAt;
+};

@@ -1,3 +1,4 @@
+import { useCallback, useEffect } from 'react';
 import { Button, Flex } from '@radix-ui/themes';
 import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +8,7 @@ import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import type { ActivityEvent } from 'entities/activity';
 import {
+    dropDeletedConflictDraft,
     useIsOfflineWriteAvailable,
     useLedgerEntryObserver,
     useOutboxOverlay,
@@ -17,7 +19,8 @@ import {
     getActivitySubeventsView,
 } from 'helpers/activityEvent';
 import { toastLedgerWriteError, useDeleteLedgerEntry } from 'hooks/useLedgerMutations';
-import { prepareExpenseEdit } from 'store/activityExpenseEdit';
+import { prepareExpenseEdit, withConflictDraft } from 'store/activityExpenseEdit';
+import { useConflictDraftStore } from 'store/conflictDraftStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
@@ -50,6 +53,7 @@ const ActivitySubeventsButtons = ({
 }: Props) => {
     const { t } = useTranslation(['activity', 'toasts']);
     const initializeEdit = useExpenseModalStore(state => state.initializeEdit);
+    const requestedDraftEntryId = useConflictDraftStore(state => state.requestedEntryId);
     const { deleteLedgerEntry, isPending: isRemoving } = useDeleteLedgerEntry();
     const currentEvent =
         currentEventProp ??
@@ -62,13 +66,15 @@ const ActivitySubeventsButtons = ({
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
     const isOfflineWritable = useIsOfflineWriteAvailable();
     // 03-16a A review N5: a queued delete of the entry is its last word; no edit or second delete.
-    const { pendingDeletes } = useOutboxOverlay();
+    const { pendingDeletes, conflictDraftEntryIds } = useOutboxOverlay();
     const isDeleteQueued = parentEntryId !== undefined && pendingDeletes.has(parentEntryId);
+    // §2.6: an expense with a conflict draft (flag off: never).
+    const hasDraft = parentEntryId !== undefined && conflictDraftEntryIds.has(parentEntryId);
     const isChangeable = canChange && !isDeleteQueued;
     const observedEntryId =
         isOfflineWritable && isExpense && canChange && !isEntryReversed ? parentEntryId : undefined;
 
-    const onEdit = (): void => {
+    const onEdit = useCallback((): void => {
         if (!parentEntryId || !isExpense || !isChangeable) {
             return;
         }
@@ -79,10 +85,48 @@ const ActivitySubeventsButtons = ({
             parentActivityId,
         });
 
-        if (initialization) {
-            initializeEdit(initialization);
+        if (!initialization) {
+            return;
         }
-    };
+        // §2.6: with a conflict draft the form opens on it ("your unsaved changes").
+        const opened = hasDraft
+            ? withConflictDraft(initialization)
+            : { initialization, isDraft: false };
+
+        useConflictDraftStore.getState().setOpened(opened.isDraft ? parentEntryId : null);
+        initializeEdit(opened.initialization);
+    }, [
+        childEvents,
+        hasDraft,
+        initializeEdit,
+        isChangeable,
+        isExpense,
+        parentActivityId,
+        parentEntryId,
+        parentEvent,
+    ]);
+
+    // "Open my changes" (the toast, `OutboxSheet`) navigated here: open the form on the draft once.
+    useEffect(() => {
+        const store = useConflictDraftStore.getState();
+
+        if (
+            parentEntryId === undefined ||
+            requestedDraftEntryId !== parentEntryId ||
+            store.requestedEntryId !== parentEntryId
+        ) {
+            return;
+        }
+        store.clearRequest();
+        onEdit();
+    }, [onEdit, parentEntryId, requestedDraftEntryId]);
+
+    // §2.6: a reversed expense drops its draft (the history shows the deletion).
+    useEffect(() => {
+        if (isEntryReversed && hasDraft && parentEntryId !== undefined) {
+            void dropDeletedConflictDraft(parentEntryId);
+        }
+    }, [hasDraft, isEntryReversed, parentEntryId]);
 
     const onRemove = (): Promise<void> => {
         if (!parentEntryId || !isChangeable) {

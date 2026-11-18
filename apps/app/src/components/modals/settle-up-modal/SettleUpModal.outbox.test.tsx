@@ -197,6 +197,35 @@ describe('a group settle-up with unsent expenses of the group', () => {
     });
 });
 
+describe('03-16b a conflict draft is unsent intent: it refuses settle-up like a queued expense', () => {
+    const draft = {
+        entryId: 'entry-d',
+        groupId: 'group-1',
+        parentActivityId: null,
+        description: null,
+        createdAt: 1,
+    };
+
+    test('a draft of the group refuses the group settle-up', async () => {
+        ledger.patch = {
+            restore: 'ok',
+            count: 1,
+            conflictDrafts: [draft],
+            queuedGroupIds: new Set(['group-1']),
+        };
+        await openGroupSettleUp();
+
+        expect(screen.getByText(GROUP_HINT)).toBeTruthy();
+    });
+
+    test('any draft refuses the friends settle-up', () => {
+        ledger.patch = { restore: 'ok', count: 1, conflictDrafts: [draft] };
+        renderFriendSettleUp();
+
+        expect(screen.getByText(FRIENDS_HINT)).toBeTruthy();
+    });
+});
+
 describe('M2, L5: what does not refuse, and the restore still running', () => {
     test('unreadable records (they have no action) refuse neither the group nor the friends', async () => {
         ledger.patch = { restore: 'ok', count: 2, unreadableCount: 2 };

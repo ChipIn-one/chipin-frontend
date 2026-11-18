@@ -66,6 +66,10 @@
     "savedSending": "Saved, sending…",
     "createAlreadySending": "This expense is already being sent; edit it once it is saved",
     "cancelRefused": "It is already being sent and can no longer be cancelled",
-    "actionFailed": "Could not change the operation, try again"
+    "actionFailed": "Could not change the operation, try again",
+    "conflictChanged": "This expense was changed by another member",
+    "openMyChanges": "Open my changes",
+    "conflictNotDeleted": "This expense was changed by another member, so it was not deleted",
+    "conflictDraftDeleted": "The expense was deleted"
   }
 }

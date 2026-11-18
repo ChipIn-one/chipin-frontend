@@ -53,12 +53,14 @@ import {
     toExpensePatchWire,
 } from '../model/toExpenseWire';
 import {
+    isOlderLedgerEntry,
     type LedgerEntry,
     optimisticCreatedEntry,
     optimisticUpdatedEntry,
     readLedgerEntry,
 } from '../model/toLedgerEntry';
 
+import { noticeLedgerConflict } from './conflictDrafts';
 import type {
     CreateExpenseParams,
     DeleteLedgerEntryParams,
@@ -331,6 +333,30 @@ const writeAnsweredEntry = (
         });
 };
 
+// §2.6: a conflict's `current` into `ledger.entry(id)` (after a read in flight is cancelled), unless
+// the cache already holds a newer answer (by the server's `updatedAt`: a stale answer never
+// overwrites newer state). Not readable: the cached entry is read again by the invalidation.
+const writeConflictEntry = (
+    client: QueryClient,
+    op: LedgerOutboxOp,
+    current: unknown,
+): Promise<void> => {
+    const queryKey = ledgerKeys.entry(op.entryId);
+    const fresh = readLedgerEntry(current);
+
+    if (!fresh) {
+        return Promise.resolve();
+    }
+    return client
+        .cancelQueries({ queryKey, exact: true })
+        .catch(() => undefined)
+        .then(() => {
+            client.setQueryData<LedgerEntry>(queryKey, cached =>
+                isOlderLedgerEntry(fresh, cached) ? cached : fresh,
+            );
+        });
+};
+
 // What is read again after the op settled (`invalidateAfterLedgerOp`): its views and its entry.
 const opContext = (op: LedgerOutboxOp) => ({
     groupId: op.groupId ?? undefined,
@@ -371,7 +397,24 @@ export const registerLedgerOutboxDefaults = (
             // `stopped`/`cancelled` changed nothing on the server: nothing to read again. The other
             // tabs run the same effects on `settled` (§2.2).
             onSettled: (result, error, variables) => {
-                if (!isLedgerOutboxOp(variables) || (!error && result?.kind !== 'sent')) {
+                if (!isLedgerOutboxOp(variables)) {
+                    return undefined;
+                }
+                // §2.6: `current` into the cache, the views read again, the notice (this tab).
+                if (!error && result?.kind === 'conflicted') {
+                    return writeConflictEntry(client, variables, result.entry)
+                        .then(() => {
+                            announceOutboxSettled(variables, 'conflicted', result.entry);
+                            noticeLedgerConflict({
+                                kind: result.isDelete ? 'notDeleted' : 'changed',
+                                entryId: variables.entryId,
+                                parentActivityId: variables.parentActivityId,
+                            });
+                            return effects.onEntryWritten(opContext(variables), client);
+                        })
+                        .catch(() => undefined);
+                }
+                if (!error && result?.kind !== 'sent') {
                     return undefined;
                 }
                 const entry = result?.kind === 'sent' ? result.entry : null;
@@ -405,6 +448,12 @@ const ledgerDrainHooks = (
     ...ledgerAdoption(client),
     onRemoteSettled: ({ op, result, entry }) => {
         if (!isLedgerOutboxOp(op) || op.owner !== userId) {
+            return;
+        }
+        if (result === 'conflicted') {
+            void writeConflictEntry(client, op, entry)
+                .then(() => effects.onEntryWritten(opContext(op), client))
+                .catch(() => undefined);
             return;
         }
         if (result === 'sent') {

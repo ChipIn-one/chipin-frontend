@@ -6,6 +6,7 @@ import { useOutboxSheetStore } from 'store/outboxSheetStore';
 
 import { BaseModal } from 'components/modals';
 
+import { ConflictDraftRow } from './ConflictDraftRow';
 import { OutboxItemRow } from './OutboxItemRow';
 
 interface Props {
@@ -15,13 +16,13 @@ interface Props {
 /**
  * `OutboxSheet` (spec 03 §2.5): the ops saved on this device and not answered yet. Pending ones
  * with their status, failed ones with their reason and Retry/Cancel; an op being sent offers no
- * Cancel. The conflict drafts join it in 03-16b.
+ * Cancel. The conflict drafts (§2.6) with "Open my changes" and "Discard my changes".
  */
 export const OutboxSheet = ({ overlay }: Props) => {
     const { t } = useTranslation('common');
     const isOpen = useOutboxSheetStore(state => state.isOpen);
     const setIsOpen = useOutboxSheetStore(state => state.setIsOpen);
-    const { pending, failed, unreadableCount, isStorageNotPersisted } = overlay;
+    const { pending, failed, conflictDrafts, unreadableCount, isStorageNotPersisted } = overlay;
 
     return (
         <BaseModal
@@ -43,8 +44,21 @@ export const OutboxSheet = ({ overlay }: Props) => {
                             </Text>
                         </Card>
                     )}
-                    {pending.length === 0 && failed.length === 0 && unreadableCount === 0 && (
-                        <Text color="gray">{t('outbox.empty')}</Text>
+                    {pending.length === 0 &&
+                        failed.length === 0 &&
+                        conflictDrafts.length === 0 &&
+                        unreadableCount === 0 && <Text color="gray">{t('outbox.empty')}</Text>}
+                    {conflictDrafts.length > 0 && (
+                        <Flex direction="column" gap="2" asChild>
+                            <section aria-label={t('outbox.conflictDraftsTitle')}>
+                                <Heading as="h3" size="3">
+                                    {t('outbox.conflictDraftsTitle')}
+                                </Heading>
+                                {conflictDrafts.map(item => (
+                                    <ConflictDraftRow key={item.entryId} item={item} />
+                                ))}
+                            </section>
+                        </Flex>
                     )}
                     {failed.length > 0 && (
                         <Flex direction="column" gap="2" asChild>

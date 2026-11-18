@@ -8,7 +8,7 @@ export const OUTBOX_KINDS = ['createExpense', 'updateExpense', 'deleteExpense'] 
 
 /**
  * `conflict` is the interim reason of 03-15a (a 409 `LEDGER.VERSION_CONFLICT`): it stays readable,
- * 03-16b turns such records into conflict drafts.
+ * and the drain-lock restore of 03-16b turns such records into conflict drafts.
  */
 export const FAILED_REASONS = [
     'validation',
@@ -36,10 +36,10 @@ export const OutboxOpBaseSchema = z.looseObject({
  * One key per user. `nextSeq`, `ops` and `cancelled` are strict (a key without them is unreadable as
  * a whole); `ops` are read one by one (an invalid op does not make the key unreadable). The other
  * fields are checked per value on read, so one bad value never locks the queue: an invalid version
- * is dropped (the op then asks the server for it, §2.1), an invalid `sending` claim or
- * `retryRequested` list is reset, `conflictDrafts` (03-16b) is kept as read. Unknown keys of a
- * newer build are kept and written back. `retryRequested` and `sending` are the multi-tab fields of
- * 03-15c, `conflictDrafts` of 03-16b.
+ * or conflict draft is dropped (the op then asks the server for the version, §2.1), an invalid
+ * `sending` claim or `retryRequested` list is reset. Unknown keys of a newer build are kept and
+ * written back. `retryRequested` and `sending` are the multi-tab fields of 03-15c,
+ * `conflictDrafts` of 03-16b.
  */
 export const OutboxStateSchema = z.looseObject({
     nextSeq: z.number().int().positive(),
@@ -57,6 +57,23 @@ export const RetryRequestedSchema = z.array(z.string());
 
 export const VersionsSchema = z.record(z.string(), z.unknown());
 
+export const ConflictDraftsSchema = z.record(z.string(), z.unknown());
+
+/**
+ * A conflict draft (§2.6, D28): the changed fields of the user's edits of an entry the server
+ * answered 409 for, kept until the user saves or discards them. `fields` is the merged wire patch,
+ * checked as an object (built by this app's mappers, validated by the server when it is resent).
+ * `parentActivityId` (the expense history the edits were made from) reopens the form from the
+ * toast and `OutboxSheet`.
+ */
+export const ConflictDraftSchema = z.object({
+    entryId: z.string().min(1),
+    groupId: z.string().nullable(),
+    parentActivityId: z.string().nullish(),
+    fields: z.record(z.string(), z.unknown()),
+    createdAt: z.number(),
+});
+
 /** What 03-15b writes; unknown keys read from the key are added back. */
 export interface PersistedOutboxState {
     nextSeq: number;
@@ -65,7 +82,7 @@ export interface PersistedOutboxState {
     cancelled: string[];
     retryRequested: string[];
     sending: z.infer<typeof SendingSchema>;
-    conflictDrafts: unknown;
+    conflictDrafts: Record<string, unknown>;
 }
 
 /** A failed record; `op` is checked separately (an `unreadable` op is kept as it was read). */
