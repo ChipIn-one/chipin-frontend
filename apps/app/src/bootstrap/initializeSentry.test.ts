@@ -1,5 +1,5 @@
 import type { Breadcrumb, BrowserOptions, ErrorEvent } from '@sentry/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { initializeSentry } from './initializeSentry';
 
@@ -19,8 +19,16 @@ const getOptions = (): BrowserOptions => {
     return options;
 };
 
+const setWebdriver = (value: boolean | undefined): void => {
+    Object.defineProperty(navigator, 'webdriver', { configurable: true, value });
+};
+
 beforeEach(() => {
     sentryMocks.init.mockReset();
+});
+
+afterEach(() => {
+    Reflect.deleteProperty(navigator, 'webdriver');
 });
 
 test('sanitizes invite tokens in breadcrumb message and arbitrary data keys', () => {
@@ -69,4 +77,38 @@ test('sanitizes invite tokens in event extra and tags', () => {
         transaction: '/friends/join/:inviteToken',
     });
     expect(result).not.toHaveProperty('extra.__serialized__');
+});
+
+// Issue ChipIn-one/chipin-frontend#754: e2e runs against Vercel previews must not report.
+test('drops every event in an automation-driven browser', () => {
+    setWebdriver(true);
+    const { beforeSend } = getOptions();
+
+    expect(beforeSend?.({ type: undefined, message: 'boom' }, {})).toBeNull();
+});
+
+test.each([false, undefined])('sends the event when navigator.webdriver is %s', value => {
+    setWebdriver(value);
+    const { beforeSend } = getOptions();
+
+    expect(beforeSend?.({ type: undefined, message: 'boom' }, {})).toMatchObject({
+        message: 'boom',
+    });
+});
+
+test.each([
+    [true, ['Dedupe']],
+    [false, ['BrowserSession', 'Dedupe']],
+])('with navigator.webdriver %s keeps integrations %j', (webdriver, expected) => {
+    const defaults: Extract<BrowserOptions['integrations'], unknown[]> = [
+        { name: 'BrowserSession' },
+        { name: 'Dedupe' },
+    ];
+    setWebdriver(webdriver);
+    const { integrations } = getOptions();
+
+    expect(typeof integrations).toBe('function');
+    const kept = typeof integrations === 'function' ? integrations(defaults) : [];
+
+    expect(kept.map(({ name }) => name)).toEqual(expected);
 });

@@ -64,6 +64,22 @@ const installServiceWorkerRegistration = (): ServiceWorker => {
     return waitingWorker;
 };
 
+const installServiceWorkerContainer = (register: () => Promise<unknown>): void => {
+    Object.defineProperty(navigator, 'serviceWorker', {
+        configurable: true,
+        value: { controller: null, register: vi.fn(register) },
+    });
+};
+
+const expectNoUpdatePipeline = (
+    addEventListener: ReturnType<typeof vi.spyOn>,
+    setIntervalSpy: ReturnType<typeof vi.spyOn>,
+): void => {
+    expect(addEventListener).not.toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(mocks.setIsSwUpdateAvailable).not.toHaveBeenCalled();
+};
+
 beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -78,6 +94,7 @@ afterEach(async () => {
 
     cleanupServiceWorkerUpdates();
     vi.restoreAllMocks();
+    Reflect.deleteProperty(navigator, 'serviceWorker');
 });
 
 test('applies the shared worker activation before reloading', () => {
@@ -147,4 +164,61 @@ test('does not register a worker on a legacy host', async () => {
     await initServiceWorkerUpdates();
 
     expect(navigator.serviceWorker.register).not.toHaveBeenCalled();
+});
+
+test.each([
+    ['absent', () => Reflect.deleteProperty(navigator, 'serviceWorker')],
+    [
+        'present but undefined',
+        () =>
+            Object.defineProperty(navigator, 'serviceWorker', {
+                configurable: true,
+                value: undefined,
+            }),
+    ],
+])('does nothing when the service worker container is %s', async (_, setUpContainer) => {
+    setUpContainer();
+    const addEventListener = vi.spyOn(document, 'addEventListener');
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await expect(initServiceWorkerUpdates()).resolves.toBeUndefined();
+
+    expect(mocks.shouldRegisterServiceWorker).not.toHaveBeenCalled();
+    expectNoUpdatePipeline(addEventListener, setIntervalSpy);
+});
+
+// Playwright `serviceWorkers: 'block'` replaces register() with a stub that resolves to undefined.
+test('stops quietly when register resolves without a registration', async () => {
+    installServiceWorkerContainer(() => Promise.resolve(undefined));
+    const addEventListener = vi.spyOn(document, 'addEventListener');
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await expect(initServiceWorkerUpdates()).resolves.toBeUndefined();
+
+    expect(navigator.serviceWorker.register).toHaveBeenCalledOnce();
+    expectNoUpdatePipeline(addEventListener, setIntervalSpy);
+});
+
+test('stops quietly when register resolves an object without addEventListener', async () => {
+    installServiceWorkerContainer(() => Promise.resolve({}));
+    const addEventListener = vi.spyOn(document, 'addEventListener');
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await expect(initServiceWorkerUpdates()).resolves.toBeUndefined();
+
+    expectNoUpdatePipeline(addEventListener, setIntervalSpy);
+});
+
+test('stops quietly when register rejects', async () => {
+    installServiceWorkerContainer(() => Promise.reject(new Error('insecure context')));
+    const addEventListener = vi.spyOn(document, 'addEventListener');
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await expect(initServiceWorkerUpdates()).resolves.toBeUndefined();
+
+    expectNoUpdatePipeline(addEventListener, setIntervalSpy);
 });
