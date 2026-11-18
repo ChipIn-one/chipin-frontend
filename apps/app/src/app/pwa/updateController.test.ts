@@ -6,7 +6,7 @@ import { HOUR } from 'constants/time';
 import { LocalStorage } from 'helpers/localStorage';
 
 import { createUpdateController, type UpdateControllerDeps } from './updateController';
-import { FORCED_UPDATE_AFTER_MS, UPDATE_SNOOZE_MS } from './updatePolicy';
+import { FORCED_UPDATE_AFTER_MS, MAX_CLOCK_SKEW_MS, UPDATE_SNOOZE_MS } from './updatePolicy';
 
 const START = Date.UTC(2026, 10, 19, 12);
 
@@ -244,5 +244,65 @@ describe('item 3: the forced update', () => {
 
         controller.onRouteChange();
         expect(deps.applyUpdate).toHaveBeenCalledOnce();
+    });
+});
+
+describe('N1: "Later" is idempotent', () => {
+    test('a second "Later" (the toast onDismiss after it was hidden) neither hides nor snoozes again', () => {
+        const { deps, controller } = setup();
+
+        controller.onWaiting();
+        controller.later();
+        vi.setSystemTime(START + HOUR);
+        controller.later();
+
+        expect(deps.hidePrompt).toHaveBeenCalledOnce();
+        expect(LocalStorage.get(LS_KEY_SW_UPDATE_DISMISSED_AT, 0)).toBe(START);
+    });
+
+    test('the onDismiss after "Update" does not snooze', () => {
+        const { controller } = setup();
+
+        controller.onWaiting();
+        controller.update();
+        controller.later();
+
+        expect(LocalStorage.get(LS_KEY_SW_UPDATE_DISMISSED_AT, 0)).toBe(0);
+    });
+});
+
+describe('L1: a stamp from the future (clock skew) is invalid', () => {
+    test('a first-detection stamp later than now + 5 min is rewritten as now', () => {
+        LocalStorage.set(LS_KEY_SW_WAITING_SINCE, START + MAX_CLOCK_SKEW_MS + 1);
+        const { deps, controller } = setup();
+
+        controller.onWaiting();
+        controller.onRouteChange();
+
+        expect(LocalStorage.get(LS_KEY_SW_WAITING_SINCE, 0)).toBe(START);
+        expect(deps.applyUpdate).not.toHaveBeenCalled();
+
+        vi.setSystemTime(START + FORCED_UPDATE_AFTER_MS + 1);
+        controller.onRouteChange();
+        expect(deps.applyUpdate).toHaveBeenCalledOnce();
+    });
+
+    test('a stamp within 5 min ahead is kept', () => {
+        LocalStorage.set(LS_KEY_SW_WAITING_SINCE, START + MAX_CLOCK_SKEW_MS);
+        const { controller } = setup();
+
+        controller.onWaiting();
+
+        expect(LocalStorage.get(LS_KEY_SW_WAITING_SINCE, 0)).toBe(START + MAX_CLOCK_SKEW_MS);
+    });
+
+    test('a snooze from the future is dropped and the prompt shows', () => {
+        LocalStorage.set(LS_KEY_SW_UPDATE_DISMISSED_AT, START + 10 * HOUR);
+        const { deps, controller } = setup();
+
+        controller.onWaiting();
+
+        expect(deps.showPrompt).toHaveBeenCalledOnce();
+        expect(LocalStorage.get(LS_KEY_SW_UPDATE_DISMISSED_AT, 0)).toBe(0);
     });
 });

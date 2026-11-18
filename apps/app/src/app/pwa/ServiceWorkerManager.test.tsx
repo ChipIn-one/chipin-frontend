@@ -12,11 +12,17 @@ import {
     getServiceWorkerRegistration,
     onBeforeAppReload,
     resetAppUpdateForTests,
+    updateServiceWorker,
 } from 'helpers/appUpdate';
 import { LocalStorage } from 'helpers/localStorage';
 import { usePwaStore } from 'store/pwaStore';
 
-import { notifyRouteChange, setSafePointCheck } from './safePoint';
+import {
+    notifyRouteChange,
+    resetSafePointForTests,
+    SAFE_RELOAD_MAX_WAIT_MS,
+    setSafePointCheck,
+} from './safePoint';
 import { ServiceWorkerManager } from './ServiceWorkerManager';
 import { FORCED_UPDATE_AFTER_MS } from './updatePolicy';
 
@@ -35,15 +41,24 @@ vi.mock('shared/offline/network', () => ({ isNetworkUsable: vi.fn(() => true) })
 const START = Date.UTC(2026, 10, 19, 12);
 const reload = vi.fn();
 
+// The waiting worker's `postMessage`: an update is applied by `SKIP_WAITING` (helpers/appUpdate).
+const skipWaiting = vi.fn();
+
 const fakeRegistration = (waiting: boolean) =>
     ({
-        waiting: waiting ? ({} as ServiceWorker) : null,
+        waiting: waiting ? ({ postMessage: skipWaiting } as unknown as ServiceWorker) : null,
         update: vi.fn(() => Promise.resolve()),
     }) as unknown as ServiceWorkerRegistration & { update: ReturnType<typeof vi.fn> };
 
 const renderOn = (hostname: string) => {
     vi.stubGlobal('location', { ...window.location, hostname, reload });
-    return render(<ServiceWorkerManager />);
+    const view = render(<ServiceWorkerManager />);
+
+    // The registering child mounts a task after the manager committed.
+    act(() => {
+        vi.advanceTimersByTime(0);
+    });
+    return view;
 };
 
 const registerWith = (registration: ServiceWorkerRegistration) => {
@@ -63,9 +78,10 @@ beforeEach(() => {
     vi.useFakeTimers({ now: START });
     LocalStorage.clear();
     resetAppUpdateForTests();
-    setSafePointCheck(null);
+    resetSafePointForTests();
     usePwaStore.setState({ isSwUpdateAvailable: false });
     pwa.options = undefined;
+    skipWaiting.mockClear();
     pwa.useRegisterSW.mockImplementation((options: RegisterSWOptions) => {
         pwa.options = options;
         useState(() => pwa.register(options));
@@ -178,7 +194,58 @@ test('the new worker taking control reloads through the onBeforeAppReload callba
     expect(calls).toEqual(['save draft', 'reload']);
 });
 
-test('a worker waiting for more than 24 h is applied at the next route change at a safe point', () => {
+// M2: another tab applied the update; this tab must not cut off its own mutation or draft.
+test("another tab's update reloads this tab at its next safe point", () => {
+    const isSafe = vi.fn(() => false);
+    setSafePointCheck(isSafe);
+    renderOn('app.chipin.one');
+
+    pwa.options?.onNeedReload?.();
+    act(() => {
+        vi.advanceTimersByTime(5_000);
+    });
+    expect(reload).not.toHaveBeenCalled();
+
+    isSafe.mockReturnValue(true);
+    act(() => {
+        vi.advanceTimersByTime(1_000);
+    });
+    expect(reload).toHaveBeenCalledOnce();
+});
+
+test("another tab's update reloads this tab after 30 s at the latest", () => {
+    setSafePointCheck(() => false);
+    renderOn('app.chipin.one');
+
+    pwa.options?.onNeedReload?.();
+    pwa.options?.onNeedReload?.();
+    act(() => {
+        vi.advanceTimersByTime(SAFE_RELOAD_MAX_WAIT_MS - 1);
+    });
+    expect(reload).not.toHaveBeenCalled();
+
+    act(() => {
+        vi.advanceTimersByTime(1);
+    });
+    expect(reload).toHaveBeenCalledOnce();
+});
+
+test('this tab\'s own "Update" reloads at once, even at an unsafe point', async () => {
+    setSafePointCheck(() => false);
+    const container = new EventTarget();
+    vi.stubGlobal('navigator', { ...navigator, serviceWorker: container });
+    renderOn('app.chipin.one');
+    registerWith(fakeRegistration(true));
+
+    await act(() => updateServiceWorker(true));
+    // Workbox's `controlling` (onNeedReload) and the controllerchange of this tab's update.
+    pwa.options?.onNeedReload?.();
+    container.dispatchEvent(new Event('controllerchange'));
+
+    expect(reload).toHaveBeenCalledOnce();
+});
+
+test('a worker waiting for more than 24 h is applied at the next route change at a safe point', async () => {
     LocalStorage.set(LS_KEY_SW_WAITING_SINCE, START - FORCED_UPDATE_AFTER_MS - 1);
     const isSafe = vi.fn(() => false);
     setSafePointCheck(isSafe);
@@ -188,16 +255,18 @@ test('a worker waiting for more than 24 h is applied at the next route change at
     act(() => {
         notifyRouteChange();
     });
-    expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(skipWaiting).not.toHaveBeenCalled();
 
     isSafe.mockReturnValue(true);
     act(() => {
         notifyRouteChange();
     });
-    expect(pwa.updateServiceWorker).toHaveBeenCalledOnce();
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(skipWaiting).toHaveBeenCalledExactlyOnceWith({ type: 'SKIP_WAITING' });
 });
 
-test('the toast\'s "Update" applies the waiting worker, "Later" snoozes it', () => {
+test('the toast\'s "Update" applies the waiting worker, "Later" snoozes it', async () => {
     renderOn('app.chipin.one');
     registerWith(fakeRegistration(true));
 
@@ -209,10 +278,12 @@ test('the toast\'s "Update" applies the waiting worker, "Later" snoozes it', () 
         later?.click();
     });
     expect(toast.dismiss).toHaveBeenCalledWith(TOASTS_IDS.swUpdate);
-    expect(pwa.updateServiceWorker).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(skipWaiting).not.toHaveBeenCalled();
 
     act(() => {
         update?.click();
     });
-    expect(pwa.updateServiceWorker).toHaveBeenCalledOnce();
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(skipWaiting).toHaveBeenCalledExactlyOnceWith({ type: 'SKIP_WAITING' });
 });

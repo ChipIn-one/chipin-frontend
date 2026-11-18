@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { SS_KEY_EXPENSE_DRAFT } from 'constants/localstorage';
-import { onBeforeAppReload } from 'helpers/appUpdate';
+import { type AppReloadContext, onBeforeAppReload } from 'helpers/appUpdate';
 import { getTabUserId, SessionStorage } from 'helpers/localStorage';
 import { currencyCode } from 'shared/money';
 import {
@@ -155,27 +155,51 @@ const toParticipant = ({ id, displayName, picture }: ExpenseParticipant) => ({
     ...(picture === undefined ? {} : { picture }),
 });
 
-const toSavedSource = (source: ExpenseModalSource): ExpenseModalSource => ({
-    ...source,
-    currentUser: source.currentUser ? toParticipant(source.currentUser) : null,
-    groups: source.groups.map(group => ({ ...group, members: group.members.map(toParticipant) })),
-    knownFriends: source.knownFriends.map(toParticipant),
-});
+// An edit draft keeps only the people the edit form shows: the current user, the expense's group
+// (its members are the form's participants) and the friends taking part in the expense. Other
+// groups and friends are not stored. Trade-off (L4): after a restore, the friend picker of the
+// edit form lists only the entry's participants (an edit cannot move an expense to another friend
+// anyway, and a fresh edit modal reads the full list again).
+const toSavedEditSource = (state: ExpenseModalState): ExpenseModalSource => {
+    const { source, editContext } = state;
+    const groupId = editContext?.groupId ?? state.groupId;
+    const participantIds = new Set([
+        ...(editContext?.original.participantIds ?? []),
+        ...Object.keys(state.includedParticipantIds),
+        state.selectedFriendId,
+    ]);
 
-const toDraft = ({ isOpened, source, ...fields }: ExpenseModalState): ExpenseModalDraft => ({
-    ...fields,
-    source: isOpened && fields.mode === 'edit' ? toSavedSource(source) : null,
-});
+    return {
+        ...source,
+        currentUser: source.currentUser ? toParticipant(source.currentUser) : null,
+        groups: source.groups
+            .filter(group => group.id === groupId)
+            .map(group => ({ ...group, members: group.members.map(toParticipant) })),
+        knownFriends: source.knownFriends
+            .filter(friend => participantIds.has(friend.id))
+            .map(toParticipant),
+    };
+};
+
+const toDraft = (state: ExpenseModalState): ExpenseModalDraft => {
+    const { isOpened: _isOpened, source: _source, ...fields } = state;
+
+    return { ...fields, source: state.mode === 'edit' ? toSavedEditSource(state) : null };
+};
 
 /**
  * Writes the open draft of the signed-in user of this tab; nothing (and an older saved draft is
- * removed) when the modal is closed, there is no user, or the draft is another user's.
+ * removed) when the modal is closed, there is no user, the draft is another user's, or the reload
+ * comes from the error fallback (`keepDraft: false`: the draft may be what crashed the app).
  */
-export const saveExpenseDraftForReload = (): void => {
+export const saveExpenseDraftForReload = (
+    context: AppReloadContext = { keepDraft: true },
+): void => {
     const state = useExpenseModalStore.getState();
     const userId = getTabUserId();
 
     if (
+        !context.keepDraft ||
         !state.isOpened ||
         userId === undefined ||
         (state.ownerId !== null && state.ownerId !== userId)

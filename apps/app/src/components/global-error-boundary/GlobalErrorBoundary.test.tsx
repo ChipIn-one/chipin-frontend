@@ -87,7 +87,8 @@ test('reloads the current page once when Try again is clicked repeatedly', () =>
         .click(tryAgain)
         .then(() => user.click(tryAgain))
         .then(() => {
-            expect(mocks.reloadApp).toHaveBeenCalledOnce();
+            // M1: the open draft may be what crashed, so it is not saved for after the reload.
+            expect(mocks.reloadApp).toHaveBeenCalledExactlyOnceWith({ keepDraft: false });
             expect(tryAgain.hasAttribute('disabled')).toBe(true);
             expect(mocks.captureMessage).toHaveBeenCalledWith(
                 'Application recovery action',
@@ -119,7 +120,7 @@ test('shows the update section only when an update is available', () => {
 
 // Spec 04 §2.11 (A-26): the fallback applies the update through the single path of
 // `ServiceWorkerManager` (`updateServiceWorker(true)`), which reloads once the new worker controls.
-test('applies the available update through updateServiceWorker(true)', () => {
+test('applies the available update through updateServiceWorker(true) without the draft', () => {
     mocks.checkForServiceWorkerUpdate.mockResolvedValue(true);
     mocks.updateServiceWorker.mockReturnValue(new Promise<void>(() => undefined));
     const user = userEvent.setup();
@@ -135,7 +136,9 @@ test('applies the available update through updateServiceWorker(true)', () => {
             .click(updateButton)
             .then(() => user.click(updateButton))
             .then(() => {
-                expect(mocks.updateServiceWorker).toHaveBeenCalledExactlyOnceWith(true);
+                expect(mocks.updateServiceWorker).toHaveBeenCalledExactlyOnceWith(true, {
+                    keepDraft: false,
+                });
                 expect(mocks.reloadApp).not.toHaveBeenCalled();
                 expect(updateButton.hasAttribute('disabled')).toBe(true);
                 expect(updateButton.textContent).toContain('errorBoundary.updatingApp');

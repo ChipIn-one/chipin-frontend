@@ -3,33 +3,43 @@ import { Box, Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { getServiceWorkerRegistration, reloadApp, updateServiceWorker } from 'helpers/appUpdate';
+import {
+    isPageControlledByServiceWorker,
+    reloadApp,
+    resolveServiceWorkerRegistration,
+    updateServiceWorker,
+    waitForWaitingWorker,
+} from 'helpers/appUpdate';
 
-import { useIsUpdateRequired, waitForWaitingWorker } from './updateRequired';
+import { UPDATE_REQUIRED_WAIT_MS, useIsUpdateRequired } from './updateRequired';
 
 type UpdateStatus = 'idle' | 'checking' | 'notPublished';
 
 /**
  * The button of the screen (spec 04 §2.11 item 4): `registration.update()`, wait for `waiting` up to
  * 10 s, then `updateServiceWorker(true)`. Resolves `false` when no new worker came: the page is not
- * reloaded, otherwise the same version would load again (C3-26). Without a registered worker (no
- * SW support) nothing is served from a precache, so a plain reload fetches the newest build.
+ * reloaded, otherwise the same version would load again (C3-26). The registration is the manager's,
+ * else the browser's. Only a page that no worker controls (no SW support, a hard reload) is
+ * reloaded without one: nothing is served from a precache there, so the reload fetches the newest
+ * build. A controlled page without a waiting worker is never reloaded.
  */
-export const applyRequiredUpdate = (): Promise<boolean> => {
-    const registration = getServiceWorkerRegistration();
-
-    if (!registration) {
-        reloadApp();
-        return Promise.resolve(true);
-    }
-
-    return waitForWaitingWorker(registration).then(hasWaiting => {
-        if (hasWaiting) {
-            void updateServiceWorker(true);
+export const applyRequiredUpdate = (): Promise<boolean> =>
+    resolveServiceWorkerRegistration().then(registration => {
+        if (!registration) {
+            if (isPageControlledByServiceWorker()) {
+                return false;
+            }
+            reloadApp();
+            return true;
         }
-        return hasWaiting;
+
+        return waitForWaitingWorker(registration, UPDATE_REQUIRED_WAIT_MS).then(hasWaiting => {
+            if (hasWaiting) {
+                void updateServiceWorker(true);
+            }
+            return hasWaiting;
+        });
     });
-};
 
 const UpdateRequiredView = () => {
     const { t } = useTranslation('pwa');

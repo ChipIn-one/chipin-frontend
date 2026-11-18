@@ -115,15 +115,15 @@ export const createUpdateController = (deps: UpdateControllerDeps): UpdateContro
             }
         },
         update: apply,
+        // Idempotent: only a visible prompt is snoozed (the toast's `onDismiss` also calls it after
+        // "Update" or "Later" already hid it).
         later: () => {
-            if (isApplying) {
+            if (isApplying || !isPromptVisible) {
                 return;
             }
+            isPromptVisible = false;
             snoozeUpdatePrompt(deps.now());
-            if (isPromptVisible) {
-                isPromptVisible = false;
-                deps.hidePrompt();
-            }
+            deps.hidePrompt();
         },
     };
 };

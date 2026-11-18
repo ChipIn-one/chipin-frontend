@@ -17,7 +17,7 @@ import { shouldRegisterServiceWorker } from 'helpers/serviceWorkerHost';
 import { isNetworkUsable } from 'shared/offline/network';
 import { usePwaStore } from 'store/pwaStore';
 
-import { isAtSafePoint, onRouteChange } from './safePoint';
+import { isAtSafePoint, onRouteChange, reloadAtSafePoint } from './safePoint';
 import { createUpdateController, type UpdateController } from './updateController';
 import { UPDATE_CHECK_INTERVAL_MS } from './updatePolicy';
 
@@ -64,8 +64,6 @@ interface ServiceWorkerSession {
 const createSession = (): ServiceWorkerSession => {
     let registration: ServiceWorkerRegistration | undefined;
     const getRegistration = (): ServiceWorkerRegistration | undefined => registration;
-    // Set when the controller hides the toast itself, so its `onDismiss` is not taken for "Later".
-    let isHidingPrompt = false;
     const controller: UpdateController = createUpdateController({
         getRegistration,
         applyUpdate: () => {
@@ -81,19 +79,14 @@ const createSession = (): ServiceWorkerSession => {
                 {
                     id: TOASTS_IDS.swUpdate,
                     duration: Infinity,
-                    // The close button counts as "Later".
-                    onDismiss: () => {
-                        if (!isHidingPrompt) {
-                            controller.later();
-                        }
-                    },
+                    // The close button counts as "Later". Sonner also calls this after the controller
+                    // dismissed the toast itself ("Update", "Later"): `later` is then a no-op.
+                    onDismiss: controller.later,
                 },
             );
         },
         hidePrompt: () => {
-            isHidingPrompt = true;
             toast.dismiss(TOASTS_IDS.swUpdate);
-            isHidingPrompt = false;
         },
         setUpdateAvailable: isAvailable => {
             usePwaStore.getState().setIsSwUpdateAvailable(isAvailable);
@@ -112,7 +105,7 @@ const createSession = (): ServiceWorkerSession => {
 
 const ServiceWorkerRegistration = () => {
     const [{ controller, getRegistration, setRegistration }] = useState(createSession);
-    const { updateServiceWorker: applyWaitingWorker } = useRegisterSW({
+    useRegisterSW({
         onRegisteredSW: (_swUrl, registration) => {
             setRegistration(registration);
             controller.onRegistered(registration);
@@ -120,19 +113,25 @@ const ServiceWorkerRegistration = () => {
         onNeedRefresh: () => {
             controller.onWaiting();
         },
-        // The new worker took control (this tab's update, or another tab's): reload through the
-        // `onBeforeAppReload` callbacks.
-        onNeedReload: reloadApp,
+        // The new worker took control. Another tab's update reloads this tab at its next safe point
+        // (at most 30 s later). This tab's own update ("Update", a forced update, the error fallback)
+        // still reloads at once: the `controllerchange` listener of `updateServiceWorker` does it,
+        // whichever of the two runs first (a second reload is a no-op).
+        onNeedReload: () => {
+            reloadAtSafePoint(reloadApp);
+        },
         // No service worker (an insecure origin, a blocked or unsupported browser): the app runs
         // without one, as before; there is nothing to recover.
         onRegisterError: () => undefined,
     });
 
-    // The controls outlive this component on purpose: the global error fallback that replaces the
-    // tree still applies an update through them.
+    // The controls outlive this component on purpose: the global error fallback still reads the
+    // registration through them. Updates are applied by `helpers/appUpdate` (`SKIP_WAITING` to the
+    // waiting worker), not by the hook's `updateServiceWorker`: before the window `load`
+    // workbox-window has no registration and its skip-waiting message would be lost.
     useEffect(() => {
-        setServiceWorkerControls({ update: applyWaitingWorker, getRegistration });
-    }, [applyWaitingWorker, getRegistration]);
+        setServiceWorkerControls({ getRegistration });
+    }, [getRegistration]);
 
     useEffect(() => {
         const onVisibilityChange = (): void => {
@@ -157,6 +156,25 @@ const ServiceWorkerRegistration = () => {
 
 /** The single service worker registration and its update policy (spec 04 §2.11 items 1–3). */
 export const ServiceWorkerManager = () => {
+    // `useRegisterSW` registers in its state initializer, during render. A render React throws away
+    // (it renders the whole root again after an error in a sibling, e.g. an app that crashes on its
+    // first render) would register a second time, so the registering child mounts only after this
+    // component has committed (a task later, so the commit itself is never re-rendered).
+    const [isCommitted, setIsCommitted] = useState(false);
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setIsCommitted(true);
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, []);
+
+    if (!isCommitted) {
+        return null;
+    }
     // The legacy hosts serve the kill-switch at /sw.js: register nothing there (04-4a1).
     if (!shouldRegisterServiceWorker(window.location.hostname)) {
         return null;

@@ -14,7 +14,6 @@ import { outboxGate } from 'shared/offline/outboxGate';
 
 /** How long the screen's button waits for a published worker to reach `waiting`. */
 export const UPDATE_REQUIRED_WAIT_MS = 10 * SECOND;
-const WAITING_POLL_MS = 250;
 
 export const isUpdateRequiredFlagOn = (): boolean =>
     import.meta.env.VITE_FEATURE_UPDATE_REQUIRED === 'true';
@@ -55,38 +54,3 @@ export const resetUpdateRequiredForTests = (): void => {
     isRequired = false;
     listeners.clear();
 };
-
-/**
- * Asks the server for `/sw.js` and resolves `true` once a new worker is `waiting`, or `false`
- * after `timeoutMs` (nothing published yet, or offline).
- */
-export const waitForWaitingWorker = (
-    registration: ServiceWorkerRegistration,
-    timeoutMs: number = UPDATE_REQUIRED_WAIT_MS,
-): Promise<boolean> =>
-    new Promise<boolean>(resolve => {
-        let isSettled = false;
-
-        const settle = (hasWaiting: boolean): void => {
-            if (isSettled) {
-                return;
-            }
-            isSettled = true;
-            window.clearInterval(pollId);
-            window.clearTimeout(timeoutId);
-            resolve(hasWaiting);
-        };
-        const check = (): void => {
-            if (registration.waiting) {
-                settle(true);
-            }
-        };
-        const pollId = window.setInterval(check, WAITING_POLL_MS);
-        const timeoutId = window.setTimeout(() => {
-            settle(registration.waiting !== null);
-        }, timeoutMs);
-
-        // A failed check (offline) leaves the poll to the timeout: a worker may still finish.
-        registration.update().then(check, () => undefined);
-        check();
-    });

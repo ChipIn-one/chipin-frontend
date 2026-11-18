@@ -21,7 +21,9 @@ vi.mock('react-i18next', () => ({
 }));
 
 const reload = vi.fn();
-const applyWaitingWorker = vi.fn(() => Promise.resolve());
+// The waiting worker's `postMessage`: the update is applied by `SKIP_WAITING`.
+const applyWaitingWorker = vi.fn();
+const newWorker = { postMessage: applyWaitingWorker } as unknown as ServiceWorker;
 
 const registrationWith = () => {
     const registration = {
@@ -29,7 +31,6 @@ const registrationWith = () => {
         update: vi.fn(() => Promise.resolve()),
     };
     setServiceWorkerControls({
-        update: applyWaitingWorker,
         getRegistration: () => registration as unknown as ServiceWorkerRegistration,
     });
     return registration;
@@ -100,6 +101,7 @@ describe('with VITE_FEATURE_UPDATE_REQUIRED=true', () => {
         });
 
         clickUpdate();
+        await act(() => vi.advanceTimersByTimeAsync(0));
 
         expect(registration.update).toHaveBeenCalledOnce();
         expect(screen.getByRole('button', { name: /updateRequired\.checking/ })).toBeTruthy();
@@ -128,16 +130,16 @@ describe('with VITE_FEATURE_UPDATE_REQUIRED=true', () => {
         await act(() => vi.advanceTimersByTimeAsync(3_000));
         expect(applyWaitingWorker).not.toHaveBeenCalled();
 
-        registration.waiting = {} as ServiceWorker;
+        registration.waiting = newWorker;
         await act(() => vi.advanceTimersByTimeAsync(500));
 
-        expect(applyWaitingWorker).toHaveBeenCalledExactlyOnceWith(true);
+        expect(applyWaitingWorker).toHaveBeenCalledExactlyOnceWith({ type: 'SKIP_WAITING' });
         expect(screen.queryByText('updateRequired.notPublished')).toBeNull();
     });
 
     test('a worker already waiting is applied at once', async () => {
         const registration = registrationWith();
-        registration.waiting = {} as ServiceWorker;
+        registration.waiting = newWorker;
         render(<UpdateRequiredScreen />);
         act(() => {
             showUpdateRequired();
@@ -146,7 +148,7 @@ describe('with VITE_FEATURE_UPDATE_REQUIRED=true', () => {
         clickUpdate();
         await act(() => vi.advanceTimersByTimeAsync(0));
 
-        expect(applyWaitingWorker).toHaveBeenCalledExactlyOnceWith(true);
+        expect(applyWaitingWorker).toHaveBeenCalledExactlyOnceWith({ type: 'SKIP_WAITING' });
     });
 
     test('without a service worker the button reloads through the onBeforeAppReload callbacks', async () => {
@@ -162,5 +164,75 @@ describe('with VITE_FEATURE_UPDATE_REQUIRED=true', () => {
         await act(() => vi.advanceTimersByTimeAsync(0));
 
         expect(calls).toEqual(['save', 'reload']);
+    });
+
+    // L3: a page a worker controls is never plain-reloaded without a waiting worker (C3-26).
+    test('a controlled page whose registration is not known yet is not reloaded', async () => {
+        vi.stubGlobal('navigator', {
+            ...navigator,
+            serviceWorker: { controller: {}, getRegistration: () => Promise.resolve(undefined) },
+        });
+        render(<UpdateRequiredScreen />);
+        act(() => {
+            showUpdateRequired();
+        });
+
+        clickUpdate();
+        await act(() => vi.advanceTimersByTimeAsync(0));
+
+        expect(screen.getByText('updateRequired.notPublished')).toBeTruthy();
+        expect(reload).not.toHaveBeenCalled();
+    });
+
+    test('without the manager it uses the browser registration', async () => {
+        const registration = {
+            waiting: {} as ServiceWorker,
+            update: vi.fn(() => Promise.resolve()),
+        };
+        const postMessage = vi.fn();
+        registration.waiting = { postMessage } as unknown as ServiceWorker;
+        vi.stubGlobal('navigator', {
+            ...navigator,
+            serviceWorker: Object.assign(new EventTarget(), {
+                controller: {},
+                getRegistration: () => Promise.resolve(registration),
+            }),
+        });
+        render(<UpdateRequiredScreen />);
+        act(() => {
+            showUpdateRequired();
+        });
+
+        clickUpdate();
+        await act(() => vi.advanceTimersByTimeAsync(0));
+
+        expect(postMessage).toHaveBeenCalledExactlyOnceWith({ type: 'SKIP_WAITING' });
+    });
+
+    // R2 MEDIUM-1: the manager is mounted but workbox-window has no registration before `load`.
+    test('before load (the manager has no registration yet) it uses the browser registration', async () => {
+        const registration = {
+            waiting: {} as ServiceWorker,
+            update: vi.fn(() => Promise.resolve()),
+        };
+        const postMessage = vi.fn();
+        registration.waiting = { postMessage } as unknown as ServiceWorker;
+        vi.stubGlobal('navigator', {
+            ...navigator,
+            serviceWorker: Object.assign(new EventTarget(), {
+                controller: {},
+                getRegistration: () => Promise.resolve(registration),
+            }),
+        });
+        setServiceWorkerControls({ getRegistration: () => undefined });
+        render(<UpdateRequiredScreen />);
+        act(() => {
+            showUpdateRequired();
+        });
+
+        clickUpdate();
+        await act(() => vi.advanceTimersByTimeAsync(0));
+
+        expect(postMessage).toHaveBeenCalledExactlyOnceWith({ type: 'SKIP_WAITING' });
     });
 });

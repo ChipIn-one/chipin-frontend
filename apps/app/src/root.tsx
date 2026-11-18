@@ -40,6 +40,19 @@ const i18nSettled = i18nReady.catch((error: unknown) => {
     Sentry.captureException(error);
 });
 
+// The SW manager sits outside the app's error boundary; its own boundary keeps a failure of the
+// manager from blanking the page (renders nothing; the controls it handed over outlive it).
+const IsolatedServiceWorkerManager = () => (
+    <Sentry.ErrorBoundary
+        beforeCapture={scope => {
+            scope.setTag('errorBoundary', 'serviceWorkerManager');
+        }}
+        fallback={<></>}
+    >
+        <ServiceWorkerManager />
+    </Sentry.ErrorBoundary>
+);
+
 const rootElement = document.getElementById('root')!;
 const publicBuildYear = Number(rootElement.dataset.publicBuildYear);
 const prerenderedRoute =
@@ -73,20 +86,22 @@ if (legacyHostAppUrl) {
                 .then(() =>
                     hydrateRoot(
                         rootElement,
-                        <GlobalErrorBoundary>
-                            <PublicBuildYearContext.Provider
-                                value={
-                                    Number.isInteger(publicBuildYear) && publicBuildYear > 2000
-                                        ? publicBuildYear
-                                        : null
-                                }
-                            >
-                                <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
-                            </PublicBuildYearContext.Provider>
-                            <PublicTelemetry />
+                        <>
+                            <GlobalErrorBoundary>
+                                <PublicBuildYearContext.Provider
+                                    value={
+                                        Number.isInteger(publicBuildYear) && publicBuildYear > 2000
+                                            ? publicBuildYear
+                                            : null
+                                    }
+                                >
+                                    <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
+                                </PublicBuildYearContext.Provider>
+                                <PublicTelemetry />
+                            </GlobalErrorBoundary>
                             {/* Public SSG entry must register the same service worker as the SPA. */}
-                            <ServiceWorkerManager />
-                        </GlobalErrorBoundary>,
+                            <IsolatedServiceWorkerManager />
+                        </>,
                     ),
                 ),
         )
@@ -108,20 +123,23 @@ if (legacyHostAppUrl) {
         })
         .then(Main => {
             createRoot(rootElement).render(
-                <GlobalErrorBoundary>
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme={resolveStoredTheme()}
-                        storageKey={LS_KEY_THEME}
-                        enableSystem
-                    >
-                        <Analytics beforeSend={sanitizeTelemetryEvent} />
-                        <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
-                        <Main />
-                        {/* The single SW registration, once per page (above the per-user router). */}
-                        <ServiceWorkerManager />
-                    </ThemeProvider>
-                </GlobalErrorBoundary>,
+                <>
+                    <GlobalErrorBoundary>
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme={resolveStoredTheme()}
+                            storageKey={LS_KEY_THEME}
+                            enableSystem
+                        >
+                            <Analytics beforeSend={sanitizeTelemetryEvent} />
+                            <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
+                            <Main />
+                        </ThemeProvider>
+                    </GlobalErrorBoundary>
+                    {/* The single SW registration, once per page, outside the error boundary: it
+                        keeps running for the error fallback when the app crashes on first render. */}
+                    <IsolatedServiceWorkerManager />
+                </>,
             );
         })
         .catch(error => Sentry.captureException(error));

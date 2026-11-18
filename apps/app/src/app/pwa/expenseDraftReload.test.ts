@@ -287,3 +287,46 @@ describe("foreign, corrupt or another user's data is dropped", () => {
         expect(savedRaw()).toBeNull();
     });
 });
+
+// M1: a reload from the error fallback must not bring back a draft that may have crashed the app.
+test('a reload without the draft (the error fallback) saves nothing and removes an older draft', () => {
+    openCreateDraft();
+    SessionStorage.setRaw(SS_KEY_EXPENSE_DRAFT, 'old');
+    onBeforeAppReload(saveExpenseDraftForReload);
+
+    reloadApp({ keepDraft: false });
+
+    expect(savedRaw()).toBeNull();
+});
+
+// L4: an edit draft stores only the people its form shows.
+test('an edit draft does not store unrelated groups or friends', () => {
+    const stranger = { id: 'user-8', displayName: 'Stranger', picture: null };
+    const groupMate = { id: 'user-7', displayName: 'Group mate', picture: null };
+    openEditDraft();
+    useExpenseModalStore.setState(state => ({
+        source: {
+            ...state.source,
+            groups: [
+                { id: 'other-group', name: 'Other trip', members: [me, stranger] },
+                { id: 'entry-group', name: 'Dinner club', members: [me, groupMate] },
+            ],
+            knownFriends: [friend, stranger],
+        },
+        editContext: state.editContext && { ...state.editContext, groupId: 'entry-group' },
+    }));
+
+    saveExpenseDraftForReload();
+    const raw = savedRaw() ?? '';
+
+    expect(raw).not.toContain('Stranger');
+    expect(raw).not.toContain('Other trip');
+    expect(raw).toContain('Group mate');
+
+    useExpenseModalStore.getState().reset();
+    expect(restoreExpenseDraftAfterReload()).toBe(true);
+    const restored = useExpenseModalStore.getState().source;
+    expect(restored.currentUser).toEqual(me);
+    expect(restored.groups.map(group => group.id)).toEqual(['entry-group']);
+    expect(restored.knownFriends).toEqual([friend]);
+});

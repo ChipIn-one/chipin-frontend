@@ -76,7 +76,8 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
         isActionPendingRef.current = true;
         setIsActionPending(true);
         reportRecoveryAction(RECOVERY_ACTION.manualReload, timestamp);
-        reloadApp();
+        // The open draft may be what crashed: it is not saved for after the reload (no crash loop).
+        reloadApp({ keepDraft: false });
     };
 
     const onDashboard = (event: MouseEvent<HTMLAnchorElement>): void => {
@@ -100,7 +101,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
         // Spec 04 §2.11 (A-26): the single update path of `ServiceWorkerManager`. It reloads once
         // the new worker takes control, or after its timeout when the activation fails.
         reportRecoveryAction(RECOVERY_ACTION.updateApplied, timestamp);
-        void updateServiceWorker(true);
+        void updateServiceWorker(true, { keepDraft: false });
     };
 
     return (
