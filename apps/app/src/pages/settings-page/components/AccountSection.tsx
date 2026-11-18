@@ -1,12 +1,14 @@
 import { Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { userSex } from 'entities/users';
 import { useSelfUser, useUserSetting } from 'hooks/useSelfUser';
 import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import { RadioCards, TextInput } from 'basics';
 import { UserAvatarModal } from 'components/modals/user-avatar-modal';
+import { OnlineOnly } from 'components/online-only';
 import { UserProfileSummary } from 'components/user-profile-summary';
 
 interface Props {
@@ -53,17 +55,19 @@ const AccountSection = ({ isLoading }: Props) => {
                     <UserProfileSummary user={user ?? undefined} isLoading={isLoading} />
 
                     <UserAvatarModal>
-                        <Button
-                            type="button"
-                            size="2"
-                            variant="outline"
-                            color="gray"
-                            disabled={isLoading}
-                        >
-                            <Skeleton loading={isLoading}>
-                                {t('common:buttons.changePhoto')}
-                            </Skeleton>
-                        </Button>
+                        <OnlineOnly action={ONLINE_ONLY_ACTIONS.avatarUpload}>
+                            <Button
+                                type="button"
+                                size="2"
+                                variant="outline"
+                                color="gray"
+                                disabled={isLoading}
+                            >
+                                <Skeleton loading={isLoading}>
+                                    {t('common:buttons.changePhoto')}
+                                </Skeleton>
+                            </Button>
+                        </OnlineOnly>
                     </UserAvatarModal>
                 </Flex>
 

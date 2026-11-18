@@ -1,9 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
+import { OverlayBody } from '../../components';
 import type { SettlementFormProps } from '../internal';
+import { useIsSettleUpRefused } from '../internal/useIsSettleUpRefused';
 
 import SettlementFormContent from './SettlementFormContent';
+import { SettleUpQueuedHint } from './SettleUpQueuedHint';
 
 const SettlementForm = ({
     isOpened,
@@ -14,6 +17,7 @@ const SettlementForm = ({
     onSubmit,
 }: SettlementFormProps) => {
     const { t } = useTranslation('friends');
+    const isRefused = useIsSettleUpRefused(null);
 
     return (
         <BaseModal
@@ -23,13 +27,19 @@ const SettlementForm = ({
             accessibleDescription={t('friends:settleUp.noMoneyMoves')}
             maxWidth={MODAL_SIZES.default}
             content={
-                <SettlementFormContent
-                    friend={friend}
-                    balances={balances}
-                    initialCurrency={initialCurrency}
-                    onSubmit={onSubmit}
-                    onClose={() => onOpenChange(false)}
-                />
+                isRefused ? (
+                    <OverlayBody>
+                        <SettleUpQueuedHint isGroup={false} onClose={() => onOpenChange(false)} />
+                    </OverlayBody>
+                ) : (
+                    <SettlementFormContent
+                        friend={friend}
+                        balances={balances}
+                        initialCurrency={initialCurrency}
+                        onSubmit={onSubmit}
+                        onClose={() => onOpenChange(false)}
+                    />
+                )
             }
         />
     );

@@ -3,6 +3,10 @@ import { PlusIcon, UsersIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
+
+import { OnlineOnly } from 'components/online-only';
+
 import { CreateUpdateGroupModal } from './modals';
 
 type Props = Omit<ComponentProps<typeof Flex>, 'children'> & {
@@ -25,10 +29,12 @@ const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) 
             </Flex>
 
             <CreateUpdateGroupModal type="create">
-                <Button size="2" variant="soft" loading={isLoading}>
-                    <PlusIcon size={16} />
-                    {t('common:buttons.create')}
-                </Button>
+                <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupCreate}>
+                    <Button size="2" variant="soft" loading={isLoading}>
+                        <PlusIcon size={16} />
+                        {t('common:buttons.create')}
+                    </Button>
+                </OnlineOnly>
             </CreateUpdateGroupModal>
         </Flex>
     );

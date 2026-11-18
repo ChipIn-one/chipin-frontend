@@ -20,7 +20,10 @@ import {
     saveLocalUser,
 } from 'helpers/localStorage';
 import { clearUserData } from 'shared/offline/clearUserData';
+import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
+import { readOutboxCountOrUnknown } from 'shared/offline/outboxCount';
 
+import { requestAccountSwitchConfirm } from './accountSwitchConfirmStore';
 import {
     AUTH_STATUS,
     type AuthStatus,
@@ -69,6 +72,17 @@ const resetAuthScopedStores = () => {
     resetSessionSelfLoad();
 };
 
+// `LS_KEY_USER` of the next user (`{ id, settings }`), or `{ settings }` without one.
+const moveLocalUser = (nextUserId: string | null): void => {
+    const settings = getLocalUser()?.settings;
+
+    if (nextUserId !== null && settings) {
+        saveLocalUser({ id: nextUserId, settings });
+    } else {
+        clearLocalUserIdentity();
+    }
+};
+
 // Step (2a) of `clearUserData`: the legacy stores, the expense draft and the open `OutboxSheet`.
 const resetUserStores = () => {
     resetAuthScopedStores();
@@ -82,13 +96,7 @@ const resetUserStores = () => {
 // already, a failure is reported). Without a cached id there is no user cache to delete; the
 // stores and the draft are reset all the same.
 const dropUserData = (userId: string | undefined, nextUserId: string | null = null): void => {
-    const settings = getLocalUser()?.settings;
-
-    if (nextUserId !== null && settings) {
-        saveLocalUser({ id: nextUserId, settings });
-    } else {
-        clearLocalUserIdentity();
-    }
+    moveLocalUser(nextUserId);
     if (userId === undefined) {
         resetUserStores();
         return;
@@ -110,7 +118,8 @@ const dropSignedOutUser = (): void => {
 // request: a write still in flight tells that it is stale by its client, which `clearUserData`
 // drops (`isUserCacheClient`). The previous user's data goes (§1.5 account switch) and
 // `LS_KEY_USER` = `{ id: Y, settings }`; a draft of another user is reset. Returns whether it
-// switched. No dialog until 03-16a: it only asks about unsent outbox operations.
+// switched. With offline writes on, the sign-in asks first (`askAccountSwitch`) and a refresh may
+// keep X's data (`onAccessTokenRefreshed`).
 const dropOtherUserData = (nextUserId: string | null): boolean => {
     const previousUserId = cachedUserId();
     const switched = previousUserId !== undefined && previousUserId !== nextUserId;
@@ -124,6 +133,22 @@ const dropOtherUserData = (nextUserId: string | null): boolean => {
         draft.reset();
     }
     return switched;
+};
+
+// §1.5 "sign-in of Y" with offline writes on (03-16a part C): X's outbox is counted from IndexedDB
+// (this tab runs on the anonymous client, X's outbox is not restored in memory). N > 0, or a failed
+// count, asks "This device has N unsent operations of another account. Delete them and sign in?";
+// resolves whether to go on (dropping X). Null when there is nothing to ask: offline writes off or
+// no switch, and the sign-in goes on synchronously as before.
+const askAccountSwitch = (nextUserId: string | null): Promise<boolean> | null => {
+    const previousUserId = cachedUserId();
+
+    if (!isOfflineWritesFlagOn() || previousUserId === undefined || previousUserId === nextUserId) {
+        return null;
+    }
+    return readOutboxCountOrUnknown(previousUserId).then(count =>
+        count === 0 ? true : requestAccountSwitchConfirm(count),
+    );
 };
 
 const loadSignedInData = (): Promise<void> => {
@@ -206,15 +231,38 @@ export const useAuthStore = create<AuthStore>(set => ({
             .then(({ token, is_new_user: isNewUser }) => {
                 // A persistence error throws here: the previous user's data is kept (§1.5 table).
                 establishAuthSession(token);
-                dropOtherUserData(getAccessTokenSubject(token));
-                set({
-                    status: AUTH_STATUS.AUTHENTICATED,
-                    unauthReason: undefined,
-                    isNewUser,
-                    sessionMode: SESSION_MODE.ONLINE,
-                });
+                const nextUserId = getAccessTokenSubject(token);
+                const signIn = (): Promise<void> => {
+                    dropOtherUserData(nextUserId);
+                    set({
+                        status: AUTH_STATUS.AUTHENTICATED,
+                        unauthReason: undefined,
+                        isNewUser,
+                        sessionMode: SESSION_MODE.ONLINE,
+                    });
 
-                return loadSignedInData();
+                    return loadSignedInData();
+                };
+                // "Cancel" of the account-switch dialog: Y is signed out here and X's data stays
+                // (`LS_KEY_USER` keeps X, nothing is cleared). The server logout is not broadcast:
+                // other tabs still on X would take it as X's sign-out and delete X's data.
+                const keepPreviousUser = (): Promise<void> => {
+                    const logoutRequest = startAuthLogout({ broadcast: false });
+
+                    resetAuthScopedStores();
+                    set({
+                        status: AUTH_STATUS.UNAUTHENTICATED,
+                        unauthReason: UNAUTH_REASON.SIGNED_OUT,
+                        isNewUser: null,
+                        sessionMode: SESSION_MODE.ONLINE,
+                    });
+                    return logoutRequest;
+                };
+                const question = askAccountSwitch(nextUserId);
+
+                return question === null
+                    ? signIn()
+                    : question.then(isConfirmed => (isConfirmed ? signIn() : keepPreviousUser()));
             })
             .catch((error: unknown) => {
                 const cleanup =
@@ -299,19 +347,52 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 }));
 
-// Another tab may switch the account (the refresh cookie is shared): a refreshed token of another
-// user drops this tab's previous user like a sign-in does (§1.5). An unreadable `sub` decides
-// nothing here, the sign-in already did. An online session reloads its data; the session check
-// and the reconnect refresh load it themselves. Wired by `bootstrap/initializeApi`.
-export const onAccessTokenRefreshed = (token: string): void => {
-    const nextUserId = getAccessTokenSubject(token);
-
-    if (nextUserId === null || !dropOtherUserData(nextUserId)) {
-        return;
-    }
+const reloadOnlineSession = (): void => {
     const { status, sessionMode } = useAuthStore.getState();
 
     if (status === AUTH_STATUS.AUTHENTICATED && sessionMode === SESSION_MODE.ONLINE) {
         void loadSignedInData();
+    }
+};
+
+// Counts the refreshed tokens (03-16a part C): a switch whose outbox count is still being read is
+// superseded by any later token.
+let refreshSwitch = 0;
+
+// Another tab may switch the account (the refresh cookie is shared): a refreshed token of another
+// user drops this tab's previous user like a sign-in does (§1.5). An unreadable `sub` decides
+// nothing here, the sign-in already did. An online session reloads its data; the session check
+// and the reconnect refresh load it themselves. Wired by `bootstrap/initializeApi`.
+// With offline writes on, X's outbox is counted first: the tab that signed Y in asked about it and
+// deleted X's data or signed Y out, so a non-empty (or unreadable) outbox of X is not deleted here;
+// this tab only moves to Y. The answer applies only while no later token came and this tab's user
+// did not change meanwhile.
+export const onAccessTokenRefreshed = (token: string): void => {
+    refreshSwitch += 1;
+    const current = refreshSwitch;
+    const nextUserId = getAccessTokenSubject(token);
+
+    if (nextUserId === null) {
+        return;
+    }
+    const previousUserId = cachedUserId();
+
+    if (isOfflineWritesFlagOn() && previousUserId !== undefined && previousUserId !== nextUserId) {
+        void readOutboxCountOrUnknown(previousUserId).then(count => {
+            if (current !== refreshSwitch || cachedUserId() !== previousUserId) {
+                return;
+            }
+            if (count === 0) {
+                dropOtherUserData(nextUserId);
+            } else {
+                moveLocalUser(nextUserId);
+                resetUserStores();
+            }
+            reloadOnlineSession();
+        });
+        return;
+    }
+    if (dropOtherUserData(nextUserId)) {
+        reloadOnlineSession();
     }
 };

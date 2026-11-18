@@ -848,6 +848,43 @@ without one read time). (5) There is no `offline` i18n namespace: the spec's `of
 toasts `savedSending` ("Saved, sending…"), a changed repeat of a create being sent `createAlreadySending` (the form
 stays open); a queued delete disables the entry's Edit and Delete (A review N5).
 
+Deviation (03-16a part C): online-only actions and the sign-out and account-switch confirms; flag off, nothing of it
+renders, subscribes or reads IDB. (1) `useRequiresOnline(action)` (`hooks/`, blocked = flag on and either
+`!isNetworkUsable()`, re-rendered on `onlineManager`, or `sessionMode === offline-cached`) and `<OnlineOnly action>`
+(`components/online-only`): not blocked, the child as it is (a Radix trigger's `asChild` props reach it through `Slot`);
+blocked, the child gets `disabled` + `aria-disabled`, the trigger's props are dropped and a focusable span carries the
+tooltip "An internet connection is required". `<OnlineOnlyGroup>` puts the user-settings cards in a disabled `fieldset`
+(a page caption says why); menu items and a card button read the hook. `ONLINE_ONLY_ACTIONS` (`constants/`) has
+`settleUp`, `settlement.delete`/`edit`, `group.create`/`update`/`cover`/`leave`/`kick`/`delete`, `invite.accept`,
+`avatar.upload`, `user.settings`, `friend.delete`, `logoutOtherDevices`; "invites" of the table are the join
+confirmations (sharing an existing invite link stays local) and the group delete is added. A source scan test checks
+that every key is used by an `action={…}` or `useRequiresOnline(…)` entry point. The group settle-up trigger is
+wrapped and an open `GroupSettleUpFlow` closes when the network goes (it does not reopen). The refusals before
+`mutate` stay as the guard for flag off and for a control used as the network went. (2) C2-02: the history's Update
+and Delete of a non-expense are wrapped (`settlement.edit`/`delete`); `chooseLedgerWritePath` already takes the online
+path for an entry not cached as an `EXPENSE` (the history observes only expenses). (3) Resolves 03-15a (11): settle-up
+refuses rather than shows the caption alone. A group's flow shows "Send or cancel the unsent expenses of this group
+first" with a button that opens `OutboxSheet` while the group has a pending, failed or unreadable op
+(`OutboxOverlay.queuedGroupIds`; an unreadable record counts when its raw op names the group; a payment already sent
+finishes); the friends' form refuses while anything is queued (its balances span groups). The part B caption stays.
+Since an unreadable record has no action, a friends' settle-up stays refused until the app that wrote it sends it.
+(4) Sign-out: one hook (`useSignOutConfirm`, both buttons) reads N from the stored keys of the cached user
+(`readOutboxRecordCount`: pending ops + failed + unreadable records, validated as a restore reads them, no write lock,
+loaded lazily off the landing path); N > 0 → "N unsent operations will be deleted. Sign out?", a failed read → the
+same without N, 0 → sign-out. The conflict drafts are not counted: `conflictDrafts` is still kept as read; 03-16b adds
+them to N. The remote logout asks nothing. (5) Account switch: the initiating tab (`exchangeGoogleOAuthCode`), after
+the token is set and its `sub` ≠ the cached id, counts X's stored outbox (this tab runs on the anonymous client);
+N > 0 or a failed read asks through `requestAccountSwitchConfirm` (a UI store; the dialog is rendered by
+`OAuthCallbackPage`, flag on only). "Delete and sign in" goes on as before. Cancel signs Y out in this tab only:
+`startAuthLogout({ broadcast: false })` (a broadcast would make the tabs still on X run the remote logout and delete
+X's data), which also writes the session hint false; `LS_KEY_USER` keeps X, nothing is cleared, the status is
+`unauthenticated`/`signed_out` and the exchange resolves, so the callback page navigates as after a sign-out. A newer
+question answers an older one with Cancel. Another tab that gets Y's token by refresh counts X's outbox too: empty →
+X is dropped as before; not empty (or unreadable) → the tab moves to Y (`LS_KEY_USER` = Y, user stores reset) without
+`clearUserData(X)`; the answer applies only if this tab's user and token did not change meanwhile. Deferred: the
+"Create as a new expense" and 24 h caption of part B (4) stay deferred; conflict drafts in N (03-16b); `DevMenu`'s
+settings writes are not wrapped (development only).
+
 #### 2.5 Error handling
 
 409 is distinguished **by `code`**, not by status: `SYSTEM.CONFLICT` — transient (retry), `LEDGER.VERSION_CONFLICT` —

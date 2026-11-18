@@ -644,6 +644,16 @@ const countOps = (draft: OutboxState): number =>
 export const isOutboxFull = (): boolean => countOps(state) >= OUTBOX_LIMIT;
 
 /**
+ * The records of `userId`'s outbox in IndexedDB (§1.5 sign-out and account-switch count, 03-16a
+ * part C): pending, failed and unreadable, read and validated as a restore reads them, without the
+ * write lock (a count, not a read-modify-write) and without touching this tab's state, so it works
+ * for a user this tab has not restored. The conflict drafts are not counted until 03-16b parses
+ * them. Rejects when the keys cannot be read (an IDB error, a key unreadable as a whole).
+ */
+export const readOutboxRecordCount = (userId: string): Promise<number> =>
+    readKeys(userId).then(({ state: read }) => countOps(read));
+
+/**
  * A repeated create of an entry (one client entry id, §2.7) with another draft: the queued create
  * may already be on the server, so it is never replaced (R2-L1).
  */
@@ -784,6 +794,10 @@ export const outboxSendingOpId = (): string | null => state.sending?.opId ?? nul
 
 /** Failed records whose op is not readable (§2.5 `unreadable`): kept, counted by the limit. */
 export const unreadableOutboxCount = (): number => state.unreadable.length;
+
+/** The ops of the unreadable records as read (unknown shape), for a caller that looks for a field. */
+export const unreadableOutboxOps = (): readonly unknown[] =>
+    state.unreadable.map(({ record }) => recordOp(record));
 
 /** Discarded in the key (`OutboxState.cancelled`): a restore or an adoption skips it. */
 export const isOpCancelledInKey = (opId: string): boolean => state.cancelled.has(opId);

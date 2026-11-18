@@ -51,8 +51,9 @@ export const toastWriteRefusal = (reason: UserWriteRefusal): void => {
     }
 };
 
-// TODO(spec 03 §2.9): disable the controls offline with `useRequiresOnline()` / `<OnlineOnly>`
-// once they exist; until then an offline write is refused here with a toast.
+// Spec 03 §2.9: with offline writes on, `<OnlineOnly>` / `useRequiresOnline()` disable the
+// controls offline (03-16a part C). Off, or for a control used as the network went,
+// an offline write is refused here with a toast.
 const refuseOffline = (): Promise<never> => {
     toastWriteRefusal('offline');
     return refuse('offline');

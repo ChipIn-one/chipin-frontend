@@ -3,11 +3,13 @@ import { UserPlusIcon, UsersRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { useFriendInvite } from 'hooks/pwaHooks';
 import { useSelfUser } from 'hooks/useSelfUser';
 
 import Image from 'basics/Image';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
+import { OnlineOnly } from 'components/online-only';
 
 import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.webp';
 
@@ -90,10 +92,12 @@ const DashboardOnboarding = () => {
                         width={{ initial: '100%', sm: 'auto' }}
                     >
                         <CreateUpdateGroupModal type="create">
-                            <ActionButton type="button" size="3">
-                                <UsersRoundIcon size={18} />
-                                {t('common:buttons.createGroup')}
-                            </ActionButton>
+                            <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupCreate}>
+                                <ActionButton type="button" size="3">
+                                    <UsersRoundIcon size={18} />
+                                    {t('common:buttons.createGroup')}
+                                </ActionButton>
+                            </OnlineOnly>
                         </CreateUpdateGroupModal>
                         <ActionButton
                             type="button"

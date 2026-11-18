@@ -16,7 +16,7 @@ import {
     startLedgerOutbox,
 } from 'entities/ledger/api/outbox';
 import { capabilitiesQueryOptions } from 'entities/ledger/api/queries';
-import { saveLocalUser } from 'helpers/localStorage';
+import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
 import { createQueryClient } from 'shared/api/queryClient';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
@@ -689,9 +689,15 @@ describe('03-15c1 the drain-session fence (M2)', () => {
     });
 
     const switchAccountsAndBack = async (): Promise<QueryClient> => {
-        // Another tab signs in Y, then X again: this tab's refresh listener sees both tokens.
+        // Another tab signs in Y, then X again: this tab's refresh listener sees both tokens. The
+        // tab that signed Y in deleted X's outbox ("Delete and sign in", 03-16a part C), so this
+        // tab counts nothing of X and clears X's data; a non-empty outbox of X would be kept.
+        await idb.del(OUTBOX_KEY);
+        await idb.del(FAILED_KEY);
         onAccessTokenRefreshed(fakeAccessToken(OTHER));
+        await vi.waitFor(() => expect(getLocalUser()?.id).toBe(OTHER));
         onAccessTokenRefreshed(fakeAccessToken(USER));
+        await vi.waitFor(() => expect(getLocalUser()?.id).toBe(USER));
         await wait(20);
         const client = newClient();
 

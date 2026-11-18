@@ -13,14 +13,17 @@ import {
 import { LogOutIcon, Trash2Icon, UserMinusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import type { Group } from 'entities/groups';
 import { toastGroupWriteError, useUpdateGroup } from 'hooks/useGroupMutations';
+import { useRequiresOnline } from 'hooks/useRequiresOnline';
 import { useSelfUser } from 'hooks/useSelfUser';
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
 import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-alert-dialog';
 import { LeaveGroupAlertDialog } from 'components/modals/leave-group-alert-dialog';
 import { RemoveGroupAlertDialog } from 'components/modals/remove-group-alert-dialog';
+import { OnlineOnly } from 'components/online-only';
 
 import GroupInviteActionRows from './GroupInviteActionRows';
 
@@ -37,9 +40,15 @@ const GroupSettingsTab = ({ group }: Props) => {
     const simplifyDebtsValue: unknown = group.simplifyDebts;
     const isSimplifyDebtsSupported = typeof simplifyDebtsValue === 'boolean';
     const isSimplifyDebtsEnabled = isSimplifyDebtsSupported && simplifyDebtsValue;
+    const isGroupUpdateBlocked = useRequiresOnline(ONLINE_ONLY_ACTIONS.groupUpdate);
 
     const onSimplifyDebtsChange = (nextValue: boolean): void => {
-        if (!isGroupOwner || !isSimplifyDebtsSupported || isGroupUpdatePending) {
+        if (
+            !isGroupOwner ||
+            !isSimplifyDebtsSupported ||
+            isGroupUpdatePending ||
+            isGroupUpdateBlocked
+        ) {
             return;
         }
 
@@ -101,10 +110,12 @@ const GroupSettingsTab = ({ group }: Props) => {
                                         groupId={group.id}
                                         member={member.user}
                                     >
-                                        <Button variant="soft" color="orange" size="1">
-                                            <UserMinusIcon size={13} />
-                                            {t('common:buttons.kickMember')}
-                                        </Button>
+                                        <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupKick}>
+                                            <Button variant="soft" color="orange" size="1">
+                                                <UserMinusIcon size={13} />
+                                                {t('common:buttons.kickMember')}
+                                            </Button>
+                                        </OnlineOnly>
                                     </KickGroupMemberAlertDialog>
                                 )}
                             </Flex>
@@ -153,7 +164,8 @@ const GroupSettingsTab = ({ group }: Props) => {
                                 disabled={
                                     !isGroupOwner ||
                                     !isSimplifyDebtsSupported ||
-                                    isGroupUpdatePending
+                                    isGroupUpdatePending ||
+                                    isGroupUpdateBlocked
                                 }
                                 aria-label={t('group:page.settings.simplifyDebtsTitle')}
                                 onCheckedChange={onSimplifyDebtsChange}
@@ -168,12 +180,14 @@ const GroupSettingsTab = ({ group }: Props) => {
                 <Separator size="4" mb="1" />
 
                 <LeaveGroupAlertDialog group={group}>
-                    <Box width="100%" asChild>
-                        <Button variant="ghost" color="orange" size="3">
-                            <LogOutIcon size={16} />
-                            {t('common:buttons.leaveGroup')}
-                        </Button>
-                    </Box>
+                    <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupLeave} isFullWidth>
+                        <Box width="100%" asChild>
+                            <Button variant="ghost" color="orange" size="3">
+                                <LogOutIcon size={16} />
+                                {t('common:buttons.leaveGroup')}
+                            </Button>
+                        </Box>
+                    </OnlineOnly>
                 </LeaveGroupAlertDialog>
 
                 {isGroupOwner && (
@@ -181,12 +195,14 @@ const GroupSettingsTab = ({ group }: Props) => {
                         <Separator size="4" my="1" />
 
                         <RemoveGroupAlertDialog group={group}>
-                            <Box width="100%" asChild>
-                                <Button variant="ghost" color="red" size="3">
-                                    <Trash2Icon size={16} />
-                                    {t('common:buttons.removeGroup')}
-                                </Button>
-                            </Box>
+                            <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupDelete} isFullWidth>
+                                <Box width="100%" asChild>
+                                    <Button variant="ghost" color="red" size="3">
+                                        <Trash2Icon size={16} />
+                                        {t('common:buttons.removeGroup')}
+                                    </Button>
+                                </Box>
+                            </OnlineOnly>
                         </RemoveGroupAlertDialog>
                     </>
                 )}

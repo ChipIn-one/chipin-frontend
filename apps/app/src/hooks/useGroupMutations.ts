@@ -62,8 +62,9 @@ export const toastGroupWriteError = (error: unknown, fallbackMessage: string): v
     toast.error(resolveApiErrorMessageFromError(error, fallbackMessage));
 };
 
-// TODO(spec 03 §2.9): disable the controls offline with `useRequiresOnline()` / `<OnlineOnly>`
-// once they exist; until then an offline write is refused here and the caller's toast shows it.
+// Spec 03 §2.9: with offline writes on, `<OnlineOnly>` / `useRequiresOnline()` disable the
+// controls offline (03-16a part C). Off, or for a control used as the network went,
+// an offline write is refused here and the caller's toast shows it.
 const refusalBeforeMutate = (isEnabled: boolean): Promise<never> | null => {
     if (!isEnabled) {
         return Promise.reject(new GroupWriteRefusedError('session'));

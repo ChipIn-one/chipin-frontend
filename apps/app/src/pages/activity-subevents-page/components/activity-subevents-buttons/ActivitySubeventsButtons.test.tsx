@@ -1,5 +1,6 @@
+import { Theme } from '@radix-ui/themes';
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { clear } from 'idb-keyval';
 import { http, HttpResponse } from 'msw';
@@ -25,7 +26,7 @@ import { domainExpenseEvent, domainSettlementEvent } from 'test/activityFixtures
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
-import { resetOutbox } from 'test/outbox';
+import { pendingOutboxOps, resetOutbox } from 'test/outbox';
 import { mountAsUserClient } from 'test/userClient';
 
 import { ActivitySubeventsButtons } from './ActivitySubeventsButtons';
@@ -713,5 +714,99 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
 
         expect(reads).toEqual([]);
         expect(client.getQueryState(ledgerKeys.entry('expense-id'))).toBeUndefined();
+    });
+    // 03-16a part C, §2.9 C2-02: a settlement is changed only online, on two levels.
+    describe('C2-02: a settlement delete or edit is online-only, an expense delete may be queued', () => {
+        const renderBoth = () =>
+            render(
+                <>
+                    <section aria-label="expense">
+                        <ActivitySubeventsButtons
+                            parentEvent={parentEvent}
+                            parentActivityId={parentEvent.id}
+                            childEvents={[]}
+                        />
+                    </section>
+                    <section aria-label="settlement">
+                        <ActivitySubeventsButtons
+                            parentEvent={settlementEvent(true)}
+                            parentActivityId="settlement-activity-id"
+                            childEvents={[]}
+                        />
+                    </section>
+                </>,
+                { wrapper: Theme },
+            );
+
+        test('flag on, offline: the settlement Delete and Update are disabled, 0 outbox ops; the expense Delete is queued', async () => {
+            const client = signIn();
+            const sent = serveDelete();
+
+            serveEntry();
+            await withOfflineWrites(client);
+            renderBoth();
+            await waitFor(() => {
+                expect(client.getQueryData(ledgerKeys.entry('expense-id'))).toBeTruthy();
+            });
+            act(() => {
+                onlineManager.setOnline(false);
+            });
+            const settlement = within(screen.getByRole('region', { name: 'settlement' }));
+            const expense = within(screen.getByRole('region', { name: 'expense' }));
+            const settlementDelete = settlement.getByRole('button', { name: 'Delete' });
+            const user = userEvent.setup();
+
+            expect(settlementDelete).toHaveProperty('disabled', true);
+            expect(settlementDelete.getAttribute('aria-disabled')).toBe('true');
+            expect(settlement.getByRole('button', { name: 'Update' })).toHaveProperty(
+                'disabled',
+                true,
+            );
+            await user.click(settlementDelete.parentElement ?? settlementDelete);
+            expect(screen.queryByRole('button', { name: 'Delete entry' })).toBeNull();
+            expect(pendingOutboxOps()).toEqual([]);
+
+            expect(expense.getByRole('button', { name: 'Delete' })).toHaveProperty(
+                'disabled',
+                false,
+            );
+            await user.click(expense.getByRole('button', { name: 'Delete' }));
+            await user.click(screen.getByRole('button', { name: 'Delete entry' }));
+            await waitFor(() => {
+                expect(pendingOutboxOps().map(op => [op.kind, op.entryId])).toEqual([
+                    ['deleteExpense', 'expense-id'],
+                ]);
+            });
+            expect(sent).toEqual([]);
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+        });
+
+        test('flag on, online: the settlement DELETE goes out on the online path, nothing queued', async () => {
+            const client = signIn();
+            const sent = serveDelete();
+
+            serveEntry();
+            server.use(
+                http.get('*/groups/group-1/activity-previews', () =>
+                    HttpResponse.json({ items: [], nextCursor: null }),
+                ),
+                http.get('*/groups/group-1', () => HttpResponse.json(wireGroup('group-1'))),
+            );
+            await withOfflineWrites(client);
+            renderBoth();
+            const settlement = within(screen.getByRole('region', { name: 'settlement' }));
+            const user = userEvent.setup();
+
+            await user.click(settlement.getByRole('button', { name: 'Delete' }));
+            await user.click(screen.getByRole('button', { name: 'Delete entry' }));
+
+            await waitFor(() => {
+                expect(sent).toEqual(['DELETE /ledger/entries/settlement-id']);
+            });
+            expect(pendingOutboxOps()).toEqual([]);
+            expect(client.getQueryState(ledgerKeys.entry('settlement-id'))).toBeUndefined();
+        });
     });
 });
