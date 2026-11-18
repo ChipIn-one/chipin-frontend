@@ -11,10 +11,12 @@ import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
 import { outboxGate } from 'shared/offline/outboxGate';
 import { resetStoragePersistRequest } from 'shared/offline/outboxRegistry';
 import {
+    dropConflictDraft,
     failedOutboxOps,
     isOutboxFull,
     OUTBOX_LIMIT,
     outboxConflictDraft,
+    outboxEntryIds,
     pendingOutboxOps,
     readOutboxRecordCount,
     resetOutbox,
@@ -200,12 +202,19 @@ const cacheEntry = (client: QueryClient, entryId: string, version: string, updat
     });
 };
 
-const queueEdit = (client: QueryClient, entryId: string, description: string) =>
+// `replacesConflictDraft`: saved from a form opened on the entry's draft.
+const queueEdit = (
+    client: QueryClient,
+    entryId: string,
+    description: string,
+    replacesConflictDraft = false,
+) =>
     updateExpenseViaOutbox(client, {
         entryId,
         entry: { description },
         groupId: 'group-1',
         parentActivityId: `activity-${entryId}`,
+        replacesConflictDraft,
     })?.() ?? Promise.reject(new Error('the online path was chosen'));
 
 const notices: LedgerConflictNotice[] = [];
@@ -286,7 +295,7 @@ describe('03-16b Conflict keeps a draft (D28)', () => {
 
         cacheEntry(reloaded, 'entry-x', 'v50', 100);
         onlineManager.setOnline(false);
-        await queueEdit(reloaded, 'entry-x', 'Lunch');
+        await queueEdit(reloaded, 'entry-x', 'Lunch', true);
         expect(outboxConflictDraft('entry-x')).toBeNull();
         const stored = await readStored(OUTBOX_KEY);
 
@@ -354,6 +363,118 @@ describe('03-16b Conflict keeps a draft (D28)', () => {
         expect(client.getQueryData(ledgerKeys.entry('entry-x'))).toMatchObject({
             version: 'v60',
             updatedAt: 300,
+        });
+    });
+});
+
+describe('03-16b R1 M1: only a Save from a form opened on the draft replaces it', () => {
+    test('a form opened before the conflict, saved after it (its append racing recordConflict): the draft is kept', async () => {
+        serveLedger(new Set(['entry-x']));
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        cacheEntry(client, 'entry-x', 'v41');
+        await queueEdit(client, 'entry-x', 'Lunch');
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => expect(outboxConflictDraft('entry-x')).not.toBeNull());
+
+        // The edit of a form that was not opened on the draft lands after the conflict write.
+        onlineManager.setOnline(false);
+        await queueEdit(client, 'entry-x', 'Other');
+
+        expect(pendingOutboxOps()).toEqual([
+            expect.objectContaining({ kind: 'updateExpense', patch: { description: 'Other' } }),
+        ]);
+        expect(outboxConflictDraft('entry-x')).toMatchObject({ fields: { description: 'Lunch' } });
+        expect(await readStored(OUTBOX_KEY)).toMatchObject({
+            conflictDrafts: { 'entry-x': expect.objectContaining({ entryId: 'entry-x' }) },
+        });
+    });
+
+    test('a queued delete drops the draft (it makes it moot)', async () => {
+        serveLedger(new Set());
+        await storeOutbox([], {
+            conflictDrafts: { 'entry-x': draftOf('entry-x', { description: 'L' }) },
+        });
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        cacheEntry(client, 'entry-x', 'v41');
+        await deleteExpenseViaOutbox(client, { entryId: 'entry-x' })?.();
+
+        expect(outboxConflictDraft('entry-x')).toBeNull();
+    });
+});
+
+describe('03-16b R1 L1, L3, L4, N4', () => {
+    test('L1: an unreadable current drops the cached (optimistic) entry: no resend on the version that conflicted', async () => {
+        server.use(
+            http.patch('*/ledger/entries/:id', () =>
+                HttpResponse.json(
+                    { code: 'LEDGER.VERSION_CONFLICT', current: { id: 'entry-x' } },
+                    { status: 409 },
+                ),
+            ),
+        );
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        cacheEntry(client, 'entry-x', 'v41');
+        await queueEdit(client, 'entry-x', 'Lunch');
+        onlineManager.setOnline(true);
+
+        await vi.waitFor(() => expect(notices).toHaveLength(1));
+        expect(client.getQueryData(ledgerKeys.entry('entry-x'))).toBeUndefined();
+        expect(outboxConflictDraft('entry-x')).not.toBeNull();
+    });
+
+    test('L3: an old failed delete conflict dropped on restore says so (conflictNotDeleted)', async () => {
+        serveLedger(new Set());
+        await storeFailed([
+            {
+                op: storedOp(1, 'entry-y', { kind: 'deleteExpense', patch: undefined }),
+                reason: 'conflict',
+                failedAt: 8,
+            },
+        ]);
+        await storeOutbox([], { nextSeq: 2 });
+        await openTab();
+
+        await vi.waitFor(() =>
+            expect(notices).toEqual([
+                { kind: 'notDeleted', entryId: 'entry-y', parentActivityId: 'activity-entry-y' },
+            ]),
+        );
+    });
+
+    test('L4: a drafted entry is read again on restore (outboxEntryIds)', async () => {
+        const served = serveLedger(new Set(), { 'entry-x': current('entry-x') });
+
+        await storeOutbox([], {
+            conflictDrafts: { 'entry-x': draftOf('entry-x', { description: 'L' }) },
+        });
+        const client = await newTab();
+
+        client.setQueryData(ledgerKeys.entry('entry-x'), current('entry-x'));
+        await startLedgerOutbox(client, USER, effects);
+
+        expect(outboxEntryIds().has('entry-x')).toBe(true);
+        expect(client.getQueryState(ledgerKeys.entry('entry-x'))?.isInvalidated).toBe(true);
+        expect(served.requests).toEqual([]);
+    });
+
+    test('N4: unknown fields of a stored draft are kept and written back', async () => {
+        serveLedger(new Set());
+        await storeOutbox([], {
+            conflictDrafts: {
+                'entry-x': { ...draftOf('entry-x', { description: 'L' }), future: 'kept' },
+            },
+        });
+        await openTab();
+        await dropConflictDraft('entry-other');
+
+        expect(await readStored(OUTBOX_KEY)).toMatchObject({
+            conflictDrafts: { 'entry-x': { future: 'kept' } },
         });
     });
 });

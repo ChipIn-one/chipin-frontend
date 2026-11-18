@@ -61,6 +61,11 @@ export interface CreateSettlementParams {
 export interface UpdateExpenseParams extends LedgerWriteContext {
     entryId: string;
     entry: ExpensePatch;
+    /**
+     * Spec 03 §2.6: saved from a form opened on the entry's conflict draft; a queued edit then
+     * replaces the draft in its append write (otherwise the draft is kept). The online path ignores it.
+     */
+    replacesConflictDraft?: boolean;
 }
 
 export interface DeleteLedgerEntryParams extends LedgerWriteContext {

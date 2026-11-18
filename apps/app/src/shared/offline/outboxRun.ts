@@ -187,7 +187,7 @@ const sleep = (ms: number): Promise<void> =>
 
 // A write the outbox refused (stopped, cleared) is no persistence failure; a write-lock timeout is
 // transient and reported on its own, without taking the once-per-session persist-failure report.
-const reportWriteFailure = (error: unknown): void => {
+export const reportOutboxWriteFailure = (error: unknown): void => {
     if (error instanceof OutboxLockTimeoutError) {
         Sentry.captureMessage('outbox.write_lock_timeout', { level: 'warning' });
     } else if (!(error instanceof OutboxWriteStoppedError)) {
@@ -213,7 +213,7 @@ export const retryWrite = (
                 return false;
             }
             setOutboxStatus(op.opId, 'failed-unsaved');
-            reportWriteFailure(error);
+            reportOutboxWriteFailure(error);
             return sleep(backoff(attempt)).then(() =>
                 shouldStop() ? false : retryWrite(op, write, shouldStop, attempt + 1),
             );
@@ -232,7 +232,7 @@ const skipped = (op: OutboxOpBase, fence: OutboxFence): OutboxResult | null =>
 // Compare-and-clear of the run's own claim; a failure leaves it to the next claim or restore.
 const releaseClaim = (op: OutboxOpBase, fence: OutboxFence): Promise<void> =>
     isOwnerFence(fence)
-        ? releaseOutboxClaim(op, fence).catch(reportWriteFailure)
+        ? releaseOutboxClaim(op, fence).catch(reportOutboxWriteFailure)
         : Promise.resolve();
 
 const noop = (): void => undefined;
@@ -483,7 +483,7 @@ const attempt = async <Op extends OutboxOpBase>(
     }
     // M1: ordered after a discard whose write is in flight (§2.3: a discard never races a request).
     const claim = await claimOutboxOp(op, fence, isOwnerSession).catch((error: unknown) => {
-        reportWriteFailure(error);
+        reportOutboxWriteFailure(error);
         return 'unsaved' as const;
     });
 
@@ -559,7 +559,7 @@ export const runOutboxOp = <Op extends OutboxOpBase>(
             outboxGate.releaseTurn(op.opId);
         }
         if (isOpCancelled(op.opId) || isOpCancelledInKey(op.opId)) {
-            void forgetCancelled(op.opId, fence).catch(reportWriteFailure);
+            void forgetCancelled(op.opId, fence).catch(reportOutboxWriteFailure);
         }
     });
 };
@@ -686,6 +686,8 @@ export interface OutboxAdoption {
     isAcceptable: OutboxOpCheck;
     /** The `sub` of the current access token. */
     sessionUserId: () => string | null;
+    /** §2.6: old failed delete `conflict` records dropped by the restore (03-16b R1 L3). */
+    onConflictDeletesDropped?: (ops: readonly OutboxOpBase[]) => void;
 }
 
 /**
@@ -714,12 +716,19 @@ export const restoreOutbox = (
         // 03-16b: the interim failed `conflict` records of older builds become conflict drafts.
         return writeOutbox(draft => {
             draft.sending = null;
-            convertFailedConflicts(draft);
+            return convertFailedConflicts(draft);
         })
-            .catch((error: unknown) => {
-                reportWriteFailure(error);
-                return refreshOutbox();
-            })
+            .then(
+                dropped => {
+                    if (dropped.length > 0) {
+                        adoption.onConflictDeletesDropped?.(dropped);
+                    }
+                },
+                (error: unknown) => {
+                    reportOutboxWriteFailure(error);
+                    return refreshOutbox();
+                },
+            )
             .then(() => {
                 if (outboxOwner() !== userId || isOutboxStopped()) {
                     return result;

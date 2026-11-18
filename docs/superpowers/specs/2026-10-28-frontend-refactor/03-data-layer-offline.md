@@ -985,17 +985,22 @@ and the outbox `onSettled` writes `current`, refreshes the views (`onEntryWritte
 `settled` gains `result: 'conflicted'` for the other tabs (an older build drops the message: freshness only). A 409
 `LEDGER.VERSION_CONFLICT` on a create is failed `rejected` (no version to conflict with). (2) Stale guard: versions are
 opaque, so `LedgerEntry` gains the server's `updatedAt` and a `current` older than the cached entry by it is not written
-(equal or unknown: written); the invalidation reads the entry again either way. (3) `ConflictDraft` also carries
+(equal or unknown: written; whole seconds, so two answers of one second may overwrite, healed by the refetch that
+follows); the invalidation reads the entry again either way, and an unreadable `current` drops the cached entry. (3) `ConflictDraft` also carries
 `parentActivityId` (nullable): "Open my changes" (toast, `OutboxSheet`) navigates to that expense history, whose Edit
 opens the form (a request in the UI store `conflictDraftStore`; `expenseModalStore` is unchanged); without it only
 "Discard my changes" is offered. (4) The form's base is the expense history's latest event, as for every edit (the
 cached entry has no sharing mode or participant names); the history is invalidated by the conflict, the original stays
 that state, so Save sends the draft's fields as an ordinary edit whose `baseVersion` is the cached version (registry,
-unchanged). Every queued edit or delete of an entry drops its draft in its append write (a delete makes it moot); a Save
-answered online, or with nothing left to change, removes the draft after it (no append). (5) `LedgerEntryInfo` has no
+unchanged). Only a Save from a form opened on the draft replaces it: its edit carries `replacesConflictDraft` and the
+append write drops the draft; any other queued edit (a form opened before the conflict, or on an unreadable draft) keeps
+it; a queued delete drops it (moot). A Save answered online, or with nothing left to change, removes the draft after it
+(no append). "Open my changes" opens the form only once the expense history is fresh (not being read, not
+invalidated), and the request is consumed only by an editor that opened. (5) `LedgerEntryInfo` has no
 reversed state (a reversed entry reads 404): "a `REVERSED` entry" is the expense history whose latest event is
 `EXPENSE_REVERSED`; the 404 drop runs in the `ledger.entry(id)` query function. (6) Old failed `conflict` records are
-converted in the drain-lock restore write: an edit → a draft (`createdAt` = `failedAt`), a delete → dropped; a create
+converted in the drain-lock restore write: an edit → a draft (`createdAt` = `failedAt`), a delete → dropped with the
+`conflictNotDeleted` notice; a create
 stays failed `conflict` (Cancel only). Its later ops are no longer blocked and fold into the draft on their own 409. (7)
 Drafts count in the limit (a Save at the limit takes the online path), the badge, the sign-out and account-switch N, and
 the settle-up refusal (a draft is unsent intent: its group, or any draft for the friends form). (8) Keys:

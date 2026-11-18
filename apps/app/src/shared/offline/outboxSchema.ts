@@ -64,9 +64,9 @@ export const ConflictDraftsSchema = z.record(z.string(), z.unknown());
  * answered 409 for, kept until the user saves or discards them. `fields` is the merged wire patch,
  * checked as an object (built by this app's mappers, validated by the server when it is resent).
  * `parentActivityId` (the expense history the edits were made from) reopens the form from the
- * toast and `OutboxSheet`.
+ * toast and `OutboxSheet`. Unknown fields (a newer build's) are kept and written back.
  */
-export const ConflictDraftSchema = z.object({
+export const ConflictDraftSchema = z.looseObject({
     entryId: z.string().min(1),
     groupId: z.string().nullable(),
     parentActivityId: z.string().nullish(),

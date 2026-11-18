@@ -335,7 +335,7 @@ const writeAnsweredEntry = (
 
 // §2.6: a conflict's `current` into `ledger.entry(id)` (after a read in flight is cancelled), unless
 // the cache already holds a newer answer (by the server's `updatedAt`: a stale answer never
-// overwrites newer state). Not readable: the cached entry is read again by the invalidation.
+// overwrites newer state). Not readable: the cached entry is dropped and read again.
 const writeConflictEntry = (
     client: QueryClient,
     op: LedgerOutboxOp,
@@ -344,13 +344,16 @@ const writeConflictEntry = (
     const queryKey = ledgerKeys.entry(op.entryId);
     const fresh = readLedgerEntry(current);
 
-    if (!fresh) {
-        return Promise.resolve();
-    }
     return client
         .cancelQueries({ queryKey, exact: true })
         .catch(() => undefined)
         .then(() => {
+            // R1 L1: not readable, the cached (optimistic or older) entry leaves the cache, so a
+            // resend is never based on the version that just conflicted; it is read again.
+            if (!fresh) {
+                client.removeQueries({ queryKey, exact: true });
+                return;
+            }
             client.setQueryData<LedgerEntry>(queryKey, cached =>
                 isOlderLedgerEntry(fresh, cached) ? cached : fresh,
             );
@@ -435,6 +438,16 @@ const ledgerAdoption = (client: QueryClient): OutboxAdoption => ({
     mutationKeyFor: kind => ledgerOutboxMutationKeys[kind],
     isAcceptable: op => isAcceptableLedgerOp(client, op),
     sessionUserId: () => getAccessTokenUserId(),
+    // §2.6 (R1 L3): an old failed delete conflict dropped on restore says so, like a new one.
+    onConflictDeletesDropped: ops => {
+        ops.forEach(op => {
+            noticeLedgerConflict({
+                kind: 'notDeleted',
+                entryId: op.entryId,
+                parentActivityId: isLedgerOutboxOp(op) ? op.parentActivityId : null,
+            });
+        });
+    },
 });
 
 // §2.2 in a tab that does not drain: the effects of another tab's settled op of this owner. The
@@ -560,7 +573,7 @@ export const createExpenseViaOutbox = (
 /** The outbox path of an expense edit, or null for the online path. */
 export const updateExpenseViaOutbox = (
     client: QueryClient,
-    { entryId, entry, groupId, parentActivityId }: UpdateExpenseParams,
+    { entryId, entry, groupId, parentActivityId, replacesConflictDraft }: UpdateExpenseParams,
 ): QueueLedgerWrite | null =>
     chooseLedgerWritePath(client, { kind: 'update', entryId }) !== 'outbox'
         ? null
@@ -570,7 +583,7 @@ export const updateExpenseViaOutbox = (
                   .then(patch =>
                       enqueueLedgerOp(
                           client,
-                          { kind: 'updateExpense', entryId },
+                          { kind: 'updateExpense', entryId, replacesConflictDraft },
                           ({ base, baseVersion }) => ({
                               ...base,
                               kind: 'updateExpense',

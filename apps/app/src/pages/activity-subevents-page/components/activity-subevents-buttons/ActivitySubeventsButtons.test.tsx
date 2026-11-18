@@ -795,6 +795,88 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
         });
     });
 
+    test('03-16b R1 L2: the request waits for a fresh history and is kept until an editor opened', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        // The conflict invalidated the history; its refetch has not answered yet.
+        await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+        expect(useConflictDraftStore.getState().requestedEntryId).toBe('expense-id');
+        act(() => {
+            client.setQueryData(historyKey, emptyHistory);
+        });
+
+        await waitFor(() => {
+            expect(useExpenseModalStore.getState()).toMatchObject({
+                isOpened: true,
+                description: 'Mine',
+            });
+        });
+        expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+    });
+
+    test('03-16b R1 L2: an entry that cannot be edited does not consume the request', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+                canChange={false}
+            />,
+        );
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+        expect(useConflictDraftStore.getState().requestedEntryId).toBe('expense-id');
+    });
+
+    test('03-16b R1 M1: an unreadable draft opens the ordinary editor, not marked as opened on a draft', async () => {
+        const client = signIn();
+
+        serveEntry();
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        await clear();
+        await storeConflictDrafts('user-id', {
+            'expense-id': {
+                entryId: 'expense-id',
+                groupId: null,
+                parentActivityId: parentEvent.id,
+                fields: { amount: 12 },
+                createdAt: 5,
+            },
+        });
+        await startUserLedgerOutbox(client, 'user-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[updatedEvent]}
+            />,
+        );
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Update' }));
+
+        expect(useExpenseModalStore.getState()).toMatchObject({ description: 'Updated dinner' });
+        expect(useConflictDraftStore.getState().openedEntryId).toBeNull();
+        expect(outboxConflictDraft('expense-id')).not.toBeNull();
+    });
+
     test('03-16b a reversed expense drops its draft', async () => {
         const client = signIn();
 

@@ -748,6 +748,32 @@ describe('03-16a with offline writes on', () => {
             expect(sent).toEqual([]);
         });
 
+        test('R1 M1: a form not opened on the draft (opened before the conflict, or on an unreadable draft) keeps it when its edit is queued', async () => {
+            const client = await openOnDraft();
+
+            useConflictDraftStore.getState().setOpened(null);
+            client.setQueryData(ledgerKeys.entry('entry-1'), {
+                id: 'entry-1',
+                type: 'EXPENSE',
+                version: 'v50',
+                updatedAt: 100,
+                groupId: null,
+                expense: null,
+            });
+            onlineManager.setOnline(false);
+            const onClose = vi.fn();
+
+            submit(onClose);
+
+            await waitFor(() => {
+                expect(onClose).toHaveBeenCalledOnce();
+            });
+            expect(pendingOutboxOps()).toHaveLength(1);
+            expect(outboxConflictDraft('entry-1')).toMatchObject({
+                fields: { description: 'Lunch' },
+            });
+        });
+
         test('Save answered online (the entry not cached): one PATCH, then the draft is removed', async () => {
             await openOnDraft();
             const sent = serveLedger();

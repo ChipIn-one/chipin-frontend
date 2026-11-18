@@ -54,6 +54,8 @@ export interface OutboxOpRequest {
     kind: OutboxKind;
     entryId: string;
     owner: string;
+    /** §2.6: an edit saved from a form opened on the entry's conflict draft (it replaces it). */
+    replacesConflictDraft?: boolean;
 }
 
 /** The base fields the registry assigns and the version an edit or a delete is based on. */
@@ -108,7 +110,7 @@ export const resetStoragePersistRequest = (): void => {
  */
 export const enqueueOutboxOp = <Op extends OutboxOpBase>(
     client: QueryClient,
-    { kind, entryId, owner }: OutboxOpRequest,
+    { kind, entryId, owner, replacesConflictDraft = false }: OutboxOpRequest,
     build: (seed: OutboxOpSeed) => Op,
 ): Promise<Op> => {
     const { entryKind, needsCachedEntry } = OUTBOX_OPS[kind];
@@ -123,13 +125,15 @@ export const enqueueOutboxOp = <Op extends OutboxOpBase>(
     // the cached version is read there too (a 2xx answered meanwhile has written it), and the
     // append counts as in flight from now, so a removal landing before it keeps our version.
     return trackOutboxAppend(entryId, () =>
-        appendOutboxOp((seq, queue) =>
-            build({
-                base: { opId, seq, owner, entryKind, createdAt, schema: 1, kind, entryId },
-                baseVersion: queue.hasPendingCreateOf(entryId)
-                    ? null
-                    : (readCachedEntry(client, entryId)?.version ?? null),
-            }),
+        appendOutboxOp(
+            (seq, queue) =>
+                build({
+                    base: { opId, seq, owner, entryKind, createdAt, schema: 1, kind, entryId },
+                    baseVersion: queue.hasPendingCreateOf(entryId)
+                        ? null
+                        : (readCachedEntry(client, entryId)?.version ?? null),
+                }),
+            { replacesConflictDraft },
         ),
     ).then(op => {
         requestPersistentStorage();

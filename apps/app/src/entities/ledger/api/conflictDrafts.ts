@@ -5,6 +5,7 @@
 import { useEffect } from 'react';
 
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
+import { reportOutboxWriteFailure } from 'shared/offline/outboxRun';
 import { dropConflictDraft, outboxConflictDraft } from 'shared/offline/outboxStore';
 
 import { fromExpensePatchWire } from '../model/toExpenseWire';
@@ -27,6 +28,14 @@ const listeners = new Set<(notice: LedgerConflictNotice) => void>();
 /** Tells the mounted listeners (none: nothing happens). */
 export const noticeLedgerConflict = (notice: LedgerConflictNotice): void => {
     listeners.forEach(listener => listener(notice));
+};
+
+/**
+ * A draft write that failed (R1 N3, invariant 7): reported like every outbox write failure (a
+ * refused write of a stopped outbox is not one; a lock timeout and an IDB error are).
+ */
+export const reportConflictDraftFailure = (error: unknown): void => {
+    reportOutboxWriteFailure(error);
 };
 
 /** Listens to the conflict notices; returns the unsubscribe. */
@@ -69,18 +78,15 @@ export const dropDeletedConflictDraft = (entryId: string): Promise<void> => {
     if (draft === null) {
         return Promise.resolve();
     }
-    return dropConflictDraft(entryId).then(
-        isDropped => {
-            if (isDropped) {
-                noticeLedgerConflict({
-                    kind: 'deleted',
-                    entryId,
-                    parentActivityId: draft.parentActivityId,
-                });
-            }
-        },
-        () => undefined,
-    );
+    return dropConflictDraft(entryId).then(isDropped => {
+        if (isDropped) {
+            noticeLedgerConflict({
+                kind: 'deleted',
+                entryId,
+                parentActivityId: draft.parentActivityId,
+            });
+        }
+    }, reportConflictDraftFailure);
 };
 
 /** Whether the entry has a conflict draft in this tab's last read (flag off: never). */

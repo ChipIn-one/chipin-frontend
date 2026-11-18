@@ -766,6 +766,7 @@ export interface OutboxAppendView {
  */
 export const appendOutboxOp = <Op extends OutboxOpBase>(
     build: (seq: number, queue: OutboxAppendView) => Op,
+    { replacesConflictDraft = false }: { replacesConflictDraft?: boolean } = {},
 ): Promise<Op> =>
     writeOutbox(draft => {
         if (countOps(draft) >= OUTBOX_LIMIT) {
@@ -779,9 +780,10 @@ export const appendOutboxOp = <Op extends OutboxOpBase>(
             draft.nextSeq += 1;
             draft.ops.push(op);
         }
-        // §2.6: an edit saved from the form replaces the entry's conflict draft in this same write
-        // (any edit of an entry with a draft opens on the draft); a delete makes it moot.
-        if (op.kind !== 'createExpense') {
+        // §2.6: an edit saved from a form opened on the entry's conflict draft replaces it in this
+        // same write (`replacesConflictDraft`); any other edit keeps it (R1 M1: a form opened before
+        // the conflict, or on an unreadable draft, must not lose it). A delete makes it moot.
+        if (op.kind === 'deleteExpense' || (op.kind === 'updateExpense' && replacesConflictDraft)) {
             draft.conflictDrafts.delete(op.entryId);
         }
         return op;
@@ -867,9 +869,12 @@ const unreadableEntryIds = (): string[] =>
 export const failedEntryIds = (): ReadonlySet<string> =>
     new Set([...[...state.failed.values()].map(({ op }) => op.entryId), ...unreadableEntryIds()]);
 
-/** The entries with a pending or failed op (§1.4 `outboxState.entryIds`). */
+/**
+ * The entries with a pending or failed op or a conflict draft (§1.4 `outboxState.entryIds`; 03-16b
+ * R1 L4: a drafted entry is read again on restore too).
+ */
 export const outboxEntryIds = (): ReadonlySet<string> =>
-    new Set([...entryIdsOf(state), ...unreadableEntryIds()]);
+    new Set([...entryIdsOf(state), ...unreadableEntryIds(), ...state.conflictDrafts.keys()]);
 
 /** Our latest write of the entry, newer than any `baseVersion` (§2.1). */
 export const getOutboxVersion = (entryId: string): string | null =>
@@ -1285,6 +1290,7 @@ const mergeIntoDraft = (
     const last = updates[updates.length - 1];
 
     draft.conflictDrafts.set(entryId, {
+        ...existing,
         entryId,
         groupId: stringField(last, 'groupId') ?? existing?.groupId ?? null,
         parentActivityId:
@@ -1360,22 +1366,24 @@ export const recordConflict = (op: OutboxOpBase, fence: OutboxFence): Promise<Ou
 /**
  * 03-16b on the drain-lock restore (in its write): a failed record of the interim reason
  * `conflict` (03-15a…03-16a) becomes the entry's conflict draft (an edit's patch, merged like
- * `recordConflict`), or is dropped (a delete: a delete conflict keeps no draft). Its later ops, no
+ * `recordConflict`), or is dropped (a delete: a delete conflict keeps no draft). Returns the
+ * dropped deletes: the caller tells the user, like a delete conflict (R1 L3). Its later ops, no
  * longer blocked, are sent and fold into the draft on their own 409.
  */
-export const convertFailedConflicts = (draft: OutboxState): void => {
+export const convertFailedConflicts = (draft: OutboxState): OutboxOpBase[] =>
     [...draft.failed.values()]
         // A create has no version to conflict with: such a record stays failed (Cancel only).
         .filter(({ op, reason }) => reason === 'conflict' && op.kind !== 'createExpense')
         .sort((a, b) => bySeq(a.op, b.op))
-        .forEach(({ op, failedAt }) => {
+        .flatMap(({ op, failedAt }) => {
             draft.failed.delete(op.opId);
             draft.retryRequested = draft.retryRequested.filter(opId => opId !== op.opId);
             if (op.kind === 'updateExpense') {
                 mergeIntoDraft(draft, op.entryId, [op], failedAt);
+                return [];
             }
+            return [op];
         });
-};
 
 /**
  * Removes the entry's conflict draft (§2.6: "Discard my changes", the entry deleted remotely), from

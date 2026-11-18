@@ -9,6 +9,7 @@ export {
     discardConflictDraft,
     dropDeletedConflictDraft,
     hasConflictDraft,
+    reportConflictDraftFailure,
     useLedgerConflictNotices,
 } from './api/conflictDrafts';
 export type {

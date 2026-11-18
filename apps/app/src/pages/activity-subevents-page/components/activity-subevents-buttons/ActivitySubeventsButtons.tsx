@@ -1,12 +1,13 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { Button, Flex } from '@radix-ui/themes';
+import { useQueryClient } from '@tanstack/react-query';
 import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
-import type { ActivityEvent } from 'entities/activity';
+import { type ActivityEvent, activityKeys } from 'entities/activity';
 import {
     dropDeletedConflictDraft,
     useIsOfflineWriteAvailable,
@@ -31,6 +32,26 @@ import { OnlineOnly } from 'components/online-only';
 const LedgerEntryObserver = ({ entryId }: { entryId: string }) => {
     useLedgerEntryObserver(entryId);
     return null;
+};
+
+// R1 L2: the expense history is fresh: not being read and not invalidated (the conflict invalidates
+// it), so a draft opens on the expense as it is now. No history cached: nothing to wait for.
+const useIsHistoryFresh = (parentActivityId: string | undefined): boolean => {
+    const client = useQueryClient();
+    const isFresh = (): boolean => {
+        const state =
+            parentActivityId === undefined
+                ? undefined
+                : client.getQueryState(activityKeys.children(parentActivityId));
+
+        return !state || (state.fetchStatus === 'idle' && !state.isInvalidated);
+    };
+
+    return useSyncExternalStore(
+        listener => client.getQueryCache().subscribe(listener),
+        isFresh,
+        isFresh,
+    );
 };
 
 interface Props {
@@ -74,9 +95,10 @@ const ActivitySubeventsButtons = ({
     const observedEntryId =
         isOfflineWritable && isExpense && canChange && !isEntryReversed ? parentEntryId : undefined;
 
-    const onEdit = useCallback((): void => {
+    // Whether the editor was opened.
+    const openEdit = useCallback((): boolean => {
         if (!parentEntryId || !isExpense || !isChangeable) {
-            return;
+            return false;
         }
 
         const initialization = prepareExpenseEdit({
@@ -86,7 +108,7 @@ const ActivitySubeventsButtons = ({
         });
 
         if (!initialization) {
-            return;
+            return false;
         }
         // §2.6: with a conflict draft the form opens on it ("your unsaved changes").
         const opened = hasDraft
@@ -95,6 +117,7 @@ const ActivitySubeventsButtons = ({
 
         useConflictDraftStore.getState().setOpened(opened.isDraft ? parentEntryId : null);
         initializeEdit(opened.initialization);
+        return true;
     }, [
         childEvents,
         hasDraft,
@@ -106,20 +129,28 @@ const ActivitySubeventsButtons = ({
         parentEvent,
     ]);
 
-    // "Open my changes" (the toast, `OutboxSheet`) navigated here: open the form on the draft once.
+    const onEdit = (): void => {
+        openEdit();
+    };
+    const isHistoryFresh = useIsHistoryFresh(parentActivityId);
+
+    // "Open my changes" (the toast, `OutboxSheet`) navigated here: once the history is fresh (R1
+    // L2), open the form on the draft; the request is consumed only by an editor that opened.
     useEffect(() => {
         const store = useConflictDraftStore.getState();
 
         if (
             parentEntryId === undefined ||
+            !isHistoryFresh ||
             requestedDraftEntryId !== parentEntryId ||
             store.requestedEntryId !== parentEntryId
         ) {
             return;
         }
-        store.clearRequest();
-        onEdit();
-    }, [onEdit, parentEntryId, requestedDraftEntryId]);
+        if (openEdit()) {
+            store.clearRequest();
+        }
+    }, [isHistoryFresh, openEdit, parentEntryId, requestedDraftEntryId]);
 
     // §2.6: a reversed expense drops its draft (the history shows the deletion).
     useEffect(() => {
