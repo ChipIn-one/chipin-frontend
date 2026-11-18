@@ -13,7 +13,9 @@ const isSafeDocumentationPath = path => {
         return false;
     }
 
-    if (path.startsWith('docs/engineering/rules/')) {
+    // Rules feed the ESLint layer table; the specs feed scripts/check-rule-registry.test.mjs
+    // (02-rulebook-tooling.md §D0). Both are gate inputs, not prose.
+    if (path.startsWith('docs/engineering/rules/') || path.startsWith('docs/superpowers/specs/')) {
         return false;
     }
 
@@ -22,6 +24,45 @@ const isSafeDocumentationPath = path => {
 
 export const isDocsOnlyChange = changedFiles =>
     changedFiles.length > 0 && changedFiles.every(isSafeDocumentationPath);
+
+// Workspace scopes (spec 04 §1.4). The trailing slash keeps lookalikes (`apps/application/`) out.
+const WORKSPACE_PREFIXES = [
+    ['app', 'apps/app/'],
+    ['site', 'apps/site/'],
+];
+
+// 'docs' | 'app' | 'site' | 'full'. Anything not classified (packages/**, the lockfile, root
+// configs, config/**, scripts/**, .github/**, unknown paths) is 'full': fail safe.
+const classifyPath = path => {
+    if (isSafeDocumentationPath(path)) {
+        return 'docs';
+    }
+
+    for (const [scope, prefix] of WORKSPACE_PREFIXES) {
+        if (path.startsWith(prefix)) {
+            return scope;
+        }
+    }
+
+    return 'full';
+};
+
+// docs-only | app | site | full. An empty list fails closed (full). Safe docs mixed into a
+// workspace change do not widen it; app + site together, or any repo-level path, give full.
+export const resolveChangeScope = changedFiles => {
+    if (changedFiles.length === 0) {
+        return 'full';
+    }
+
+    const scopes = new Set(changedFiles.map(classifyPath));
+
+    scopes.delete('docs');
+    if (scopes.size === 0) {
+        return 'docs-only';
+    }
+
+    return scopes.size === 1 ? [...scopes][0] : 'full';
+};
 
 export const resolveCiGateMode = ({ workflow, targetBranch, changedFiles }) => {
     if (!WORKFLOWS.has(workflow)) {
@@ -32,7 +73,7 @@ export const resolveCiGateMode = ({ workflow, targetBranch, changedFiles }) => {
         throw new Error(`Unsupported CI target branch: ${targetBranch || 'missing'}`);
     }
 
-    return isDocsOnlyChange(changedFiles) ? 'docs-only' : 'full';
+    return resolveChangeScope(changedFiles);
 };
 
 const isCli = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
