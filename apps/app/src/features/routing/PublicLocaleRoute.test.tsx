@@ -17,6 +17,8 @@ const PAGE_TEXT = 'Public page';
 const i18nMock = vi.hoisted(() => ({
     instance: null as I18n | null,
     failure: null as Error | null,
+    // A switch still loading: it neither switches nor settles.
+    held: false,
 }));
 
 vi.mock('react-i18next', () =>
@@ -60,6 +62,9 @@ vi.mock('helpers/setAppLanguage', () => ({
     applyLanguage: (lng: string) => {
         if (i18nMock.failure) {
             return Promise.reject(i18nMock.failure);
+        }
+        if (i18nMock.held) {
+            return new Promise<void>(() => undefined);
         }
         return (
             i18nMock.instance?.changeLanguage(lng).then(() => undefined) ??
@@ -200,5 +205,46 @@ test('renders children in the active language when the URL language fails to loa
         expect(captureException).toHaveBeenCalledWith(error);
     } finally {
         i18nMock.failure = null;
+    }
+});
+
+// R2-N1: once the URL language loads after a failure, a later switch away from it shows the
+// loader again instead of the page in another language.
+test('a URL language that loads after a failure clears the failure', async () => {
+    i18nMock.failure = new Error('Locale ru not loaded');
+    const { rerender } = render(
+        <PublicLocaleRoute locale="ru">
+            <p>{PAGE_TEXT}</p>
+        </PublicLocaleRoute>,
+    );
+    expect(await screen.findByText(PAGE_TEXT)).toBeTruthy();
+
+    try {
+        // The next visit of the URL language loads it.
+        i18nMock.failure = null;
+        rerender(
+            <PublicLocaleRoute locale="en">
+                <p>{PAGE_TEXT}</p>
+            </PublicLocaleRoute>,
+        );
+        rerender(
+            <PublicLocaleRoute locale="ru">
+                <p>{PAGE_TEXT}</p>
+            </PublicLocaleRoute>,
+        );
+        await vi.waitFor(() => {
+            expect(i18n().resolvedLanguage).toBe('ru');
+        });
+
+        // Something switches away; the re-assert is still loading.
+        i18nMock.held = true;
+        await act(async () => {
+            await i18n().changeLanguage('en');
+        });
+
+        expect(screen.queryByText(PAGE_TEXT)).toBeNull();
+    } finally {
+        i18nMock.failure = null;
+        i18nMock.held = false;
     }
 });

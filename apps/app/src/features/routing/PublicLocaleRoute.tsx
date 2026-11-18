@@ -38,10 +38,14 @@ const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; childre
     // `<html lang>` follows i18next (`i18n/htmlLang`, wired at boot): no write of it here (#708).
     useEffect(() => {
         if (resolvedLanguage !== locale) {
-            applyLanguage(locale).catch((error: unknown) => {
-                Sentry.captureException(error);
-                setFailedLocale(locale);
-            });
+            applyLanguage(locale)
+                .then(() => {
+                    setFailedLocale(null);
+                })
+                .catch((error: unknown) => {
+                    Sentry.captureException(error);
+                    setFailedLocale(locale);
+                });
         }
     }, [i18n, locale, resolvedLanguage]);
 

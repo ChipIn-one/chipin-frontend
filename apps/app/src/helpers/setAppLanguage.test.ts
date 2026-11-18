@@ -140,3 +140,33 @@ test('the latest switch wins over an older one still loading', () => {
             expect(getPendingLanguage()).toBeNull();
         });
 });
+
+// R2-L1: latest wins by call, not by language: ru (#1), en (#2), ru (#3) ends in ru and saves ru.
+test('the latest call wins even when an older call has the same language', () => {
+    dropRussian();
+    const waiting: (() => void)[] = [];
+    connector().backend.read = (lng, ns, callback) => {
+        waiting.push(() => {
+            realRead(lng, ns, callback);
+        });
+    };
+    const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
+
+    const first = applyLanguage('ru');
+    const second = setAppLanguage('en');
+    const third = setAppLanguage('ru');
+
+    return second
+        .then(() => {
+            waiting.forEach(read => {
+                read();
+            });
+            return Promise.all([first, third]);
+        })
+        .then(() => {
+            expect(changeLanguage.mock.calls.map(([lng]) => lng)).toEqual(['ru']);
+            expect(i18n.resolvedLanguage).toBe('ru');
+            expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('ru');
+            expect(getPendingLanguage()).toBeNull();
+        });
+});

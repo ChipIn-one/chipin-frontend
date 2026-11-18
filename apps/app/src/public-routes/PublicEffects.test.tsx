@@ -13,6 +13,11 @@ import { getOrThrow } from 'test/getOrThrow';
 
 import { PublicEffects } from './PublicEffects';
 
+const captureException = vi.hoisted(() => vi.fn());
+vi.mock('@sentry/react', async importOriginal => ({
+    ...(await importOriginal<typeof import('@sentry/react')>()),
+    captureException,
+}));
 vi.mock('sonner', () => ({
     Toaster: ({ theme }: { theme: string }) => (
         <output aria-label="Public toast theme">{theme}</output>
@@ -314,6 +319,10 @@ test('no suggestion toast in English when the suggested strings fail to load', a
     });
     expect(reloadResources).toHaveBeenCalledOnce();
     expect(toast.message).not.toHaveBeenCalled();
+    // R2-N2: the failed read is reported.
+    expect(captureException).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Locale ru not loaded: toasts' }),
+    );
 });
 
 test('explicit locale URL never offers a competing browser language', () => {

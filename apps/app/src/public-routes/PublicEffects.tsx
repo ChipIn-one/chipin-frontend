@@ -129,7 +129,13 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
             offer();
         } else {
             i18n.reloadResources([suggestedLocale], ['toasts'])
-                .then(offer)
+                .then(() => {
+                    // i18next resolves a failed read too; the bundle is then missing.
+                    if (!i18n.hasResourceBundle(suggestedLocale, 'toasts')) {
+                        throw new Error(`Locale ${suggestedLocale} not loaded: toasts`);
+                    }
+                    offer();
+                })
                 .catch((error: unknown) => {
                     Sentry.captureException(error);
                 });

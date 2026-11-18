@@ -6,8 +6,9 @@ import type { SupportedLocale } from 'constants/locales';
 import { saveLocalePreference } from 'helpers/locale';
 import { i18n, I18N_NAMESPACES } from 'i18n';
 
-// The target of the latest switch still in flight: an older switch that finishes later must not
-// apply over it (latest wins).
+// Latest wins, by call: each switch takes the next id, and only the latest one (`latestCall`) may
+// apply; `pendingLanguage` is its target while it is in flight.
+let latestCall = 0;
 let pendingLanguage: SupportedLocale | null = null;
 
 /** The language a switch in flight goes to, else null. */
@@ -32,31 +33,34 @@ const loadLanguage = (lng: SupportedLocale): Promise<void> => {
     });
 };
 
-const finish = (lng: SupportedLocale): void => {
-    if (pendingLanguage === lng) {
-        pendingLanguage = null;
-    }
-};
-
 /** Loads and switches to `lng`; resolves false when a newer switch superseded this one. */
 const switchTo = (lng: SupportedLocale): Promise<boolean> => {
+    latestCall += 1;
+    const call = latestCall;
+    const isLatest = () => call === latestCall;
+    const finish = () => {
+        if (isLatest()) {
+            pendingLanguage = null;
+        }
+    };
+
     pendingLanguage = lng;
 
     return loadLanguage(lng)
         .then(() => {
-            if (pendingLanguage !== lng) {
+            if (!isLatest()) {
                 return false;
             }
             // eslint-disable-next-line no-restricted-syntax -- the one call site (spec 04 §2.10)
-            return i18n.changeLanguage(lng).then(() => pendingLanguage === lng);
+            return i18n.changeLanguage(lng).then(isLatest);
         })
         .then(
             applied => {
-                finish(lng);
+                finish();
                 return applied;
             },
             (error: unknown) => {
-                finish(lng);
+                finish();
                 throw error;
             },
         );

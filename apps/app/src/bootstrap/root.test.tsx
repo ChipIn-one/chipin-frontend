@@ -177,6 +177,19 @@ test.each([
     }
 });
 
+// R2-M1: a prerendered page whose route language fails to load still hydrates.
+test('a public page hydrates when its route language fails to load', async () => {
+    const error = new Error('Locale ru not loaded');
+    boot.applyLanguage.mockRejectedValueOnce(error);
+
+    await bootOn('https://app.chipin.one/ru/privacy', { publicSsg: true });
+
+    await vi.waitFor(() => {
+        expect(boot.hydrateRoot).toHaveBeenCalledOnce();
+    });
+    expect(boot.captureException).toHaveBeenCalledWith(error);
+});
+
 // A failed i18n init never leaves a blank page: the app mounts and the public page hydrates anyway.
 test.each([
     ['https://app.chipin.one/dashboard', false],

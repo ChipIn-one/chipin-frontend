@@ -64,25 +64,31 @@ if (legacyHostAppUrl) {
     // loaded first (spec 04 §2.10: lazy locale chunks), so hydration never renders raw keys.
     Promise.all([import('public-routes'), i18nSettled])
         .then(([{ PublicApp }]) =>
-            applyLanguage(prerenderedRoute.locale).then(() =>
-                hydrateRoot(
-                    rootElement,
-                    <GlobalErrorBoundary>
-                        <PublicBuildYearContext.Provider
-                            value={
-                                Number.isInteger(publicBuildYear) && publicBuildYear > 2000
-                                    ? publicBuildYear
-                                    : null
-                            }
-                        >
-                            <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
-                        </PublicBuildYearContext.Provider>
-                        <PublicTelemetry />
-                        {/* Public SSG entry must register the same service worker as the SPA. */}
-                        <PWABadge />
-                    </GlobalErrorBoundary>,
+            // A route language that fails to load is reported; the page still hydrates (with the
+            // `en` fallback strings), so the worker, telemetry and effects of the page run.
+            applyLanguage(prerenderedRoute.locale)
+                .catch((error: unknown) => {
+                    Sentry.captureException(error);
+                })
+                .then(() =>
+                    hydrateRoot(
+                        rootElement,
+                        <GlobalErrorBoundary>
+                            <PublicBuildYearContext.Provider
+                                value={
+                                    Number.isInteger(publicBuildYear) && publicBuildYear > 2000
+                                        ? publicBuildYear
+                                        : null
+                                }
+                            >
+                                <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
+                            </PublicBuildYearContext.Provider>
+                            <PublicTelemetry />
+                            {/* Public SSG entry must register the same service worker as the SPA. */}
+                            <PWABadge />
+                        </GlobalErrorBoundary>,
+                    ),
                 ),
-            ),
         )
         .catch(error => Sentry.captureException(error));
 } else {
