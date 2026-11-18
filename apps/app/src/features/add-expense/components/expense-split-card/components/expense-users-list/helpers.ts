@@ -1,12 +1,15 @@
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
 
 interface SplitControlLabels {
+    amountInput: string;
     decreaseAmount: string;
     decreasePercent: string;
     decreaseShare: string;
     increaseAmount: string;
     increasePercent: string;
     increaseShare: string;
+    percentInput: string;
+    shareInput: string;
 }
 
 interface SplitParticipantControlParams {
@@ -21,6 +24,7 @@ interface SplitParticipantControlParams {
 export interface SplitParticipantControlData {
     decreaseLabel: string;
     increaseLabel: string;
+    inputLabel: string;
     inputMode: 'decimal' | 'numeric';
     stepSize: number;
     value: string;
@@ -42,6 +46,7 @@ export const getSplitParticipantControlData = ({
                 stepSize: 1,
                 decreaseLabel: labels.decreasePercent,
                 increaseLabel: labels.increasePercent,
+                inputLabel: labels.percentInput,
             };
         case EXPENSE_SPLIT_MODES.AMOUNTS:
             return {
@@ -50,6 +55,7 @@ export const getSplitParticipantControlData = ({
                 stepSize: amountStep,
                 decreaseLabel: labels.decreaseAmount,
                 increaseLabel: labels.increaseAmount,
+                inputLabel: labels.amountInput,
             };
         case EXPENSE_SPLIT_MODES.SHARES:
             return {
@@ -58,6 +64,7 @@ export const getSplitParticipantControlData = ({
                 stepSize: 1,
                 decreaseLabel: labels.decreaseShare,
                 increaseLabel: labels.increaseShare,
+                inputLabel: labels.shareInput,
             };
         case EXPENSE_SPLIT_MODES.EQUAL:
             return null;

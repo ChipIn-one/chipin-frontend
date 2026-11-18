@@ -1,6 +1,6 @@
 import { Grid } from '@radix-ui/themes';
 
-import ExpenseAmountFields from './components/expense-amount-fields/ExpenseAmountFields';
+import { ExpenseAmountFields } from './components/expense-amount-fields/ExpenseAmountFields';
 import ExpenseCurrencyCategoryFields from './components/expense-currency-category-fields/ExpenseCurrencyCategoryFields';
 
 const ExpenseDetailsSection = () => (
