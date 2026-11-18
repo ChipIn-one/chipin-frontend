@@ -1,0 +1,10 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2022"],
+        // The tests read tokens.css and the Radix scale files with node:fs.
+        "types": ["node"]
+    },
+    "include": ["src", "*.ts"]
+}

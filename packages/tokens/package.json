@@ -1,0 +1,17 @@
+{
+    "name": "@chipin/tokens",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./tokens.css": "./tokens.css",
+        "./radix-colors.css": "./src/radix-colors.css",
+        "./theme": "./src/theme.ts",
+        "./theme-init": "./src/theme-init.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc -p tsconfig.json"
+    },
+    "peerDependencies": {
+        "@radix-ui/themes": "^3.3.0"
+    }
+}
