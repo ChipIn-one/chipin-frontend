@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { bootstrapNetwork, isNetworkUsable, OFFLINE_RECHECK_MS, waitForOnline } from './network';
 
 const health = vi.hoisted(() => ({
-    probeBackendHealth: vi.fn<() => Promise<'ok' | 'error' | 'unreachable'>>(),
+    probeBackendHealth: vi.fn<(sentAfter?: number) => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
 vi.mock('api/healthApi', () => ({ probeBackendHealth: health.probeBackendHealth }));
@@ -69,6 +69,28 @@ describe('bootstrapNetwork', () => {
         // Online again: the re-check has stopped.
         await vi.advanceTimersByTimeAsync(OFFLINE_RECHECK_MS * 3);
         expect(health.probeBackendHealth).toHaveBeenCalledTimes(2);
+    });
+
+    test('a re-check answer that a new outage overtook does not end that outage', async () => {
+        setNavigatorOnLine(true);
+        teardown = bootstrapNetwork();
+        let answer: ((health: 'ok') => void) | undefined;
+        health.probeBackendHealth.mockReturnValueOnce(
+            new Promise(resolve => {
+                answer = resolve;
+            }),
+        );
+
+        onlineManager.setOnline(false);
+        await vi.advanceTimersByTimeAsync(OFFLINE_RECHECK_MS);
+        expect(health.probeBackendHealth).toHaveBeenCalledOnce();
+        // Back online and offline again while the probe is still running.
+        onlineManager.setOnline(true);
+        onlineManager.setOnline(false);
+        answer?.('ok');
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(onlineManager.isOnline()).toBe(false);
     });
 
     test('no probe while the browser itself says offline (it fires `online`)', async () => {

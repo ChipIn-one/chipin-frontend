@@ -24,6 +24,19 @@ export const waitForOnline = (): Promise<void> =>
         });
     });
 
+// `performance.now()` of the last online-to-offline transition of `onlineManager` (the `offline`
+// window event, an `offline` classification, an offline cold start; it notifies only on a change).
+// A request sent before it says nothing about the network after it (#746).
+let lastOfflineAt = Number.NEGATIVE_INFINITY;
+onlineManager.subscribe(online => {
+    if (!online) {
+        lastOfflineAt = performance.now();
+    }
+});
+
+/** When the app last went offline (`performance.now()`), `-Infinity` if it never did. */
+export const getLastOfflineAt = (): number => lastOfflineAt;
+
 const browserSaysOnline = (): boolean =>
     typeof navigator === 'undefined' || navigator.onLine !== false;
 
@@ -39,14 +52,16 @@ const stopRecheck = (): void => {
 // A request classified `offline` (`setOnline(false)`) on a network the browser still calls online
 // never gets an `online` event: probe `/health` (5 s timeout, shared with every other probe) until
 // any HTTP answer proves the network. The answer proves the network, not the backend: a non-2xx
-// is classified by the reconnect refetch, not here.
+// is classified by the reconnect refetch, not here. Only a probe sent during the current outage
+// counts: one that a new outage overtook (back online and offline again while it ran) is ignored.
 const recheck = (): void => {
     if (!browserSaysOnline()) {
         // The browser fires `online` itself.
         return;
     }
-    void probeBackendHealth().then(health => {
-        if (health !== 'unreachable') {
+    const offlineAt = lastOfflineAt;
+    void probeBackendHealth(offlineAt).then(health => {
+        if (health !== 'unreachable' && lastOfflineAt === offlineAt) {
             onlineManager.setOnline(true);
         }
     });

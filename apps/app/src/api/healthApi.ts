@@ -18,26 +18,41 @@ const isSuccessfulHealthStatus = (status: number): boolean => {
     return status >= 200 && status < 300;
 };
 
-let healthProbePromise: Promise<BackendHealth> | null = null;
+const sendHealthProbe = (): Promise<BackendHealth> =>
+    publicApiInstance
+        // Every HTTP answer resolves, so it also passes the success interceptor, which marks the
+        // network usable (`onResponseSuccess`) when the probe was sent after the app last went
+        // offline (#746): intended, an answer proves the network.
+        .get<unknown>('/health', {
+            timeout: HEALTH_CHECK_TIMEOUT_MS,
+            validateStatus: () => true,
+        })
+        .then(
+            (response): BackendHealth =>
+                isSuccessfulHealthStatus(response.status) ? 'ok' : 'error',
+            (): BackendHealth => 'unreachable',
+        );
 
-/** Probes `/health`; simultaneous probes share one request. Never rejects. */
-export const probeBackendHealth = (): Promise<BackendHealth> => {
+let healthProbePromise: Promise<BackendHealth> | null = null;
+// `performance.now()` when the shared probe was sent.
+let healthProbeSentAt = Number.NEGATIVE_INFINITY;
+
+/**
+ * Probes `/health`; simultaneous probes share one request. Never rejects. With `sentAfter` (the
+ * moment the app went offline) the answer comes from a probe sent after it: an older shared probe
+ * describes the network before the outage, so a fresh, unshared one is sent instead (#746).
+ */
+export const probeBackendHealth = (
+    sentAfter = Number.NEGATIVE_INFINITY,
+): Promise<BackendHealth> => {
+    if (healthProbePromise && healthProbeSentAt <= sentAfter) {
+        return sendHealthProbe();
+    }
     if (!healthProbePromise) {
-        healthProbePromise = publicApiInstance
-            // Every HTTP answer resolves, so it also passes the success interceptor and marks the
-            // network usable (`onResponseSuccess`): intended, an answer proves the network.
-            .get<unknown>('/health', {
-                timeout: HEALTH_CHECK_TIMEOUT_MS,
-                validateStatus: () => true,
-            })
-            .then(
-                (response): BackendHealth =>
-                    isSuccessfulHealthStatus(response.status) ? 'ok' : 'error',
-                (): BackendHealth => 'unreachable',
-            )
-            .finally(() => {
-                healthProbePromise = null;
-            });
+        healthProbeSentAt = performance.now();
+        healthProbePromise = sendHealthProbe().finally(() => {
+            healthProbePromise = null;
+        });
     }
 
     return healthProbePromise;

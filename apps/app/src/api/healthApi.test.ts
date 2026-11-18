@@ -53,6 +53,44 @@ describe('probeBackendHealth', () => {
         return Promise.all([first, second]);
     });
 
+    test('joins a shared probe sent after the given moment', () => {
+        let resolveRequest: ((value: { status: number }) => void) | undefined;
+        vi.mocked(publicApiInstance.get).mockReturnValue(
+            new Promise(resolve => {
+                resolveRequest = resolve;
+            }),
+        );
+        const beforeFirst = performance.now() - 1;
+
+        const first = probeBackendHealth();
+        const second = probeBackendHealth(beforeFirst);
+
+        expect(publicApiInstance.get).toHaveBeenCalledOnce();
+        resolveRequest?.({ status: 204 });
+
+        return expect(Promise.all([first, second])).resolves.toEqual(['ok', 'ok']);
+    });
+
+    test('never answers with a shared probe sent at or before the given moment: sends a fresh one', () => {
+        let resolveStale: ((value: { status: number }) => void) | undefined;
+        vi.mocked(publicApiInstance.get)
+            .mockReturnValueOnce(
+                new Promise(resolve => {
+                    resolveStale = resolve;
+                }),
+            )
+            .mockRejectedValueOnce(new Error('Network Error'));
+
+        const stale = probeBackendHealth();
+        const wentOfflineAt = performance.now();
+        const fresh = probeBackendHealth(wentOfflineAt);
+
+        expect(publicApiInstance.get).toHaveBeenCalledTimes(2);
+        resolveStale?.({ status: 200 });
+
+        return expect(Promise.all([stale, fresh])).resolves.toEqual(['ok', 'unreachable']);
+    });
+
     test('reports a health request without a response as unreachable, never rejects', () => {
         vi.mocked(publicApiInstance.get).mockRejectedValue(new Error('Network Error'));
 

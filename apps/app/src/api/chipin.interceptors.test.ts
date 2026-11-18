@@ -6,7 +6,7 @@ import { initChipInApiInterceptors } from './chipin.interceptors';
 
 const onUnauthorizedSession = vi.fn();
 const onRequestFailure = vi.fn<(error: unknown, requestStartedAt?: number) => Promise<void>>();
-const onResponseSuccess = vi.fn();
+const onResponseSuccess = vi.fn<(requestStartedAt?: number) => void>();
 const onAccessTokenChanged = vi.fn<(token: string) => void>();
 
 const authSessionMocks = vi.hoisted(() => ({
@@ -404,6 +404,26 @@ test('passes when the failed request was sent, for the store to drop stale class
     const startedAt = onRequestFailure.mock.calls[0]?.[1];
     expect(startedAt).toBeGreaterThanOrEqual(before);
     expect(startedAt).toBeLessThanOrEqual(performance.now());
+});
+
+test('passes when a successful request was sent, for the store to drop stale successes', async () => {
+    const ok = (instance: typeof apiInstance, url: string) =>
+        instance.get(url, {
+            adapter: config =>
+                Promise.resolve({ config, data: {}, headers: {}, status: 200, statusText: 'OK' }),
+        });
+    const before = performance.now();
+
+    await ok(apiInstance, '/dashboard');
+    await ok(publicApiInstance, '/stats');
+
+    const after = performance.now();
+    const startTimes = onResponseSuccess.mock.calls.map(([startedAt]) => startedAt);
+    expect(startTimes).toHaveLength(2);
+    for (const startedAt of startTimes) {
+        expect(startedAt).toBeGreaterThanOrEqual(before);
+        expect(startedAt).toBeLessThanOrEqual(after);
+    }
 });
 
 test('a non-2xx /health probe answer is a successful response: it marks the network usable', async () => {

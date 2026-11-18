@@ -7,7 +7,7 @@ import { useAuthStore } from './authStore';
 import { onConnectivityChange, onResponseSuccess, useConnectivityStore } from './connectivityStore';
 
 const healthMocks = vi.hoisted(() => ({
-    probeBackendHealth: vi.fn<() => Promise<'ok' | 'error' | 'unreachable'>>(),
+    probeBackendHealth: vi.fn<(sentAfter?: number) => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
 vi.mock('api/healthApi', async importOriginal => ({
@@ -15,7 +15,12 @@ vi.mock('api/healthApi', async importOriginal => ({
     probeBackendHealth: healthMocks.probeBackendHealth,
 }));
 
+// One mocked clock for the whole file, strictly increasing on every read: the module-level
+// cut-offs (last offline, last recovery) can never lie in a later test's future.
+let clockMs = 0;
+
 beforeEach(() => {
+    vi.spyOn(performance, 'now').mockImplementation(() => (clockMs += 1));
     onlineManager.setOnline(true);
     useConnectivityStore.setState({ mode: 'online' });
     healthMocks.probeBackendHealth.mockResolvedValue('ok');
@@ -28,6 +33,7 @@ beforeEach(() => {
 
 afterEach(() => {
     onlineManager.setOnline(true);
+    vi.restoreAllMocks();
 });
 
 test('backend-down changes only connectivity and preserves the authenticated session', () => {
@@ -149,4 +155,103 @@ test('drops a classification of a request that started before the last successfu
 
     onConnectivityChange('backend-down', performance.now());
     expect(useConnectivityStore.getState().mode).toBe('backend-down');
+});
+
+// #746: a response is evidence only about the network the request was sent on.
+test('ignores a success of a request started before the app went offline', () => {
+    const startedBeforeOffline = performance.now();
+    onlineManager.setOnline(false);
+    expect(useConnectivityStore.getState().mode).toBe('offline');
+
+    onResponseSuccess(startedBeforeOffline);
+
+    expect(onlineManager.isOnline()).toBe(false);
+    expect(useConnectivityStore.getState().mode).toBe('offline');
+});
+
+test('ignores a stale success after an offline classification too', () => {
+    const startedBeforeOffline = performance.now();
+    onConnectivityChange('offline', performance.now());
+
+    onResponseSuccess(startedBeforeOffline);
+
+    expect(onlineManager.isOnline()).toBe(false);
+});
+
+test('a success of a request started after going offline restores online (captive portal)', () => {
+    onConnectivityChange('offline', performance.now());
+
+    onResponseSuccess(performance.now());
+
+    expect(onlineManager.isOnline()).toBe(true);
+    expect(useConnectivityStore.getState().mode).toBe('online');
+});
+
+test('a success without a start time restores online (no evidence that it is stale)', () => {
+    onlineManager.setOnline(false);
+
+    onResponseSuccess();
+
+    expect(onlineManager.isOnline()).toBe(true);
+});
+
+test('every online-to-offline transition moves the cut-off', () => {
+    onlineManager.setOnline(false);
+    const startedBetweenOutages = performance.now();
+    onlineManager.setOnline(true);
+    onlineManager.setOnline(false);
+
+    onResponseSuccess(startedBetweenOutages);
+    expect(onlineManager.isOnline()).toBe(false);
+
+    onResponseSuccess(performance.now());
+    expect(onlineManager.isOnline()).toBe(true);
+});
+
+test('the /health retry still brings the network back after a stale success was ignored', async () => {
+    const startedBeforeOffline = performance.now();
+    onlineManager.setOnline(false);
+    onResponseSuccess(startedBeforeOffline);
+    expect(onlineManager.isOnline()).toBe(false);
+
+    await useConnectivityStore.getState().retryBackendHealth();
+
+    expect(onlineManager.isOnline()).toBe(true);
+    expect(useConnectivityStore.getState().mode).toBe('online');
+});
+
+test('a retry asks for a /health probe sent after the app went offline, never a shared older one', async () => {
+    const beforeOffline = performance.now();
+    onlineManager.setOnline(false);
+    const afterOffline = performance.now();
+
+    await useConnectivityStore.getState().retryBackendHealth();
+
+    const sentAfter = healthMocks.probeBackendHealth.mock.calls[0]?.[0];
+    expect(sentAfter).toBeGreaterThan(beforeOffline);
+    expect(sentAfter).toBeLessThan(afterOffline);
+});
+
+test('a retry whose probe an outage overtook does not end the outage or count as a recovery', async () => {
+    useConnectivityStore.setState({ mode: 'backend-down' });
+    let answer: ((health: 'ok') => void) | undefined;
+    healthMocks.probeBackendHealth.mockReturnValueOnce(
+        new Promise(resolve => {
+            answer = resolve;
+        }),
+    );
+    const startedBeforeRetry = performance.now();
+
+    const retry = useConnectivityStore.getState().retryBackendHealth();
+    onlineManager.setOnline(false);
+    answer?.('ok');
+
+    await expect(retry).rejects.toBeInstanceOf(BackendHealthCheckError);
+    expect(onlineManager.isOnline()).toBe(false);
+    expect(useConnectivityStore.getState().mode).toBe('offline');
+
+    // Not a recovery: an older request's offline classification is still honoured.
+    onlineManager.setOnline(true);
+    onConnectivityChange('offline', startedBeforeRetry);
+    expect(onlineManager.isOnline()).toBe(false);
 });
