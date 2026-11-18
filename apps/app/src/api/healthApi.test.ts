@@ -91,6 +91,64 @@ describe('probeBackendHealth', () => {
         return expect(Promise.all([stale, fresh])).resolves.toEqual(['ok', 'unreachable']);
     });
 
+    test('later callers with the same cut-off share the fresh probe that replaced a stale one', () => {
+        let resolveStale: ((value: { status: number }) => void) | undefined;
+        let resolveFresh: ((value: { status: number }) => void) | undefined;
+        vi.mocked(publicApiInstance.get)
+            .mockReturnValueOnce(
+                new Promise(resolve => {
+                    resolveStale = resolve;
+                }),
+            )
+            .mockReturnValueOnce(
+                new Promise(resolve => {
+                    resolveFresh = resolve;
+                }),
+            );
+
+        const stale = probeBackendHealth();
+        const wentOfflineAt = performance.now();
+        const fresh = [probeBackendHealth(wentOfflineAt), probeBackendHealth(wentOfflineAt)];
+
+        expect(publicApiInstance.get).toHaveBeenCalledTimes(2);
+        resolveFresh?.({ status: 204 });
+
+        return expect(Promise.all(fresh))
+            .resolves.toEqual(['ok', 'ok'])
+            .then(() => {
+                resolveStale?.({ status: 200 });
+                return stale;
+            });
+    });
+
+    test('a stale probe settling later does not clear the shared slot of the fresh one', async () => {
+        let resolveStale: ((value: { status: number }) => void) | undefined;
+        let resolveFresh: ((value: { status: number }) => void) | undefined;
+        vi.mocked(publicApiInstance.get)
+            .mockReturnValueOnce(
+                new Promise(resolve => {
+                    resolveStale = resolve;
+                }),
+            )
+            .mockReturnValueOnce(
+                new Promise(resolve => {
+                    resolveFresh = resolve;
+                }),
+            );
+
+        const stale = probeBackendHealth();
+        const wentOfflineAt = performance.now();
+        const fresh = probeBackendHealth(wentOfflineAt);
+        resolveStale?.({ status: 200 });
+        await stale;
+
+        const joined = probeBackendHealth(wentOfflineAt);
+        expect(publicApiInstance.get).toHaveBeenCalledTimes(2);
+        resolveFresh?.({ status: 503 });
+
+        await expect(Promise.all([fresh, joined])).resolves.toEqual(['error', 'error']);
+    });
+
     test('reports a health request without a response as unreachable, never rejects', () => {
         vi.mocked(publicApiInstance.get).mockRejectedValue(new Error('Network Error'));
 

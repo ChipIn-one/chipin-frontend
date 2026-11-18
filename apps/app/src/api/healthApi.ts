@@ -40,20 +40,22 @@ let healthProbeSentAt = Number.NEGATIVE_INFINITY;
 /**
  * Probes `/health`; simultaneous probes share one request. Never rejects. With `sentAfter` (the
  * moment the app went offline) the answer comes from a probe sent after it: an older shared probe
- * describes the network before the outage, so a fresh, unshared one is sent instead (#746).
+ * describes the network before the outage, so a fresh one is sent and shared instead (#746).
  */
 export const probeBackendHealth = (
     sentAfter = Number.NEGATIVE_INFINITY,
 ): Promise<BackendHealth> => {
-    if (healthProbePromise && healthProbeSentAt <= sentAfter) {
-        return sendHealthProbe();
+    if (healthProbePromise && healthProbeSentAt > sentAfter) {
+        return healthProbePromise;
     }
-    if (!healthProbePromise) {
-        healthProbeSentAt = performance.now();
-        healthProbePromise = sendHealthProbe().finally(() => {
+    healthProbeSentAt = performance.now();
+    const probe: Promise<BackendHealth> = sendHealthProbe().finally(() => {
+        // A stale probe settling after a fresh one replaced it leaves the fresh one shared.
+        if (healthProbePromise === probe) {
             healthProbePromise = null;
-        });
-    }
+        }
+    });
+    healthProbePromise = probe;
 
-    return healthProbePromise;
+    return probe;
 };
