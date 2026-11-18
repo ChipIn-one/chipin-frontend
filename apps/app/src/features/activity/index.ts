@@ -1,5 +1,5 @@
 import ActivityHeader, { type ActivityFilter } from './ActivityHeader';
-import ActivityList from './ActivityList';
+import { ActivityList } from './ActivityList';
 import ActivitySidebar from './ActivitySidebar';
 import { ActivityEvent, ActivityEventsList } from './components';
 

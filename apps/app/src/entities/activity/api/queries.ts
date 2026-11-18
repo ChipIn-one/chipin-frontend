@@ -9,6 +9,7 @@ import { infiniteQueryOptions, useInfiniteQuery, useQueryClient } from '@tanstac
 
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { api } from 'shared/api/client';
+import { refetchIfRestored } from 'shared/api/queryClient';
 import { isNetworkUsable } from 'shared/offline/network';
 
 import { firstPageOnly } from '../model/selfActivity';
@@ -129,6 +130,7 @@ export const selfActivityPreviewsQueryOptions = () =>
     infiniteQueryOptions({
         queryKey: activityKeys.self({ view: 'previews' }),
         staleTime: SELF_ACTIVITY_STALE_TIME,
+        refetchOnMount: refetchIfRestored,
         initialPageParam: firstPageParam(),
         queryFn: ({ pageParam, signal }) => fetchPreviewsPage(pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,
@@ -144,6 +146,7 @@ export const selfActivityEventsQueryOptions = () =>
     infiniteQueryOptions({
         queryKey: activityKeys.self({ view: 'events' }),
         staleTime: SELF_ACTIVITY_STALE_TIME,
+        refetchOnMount: refetchIfRestored,
         initialPageParam: firstPageParam(),
         queryFn: ({ pageParam, signal }) => fetchEventsPage(pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,
@@ -189,6 +192,7 @@ export const activityChildrenQueryOptions = (parentActivityId: string) =>
     infiniteQueryOptions({
         queryKey: activityKeys.children(parentActivityId),
         staleTime: ACTIVITY_CHILDREN_STALE_TIME,
+        refetchOnMount: refetchIfRestored,
         initialPageParam: firstPageParam(),
         queryFn: ({ pageParam, signal }) => fetchChildrenPage(parentActivityId, pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,

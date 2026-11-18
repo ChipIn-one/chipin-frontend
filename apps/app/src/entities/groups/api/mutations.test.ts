@@ -11,6 +11,7 @@ import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { InvalidPathSegmentError } from 'shared/api/client';
 import { apiInstance } from 'shared/api/http';
+import { PAGE_LOADED_AT } from 'shared/api/queryClient';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { cachesByUser } from 'shared/offline/userCaches';
 import { domainPreview, wirePreview } from 'test/activityFixtures';
@@ -202,6 +203,10 @@ const isKnownUsersInvalidated = () =>
 
 describe('group mutations', () => {
     beforeEach(() => {
+        // The clock runs from a minute after the page loaded: the list seeded a second ago was
+        // read in this page, not restored from the persisted cache (a mount reads that again, #724).
+        vi.useFakeTimers({ toFake: ['Date'], shouldAdvanceTime: true });
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
         vi.clearAllMocks();
         userCache = mountUserDashboardCache();
         userCache.client.setQueryData(usersKeys.known(), []);
@@ -266,6 +271,7 @@ describe('group mutations', () => {
     afterEach(() => {
         stopWatchingList();
         userCache.dispose();
+        vi.useRealTimers();
     });
 
     test('every group write is online only and never retried', () => {

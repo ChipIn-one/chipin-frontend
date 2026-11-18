@@ -147,6 +147,18 @@ const storeOutbox = (ops: unknown[], fields: Record<string, unknown> = {}): Prom
         }),
     );
 
+// A write of the outbox key that takes a `sending` claim (§2.3).
+const isClaimWrite = (value: unknown): boolean => {
+    const stored: unknown = typeof value === 'string' ? persistCodec.parse(value) : null;
+
+    return (
+        typeof stored === 'object' &&
+        stored !== null &&
+        'sending' in stored &&
+        stored.sending !== null
+    );
+};
+
 const storeFailed = (records: unknown[]): Promise<void> =>
     idb.set(FAILED_KEY, persistCodec.stringify(records));
 
@@ -431,8 +443,9 @@ describe('03-15b the failed key (§2.5, C3-05)', () => {
         const created = serveLedger(entryId => entryId === 'entry-x');
         let failOutboxWrites = true;
 
+        // The claim write (03-15c1: persisted) lands; every later write of the outbox key fails.
         vi.mocked(set).mockImplementation((key, value) =>
-            key === OUTBOX_KEY && failOutboxWrites
+            key === OUTBOX_KEY && failOutboxWrites && !isClaimWrite(value)
                 ? Promise.reject(new DOMException('quota', 'QuotaExceededError'))
                 : idb.set(key, value),
         );
@@ -827,7 +840,7 @@ describe('03-15b R1', () => {
 
         await storeOutbox([storedOp(1, 'entry-a')]);
         vi.mocked(set).mockImplementation((key, value) => {
-            if (key === OUTBOX_KEY && failRemoval) {
+            if (key === OUTBOX_KEY && failRemoval && !isClaimWrite(value)) {
                 return Promise.reject(new DOMException('quota', 'QuotaExceededError'));
             }
             idbLog.push(`set ${String(key)}`);

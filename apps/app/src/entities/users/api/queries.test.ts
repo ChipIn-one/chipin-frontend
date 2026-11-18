@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, expect, test } from 'vitest';
 
 import { clearLocalUserIdentity, getLocalUser, saveLocalUser } from 'helpers/localStorage';
+import { refetchIfRestored } from 'shared/api/queryClient';
 import { currencyCode, fromUnits } from 'shared/money';
 import { persistCodec } from 'shared/offline/persistCodec';
 import { dehydrateOptions } from 'shared/offline/queryPersister';
@@ -175,4 +176,8 @@ test('loads the known users with exact Money, persisted; the promo counter is ne
     expect(dehydrated.queries.map(query => query.queryKey)).toEqual([usersKeys.known()]);
     // The persisted Money survives the codec as a bigint.
     expect(persistCodec.parse(persistCodec.stringify(dehydrated))).toEqual(dehydrated);
+});
+
+test("#724 the known users' balances restored from before the reload are read again on mount", () => {
+    expect(knownUsersQueryOptions().refetchOnMount).toBe(refetchIfRestored);
 });

@@ -1,10 +1,16 @@
 import { onlineManager } from '@tanstack/react-query';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { ApiError, ApiResponseFormatError } from 'shared/lib/apiError';
 
 import { InvalidPathSegmentError } from './client';
-import { createQueryClient, PERSIST_MAX_AGE, queryRetry } from './queryClient';
+import {
+    createQueryClient,
+    PAGE_LOADED_AT,
+    PERSIST_MAX_AGE,
+    queryRetry,
+    refetchIfRestored,
+} from './queryClient';
 
 const apiError = (status: number, code?: string): ApiError =>
     new ApiError({ status, payload: code ? { code } : undefined, cause: undefined });
@@ -92,5 +98,29 @@ describe('createQueryClient', () => {
             refetchOnReconnect: true,
         });
         expect(mutations).toMatchObject({ networkMode: 'offlineFirst', retry: false });
+    });
+});
+
+describe('refetchIfRestored (#724)', () => {
+    const entry = (dataUpdatedAt: number) => ({ state: { dataUpdatedAt } });
+
+    test('reads again on mount an entry restored from before the page loaded, even if fresh', () => {
+        expect(refetchIfRestored(entry(PAGE_LOADED_AT - 1))).toBe('always');
+    });
+
+    test('leaves an entry read in this page to its stale time', () => {
+        expect(refetchIfRestored(entry(PAGE_LOADED_AT))).toBe(true);
+        expect(refetchIfRestored(entry(Date.now()))).toBe(true);
+    });
+
+    test('reads again an entry dated after now: the clock was moved back', () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            vi.setSystemTime(PAGE_LOADED_AT + 10_000);
+            expect(refetchIfRestored(entry(PAGE_LOADED_AT + 5_000))).toBe(true);
+            expect(refetchIfRestored(entry(PAGE_LOADED_AT + 20_000))).toBe('always');
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

@@ -9,6 +9,7 @@ interface Props {
     inputMode: 'decimal' | 'numeric';
     isDisabled?: boolean;
     stepSize?: number;
+    inputLabel: string;
     minLabel: string;
     plusLabel: string;
     onChange: (value: string) => void;
@@ -20,6 +21,7 @@ const ExpenseInputActions = ({
     inputMode,
     isDisabled = false,
     stepSize = 1,
+    inputLabel,
     minLabel,
     plusLabel,
     onChange,
@@ -48,6 +50,7 @@ const ExpenseInputActions = ({
                 onChange={onInputChange}
                 inputMode={inputMode}
                 disabled={isDisabled}
+                aria-label={inputLabel}
                 size="3"
             />
             <IconButton
@@ -64,4 +67,4 @@ const ExpenseInputActions = ({
     );
 };
 
-export default ExpenseInputActions;
+export { ExpenseInputActions };

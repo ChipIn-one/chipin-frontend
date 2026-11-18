@@ -182,6 +182,9 @@
                 "increaseAmount": "Increase amount",
                 "decreasePercent": "Decrease percent",
                 "increasePercent": "Increase percent",
+                "participantAmount": "{{name}} amount",
+                "participantPercent": "{{name}} percent",
+                "participantShares": "{{name}} shares",
                 "selectAll": "Select all",
                 "deselectAll": "Deselect all",
                 "total": "Total:",
@@ -268,6 +271,7 @@
         "cancel": "Cancel",
         "retry": "Try again",
         "invalidTitle": "This invite link is not valid",
-        "goHome": "Go to home"
+        "goHome": "Go to home",
+        "sessionLoadError": "We couldn't load your account. Try again."
     }
 }

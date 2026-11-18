@@ -1,10 +1,11 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
     RELEASE_OWNER,
     REPOSITORY,
+    MATRIX_PROFILES,
     TESTER_GUIDE_URL,
     assertConfiguration,
     assertFullSha,
@@ -13,16 +14,23 @@ import {
     currentQaLogins,
     findQaIssue,
     formatInvalidationLine,
+    formatMatrixLine,
     formatResultLine,
     hasGreenFrontendCiRun,
     isNearMissResult,
     isOwnerLogin,
     isSlackWebhook,
+    matrixRunUrl,
+    parseMatrixResult,
     parseQaResult,
+    renderMatrixBanner,
+    renderMatrixChecks,
+    renderMatrixTable,
     resultOutcome,
     slackCommitLink,
     slackIssueLink,
     slackLink,
+    summarizeMatrix,
     validateDeployment,
     verifyCi,
 } from './core.mjs';
@@ -185,24 +193,36 @@ export function chooseProductionBaseline(deployments, statusesFor) {
 
 // Handoff for a QA (slackId) or for the owner as QA (slackId null: nobody is mentioned). The QA Issue lists
 // Issues without QA steps, so Slack does not repeat them.
-export function formatHandoff({ slackId, issue, sha, url, fallbackNote = '' }) {
+// The browser matrix line, when the run has one, comes right after the headline.
+export function formatHandoff({ slackId, issue, sha, url, fallbackNote = '', matrix = null }) {
     const headline = slackId
         ? `<@${slackId}> Релиз-кандидат ${slackCommitLink(sha)} — нужна проверка`
         : `Релиз-кандидат ${slackCommitLink(sha)} — проверяет владелец`;
     return [
         `${headline}${fallbackNote}`,
+        ...(matrix ? [formatMatrixLine(matrix)] : []),
         slackLink(url, 'QA Build'),
         slackIssueLink(issue.html_url, issue.number),
         slackLink(TESTER_GUIDE_URL, 'QA Guide'),
     ].join('\n');
 }
 
-export function formatNoQaLine({ sha, url, fallbackNote = '' }) {
-    return `Релиз-кандидат ${slackCommitLink(sha)} — QA не нужен, UI не менялся${fallbackNote}\n${slackLink(url, 'Build')}`;
+export function formatNoQaLine({ sha, url, fallbackNote = '', matrix = null }) {
+    const matrixLine = matrix ? `\n${formatMatrixLine(matrix)}` : '';
+    return `Релиз-кандидат ${slackCommitLink(sha)} — QA не нужен, UI не менялся${fallbackNote}${matrixLine}\n${slackLink(url, 'Build')}`;
 }
 
-export function sendHandoff({ post, webhook, slackId, issue, sha, url, fallbackNote = '' }) {
-    const payload = { text: formatHandoff({ slackId, issue, sha, url, fallbackNote }) };
+export function sendHandoff({
+    post,
+    webhook,
+    slackId,
+    issue,
+    sha,
+    url,
+    fallbackNote = '',
+    matrix = null,
+}) {
+    const payload = { text: formatHandoff({ slackId, issue, sha, url, fallbackNote, matrix }) };
     return post(webhook, payload)
         .then(() => ({ delivered: true }))
         .catch(() => ({
@@ -237,8 +257,18 @@ export function postSlack(webhook, payload, fetchImpl = fetch) {
     });
 }
 
-export function probePublicPreview(url, fetchImpl = fetch) {
-    return fetchImpl(url, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(10000) })
+// Vercel's Protection Bypass for Automation header, sent only with the optional secret and only to
+// the validated Preview URL; the secret is never logged.
+const VERCEL_BYPASS_HEADER = 'x-vercel-protection-bypass';
+
+export function probePublicPreview(url, fetchImpl = fetch, bypassSecret = '') {
+    const secret = typeof bypassSecret === 'string' ? bypassSecret.trim() : '';
+    return fetchImpl(url, {
+        method: 'GET',
+        redirect: 'error',
+        signal: AbortSignal.timeout(10000),
+        ...(secret ? { headers: { [VERCEL_BYPASS_HEADER]: secret } } : {}),
+    })
         .then(response => {
             if (!response.ok || !/text\/html/i.test(response.headers.get('content-type') ?? '')) {
                 throw new Error('Selected Preview URL is not publicly accessible as an HTML page.');
@@ -614,11 +644,15 @@ export function resolveCandidate({ api, sha = '', deploymentId = '' }) {
                                 });
                                 return next(index + 1);
                             }
+                            const headSkip = skipped.find(item => item.sha === shas[0]);
                             return {
                                 sha: candidate,
                                 deploymentId: preview.id,
                                 url: preview.url,
                                 head: shas[0],
+                                headMissing: headSkip?.reason.includes('frontend-ci')
+                                    ? 'CI'
+                                    : 'Preview',
                                 fallback: index > 0,
                                 skipped,
                             };
@@ -627,6 +661,60 @@ export function resolveCandidate({ api, sha = '', deploymentId = '' }) {
             };
             return next(0);
         });
+}
+
+const MATRIX_RESULT_MAX_BYTES = 4096;
+
+// The result file of each known profile at its fixed path in the downloaded artifacts; a missing,
+// oversized, non-regular or malformed file is no result. Paths never come from the artifacts.
+export function readMatrixResults(dir, { lstatImpl = lstat, readImpl = readFile } = {}) {
+    return Promise.all(
+        MATRIX_PROFILES.map(({ id }) => {
+            const file = join(dir, `e2e-result-${id}`, 'result.json');
+            return lstatImpl(file)
+                .then(info =>
+                    info.isFile() && info.size <= MATRIX_RESULT_MAX_BYTES
+                        ? readImpl(file, 'utf8').then(text => parseMatrixResult(text, id))
+                        : null,
+                )
+                .catch(() => null)
+                .then(result => [id, result]);
+        }),
+    ).then(Object.fromEntries);
+}
+
+// The latest conclusion of each matrix job (`e2e <profile>`) of this run, from the GitHub API, all
+// pages. `filter=latest` keeps, after "Re-run failed jobs", the newest attempt of every job, so a job
+// that was not re-run keeps its earlier conclusion. An unreadable list leaves every conclusion
+// unknown, so no profile counts as passed.
+export function readMatrixConclusions(api, runId) {
+    return api
+        .listObject(`${REPO_PATH}/actions/runs/${runId}/jobs?filter=latest`, 'jobs')
+        .then(jobs => {
+            const conclusions = {};
+            for (const { id } of MATRIX_PROFILES) {
+                const named = jobs.filter(job => job?.name === `e2e ${id}`);
+                conclusions[id] =
+                    named.length === 1 && named[0].status === 'completed'
+                        ? named[0].conclusion
+                        : null;
+            }
+            return conclusions;
+        })
+        .catch(() => ({}));
+}
+
+// The matrix result of this run, or null when the run has none (E2E_MATRIX_DIR unset).
+export function readMatrix({ api, env, files }) {
+    if (!env.E2E_MATRIX_DIR) return Promise.resolve(null);
+    return Promise.resolve().then(() => {
+        const runId = Number(env.GITHUB_RUN_ID);
+        matrixRunUrl(runId);
+        return Promise.all([
+            readMatrixResults(env.E2E_MATRIX_DIR, files),
+            readMatrixConclusions(api, runId),
+        ]).then(([results, conclusions]) => summarizeMatrix({ results, conclusions, runId }));
+    });
 }
 
 function readDeploymentEvidence(api, id, sha) {
@@ -792,22 +880,15 @@ function createCanonicalIssue(shared, env, body, sha, priority) {
 export function fallbackNote(candidate) {
     if (!candidate?.fallback || !candidate.head) return '';
     const headSkip = candidate.skipped?.find(item => item.sha === candidate.head);
-    const missing = headSkip?.reason?.includes('frontend-ci') ? 'CI' : 'Preview';
+    const missing = ['CI', 'Preview'].includes(candidate.headMissing)
+        ? candidate.headMissing
+        : headSkip?.reason?.includes('frontend-ci')
+          ? 'CI'
+          : 'Preview';
     return ` (не последний коммит master ${assertFullSha(candidate.head, 'Master head SHA').slice(0, 7)}: ждёт ${missing})`;
 }
 
-export function prepareReleaseQa({
-    env,
-    readApi,
-    writeApi,
-    sharedRoot,
-    post = postSlack,
-    probe = probePublicPreview,
-}) {
-    const qaLogin = isOwnerLogin(env.QA_LOGIN) ? RELEASE_OWNER : env.QA_LOGIN || 'SoRawSteak';
-    const priority = env.QA_PRIORITY || 'P2';
-    if (!['P0', 'P1', 'P2', 'P3'].includes(priority))
-        throw new Error('QA_PRIORITY must be P0, P1, P2, or P3.');
+function assertOwnerDispatch(env) {
     if (
         env.GITHUB_ACTOR !== 'syllik' ||
         env.GITHUB_TRIGGERING_ACTOR !== 'syllik' ||
@@ -817,19 +898,120 @@ export function prepareReleaseQa({
             'Only release owner syllik may select a candidate from trusted master workflow code.',
         );
     }
+}
+
+// The fallback of a candidate the `resolve` job chose (its outputs reach `prepare` as env), so the
+// handoff still says the candidate is not the master head.
+export function fallbackFromEnv(env) {
+    const head = env.CANDIDATE_FALLBACK_HEAD ?? '';
+    if (!head) return {};
+    if (!['CI', 'Preview'].includes(env.CANDIDATE_FALLBACK_MISSING))
+        throw new Error('CANDIDATE_FALLBACK_MISSING must be CI or Preview.');
+    return {
+        fallback: true,
+        head: assertFullSha(head, 'Master head SHA'),
+        headMissing: env.CANDIDATE_FALLBACK_MISSING,
+    };
+}
+
+const PREVIEW_ORIGIN = /^https:\/\/chipin-frontend-[a-z0-9]+-sylliks-projects\.vercel\.app$/;
+
+// The `resolve` job of prepare-release-qa.yml: the candidate and its immutable Preview, with every
+// check the e2e matrix relies on (trusted vercel[bot] deployment of the exact SHA, public Preview, the
+// SHA inside current master). `prepare` repeats the full trust checks on the same values.
+export function resolveReleaseCandidate({ env, api, probe = null }) {
+    const probeUrl =
+        probe ?? (url => probePublicPreview(url, fetch, env.VERCEL_AUTOMATION_BYPASS_SECRET));
+    return Promise.resolve()
+        .then(() => assertOwnerDispatch(env))
+        .then(() =>
+            resolveCandidate({
+                api,
+                sha: env.CANDIDATE_SHA ?? '',
+                deploymentId: env.PREVIEW_DEPLOYMENT_ID ?? '',
+            }),
+        )
+        .then(candidate =>
+            Promise.all([
+                readCandidate(api, candidate.deploymentId, candidate.sha, probeUrl),
+                compare(api, candidate.sha, 'master'),
+            ]).then(([preview, toMaster]) => {
+                if (!['ahead', 'identical'].includes(toMaster?.status))
+                    throw new Error('Candidate is outside current master ancestry.');
+                return {
+                    sha: candidate.sha,
+                    deploymentId: preview.id,
+                    url: preview.url,
+                    fallbackHead: candidate.fallback ? candidate.head : '',
+                    fallbackMissing: candidate.fallback ? candidate.headMissing : '',
+                };
+            }),
+        );
+}
+
+// GITHUB_OUTPUT lines of the `resolve` job; every value is re-validated, so nothing else can reach
+// the e2e job's checkout ref or target.
+export function formatResolveOutputs(resolved) {
+    const sha = assertFullSha(resolved.sha, 'Candidate SHA');
+    if (!Number.isSafeInteger(resolved.deploymentId) || resolved.deploymentId <= 0)
+        throw new Error('Resolved deployment ID must be a positive integer.');
+    if (!PREVIEW_ORIGIN.test(resolved.url ?? ''))
+        throw new Error('Resolved Preview URL is not an immutable Preview origin.');
+    const fallback = fallbackFromEnv({
+        CANDIDATE_FALLBACK_HEAD: resolved.fallbackHead,
+        CANDIDATE_FALLBACK_MISSING: resolved.fallbackMissing,
+    });
+    return [
+        `sha=${sha}`,
+        `deployment_id=${resolved.deploymentId}`,
+        `url=${resolved.url}`,
+        `fallback_head=${fallback.head ?? ''}`,
+        `fallback_missing=${fallback.headMissing ?? ''}`,
+        '',
+    ].join('\n');
+}
+
+// A same-SHA rerun's matrix result as an Issue comment, with the SMOKE-SHORT checks whose owner it
+// changes. It never starts with `qa`, so the result reader ignores it.
+export function formatMatrixComment(matrix, plan = null) {
+    const checks = renderMatrixChecks(plan, matrix);
+    return `${renderMatrixBanner(matrix)}\n\n${renderMatrixTable(matrix)}\n${checks ? `\n${checks}\n` : ''}`;
+}
+
+export function prepareReleaseQa({
+    env,
+    readApi,
+    writeApi,
+    sharedRoot,
+    post = postSlack,
+    probe = null,
+    matrixFiles,
+}) {
+    const probeUrl =
+        probe ?? (url => probePublicPreview(url, fetch, env.VERCEL_AUTOMATION_BYPASS_SECRET));
+    const qaLogin = isOwnerLogin(env.QA_LOGIN) ? RELEASE_OWNER : env.QA_LOGIN || 'SoRawSteak';
+    const priority = env.QA_PRIORITY || 'P2';
+    if (!['P0', 'P1', 'P2', 'P3'].includes(priority))
+        throw new Error('QA_PRIORITY must be P0, P1, P2, or P3.');
+    assertOwnerDispatch(env);
     const currentRunId = Number(env.GITHUB_RUN_ID);
-    let sha, deploymentId, candidate, preview, baseline, plan;
-    return resolveCandidate({
-        api: readApi,
-        sha: env.CANDIDATE_SHA ?? '',
-        deploymentId: env.PREVIEW_DEPLOYMENT_ID ?? '',
-    })
-        .then(resolved => {
-            candidate = resolved;
+    const resolvedFallback = fallbackFromEnv(env);
+    let sha, deploymentId, candidate, preview, baseline, plan, matrix;
+    return Promise.all([
+        resolveCandidate({
+            api: readApi,
+            sha: env.CANDIDATE_SHA ?? '',
+            deploymentId: env.PREVIEW_DEPLOYMENT_ID ?? '',
+        }),
+        readMatrix({ api: readApi, env, files: matrixFiles }),
+    ])
+        .then(([resolved, matrixResult]) => {
+            candidate = { ...resolved, ...resolvedFallback };
+            matrix = matrixResult;
             sha = resolved.sha;
             deploymentId = resolved.deploymentId;
             return Promise.all([
-                readCandidate(readApi, deploymentId, sha, probe),
+                readCandidate(readApi, deploymentId, sha, probeUrl),
                 readCi(readApi, sha),
                 readApi
                     .list(`${REPO_PATH}/deployments?environment=Production`)
@@ -857,6 +1039,7 @@ export function prepareReleaseQa({
                     sha,
                     url: preview.url,
                     fallbackNote: fallbackNote(candidate),
+                    matrix,
                 });
                 return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({
                     outcome: 'NO_MANUAL_QA_REQUIRED',
@@ -866,6 +1049,7 @@ export function prepareReleaseQa({
                     evidence: plan.evidence,
                     included: plan.included,
                     noQa: plan.noQa,
+                    matrix,
                     slack,
                 }));
             }
@@ -897,14 +1081,27 @@ export function prepareReleaseQa({
                         deploymentId,
                         url: preview.url,
                         plan,
+                        matrix,
                     });
                     const obtain = existing
                         ? Promise.resolve(existing)
                         : createCanonicalIssue(shared, env, body, sha, priority).then(number =>
                               readApi.request(`${REPO_PATH}/issues/${number}`),
                           );
+                    // A reused Issue keeps its body; this run's matrix result goes into a comment,
+                    // posted before the tester is pinged.
+                    const report = issue =>
+                        existing && matrix
+                            ? writeApi.request(`${REPO_PATH}/issues/${issue.number}/comments`, {
+                                  method: 'POST',
+                                  body: { body: formatMatrixComment(matrix, plan) },
+                              })
+                            : null;
                     return obtain.then(issue => {
-                        return admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, issue.number)
+                        return Promise.resolve(report(issue))
+                            .then(() =>
+                                admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, issue.number),
+                            )
                             .then(() =>
                                 assignQa(
                                     readApi,
@@ -928,6 +1125,7 @@ export function prepareReleaseQa({
                                         sha,
                                         url: preview.url,
                                         fallbackNote: fallbackNote(candidate),
+                                        matrix,
                                     }).then(slack => ({
                                         outcome: 'QA_ISSUE_READY',
                                         issue: assigned.html_url,
@@ -938,6 +1136,7 @@ export function prepareReleaseQa({
                                         missingSteps: plan.missingSteps,
                                         noQa: plan.noQa,
                                         smoke: plan.smoke,
+                                        matrix,
                                         slack,
                                     })),
                                 ),

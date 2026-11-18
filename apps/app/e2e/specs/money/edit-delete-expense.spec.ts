@@ -11,6 +11,7 @@ import {
     expectSettledUp,
     openGroupTab,
     openGroupWithGroupsList,
+    reloadAndReadGroup,
     selectGroupTab,
     uniqueSuffix,
     visibleOne,
@@ -66,14 +67,14 @@ const openExpenseAction = async (
 };
 
 /**
- * Back from the expense history to the group page in the same document, then its Balances tab.
- * The page that wrote is never reloaded or reopened with `goto`: a reload within 1 s of a write
- * restores the pre-write group from the persisted cache (throttled by 1 s) and does not refetch it
- * while fresh (30 s), so the old balance would show (#724).
+ * Back from the expense history to the group page, reloaded right after the write, then its
+ * Balances tab: the persisted cache may still hold the group from before the write, and the tab
+ * must show the server's balance anyway (#724).
  */
 const backToGroupBalances = async (page: Page, groupId: string): Promise<Locator> => {
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`/group/${groupId}$`));
+    await reloadAndReadGroup(page, groupId);
 
     return selectGroupTab(page, 'Balances');
 };

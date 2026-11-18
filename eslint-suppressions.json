@@ -512,11 +512,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/activity/ActivityList.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/activity/ActivitySidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -648,11 +643,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/add-expense/components/expense-details-section/components/expense-amount-fields/ExpenseAmountFields.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/add-expense/components/expense-details-section/components/expense-currency-category-fields/ExpenseCurrencyCategoryFields.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -678,17 +668,7 @@
       "count": 1
     }
   },
-  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-input-actions/ExpenseInputActions.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/add-expense/components/expense-split-card/components/expense-split-mode-control/ExpenseSplitModeControl.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-users-list/ExpenseUsersList.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }

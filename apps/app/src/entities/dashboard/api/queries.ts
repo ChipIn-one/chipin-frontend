@@ -4,6 +4,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { api } from 'shared/api/client';
+import { refetchIfRestored } from 'shared/api/queryClient';
 
 import { toDashboardBalances } from '../model/toDashboardBalances';
 
@@ -18,6 +19,7 @@ export const dashboardBalancesQueryOptions = () =>
     queryOptions({
         queryKey: dashboardKeys.balances(),
         staleTime: DASHBOARD_STALE_TIME,
+        refetchOnMount: refetchIfRestored,
         queryFn: ({ signal }) =>
             api('get', '/dashboard/balances', { signal }).then(toDashboardBalances),
     });

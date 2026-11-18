@@ -4,12 +4,7 @@
 // still queued: it has no version yet).
 import type { QueryClient } from '@tanstack/react-query';
 
-import {
-    appendOutboxOp,
-    hasPendingCreateOf,
-    type OutboxKind,
-    type OutboxOpBase,
-} from './outboxStore';
+import { appendOutboxOp, type OutboxKind, type OutboxOpBase } from './outboxStore';
 
 export const OUTBOX_OPS: Record<OutboxKind, { entryKind: 'expense'; needsCachedEntry: boolean }> = {
     createExpense: { entryKind: 'expense', needsCachedEntry: false },
@@ -117,10 +112,11 @@ export const enqueueOutboxOp = <Op extends OutboxOpBase>(
     const opId = crypto.randomUUID();
     const createdAt = Date.now();
 
-    return appendOutboxOp(seq =>
+    // N3: whether a create of the entry is still queued is read from the draft under the lock.
+    return appendOutboxOp((seq, queue) =>
         build({
             base: { opId, seq, owner, entryKind, createdAt, schema: 1, kind, entryId },
-            baseVersion: hasPendingCreateOf(entryId) ? null : (cached?.version ?? null),
+            baseVersion: queue.hasPendingCreateOf(entryId) ? null : (cached?.version ?? null),
         }),
     ).then(op => {
         requestPersistentStorage();

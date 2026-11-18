@@ -1,10 +1,17 @@
-// SMOKE-SHORT b-e (docs/engineering/release-qa.md, scripts/release-qa/impact-rules.mjs) in Chromium.
+// SMOKE-SHORT b-e (docs/engineering/release-qa.md, scripts/release-qa/impact-rules.mjs) on every
+// profile of playwright.config.ts (desktop and phone layouts).
 // Item a (Google sign-in opens Dashboard) needs the real OAuth flow and stays manual. Preconditions
 // are arranged through the staging API; the checked action goes through the UI.
 import type { Page } from '@playwright/test';
 
 import { expect, test } from '../support/fixtures';
-import { clickAndSaveSettings, exactBalance, openGroupTab, uniqueSuffix } from '../support/ui';
+import {
+    clickAndSaveSettings,
+    exactBalance,
+    openGroupTab,
+    uniqueSuffix,
+    visibleOne,
+} from '../support/ui';
 
 /**
  * The user's persisted query cache (shared/offline/queryPersister.ts: idb-keyval, key
@@ -56,12 +63,16 @@ test.describe('SMOKE-SHORT', () => {
 
         // The modal takes its groups from the groups list, read when it opens: wait until that list
         // (the page's group links) holds this group, else the modal opens with no group.
-        await expect(page.getByRole('link', { name: new RegExp(groupName) }).first()).toBeVisible();
+        await expect(
+            visibleOne(page.getByRole('link', { name: new RegExp(groupName) })),
+        ).toBeVisible();
 
-        // The desktop sidebar's button: at this viewport the floating and mobile-bar variants are
-        // `display: none`, so they are not in the accessibility tree (strict mode would catch a
-        // second visible one). No landmark wraps the sidebar to scope it further.
-        await page.getByRole('button', { name: 'Add expense', exact: true }).click();
+        // The button of the layout shown at this viewport (desktop sidebar, floating or mobile bar).
+        const addExpense = page
+            .getByRole('button', { name: 'Add expense', exact: true })
+            .filter({ visible: true });
+        await expect(addExpense).toHaveCount(1);
+        await addExpense.click();
         const dialog = page.getByRole('dialog', { name: 'Add an expense' });
         // Neither field has an accessible label (the "Amount" text is not bound to the input), so
         // the placeholders are their only stable handles.

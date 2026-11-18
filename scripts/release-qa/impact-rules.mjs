@@ -22,7 +22,10 @@ export const IMPACT_RULES = [
 
 // SMOKE-SHORT: owner decision of 2026-10-28 in ChipIn-one/chipin-frontend#543. One short regression
 // round when the compare touches routing, auth/session, API, store bootstrap, service worker/PWA,
-// theme switching or Vercel routing. Its last check is AUTH-041, so AUTH-041 is never added twice.
+// theme switching or Vercel routing. It holds AUTH-041, so AUTH-041 is never added twice. Checks with
+// `automated` are covered by the Playwright suite (docs/e2e-tests.md) on the release browser matrix:
+// the QA Issue marks them as automated when the matrix passed on every profile, and gives them back
+// to the tester otherwise. The other checks need a real Google account or a real phone.
 export const SMOKE_SHORT = {
     id: 'SMOKE-SHORT',
     sourceUrl: 'https://github.com/ChipIn-one/chipin-frontend/issues/543',
@@ -77,20 +80,29 @@ export const SMOKE_SHORT = {
         {
             step: 'Create a group expense split equally',
             expected: 'The expense is listed and the balance changed',
+            automated: true,
         },
         {
             step: 'Open Balances / Settle up as the other participant',
             expected: 'The matching balance is shown',
+            automated: true,
         },
         {
             step: 'Switch language and theme, then reload',
             expected: 'Both apply without a flash and survive the reload',
+            automated: true,
         },
         {
             step: AUTH_041_STEP,
             expected: AUTH_041_EXPECTED,
             source: 'AUTH-041',
             sourceUrl: AUTH_041_URL,
+            automated: true,
+        },
+        {
+            step: 'On a real phone: type into the expense form, then open the Preview installed to the home screen',
+            expected:
+                'The keyboard does not cover the field, nothing sits under the notch or the home bar, the installed app starts, and new screens look right',
         },
     ],
 };

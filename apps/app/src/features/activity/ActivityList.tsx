@@ -91,7 +91,7 @@ const ActivityList = ({ activeFilter }: Props) => {
 
     return (
         <>
-            <ActivityEventsList log={filteredEvents} isFullActivityFeed />
+            <ActivityEventsList log={filteredEvents} isFullActivityFeed isNavigable />
 
             {isNextPageLoading && (
                 <Flex justify="center" py="4">
@@ -124,4 +124,4 @@ const ActivityList = ({ activeFilter }: Props) => {
     );
 };
 
-export default ActivityList;
+export { ActivityList };

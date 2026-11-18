@@ -13,6 +13,7 @@ import {
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { toActivityItems } from 'entities/activity';
 import { api, ApiError, toApiError } from 'shared/api/client';
+import { refetchIfRestored } from 'shared/api/queryClient';
 import { isNetworkUsable } from 'shared/offline/network';
 
 import {
@@ -50,6 +51,7 @@ export const groupsListQueryOptions = () =>
     infiniteQueryOptions({
         queryKey: groupsKeys.list(),
         staleTime: GROUPS_LIST_STALE_TIME,
+        refetchOnMount: refetchIfRestored,
         initialPageParam: firstPageParam(),
         queryFn: ({ pageParam, signal }) => fetchGroupsPage(pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,
@@ -132,6 +134,7 @@ export const groupDetailQueryOptions = (groupId: string) =>
     queryOptions({
         queryKey: groupsKeys.detail(groupId),
         staleTime: GROUP_DETAIL_STALE_TIME,
+        refetchOnMount: refetchIfRestored,
         queryFn: ({ client, signal }) => fetchGroupDetail(client, groupId, signal),
     });
 
@@ -210,6 +213,7 @@ export const groupActivityQueryOptions = (groupId: string) =>
     infiniteQueryOptions({
         queryKey: groupsKeys.activity(groupId),
         staleTime: GROUP_DETAIL_STALE_TIME,
+        refetchOnMount: refetchIfRestored,
         initialPageParam: firstActivityPageParam(),
         queryFn: ({ pageParam, signal }) => fetchGroupActivityPage(groupId, pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,

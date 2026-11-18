@@ -1,8 +1,15 @@
-import { dehydrate, InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
+import {
+    dehydrate,
+    hydrate,
+    InfiniteQueryObserver,
+    QueryClient,
+    QueryObserver,
+} from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { expect, test, vi } from 'vitest';
 
 import { ApiError } from 'shared/api/client';
+import { createQueryClient, PAGE_LOADED_AT, refetchIfRestored } from 'shared/api/queryClient';
 import { dehydrateOptions, trimInfinitePages } from 'shared/offline/queryPersister';
 import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { testGroup, wireGroup } from 'test/groupFixtures';
@@ -427,4 +434,80 @@ test('a detail with an unreadable preview carries it as an invalid item, left ou
             },
         ),
     ).toEqual([preview('p1')]);
+});
+
+const groupOwing = (net: number) =>
+    wireGroup('a', {
+        members: [
+            {
+                user: wireGroup('a').creator,
+                balancesByCurrency: { USD: { currency: 'USD', netBalance: net } },
+            },
+        ],
+    });
+
+const usdNet = (detail: Group | undefined): bigint | undefined =>
+    detail?.members[0]?.balancesByCurrency.USD?.net.minor;
+
+test('#724 a detail restored from a snapshot taken before a payment is read again on mount, showing the restored balance meanwhile', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    let served = groupOwing(-50);
+
+    server.use(http.get('*/groups/a', () => HttpResponse.json(served)));
+    try {
+        // Before the reload: the detail is read and the cache saved, then a payment is recorded
+        // and the throttled save never runs.
+        vi.setSystemTime(PAGE_LOADED_AT - 800);
+        const before = createQueryClient();
+
+        await before.fetchQuery(groupDetailQueryOptions('a'));
+        const snapshot = dehydrate(before, dehydrateOptions);
+
+        served = groupOwing(-20);
+
+        // The reload, within the detail's stale time of the snapshot.
+        vi.setSystemTime(PAGE_LOADED_AT + 200);
+        const after = createQueryClient();
+
+        hydrate(after, snapshot);
+        const observer = new QueryObserver(after, groupDetailQueryOptions('a'));
+        const unsubscribe = observer.subscribe(() => undefined);
+
+        try {
+            expect(usdNet(observer.getCurrentResult().data)).toBe(-500_000n);
+            expect(observer.getCurrentResult().isFetching).toBe(true);
+            await vi.waitFor(() => {
+                expect(usdNet(observer.getCurrentResult().data)).toBe(-200_000n);
+            });
+        } finally {
+            unsubscribe();
+        }
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('#724 a detail read in this page stays fresh for its stale time: a mount reads nothing', async () => {
+    let reads = 0;
+
+    server.use(
+        http.get('*/groups/a', () => {
+            reads += 1;
+            return HttpResponse.json(groupOwing(-50));
+        }),
+    );
+    const client = createQueryClient();
+
+    await client.fetchQuery(groupDetailQueryOptions('a'));
+    const observer = new QueryObserver(client, groupDetailQueryOptions('a'));
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    expect(observer.getCurrentResult().isFetching).toBe(false);
+    unsubscribe();
+    expect(reads).toBe(1);
+});
+
+test('#724 the list balances and the group activity restored from before the reload are read again on mount', () => {
+    expect(groupsListQueryOptions().refetchOnMount).toBe(refetchIfRestored);
+    expect(groupActivityQueryOptions('a').refetchOnMount).toBe(refetchIfRestored);
 });

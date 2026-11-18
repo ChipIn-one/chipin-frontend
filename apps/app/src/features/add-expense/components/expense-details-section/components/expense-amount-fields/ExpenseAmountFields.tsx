@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -9,6 +10,7 @@ import { AmountBox, DescriptionInput, LargeAmountInput } from './styled';
 
 const ExpenseAmountFields = () => {
     const { t } = useTranslation('group');
+    const amountId = useId();
     const { amount, fractionDigits, description, setAmount, setDescription } = useExpenseModalStore(
         useShallow(state => ({
             amount: state.amount,
@@ -23,11 +25,12 @@ const ExpenseAmountFields = () => {
 
     return (
         <AmountBox>
-            <Text as="label" size="2" weight="bold" color="gray">
+            <Text as="label" htmlFor={amountId} size="2" weight="bold" color="gray">
                 {t('common:fields.amount')}
             </Text>
 
             <LargeAmountInput
+                id={amountId}
                 value={amount}
                 onChange={setAmount}
                 maxFractionDigits={fractionDigits}
@@ -41,6 +44,7 @@ const ExpenseAmountFields = () => {
                 size="3"
                 variant="surface"
                 placeholder={t('expenses.modal.fields.descriptionPlaceholder')}
+                aria-label={t('common:fields.description')}
                 value={description}
                 onChange={event => setDescription(event.target.value)}
             />
@@ -48,4 +52,4 @@ const ExpenseAmountFields = () => {
     );
 };
 
-export default ExpenseAmountFields;
+export { ExpenseAmountFields };

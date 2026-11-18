@@ -1,10 +1,11 @@
-// Money-critical flows (#667): going offline. Chromium only, with service workers allowed for this
-// file (the Vite dev server registers none, `devOptions.enabled: false`; a Vercel Preview target
-// does). With the production flags no change can wait offline and sync later: offline writes are
-// behind VITE_FEATURE_OFFLINE_WRITES (off), and the ledger, group and user writes are refused while
-// offline (hooks/useLedgerMutations.ts, useGroupMutations.ts, useUserMutations.ts). So only the
-// banner and the saved data it promises are checked. Without a service worker that saved data is the
-// in-memory query cache of the open page.
+// Money-critical flows (#667): going offline, on every profile. With the production flags no change
+// can wait offline and sync later: offline writes are behind VITE_FEATURE_OFFLINE_WRITES (off), and
+// the ledger, group and user writes are refused while offline (hooks/useLedgerMutations.ts,
+// useGroupMutations.ts, useUserMutations.ts). So only the banner and the saved data it promises are
+// checked: the in-memory query cache of the open page. `context.setOffline` works in all engines.
+// Service workers are allowed only in Chromium (a Vercel Preview target registers one; the Vite dev
+// server does not): Playwright supports network control of service workers only in Chromium, so in
+// Firefox and WebKit they stay blocked and the worker's offline cache is not covered there (#735).
 import { expect, test } from '../../support/fixtures';
 import {
     exactBalance,
@@ -14,14 +15,14 @@ import {
     uniqueSuffix,
 } from '../../support/ui';
 
-test.use({ serviceWorkers: 'allow' });
+// https://github.com/ChipIn-one/chipin-frontend/issues/735: service workers in Firefox and WebKit.
+test.use({
+    serviceWorkers: async ({ browserName }, provide) => {
+        await provide(browserName === 'chromium' ? 'allow' : 'block');
+    },
+});
 
 test.describe('offline', () => {
-    test.skip(
-        ({ browserName }) => browserName !== 'chromium',
-        'The offline spec runs in Chromium only',
-    );
-
     test('going offline shows the banner over the saved balance, and reconnecting hides it', async ({
         provisioning,
         signIn,
