@@ -86,7 +86,7 @@ There is no repository deploy workflow and no release PR.
 ## Controlled sequence
 
 1. Open one Issue-backed docs-only implementation PR against `master`; let the
-   `Native Development link` workflow associate it with the Issue.
+   `Frontend PR metadata` workflow (`reconcile`) associate it with the Issue.
 2. Confirm required `frontend-ci` succeeds and request independent review for
    the exact implementation head SHA. A human merges it into `master`.
 3. Verify the Issue is still `open` and Project #5 shows `Awaiting release`.
