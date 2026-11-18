@@ -27,7 +27,7 @@ test('application code, static assets, entry HTML, locales, Vercel, PWA and Vite
         expect(isUiAffecting(path), path).toBe(true);
 });
 
-test('tests, test setup, CI, workflows, tooling, packages and docs are not UI-affecting', () => {
+test('tests, test setup, CI, workflows, tooling, package manifests and docs are not UI-affecting', () => {
     for (const path of [
         'apps/app/src/App.test.tsx',
         'apps/app/src/helpers/theme.test.ts',

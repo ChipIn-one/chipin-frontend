@@ -22,7 +22,7 @@
         "test:task": "npm run test:task -w @chipin/app --",
         "test:full": "npm run test:full -w @chipin/app && npm run test:repo",
         "typecheck": "npm run typecheck -w @chipin/app && npm run typecheck:packages",
-        "typecheck:packages": "npm run typecheck -w packages --if-present",
+        "typecheck:packages": "npm run typecheck -w packages",
         "verify": "npm run format:check && npm run lint && npm run check:file-layout && npm run typecheck",
         "verify:full": "npm run format:check && npm run lint:full && npm run check:file-layout && npm run typecheck:packages && npm run test:full && npm run build && npm run build:ds-gallery",
         "vercel-build": "npm run vercel-build -w @chipin/app --",

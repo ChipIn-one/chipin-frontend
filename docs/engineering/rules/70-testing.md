@@ -71,7 +71,7 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   store/API changes use the owning store/API tests plus directly affected UI tests, and component
   changes use the component test plus the smallest affected integration test.
 - `npm run test:full` runs the complete Vitest suite once.
-- `npm run typecheck` runs `tsc -b`.
+- `npm run typecheck` runs `tsc -b`, then `typecheck:packages` (`tsc -p` in each `packages/*`).
 - `npm run format` rewrites the repository with Prettier (`prettier.config.js`); never run it in a task.
   Run `npx prettier --write <files>` on the files you changed. `npm run format:check` checks without
   writing; `verify`, `verify:full`, and CI run it, so CI enforces formatting.
