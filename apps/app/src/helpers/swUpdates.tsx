@@ -226,7 +226,8 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
 
     isInitialized = true;
 
-    if (!('serviceWorker' in navigator)) {
+    // Unsupported browsers lack the container; stubbed environments may expose it as undefined.
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker) {
         return;
     }
 
@@ -235,7 +236,7 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
         return;
     }
 
-    let registration: ServiceWorkerRegistration;
+    let registration: ServiceWorkerRegistration | undefined;
 
     try {
         // Calling register() when a SW is already active returns the existing
@@ -243,6 +244,11 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
         registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     } catch {
         // HTTPS is required in production; fail silently in unsupported envs.
+        return;
+    }
+
+    // A stubbed register() (Playwright `serviceWorkers: 'block'`) resolves undefined: nothing to watch.
+    if (typeof registration?.addEventListener !== 'function') {
         return;
     }
 

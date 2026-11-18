@@ -21,6 +21,9 @@ const initializeSentry = () => {
         release: APP_VERSION,
         sampleRate: 1,
         sendDefaultPii: false,
+        // Automation-driven browsers send no release-health sessions either (#754).
+        integrations: defaults =>
+            navigator.webdriver ? defaults.filter(i => i.name !== 'BrowserSession') : defaults,
         beforeBreadcrumb: breadcrumb => {
             if (breadcrumb.category === 'console') {
                 return null;
@@ -35,6 +38,11 @@ const initializeSentry = () => {
             };
         },
         beforeSend: event => {
+            // Automation-driven browsers (e2e against Vercel previews) must not report (#754).
+            if (navigator.webdriver) {
+                return null;
+            }
+
             const request = event.request
                 ? {
                       method: event.request.method,
