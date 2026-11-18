@@ -24,6 +24,9 @@ permissions:
   pull-requests: write
   checks: read
 
+# The only FE workflow that writes the Development link and PR metadata: the action reconciles the native link itself,
+# so there is no separate Native Development link workflow (chipin-frontend#760). One group per PR
+# serialises the pull_request, workflow_run and dispatch runs.
 concurrency:
   group: pr-metadata-${{ github.repository }}-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || inputs.pr_number }}
   cancel-in-progress: false
