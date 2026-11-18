@@ -109,15 +109,20 @@ export class OutboxLimitError extends Error {
     }
 }
 
-/** The append write was rejected (quota, private mode): the op does not exist (§2.8). */
+/**
+ * The append write was rejected (quota, private mode) or its write lock timed out: the op does not
+ * exist (§2.8). A lock timeout is transient (`isTransient`: the `saveRetry` toast, try again).
+ */
 export class OutboxPersistError extends Error {
     override readonly name = 'OutboxPersistError';
     /** What the IndexedDB write rejected with. */
     readonly writeError: unknown;
+    readonly isTransient: boolean;
 
     constructor(writeError: unknown) {
         super('The outbox op could not be saved');
         this.writeError = writeError;
+        this.isTransient = writeError instanceof OutboxLockTimeoutError;
     }
 }
 
@@ -293,20 +298,27 @@ const readKeys = (userId: string): Promise<ReadKeys> =>
     );
 
 // Only a changed key is written, the failed key first (C3-05): after a crash between the two
-// writes the op is in both, and failed wins on the next read.
-const writeKeys = (userId: string, draft: OutboxState, read: ReadKeys): Promise<void> => {
+// writes the op is in both, and failed wins on the next read. A discard writes the outbox key
+// first (`outboxFirst`, 03-15b R1 N2): a crash between the two leaves a discarded failed create
+// failed, never its dependent edits pending without it.
+const writeKeys = (
+    userId: string,
+    draft: OutboxState,
+    read: ReadKeys,
+    outboxFirst: boolean,
+): Promise<void> => {
     const failedText = persistCodec.stringify(toFailedRecords(draft));
     const outboxText = persistCodec.stringify(toPersisted(draft));
-    const writeFailed =
+    const writeFailed = (): Promise<void> =>
         failedText === (read.failedText ?? EMPTY_FAILED_TEXT)
             ? Promise.resolve()
             : set(outboxFailedKey(userId), failedText);
-
-    return writeFailed.then(() =>
+    const writeState = (): Promise<void> =>
         outboxText === (read.outboxText ?? EMPTY_OUTBOX_TEXT)
-            ? undefined
-            : set(outboxStateKey(userId), outboxText),
-    );
+            ? Promise.resolve()
+            : set(outboxStateKey(userId), outboxText);
+
+    return outboxFirst ? writeState().then(writeFailed) : writeFailed().then(writeState);
 };
 
 // `DOMException` (the IDB errors) is not an `Error` in every realm: read its `name` directly.
@@ -329,9 +341,9 @@ const outboxVersions = new Map<string, string>();
 const pendingRemovals = new Set<string>();
 const cancelledOpIds = new Set<string>();
 const statusByOpId = new Map<string, OutboxStatus>();
-// The version a settled op of the entry answered, in any tab (`settled`, §2.2): an append prefers it
-// to the cached entry's until the `ledger.entry(id)` query of 03-16a holds it.
-const settledVersions = new Map<string, string>();
+// M3: the appends of an entry not landed yet. While one is, a sent op's removal keeps the entry's
+// version (the op being appended may be an edit or a delete based on an older cached version).
+const appendsInFlight = new Map<string, number>();
 const statusListeners = new Set<(opId: string, status: OutboxStatus) => void>();
 const writeListeners = new Set<() => void>();
 // Entries whose failed-list write is still pending: their block must stay (D29).
@@ -345,7 +357,7 @@ const forgetMemory = (): void => {
     pendingRemovals.clear();
     cancelledOpIds.clear();
     statusByOpId.clear();
-    settledVersions.clear();
+    appendsInFlight.clear();
     failureWrites.clear();
 };
 
@@ -507,10 +519,14 @@ export const outboxRestoreState = (userId: string): OutboxRestore =>
 /** §2.8: an append write failed in this session; offline writing is off until restart. */
 export const isOutboxPersistFailed = (): boolean => persistFailedThisSession;
 
-/** Whose write it is: a run passes its fence; `drain` also needs its drain session current. */
+/**
+ * Whose write it is: a run passes its fence; `drain` also needs its drain session current.
+ * `outboxFirst`: the outbox key is written before the failed key (a discard, N2).
+ */
 export interface OutboxWriteGuard {
     fence?: OutboxFence;
     drain?: boolean;
+    outboxFirst?: boolean;
 }
 
 /**
@@ -522,7 +538,7 @@ export interface OutboxWriteGuard {
  */
 export const writeOutbox = <T>(
     change: (draft: OutboxState) => T,
-    { fence = currentOutboxFence(), drain = false }: OutboxWriteGuard = {},
+    { fence = currentOutboxFence(), drain = false, outboxFirst = false }: OutboxWriteGuard = {},
 ): Promise<T> => {
     const owner = ownerId;
     const isAllowed = (): boolean =>
@@ -541,7 +557,7 @@ export const writeOutbox = <T>(
             }
             const result = change(read.state);
 
-            return writeKeys(owner, read.state, read).then(() => {
+            return writeKeys(owner, read.state, read, outboxFirst).then(() => {
                 if (ownerId === owner && isOwnerFence(fence)) {
                     state = read.state;
                     // The write landed: a failing listener must not turn it into a rejection.
@@ -595,6 +611,48 @@ const countOps = (draft: OutboxState): number =>
 /** §2.8: the outbox holds `OUTBOX_LIMIT` pending and failed ops; no op is appended. */
 export const isOutboxFull = (): boolean => countOps(state) >= OUTBOX_LIMIT;
 
+/**
+ * A repeated create of an entry (one client entry id, §2.7) with another draft: the queued create
+ * may already be on the server, so it is never replaced (R2-L1).
+ */
+export class OutboxCreateSentError extends Error {
+    override readonly name = 'OutboxCreateSentError';
+
+    constructor() {
+        super('The create of this entry is already being sent');
+    }
+}
+
+// The create of the entry in the queue: pending, sent and waiting for its removal, or failed.
+const createIn = (draft: OutboxState, entryId: string): OutboxOpBase | undefined =>
+    [...draft.ops, ...[...draft.failed.values()].map(({ op }) => op)].find(
+        op => op.entryId === entryId && op.kind === 'createExpense',
+    );
+
+// Object keys in a fixed order: equal content has equal text whatever order it was built in.
+const sortedKeys = (_key: string, value: unknown): unknown =>
+    typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+        : value;
+
+// What an op asks the server for, without the fields each append makes anew.
+const contentOf = ({ opId: _opId, seq: _seq, createdAt: _createdAt, ...content }: OutboxOpBase) =>
+    JSON.stringify(content, sortedKeys);
+
+// §2.7: a repeated create of an entry. The same content is not appended again (true); another
+// draft is refused whatever the claim (R2-L1: a create in backoff may already be on the server).
+const isRepeatedCreate = (draft: OutboxState, op: OutboxOpBase): boolean => {
+    const queued = op.kind === 'createExpense' ? createIn(draft, op.entryId) : undefined;
+
+    if (queued === undefined) {
+        return false;
+    }
+    if (contentOf(queued) !== contentOf(op)) {
+        throw new OutboxCreateSentError();
+    }
+    return true;
+};
+
 // An unsent create of the entry (a sent one, still waiting for its removal, has a version).
 const hasPendingCreateIn = (draft: OutboxState, entryId: string): boolean =>
     draft.ops.some(
@@ -609,10 +667,13 @@ export interface OutboxAppendView {
 
 /**
  * Appends the op that `build` makes with the next `seq` (C2-16), resolving once the write has
- * landed. Refused at the limit (`OutboxLimitError`). A rejected write (`OutboxPersistError`): the op
- * does not exist and offline writing is off until restart (§2.8, Sentry `outbox.persist_failed`).
- * A write-lock timeout is an `OutboxPersistError` too (the same toast), but transient: offline
- * writing stays on (Sentry `outbox.write_lock_timeout`).
+ * landed. A create of an entry that already has the same create in the queue (a repeated submit of
+ * the same form, §2.7) is not appended: it resolves with the built op and writes nothing; with
+ * another draft it is refused (`OutboxCreateSentError`), nothing is appended. Refused at the
+ * limit (`OutboxLimitError`). A rejected write (`OutboxPersistError`): the op does not exist and
+ * offline writing is off until restart (§2.8, Sentry `outbox.persist_failed`). A write-lock
+ * timeout is a transient `OutboxPersistError` (the `saveRetry` toast): offline writing stays on
+ * (Sentry `outbox.write_lock_timeout`).
  */
 export const appendOutboxOp = <Op extends OutboxOpBase>(
     build: (seq: number, queue: OutboxAppendView) => Op,
@@ -625,36 +686,59 @@ export const appendOutboxOp = <Op extends OutboxOpBase>(
             hasPendingCreateOf: entryId => hasPendingCreateIn(draft, entryId),
         });
 
-        draft.nextSeq += 1;
-        draft.ops.push(op);
+        if (!isRepeatedCreate(draft, op)) {
+            draft.nextSeq += 1;
+            draft.ops.push(op);
+        }
         return op;
     }).catch((error: unknown) => {
-        if (error instanceof OutboxLimitError || error instanceof OutboxWriteStoppedError) {
-            throw error;
-        }
-        if (error instanceof OutboxLockTimeoutError) {
-            Sentry.captureMessage('outbox.write_lock_timeout', { level: 'warning' });
-            throw new OutboxPersistError(error);
-        }
-        persistFailedThisSession = true;
-        Sentry.captureMessage('outbox.persist_failed', {
-            level: 'warning',
-            tags: { 'offline.error': errorName(error) },
-        });
-        throw new OutboxPersistError(error);
+        throw toAppendError(error);
     });
 
-/** The version a settled op of the entry answered (null for a delete: forgotten). */
-export const noteSettledVersion = (entryId: string, version: string | null): void => {
-    if (version === null) {
-        settledVersions.delete(entryId);
-    } else {
-        settledVersions.set(entryId, version);
+// Why an append was refused, as its caller shows it (§2.8).
+const toAppendError = (error: unknown): Error => {
+    if (
+        error instanceof OutboxLimitError ||
+        error instanceof OutboxWriteStoppedError ||
+        error instanceof OutboxCreateSentError
+    ) {
+        return error;
     }
+    if (error instanceof OutboxLockTimeoutError) {
+        Sentry.captureMessage('outbox.write_lock_timeout', { level: 'warning' });
+        return new OutboxPersistError(error);
+    }
+    persistFailedThisSession = true;
+    Sentry.captureMessage('outbox.persist_failed', {
+        level: 'warning',
+        tags: { 'offline.error': errorName(error) },
+    });
+    return new OutboxPersistError(error);
 };
 
-export const settledVersionOf = (entryId: string): string | null =>
-    settledVersions.get(entryId) ?? null;
+/**
+ * M3: counts an append of the entry from its call (before its write is queued) until it settled.
+ * Once none is left and no op of the entry is queued or failed (the append failed), a version kept
+ * for it is forgotten.
+ */
+export const trackOutboxAppend = <T>(entryId: string, append: () => Promise<T>): Promise<T> => {
+    appendsInFlight.set(entryId, (appendsInFlight.get(entryId) ?? 0) + 1);
+    const settle = (): void => {
+        const left = (appendsInFlight.get(entryId) ?? 1) - 1;
+
+        if (left > 0) {
+            appendsInFlight.set(entryId, left);
+            return;
+        }
+        appendsInFlight.delete(entryId);
+        // A failed op of the entry keeps it too: its Retry is sent with this version (R1 L4).
+        if (!entryIdsOf(state).has(entryId)) {
+            outboxVersions.delete(entryId);
+        }
+    };
+
+    return append().finally(settle);
+};
 
 /** The pending ops by `seq`. */
 export const pendingOutboxOps = (): readonly OutboxOpBase[] => [...state.ops].sort(bySeq);
@@ -701,6 +785,21 @@ export const noteOutboxVersion = (op: OutboxOpBase, version: string | null): voi
     } else {
         outboxVersions.set(op.entryId, version);
     }
+};
+
+/**
+ * R2-L2, R3-L1: forgets the version of every entry with no op left in the queue or the failed list
+ * (as last read) and none being appended here: a later write of it is based on the cache. After a
+ * discard in this tab and after every re-read (another tab's discard).
+ */
+export const forgetOrphanVersions = (): void => {
+    const left = entryIdsOf(state);
+
+    [...outboxVersions.keys()].forEach(entryId => {
+        if (!left.has(entryId) && !appendsInFlight.has(entryId)) {
+            outboxVersions.delete(entryId);
+        }
+    });
 };
 
 /**
@@ -752,7 +851,9 @@ export const removeOutboxOp = (op: OutboxOpBase, fence: OutboxFence): Promise<vo
                 return { isLeft: true, version: undefined };
             }
             const version = outboxVersions.get(op.entryId);
-            const isLeft = draft.ops.some(({ entryId }) => entryId === op.entryId);
+            // M3: an append of the entry not landed yet counts as a later op of it, and so does a
+            // failed op of it (its Retry, R1 L4), as the persisted `versions` count them.
+            const isLeft = entryIdsOf(draft).has(op.entryId) || appendsInFlight.has(op.entryId);
 
             if (version !== undefined && isLeft) {
                 draft.versions.set(op.entryId, version);
@@ -907,6 +1008,10 @@ export const releaseOutboxClaim = (op: OutboxOpBase, fence: OutboxFence): Promis
         { fence },
     );
 
+// N2: a discard writes the outbox key first (`writeKeys`).
+const writeOutboxFirst = <T>(change: (draft: OutboxState) => T): Promise<T> =>
+    writeOutbox(change, { outboxFirst: true });
+
 export interface DiscardResult {
     discarded: string[];
     /** Being sent, or sent and waiting for its removal: the server has (or will have) it. */
@@ -919,7 +1024,7 @@ export interface DiscardResult {
  * request. A failed create is discarded together with the ops of its entry by the caller (`opIds`).
  */
 export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
-    writeOutbox(draft => {
+    writeOutboxFirst(draft => {
         // The claim is read from the draft under the lock: any tab's request in flight is refused.
         const isSent = (opId: string): boolean =>
             draft.sending?.opId === opId || pendingRemovals.has(opId);
@@ -954,6 +1059,7 @@ export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
                 outboxGate.unblock(entryId);
             }
         });
+        forgetOrphanVersions();
         wake();
         return { discarded, refused };
     });

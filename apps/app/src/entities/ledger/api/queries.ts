@@ -4,7 +4,10 @@
 // `VITE_FEATURE_OFFLINE_WRITES` is on, and an online create never carries a client `id`.
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
-import { publicApi } from 'shared/api/client';
+import { api, publicApi } from 'shared/api/client';
+import { ledgerEntryKey } from 'shared/offline/outboxRegistry';
+
+import { type LedgerEntry, toLedgerEntry } from '../model/toLedgerEntry';
 
 const CAPABILITIES_STALE_TIME = 10 * 60_000;
 
@@ -33,3 +36,32 @@ export const useBackendCapability = (name: BackendCapability): boolean =>
         ...capabilitiesQueryOptions(),
         select: capabilities => capabilities.includes(name),
     }).data ?? false;
+
+const LEDGER_ENTRY_STALE_TIME = 30_000;
+
+/** §1.3, §2.2: the ledger keys; `entry` is the key the outbox registry reads (one definition). */
+export const ledgerKeys = {
+    all: ['ledger'] as const,
+    entry: (entryId: string) => ledgerEntryKey(entryId),
+};
+
+/** `GET /ledger/entries/{id}` as the domain entry: its type and version (§2.1, §2.2). */
+export const ledgerEntryQueryOptions = (entryId: string) =>
+    queryOptions({
+        queryKey: ledgerKeys.entry(entryId),
+        staleTime: LEDGER_ENTRY_STALE_TIME,
+        queryFn: ({ signal }): Promise<LedgerEntry> =>
+            api('get', '/ledger/entries/{id}', { params: { id: entryId }, signal }).then(
+                toLedgerEntry,
+            ),
+    });
+
+/**
+ * Observes `ledger.entry(id)` of an expense the user may edit or delete (§2.9 C2-33: an outbox edit
+ * or delete needs it), so it is read again with the views that show it (focus, reconnect, an
+ * invalidation; R1 L3). The result is not used. The caller mounts it only while offline writes are
+ * available (`useIsOfflineWriteAvailable`): otherwise nothing is read or added to the cache.
+ */
+export const useLedgerEntryObserver = (entryId: string): void => {
+    useQuery(ledgerEntryQueryOptions(entryId));
+};

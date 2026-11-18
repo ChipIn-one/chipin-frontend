@@ -6,7 +6,8 @@
 // appends an op (the registry checks it is an expense) and the drain tab's adoption creates the
 // op's mutation with the outbox key and its defaults. A settlement and
 // settle-up never take this path (§2.9).
-import type { QueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { notifyManager, type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { getAccessTokenUserId } from 'helpers/authSession';
@@ -23,7 +24,6 @@ import { hasWebLocks } from 'shared/offline/outboxIo';
 import {
     cachedEntryType,
     enqueueOutboxOp,
-    ledgerEntryKey,
     type OutboxOpRequest,
     type OutboxOpSeed,
 } from 'shared/offline/outboxRegistry';
@@ -39,7 +39,6 @@ import { OutboxOpBaseSchema } from 'shared/offline/outboxSchema';
 import {
     isOutboxFull,
     isOutboxPersistFailed,
-    noteSettledVersion,
     type OutboxOpBase,
     outboxOwner,
     type OutboxRestore,
@@ -53,6 +52,12 @@ import {
     toCreateLedgerEntryWire,
     toExpensePatchWire,
 } from '../model/toExpenseWire';
+import {
+    type LedgerEntry,
+    optimisticCreatedEntry,
+    optimisticUpdatedEntry,
+    readLedgerEntry,
+} from '../model/toLedgerEntry';
 
 import type {
     CreateExpenseParams,
@@ -60,7 +65,7 @@ import type {
     LedgerWriteEffects,
     UpdateExpenseParams,
 } from './mutations';
-import { type BackendCapability, capabilitiesQueryOptions } from './queries';
+import { type BackendCapability, capabilitiesQueryOptions, ledgerKeys } from './queries';
 
 // Frozen contract after 03-17 (m9): the keys must not be renamed.
 export const ledgerOutboxMutationKeys = {
@@ -245,6 +250,36 @@ export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
     );
 };
 
+/**
+ * `isOfflineWriteAvailable` for a component, read again on every query cache change (the
+ * capabilities are fetched once when missing). Flag off: false, nothing is read or fetched.
+ */
+export const useIsOfflineWriteAvailable = (): boolean => {
+    const client = useQueryClient();
+    const [isAvailable, setIsAvailable] = useState(false);
+
+    useEffect(() => {
+        if (!isOfflineWritesFlagOn()) {
+            return undefined;
+        }
+        const capabilitiesKey = capabilitiesQueryOptions().queryKey;
+        // Only with the capabilities cached: a missing one is fetched once here, not on every change.
+        const check = (): void => {
+            setIsAvailable(
+                client.getQueryData(capabilitiesKey) !== undefined &&
+                    isOfflineWriteAvailable(client),
+            );
+        };
+
+        void client.prefetchQuery(capabilitiesQueryOptions());
+        check();
+        // Deferred: a cache change may come from another component's render.
+        return client.getQueryCache().subscribe(notifyManager.batchCalls(check));
+    }, [client]);
+
+    return isAvailable;
+};
+
 export type LedgerWritePath = 'online' | 'outbox';
 
 export type LedgerWriteTarget = { kind: 'create' } | { kind: 'update' | 'delete'; entryId: string };
@@ -272,6 +307,37 @@ const isAcceptableLedgerOp = (client: QueryClient, op: OutboxOpBase): boolean =>
 
 const registeredClients = new WeakSet<QueryClient>();
 
+// §2.2/§2.5 2xx: the answered entry (with its new version) into `ledger.entry(id)` before the
+// invalidation, so the next edit appended here is based on it. A read in flight is cancelled first:
+// its older answer must not land over this one (R1 L1). A deleted entry, and an answer without a
+// readable version (R1 L2: neither the optimistic nor an older version may stay), leave the cache.
+const writeAnsweredEntry = (
+    client: QueryClient,
+    op: LedgerOutboxOp,
+    entry: unknown,
+): Promise<void> => {
+    const queryKey = ledgerKeys.entry(op.entryId);
+    const answered = op.kind === 'deleteExpense' ? null : readLedgerEntry(entry);
+
+    return client
+        .cancelQueries({ queryKey, exact: true })
+        .catch(() => undefined)
+        .then(() => {
+            if (answered) {
+                client.setQueryData<LedgerEntry>(queryKey, answered);
+            } else {
+                client.removeQueries({ queryKey, exact: true });
+            }
+        });
+};
+
+// What is read again after the op settled (`invalidateAfterLedgerOp`): its views and its entry.
+const opContext = (op: LedgerOutboxOp) => ({
+    groupId: op.groupId ?? undefined,
+    parentActivityId: op.parentActivityId ?? undefined,
+    entryId: op.entryId,
+});
+
 /**
  * The outbox mutation defaults (§2.1), every callback included: a restored mutation has only
  * these. `networkMode: 'always'` and `retry: false`: `runOutboxOp` waits and retries itself
@@ -297,7 +363,9 @@ export const registerLedgerOutboxDefaults = (
             // A final error: the entry on screen may be stale.
             onError: (_error, variables) => {
                 if (isLedgerOutboxOp(variables)) {
-                    void client.invalidateQueries({ queryKey: ledgerEntryKey(variables.entryId) });
+                    void client.invalidateQueries({
+                        queryKey: ledgerKeys.entry(variables.entryId),
+                    });
                 }
             },
             // `stopped`/`cancelled` changed nothing on the server: nothing to read again. The other
@@ -306,18 +374,15 @@ export const registerLedgerOutboxDefaults = (
                 if (!isLedgerOutboxOp(variables) || (!error && result?.kind !== 'sent')) {
                     return undefined;
                 }
-                announceOutboxSettled(
-                    variables,
-                    error ? 'failed' : 'sent',
-                    result?.kind === 'sent' ? result.entry : null,
-                );
-                const context = {
-                    groupId: variables.groupId ?? undefined,
-                    parentActivityId: variables.parentActivityId ?? undefined,
-                };
+                const entry = result?.kind === 'sent' ? result.entry : null;
                 const refresh = error ? effects.onWriteFailed : effects.onEntryWritten;
 
-                return refresh(context, client).catch(() => undefined);
+                return (error ? Promise.resolve() : writeAnsweredEntry(client, variables, entry))
+                    .then(() => {
+                        announceOutboxSettled(variables, error ? 'failed' : 'sent', entry);
+                        return refresh(opContext(variables), client);
+                    })
+                    .catch(() => undefined);
             },
         });
     });
@@ -329,17 +394,9 @@ const ledgerAdoption = (client: QueryClient): OutboxAdoption => ({
     sessionUserId: () => getAccessTokenUserId(),
 });
 
-const versionOf = (entry: unknown): string | null =>
-    typeof entry === 'object' &&
-    entry !== null &&
-    'version' in entry &&
-    typeof entry.version === 'string'
-        ? entry.version
-        : null;
-
-// §2.2 in a tab that does not drain: the effects of another tab's settled op of this owner. Until
-// the `ledger.entry(id)` query (03-16a) the answered version is kept by the outbox, so the next
-// edit appended here is based on it (no false 409).
+// §2.2 in a tab that does not drain: the effects of another tab's settled op of this owner. The
+// answered entry is written first, so the next edit appended here is based on its version (no
+// false 409); a fresher entry read later (a refetch) replaces it (03-15c2 R1 L3).
 const ledgerDrainHooks = (
     client: QueryClient,
     userId: string,
@@ -350,18 +407,14 @@ const ledgerDrainHooks = (
         if (!isLedgerOutboxOp(op) || op.owner !== userId) {
             return;
         }
-        const context = {
-            groupId: op.groupId ?? undefined,
-            parentActivityId: op.parentActivityId ?? undefined,
-        };
-
         if (result === 'sent') {
-            noteSettledVersion(op.entryId, versionOf(entry));
-            void effects.onEntryWritten(context, client).catch(() => undefined);
+            void writeAnsweredEntry(client, op, entry)
+                .then(() => effects.onEntryWritten(opContext(op), client))
+                .catch(() => undefined);
             return;
         }
-        void client.invalidateQueries({ queryKey: ledgerEntryKey(op.entryId) });
-        void effects.onWriteFailed(context, client).catch(() => undefined);
+        void client.invalidateQueries({ queryKey: ledgerKeys.entry(op.entryId) });
+        void effects.onWriteFailed(opContext(op), client).catch(() => undefined);
     },
 });
 
@@ -383,21 +436,43 @@ export const startLedgerOutbox = (
     return startOutboxDrain(client, userId, ledgerDrainHooks(client, userId, effects));
 };
 
+/** The optimistic entry of a queued op from the cached one; undefined: the cache is left as is. */
+type OptimisticEntry = (cached: LedgerEntry | undefined) => LedgerEntry | undefined;
+
 // Any tab appends (§2.3): the drain tab adopts its own op at once, the others learn it by the
-// `changed` ping. The path choice required this tab's restored outbox of the client's user.
+// `changed` ping. The path choice required this tab's restored outbox of the client's user. Once
+// the append write resolved, this tab writes the optimistic entry (§2.2: no snapshot; the other
+// tabs show the op through the overlay).
 const enqueueLedgerOp = <Op extends LedgerOutboxOp>(
     client: QueryClient,
     target: Omit<OutboxOpRequest, 'owner'>,
     build: (seed: OutboxOpSeed) => Op,
+    optimistic?: OptimisticEntry,
 ): Promise<void> => {
     const owner = userIdOfClient(client);
 
     if (owner === null || owner !== outboxOwner()) {
         return Promise.reject(new Error('No signed-in user client'));
     }
-    return enqueueOutboxOp(client, { ...target, owner }, build).then(() => {
-        adoptIfDraining();
-    });
+    const queryKey = ledgerKeys.entry(target.entryId);
+
+    // The optimistic entry is written before this tab adopts the op, so the op's 2xx always
+    // lands after it.
+    return enqueueOutboxOp(client, { ...target, owner }, build)
+        .then(() =>
+            optimistic
+                ? client.cancelQueries({ queryKey, exact: true }).catch(() => undefined)
+                : undefined,
+        )
+        .then(() => {
+            try {
+                if (optimistic) {
+                    client.setQueryData<LedgerEntry>(queryKey, optimistic);
+                }
+            } finally {
+                adoptIfDraining();
+            }
+        });
 };
 
 /** Queues the write in the outbox; one call = one op (one client entry id for a create). */
@@ -406,24 +481,30 @@ export type QueueLedgerWrite = () => Promise<void>;
 /** The outbox path of an expense create, or null for the online path. */
 export const createExpenseViaOutbox = (
     client: QueryClient,
-    { expense, parentActivityId }: CreateExpenseParams,
+    { expense, parentActivityId, clientEntryId }: CreateExpenseParams,
 ): QueueLedgerWrite | null =>
     chooseLedgerWritePath(client, { kind: 'create' }) !== 'outbox'
         ? null
         : () => {
-              // §2.7: the client entry id of this submit (03-16a moves it to the form's opening).
-              const entryId = crypto.randomUUID();
+              // §2.7: the client entry id made at the form's opening (a repeated submit of the
+              // form carries it, and its create is queued once); a new one without a form.
+              const entryId = clientEntryId ?? crypto.randomUUID();
 
               return Promise.resolve()
                   .then(() => toCreateLedgerEntryWire(expense, { clientEntryId: entryId }))
                   .then(wire =>
-                      enqueueLedgerOp(client, { kind: 'createExpense', entryId }, ({ base }) => ({
-                          ...base,
-                          kind: 'createExpense',
-                          groupId: wire.groupId ?? null,
-                          parentActivityId: parentActivityId ?? null,
-                          draft: wire.expense,
-                      })),
+                      enqueueLedgerOp(
+                          client,
+                          { kind: 'createExpense', entryId },
+                          ({ base }) => ({
+                              ...base,
+                              kind: 'createExpense',
+                              groupId: wire.groupId ?? null,
+                              parentActivityId: parentActivityId ?? null,
+                              draft: wire.expense,
+                          }),
+                          cached => cached ?? optimisticCreatedEntry(entryId, expense),
+                      ),
                   );
           };
 
@@ -449,6 +530,7 @@ export const updateExpenseViaOutbox = (
                               baseVersion,
                               patch,
                           }),
+                          cached => (cached ? optimisticUpdatedEntry(cached, entry) : undefined),
                       ),
                   );
 

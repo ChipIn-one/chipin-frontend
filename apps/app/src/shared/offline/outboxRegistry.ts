@@ -8,7 +8,7 @@ import {
     appendOutboxOp,
     type OutboxKind,
     type OutboxOpBase,
-    settledVersionOf,
+    trackOutboxAppend,
 } from './outboxStore';
 
 export const OUTBOX_OPS: Record<OutboxKind, { entryKind: 'expense'; needsCachedEntry: boolean }> = {
@@ -109,24 +109,25 @@ export const enqueueOutboxOp = <Op extends OutboxOpBase>(
     build: (seed: OutboxOpSeed) => Op,
 ): Promise<Op> => {
     const { entryKind, needsCachedEntry } = OUTBOX_OPS[kind];
-    const cached = readCachedEntry(client, entryId);
 
-    if (needsCachedEntry && cached?.type !== 'EXPENSE') {
+    if (needsCachedEntry && readCachedEntry(client, entryId)?.type !== 'EXPENSE') {
         return Promise.reject(new OnlineOnlyError());
     }
     const opId = crypto.randomUUID();
     const createdAt = Date.now();
 
-    // N3: whether a create of the entry is still queued is read from the draft under the lock. A
-    // version a settled op of the entry answered (any tab, `settled`) is newer than the cached one
-    // until the `ledger.entry(id)` query of 03-16a holds it.
-    return appendOutboxOp((seq, queue) =>
-        build({
-            base: { opId, seq, owner, entryKind, createdAt, schema: 1, kind, entryId },
-            baseVersion: queue.hasPendingCreateOf(entryId)
-                ? null
-                : (settledVersionOf(entryId) ?? cached?.version ?? null),
-        }),
+    // N3: whether a create of the entry is still queued is read from the draft under the lock. M3:
+    // the cached version is read there too (a 2xx answered meanwhile has written it), and the
+    // append counts as in flight from now, so a removal landing before it keeps our version.
+    return trackOutboxAppend(entryId, () =>
+        appendOutboxOp((seq, queue) =>
+            build({
+                base: { opId, seq, owner, entryKind, createdAt, schema: 1, kind, entryId },
+                baseVersion: queue.hasPendingCreateOf(entryId)
+                    ? null
+                    : (readCachedEntry(client, entryId)?.version ?? null),
+            }),
+        ),
     ).then(op => {
         requestPersistentStorage();
         return op;

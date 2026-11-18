@@ -6,6 +6,7 @@ import { ApiResponseFormatError, AuthRequestCancelledError } from 'shared/api/cl
 import { ApiError } from 'shared/lib/apiError';
 
 import { outboxGate } from './outboxGate';
+import { enqueueOutboxOp, ledgerEntryKey } from './outboxRegistry';
 import {
     adoptOutboxOps,
     classifyOutboxError,
@@ -17,9 +18,11 @@ import {
     recheckOutboxOwner,
     retryWrite,
     runOutboxOp,
+    whenOutboxIdle,
 } from './outboxRun';
 import {
     appendOutboxOp,
+    currentOutboxFence,
     discardOps,
     failedOutboxOps,
     getOutboxVersion,
@@ -814,4 +817,183 @@ test('03-15c1 R1 N3: a mutation of an older drain session failing before its run
     hold.resolve();
     await tick(10);
     expect(hasTurn).toBe(false);
+});
+
+describe('03-16a part A', () => {
+    test('03-15b R1 M3: edit online, delete appended while the edit is answered: the DELETE goes with the edit version, not the cached one (no false 409)', async () => {
+        // Nothing writes the 2xx entry into this cache: only the outbox can keep the version.
+        const client = new QueryClient();
+
+        client.setQueryData(ledgerEntryKey('entry-e'), { type: 'EXPENSE', version: 'v41' });
+        const edit = await queue('entry-e');
+        const { deps, versions } = harness();
+        const removeActual = vi.mocked(removeOutboxOp).getMockImplementation();
+        const appended: { delete?: Promise<OutboxOpBase & { baseVersion: string | null }> } = {};
+
+        // The removal write of the edit's 2xx is queued first, the user's delete right after it.
+        vi.mocked(removeOutboxOp).mockImplementationOnce((target, fence) => {
+            const removal = removeActual?.(target, fence) ?? Promise.resolve();
+
+            appended.delete = enqueueOutboxOp(
+                client,
+                { kind: 'deleteExpense', entryId: 'entry-e', owner: OWNER },
+                ({ base, baseVersion }) => ({ ...base, baseVersion }),
+            );
+            return removal;
+        });
+        const [editRun] = runAll([edit], deps);
+
+        await tick();
+        await expect(editRun).resolves.toMatchObject({ kind: 'sent' });
+        const deleteOp = await appended.delete;
+
+        expect(deleteOp).toMatchObject({ kind: 'deleteExpense', baseVersion: 'v41' });
+        const [deleteRun] = runAll(deleteOp ? [deleteOp] : [], deps);
+
+        await tick();
+        await expect(deleteRun).resolves.toMatchObject({ kind: 'sent' });
+        // The DELETE's `If-Match` is the known version: the edit's answer.
+        expect(versions).toEqual([null, 'v-op-1']);
+    });
+
+    test('03-15b R1 M3: the version kept for an append that then failed is forgotten', async () => {
+        const client = new QueryClient();
+
+        client.setQueryData(ledgerEntryKey('entry-e'), { type: 'EXPENSE', version: 'v41' });
+        const edit = await queue('entry-e');
+        const { deps } = harness();
+        const removeActual = vi.mocked(removeOutboxOp).getMockImplementation();
+        const appended: { delete?: Promise<unknown> } = {};
+
+        vi.mocked(removeOutboxOp).mockImplementationOnce((target, fence) => {
+            const removal = removeActual?.(target, fence) ?? Promise.resolve();
+
+            appended.delete = enqueueOutboxOp(
+                client,
+                { kind: 'deleteExpense', entryId: 'entry-e', owner: OWNER },
+                () => {
+                    throw new Error('could not build');
+                },
+            ).catch((error: unknown) => error);
+            return removal;
+        });
+        const [editRun] = runAll([edit], deps);
+
+        await tick();
+        await expect(editRun).resolves.toMatchObject({ kind: 'sent' });
+        await expect(appended.delete).resolves.toBeInstanceOf(Error);
+        // No op of the entry is left: a later write of it is based on the cache, not this version.
+        expect(pendingOutboxOps()).toEqual([]);
+        expect(getOutboxVersion('entry-e')).toBeNull();
+    });
+
+    // The entry has a failed op (op-2) while an earlier op (op-1) of it is answered.
+    const failedBehindSent = async () => {
+        const sent = await queue('entry-e');
+        const failed = await queue('entry-e');
+
+        await recordFailedOp(failed, 'validation', currentOutboxFence());
+        return { sent, failed };
+    };
+
+    // The Retry of the failed op: its `If-Match` is the version it is sent with.
+    const retryFailed = async (failed: OutboxOpBase, deps: OutboxDeps<OutboxOpBase>) => {
+        await requestRetry([failed.opId], () => true);
+        const [run] = runAll([failed], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+    };
+
+    test('03-16a R1 L4: a failed op of the entry keeps the answered version: its Retry is sent with it', async () => {
+        const { sent, failed } = await failedBehindSent();
+        const { deps, versions } = harness();
+        const [run] = runAll([sent], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+        await retryFailed(failed, deps);
+        expect(versions).toEqual([null, 'v-op-1']);
+    });
+
+    test('03-16a R1 L4: a Retry of a failed op after a rejected append keeps the answered version', async () => {
+        const client = new QueryClient();
+
+        client.setQueryData(ledgerEntryKey('entry-e'), { type: 'EXPENSE', version: 'v41' });
+        const { sent, failed } = await failedBehindSent();
+        const { deps, versions } = harness();
+        const removeActual = vi.mocked(removeOutboxOp).getMockImplementation();
+        const appended: { edit?: Promise<unknown> } = {};
+
+        vi.mocked(removeOutboxOp).mockImplementationOnce((target, fence) => {
+            const removal = removeActual?.(target, fence) ?? Promise.resolve();
+
+            appended.edit = enqueueOutboxOp(
+                client,
+                { kind: 'updateExpense', entryId: 'entry-e', owner: OWNER },
+                () => {
+                    throw new Error('could not build');
+                },
+            ).catch((error: unknown) => error);
+            return removal;
+        });
+        const [run] = runAll([sent], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+        await expect(appended.edit).resolves.toBeInstanceOf(Error);
+        await retryFailed(failed, deps);
+        expect(versions).toEqual([null, 'v-op-1']);
+    });
+
+    test('03-16a R2-L2: a discard that leaves no op of the entry forgets its version: the next edit goes with the refreshed cache (If-Match v3)', async () => {
+        const client = new QueryClient();
+        const { sent, failed } = await failedBehindSent();
+        const { deps, versions } = harness();
+        const [run] = runAll([sent], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+        expect(getOutboxVersion('entry-e')).toBe('v-op-1');
+        await discardOps([failed.opId]);
+        // The entry was read again after an edit made elsewhere.
+        client.setQueryData(ledgerEntryKey('entry-e'), { type: 'EXPENSE', version: 'v3' });
+        const edit = await enqueueOutboxOp(
+            client,
+            { kind: 'updateExpense', entryId: 'entry-e', owner: OWNER },
+            ({ base, baseVersion }) => ({ ...base, baseVersion }),
+        );
+        const [editRun] = runAll([edit], deps);
+
+        await tick();
+        await expect(editRun).resolves.toMatchObject({ kind: 'sent' });
+        // `If-Match` = the known version, else the base version: v3.
+        expect(versions).toEqual([null, null]);
+        expect(edit.baseVersion).toBe('v3');
+    });
+
+    test('03-15c2 R3 N2, 03-16a R1 N4: a send that throws synchronously is classified like a rejected one: failed, no claim left, the tab not counted as sending', async () => {
+        const op = await queue('entry-a', 'createExpense');
+        const deps: OutboxDeps<OutboxOpBase> = {
+            sessionUserId: () => OWNER,
+            send: () => {
+                throw new Error('sync');
+            },
+        };
+        const run = runOutboxOp(op, deps).catch((error: unknown) => error);
+
+        await tick();
+        await expect(run).resolves.toBeInstanceOf(OutboxTerminalError);
+        expect(failedOutboxOps().map(failed => [failed.op.opId, failed.reason])).toEqual([
+            ['op-1', 'rejected'],
+        ]);
+        await expect(writeOutbox(draft => draft.sending)).resolves.toBeNull();
+        let isIdle = false;
+
+        void whenOutboxIdle().then(() => {
+            isIdle = true;
+        });
+        await tick(0);
+        expect(isIdle).toBe(true);
+    });
 });

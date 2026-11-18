@@ -503,6 +503,93 @@ describe('03-15c2 two tabs: append in any tab, one drain tab (D29)', () => {
         expect(await readFailedKey()).toEqual([]);
     });
 
+    test('03-15c2 R1 L3: a fresher cached version wins over a settled one (no false 409 after an edit made elsewhere)', async () => {
+        const ledger = serveLedger();
+
+        ledger.entries.set('entry-x', 1);
+        const tabA = await openTab();
+
+        await tabA.started;
+        const tabB = await openTab();
+
+        await tabB.started;
+        [tabA, tabB].forEach(tab =>
+            tab.client.setQueryData(tab.registry.ledgerEntryKey('entry-x'), {
+                type: 'EXPENSE',
+                version: 'v1',
+            }),
+        );
+        await queueUpdate(tabA, 'entry-x');
+        await vi.waitFor(() => expect(tabB.effects.onEntryWritten).toHaveBeenCalledTimes(1));
+        // B holds the settled answer, then reads the entry again after an edit made elsewhere.
+        expect(tabB.client.getQueryData(tabB.registry.ledgerEntryKey('entry-x'))).toMatchObject({
+            version: 'v2',
+        });
+        ledger.entries.set('entry-x', 3);
+        tabB.client.setQueryData(tabB.registry.ledgerEntryKey('entry-x'), {
+            type: 'EXPENSE',
+            version: 'v3',
+        });
+
+        const second = await queueUpdate(tabB, 'entry-x');
+
+        expect(second.baseVersion).toBe('v3');
+        await vi.waitFor(() =>
+            expect(ledger.requests).toEqual([
+                'PATCH entry-x If-Match "v1"',
+                'PATCH entry-x If-Match "v3"',
+            ]),
+        );
+        await vi.waitFor(async () => expect((await readOutboxKey())?.ops).toEqual([]));
+        expect(await readFailedKey()).toEqual([]);
+    });
+
+    test('03-16a R3-L1: a discard in B forgets the version the drain tab A kept: the next edit goes with the refreshed cache (If-Match v3)', async () => {
+        const ledger = serveLedger();
+
+        ledger.entries.set('entry-x', 1);
+        await idb.set(
+            FAILED_KEY,
+            persistCodec.stringify(
+                [updateOp(1, 'entry-x', 'v1'), updateOp(2, 'entry-x', 'v1')].map(op => ({
+                    op,
+                    reason: 'validation',
+                    failedAt: 1,
+                })),
+            ),
+        );
+        await storeOutbox([], { nextSeq: 3 });
+        const tabA = await openTab();
+
+        await tabA.started;
+        const tabB = await openTab();
+
+        await tabB.started;
+        // A sends the Retry of op-1 (v2); the failed op-2 of the entry keeps that version in A.
+        await tabA.drain.retryOutboxOps(['op-1']);
+        await vi.waitFor(() => expect(ledger.requests).toEqual(['PATCH entry-x If-Match "v1"']));
+        await vi.waitFor(() => expect(tabA.store.getOutboxVersion('entry-x')).toBe('v2'));
+
+        await tabB.drain.discardOutboxOps(['op-2']);
+        await vi.waitFor(() => expect(tabA.store.getOutboxVersion('entry-x')).toBeNull());
+        // The entry was edited elsewhere and read again.
+        ledger.entries.set('entry-x', 3);
+        tabB.client.setQueryData(tabB.registry.ledgerEntryKey('entry-x'), {
+            type: 'EXPENSE',
+            version: 'v3',
+        });
+        await queueUpdate(tabB, 'entry-x');
+
+        await vi.waitFor(() =>
+            expect(ledger.requests).toEqual([
+                'PATCH entry-x If-Match "v1"',
+                'PATCH entry-x If-Match "v3"',
+            ]),
+        );
+        await vi.waitFor(async () => expect((await readOutboxKey())?.ops).toEqual([]));
+        expect(await readFailedKey()).toEqual([]);
+    });
+
     test('a failed op of entry X in A does not block entry Y appended in B', async () => {
         const ledger = serveLedger();
 

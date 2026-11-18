@@ -169,7 +169,7 @@ describe('C1-10 two create paths', () => {
             expense: { amount: 20, currency: 'USD' },
         });
         expect(effects.onEntryWritten).toHaveBeenCalledWith(
-            { groupId: 'group-1', parentActivityId: undefined },
+            { groupId: 'group-1', parentActivityId: undefined, entryId: expect.any(String) },
             client,
         );
         // The removal is its own IndexedDB write after the 2xx.
@@ -237,7 +237,7 @@ test('03 §2.1/§2.5 (N3, N4): a delete with an unknown version whose entry is g
     })?.();
     await vi.waitFor(() =>
         expect(effects.onEntryWritten).toHaveBeenCalledWith(
-            { groupId: 'group-1', parentActivityId: 'activity-1' },
+            { groupId: 'group-1', parentActivityId: 'activity-1', entryId: 'entry-x' },
             client,
         ),
     );

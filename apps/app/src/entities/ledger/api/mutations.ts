@@ -40,11 +40,18 @@ export interface LedgerWriteContext {
     groupId?: string;
     /** The root activity of the open activity history, if the write was made from it. */
     parentActivityId?: string;
+    /** The written entry, when its id is known: `ledger.entry(id)` is read again (§2.2). */
+    entryId?: string;
 }
 
 export interface CreateExpenseParams {
     expense: ExpenseDraft;
     parentActivityId?: string;
+    /**
+     * §2.7: the client entry id made when the form opened; only the outbox path sends it (an
+     * online create never carries an `id`).
+     */
+    clientEntryId?: string;
 }
 
 export interface CreateSettlementParams {
@@ -159,6 +166,7 @@ export const updateExpenseMutationOptions = (effects: LedgerWriteEffects) =>
             refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.groupId,
                 parentActivityId: variables.parentActivityId,
+                entryId: variables.entryId,
             }),
     });
 
@@ -175,5 +183,6 @@ export const deleteLedgerEntryMutationOptions = (effects: LedgerWriteEffects) =>
             refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.groupId,
                 parentActivityId: variables.parentActivityId,
+                entryId: variables.entryId,
             }),
     });

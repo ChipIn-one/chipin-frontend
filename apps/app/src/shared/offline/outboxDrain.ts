@@ -34,6 +34,7 @@ import {
     type DiscardResult,
     failedEntryIds,
     forgetCancelledInKey,
+    forgetOrphanVersions,
     hasNoFailureOf,
     isOutboxStopped,
     markOpsCancelled,
@@ -161,6 +162,8 @@ const applyQueue = (current: Drain): Promise<void> => {
     const orphans = cancelled.filter(opId => !running.has(opId));
 
     markOpsCancelled(cancelled.filter(opId => running.has(opId)));
+    // Another tab's discard may have left an entry without ops: its version goes (R3-L1).
+    forgetOrphanVersions();
     failedEntryIds().forEach(entryId => outboxGate.block(entryId));
     outboxGate.blockedEntryIds().forEach(entryId => {
         if (hasNoFailureOf(entryId)) {

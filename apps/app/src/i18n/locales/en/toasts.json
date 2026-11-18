@@ -60,6 +60,7 @@
   "offline": {
     "saved": "Saved, we will send it when the network is back",
     "saveFailed": "Could not save on the device — connect to the network",
+    "saveRetry": "Could not save, try again",
     "limitReached": "Too many unsent operations — connect to the network"
   }
 }

@@ -146,18 +146,25 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
                 groupId: state.editContext.groupId,
                 parentActivityId: state.editContext.parentActivityId,
             })
-                .then(() => {
+                .then(({ queued }) => {
                     onClose();
-                    toast.success(t('toasts:expense.updated'));
+                    // A queued edit is not saved on the server yet: its toast is the outbox's (L5).
+                    if (!queued) {
+                        toast.success(t('toasts:expense.updated'));
+                    }
                 })
                 .catch(onMutationError);
             return;
         }
 
-        createExpense({ expense: params })
-            .then(() => {
+        // §2.7: the client entry id of this opening of the form; a repeated submit carries it.
+        createExpense({ expense: params, clientEntryId: state.clientEntryId ?? undefined })
+            .then(({ queued }) => {
                 onClose();
-                toast.success(t('toasts:expense.created'));
+                // A queued expense is not on the server yet: its toast is the outbox's (L5).
+                if (!queued) {
+                    toast.success(t('toasts:expense.created'));
+                }
             })
             .catch(onMutationError);
     }, [createExpense, onClose, t, updateExpense]);

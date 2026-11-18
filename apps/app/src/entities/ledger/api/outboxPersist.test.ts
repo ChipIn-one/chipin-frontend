@@ -20,6 +20,7 @@ import {
     appendOutboxOp,
     discardOps,
     failedOutboxOps,
+    OutboxCreateSentError,
     outboxEntryIds,
     OutboxLimitError,
     OutboxPersistError,
@@ -40,8 +41,9 @@ import {
     isOfflineWriteAvailable,
     ledgerOutboxMutationKeys,
     startLedgerOutbox,
+    updateExpenseViaOutbox,
 } from './outbox';
-import { capabilitiesQueryOptions } from './queries';
+import { capabilitiesQueryOptions, ledgerEntryQueryOptions, ledgerKeys } from './queries';
 
 import 'fake-indexeddb/auto';
 
@@ -862,5 +864,265 @@ describe('03-15b R1', () => {
             [],
         );
         expect(await idb.get(OUTBOX_KEY)).toBeUndefined();
+    });
+});
+
+describe('03-16a part A: ledger.entry(id)', () => {
+    test('§2.2: a queued create writes its optimistic entry after the append; the 2xx writes the answered entry', async () => {
+        serveLedger();
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        await queueCreate(client);
+        const [op] = pendingOutboxOps();
+        const entryKey = ledgerKeys.entry(op?.entryId ?? '');
+
+        expect(client.getQueryData(entryKey)).toMatchObject({
+            id: op?.entryId,
+            type: 'EXPENSE',
+            version: null,
+            groupId: 'group-1',
+            expense: { description: 'Dinner', payerId: USER, amount: expense.amount },
+        });
+        onlineManager.setOnline(true);
+        await vi.waitFor(() =>
+            expect(client.getQueryData(entryKey)).toEqual({
+                id: op?.entryId,
+                type: 'EXPENSE',
+                version: '1',
+                groupId: null,
+                expense: null,
+            }),
+        );
+    });
+
+    test('§2.2: a queued edit applies its patch to the cached entry and keeps its version', async () => {
+        const client = await openTab();
+        const entryKey = ledgerKeys.entry('entry-x');
+
+        onlineManager.setOnline(false);
+        client.setQueryData(entryKey, {
+            id: 'entry-x',
+            type: 'EXPENSE',
+            version: 'v41',
+            groupId: 'group-1',
+            expense: {
+                description: 'Dinner',
+                amount: expense.amount,
+                category: 'food',
+                date: 1,
+                payerId: USER,
+                participantIds: [USER],
+            },
+        });
+        await updateExpenseViaOutbox(client, {
+            entryId: 'entry-x',
+            entry: { description: 'Lunch' },
+        })?.();
+
+        expect(pendingOutboxOps()).toEqual([
+            expect.objectContaining({ kind: 'updateExpense', baseVersion: 'v41' }),
+        ]);
+        expect(client.getQueryData(entryKey)).toMatchObject({
+            version: 'v41',
+            expense: { description: 'Lunch', category: 'food' },
+        });
+    });
+
+    test('§2.7: a repeated submit queues one op (the client entry id made at the form opening)', async () => {
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        const submit = () =>
+            createExpenseViaOutbox(client, { expense, clientEntryId: 'entry-form' })?.() ??
+            Promise.reject(new Error('the online path was chosen'));
+
+        await submit();
+        await submit();
+
+        expect(pendingOutboxOps()).toEqual([
+            expect.objectContaining({ kind: 'createExpense', entryId: 'entry-form', seq: 1 }),
+        ]);
+        expect((await storedOpIds()).ops).toHaveLength(1);
+    });
+
+    // entry-x cached at v41, an edit of it queued offline.
+    const queueEditOffline = async (client: QueryClient): Promise<void> => {
+        onlineManager.setOnline(false);
+        client.setQueryData(ledgerKeys.entry('entry-x'), {
+            id: 'entry-x',
+            type: 'EXPENSE',
+            version: 'v41',
+            groupId: null,
+            expense: null,
+        });
+        await updateExpenseViaOutbox(client, {
+            entryId: 'entry-x',
+            entry: { description: 'L' },
+        })?.();
+    };
+
+    // `PATCH /ledger/entries/entry-x` answers `body`.
+    const servePatchAnswer = (body: Parameters<typeof HttpResponse.json>[0]): void => {
+        server.use(http.patch('*/ledger/entries/:id', () => HttpResponse.json(body)));
+    };
+
+    test('03-16a R1 L1: a read of the entry in flight across the 2xx does not overwrite the answer: the next edit carries its version', async () => {
+        const held = deferred();
+        const reads: string[] = [];
+
+        server.use(
+            http.get('*/ledger/entries/:id', async () => {
+                reads.push('GET');
+                await held.promise;
+                return HttpResponse.json({ id: 'entry-x', type: 'EXPENSE', version: 'v41' });
+            }),
+        );
+        servePatchAnswer({ id: 'entry-x', type: 'EXPENSE', version: 'v42' });
+        const client = await openTab();
+
+        await queueEditOffline(client);
+        const read = client
+            .fetchQuery({ ...ledgerEntryQueryOptions('entry-x'), staleTime: 0 })
+            .catch(() => undefined);
+
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => expect(reads).toEqual(['GET']));
+        await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
+        held.resolve();
+        await read;
+        await wait(50);
+
+        expect(client.getQueryData(ledgerKeys.entry('entry-x'))).toMatchObject({ version: 'v42' });
+        onlineManager.setOnline(false);
+        await updateExpenseViaOutbox(client, {
+            entryId: 'entry-x',
+            entry: { description: 'M' },
+        })?.();
+        expect(pendingOutboxOps()).toEqual([expect.objectContaining({ baseVersion: 'v42' })]);
+    });
+
+    test('03-16a R1 L2: a 2xx whose expense is not readable still writes the answered version', async () => {
+        servePatchAnswer({
+            id: 'entry-x',
+            type: 'EXPENSE',
+            version: 'v42',
+            expense: { amount: 'not money' },
+        });
+        const client = await openTab();
+
+        await queueEditOffline(client);
+        onlineManager.setOnline(true);
+        await vi.waitFor(() =>
+            expect(client.getQueryData(ledgerKeys.entry('entry-x'))).toEqual({
+                id: 'entry-x',
+                type: 'EXPENSE',
+                version: 'v42',
+                groupId: null,
+                expense: null,
+            }),
+        );
+    });
+
+    test('03-16a R1 L2: a 2xx without a readable version drops the cached entry (no optimistic or older version stays)', async () => {
+        servePatchAnswer({ id: 'entry-x' });
+        const client = await openTab();
+
+        await queueEditOffline(client);
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
+        await vi.waitFor(() =>
+            expect(client.getQueryState(ledgerKeys.entry('entry-x'))).toBeUndefined(),
+        );
+    });
+
+    // A submit of the form opened as `entry-form`, with this description.
+    const submitForm = (client: QueryClient, description: string) =>
+        createExpenseViaOutbox(client, {
+            expense: { ...expense, description },
+            clientEntryId: 'entry-form',
+        })?.() ?? Promise.reject(new Error('the online path was chosen'));
+
+    test('03-16a R2-L1: a repeated create with another draft is refused while the first is queued (it may be on the server): nothing appended, the first is sent', async () => {
+        const created = serveLedger();
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        await submitForm(client, 'Dinner');
+        await expect(submitForm(client, 'Lunch')).rejects.toBeInstanceOf(OutboxCreateSentError);
+        expect(pendingOutboxOps()).toEqual([
+            expect.objectContaining({
+                entryId: 'entry-form',
+                draft: expect.objectContaining({ description: 'Dinner' }),
+            }),
+        ]);
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => expect(created).toEqual(['entry-form']));
+        await wait(100);
+        expect(created).toEqual(['entry-form']);
+    });
+
+    test('03-16a R2-N3: a repeated create with another draft while the drain holds its claim is refused, nothing appended', async () => {
+        const held = deferred();
+        const created: string[] = [];
+
+        server.use(
+            http.post('*/ledger/entries', async () => {
+                created.push('entry-form');
+                await held.promise;
+                return HttpResponse.json({ id: 'entry-form', type: 'EXPENSE', version: '1' });
+            }),
+        );
+        const client = await openTab();
+
+        await submitForm(client, 'Dinner');
+        await vi.waitFor(() => expect(created).toEqual(['entry-form']));
+        await expect(readStored(OUTBOX_KEY)).resolves.toMatchObject({
+            sending: { opId: pendingOutboxOps()[0]?.opId },
+        });
+        await expect(submitForm(client, 'Lunch')).rejects.toBeInstanceOf(OutboxCreateSentError);
+        expect(pendingOutboxOps()).toHaveLength(1);
+        held.resolve();
+        await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
+        expect(created).toEqual(['entry-form']);
+    });
+
+    test('03-16a R1 N1: a repeated create with another draft whose create already failed is refused, nothing is appended', async () => {
+        await storeFailed([{ op: storedOp(1, 'entry-form'), reason: 'validation', failedAt: 1 }]);
+        await storeOutbox([], { nextSeq: 2 });
+        onlineManager.setOnline(false);
+        const client = await openTab();
+
+        await expect(
+            createExpenseViaOutbox(client, { expense, clientEntryId: 'entry-form' })?.(),
+        ).rejects.toBeInstanceOf(OutboxCreateSentError);
+        expect(pendingOutboxOps()).toEqual([]);
+    });
+
+    test('03-15b R1 N2: a crash between the two writes of a discard of a failed create leaves no edit of it pending', async () => {
+        const patched = servePatches();
+
+        await storeFailed([{ op: storedOp(1, 'entry-c'), reason: 'validation', failedAt: 1 }]);
+        await storeOutbox([updateOp(2, 'entry-c', null)], { nextSeq: 3 });
+        onlineManager.setOnline(false);
+        await openTab();
+        // The first key the discard writes lands, the second does not ("crash").
+        let writes = 0;
+
+        vi.mocked(set).mockImplementation((key, value) => {
+            writes += 1;
+            return writes === 2
+                ? Promise.reject(new DOMException('crash', 'AbortError'))
+                : idb.set(key, value);
+        });
+        await discardOps(['op-1', 'op-2']).catch(() => undefined);
+
+        // The dependent edit left `ops`; the create is still failed (it can be discarded again).
+        expect(await storedOpIds()).toEqual({ ops: [], failed: ['op-1'] });
+        vi.mocked(set).mockImplementation(idb.set);
+        await openTab();
+        onlineManager.setOnline(true);
+        await wait(100);
+        expect(patched).toEqual([]);
     });
 });

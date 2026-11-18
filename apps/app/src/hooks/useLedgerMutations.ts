@@ -4,10 +4,12 @@
 // only while offline writes are off, spec 03 §2.1), so nothing waits paused for a reconnect. With
 // `VITE_FEATURE_OFFLINE_WRITES` on, an expense is queued in the outbox instead (03-15a). A write of
 // a kind that is already running is refused as well (a double submit sends one request), and so
-// is the answer of a write whose session ended meanwhile. A queued expense resolves once its op is
-// saved on the device (03-15b; offline it says so). A refusal or a failure rejects: the caller
-// shows it with `toastLedgerWriteError`. `isPending` is true while a write of that kind
-// runs on the user's client: until what shows the entry has reloaded, or until the write failed.
+// is the answer of a write whose session ended meanwhile. A queued expense resolves
+// `{ queued: true }` once its op is saved on the device (03-15b; offline it says so, and the caller
+// shows no success toast of its own: the server has not answered, 03-16a L5). A refusal or a
+// failure rejects: the caller shows it with `toastLedgerWriteError`. `isPending` is true while a
+// write of that kind runs on the user's client: until what shows the entry has reloaded, or until
+// the write failed.
 import { useCallback } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +26,7 @@ import {
     deleteExpenseViaOutbox,
     deleteLedgerEntryMutationOptions,
     type DeleteLedgerEntryParams,
+    ledgerKeys,
     ledgerOnlineMutationKeys,
     type LedgerWriteContext,
     type LedgerWriteEffects,
@@ -75,9 +78,12 @@ export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): 
         }
         return;
     }
-    // §2.8: the expense was not saved on the device (it does not exist); offline saving is off.
+    // §2.8: the expense was not saved on the device (it does not exist). A write-lock timeout is
+    // transient (try again, offline saving stays on); any other failure turns offline saving off.
     if (error instanceof OutboxPersistError) {
-        toast.error(i18n.t('toasts:offline.saveFailed'));
+        toast.error(
+            i18n.t(error.isTransient ? 'toasts:offline.saveRetry' : 'toasts:offline.saveFailed'),
+        );
         return;
     }
     if (error instanceof OutboxLimitError) {
@@ -87,18 +93,20 @@ export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): 
     toast.error(resolveApiErrorMessageFromError(error, fallbackMessage));
 };
 
-// What reads the written entry again once a sent write settles, on the write's own client. The
-// user's own activity feeds and the open expense history are queries of `entities/activity`; the
-// dashboard, the group and the friends are refreshed by the functions the legacy stores use, until
-// they are queries of their own entities.
+// What reads the written entry again once a sent write settles, on the write's own client
+// (`invalidateAfterLedgerOp`, §2.2). The user's own activity feeds and the open expense history
+// are queries of `entities/activity`; the dashboard, the group and the friends are refreshed by the
+// functions the legacy stores use, until they are queries of their own entities. `ledger.entry(id)`
+// is cached only with offline writes on: otherwise its invalidation matches nothing.
 const invalidateViews = (
-    { groupId, parentActivityId }: LedgerWriteContext,
+    { groupId, parentActivityId, entryId }: LedgerWriteContext,
     client: QueryClient,
 ): Promise<void>[] => [
     invalidateDashboard(),
     groupId ? invalidateGroup(groupId) : invalidateKnownUsers(),
     invalidateSelfActivity(client),
     ...(parentActivityId ? [invalidateActivityChildren(client, parentActivityId)] : []),
+    ...(entryId ? [client.invalidateQueries({ queryKey: ledgerKeys.entry(entryId) })] : []),
 ];
 
 const storeEffects: LedgerWriteEffects = {
@@ -165,6 +173,17 @@ const useIsWriting = (mutationKey: LedgerMutationKey): boolean =>
 /** The outbox path of a write (spec 03 §2.1), or null for the online path (always, flag off). */
 type ViaOutbox<Params> = (client: QueryClient, params: Params) => QueueLedgerWrite | null;
 
+/**
+ * How a write resolved: `queued` — saved in the outbox, not answered by the server yet (its
+ * toast, if any, is the hook's); otherwise the server answered and the views reloaded.
+ */
+export interface LedgerWriteResult {
+    queued: boolean;
+}
+
+const QUEUED: LedgerWriteResult = { queued: true };
+const ANSWERED: LedgerWriteResult = { queued: false };
+
 // The writes of a kind being queued on a client: a repeated submit while one is queued is refused
 // as busy, as on the online path, so one submit queues one op (one client entry id).
 const queuing = new WeakMap<QueryClient, Set<LedgerMutationKey>>();
@@ -173,7 +192,7 @@ const queueOnce = (
     client: QueryClient,
     mutationKey: LedgerMutationKey,
     queue: QueueLedgerWrite,
-): Promise<void> => {
+): Promise<LedgerWriteResult> => {
     const kinds = queuing.get(client) ?? new Set<LedgerMutationKey>();
 
     if (kinds.has(mutationKey) || client.isMutating({ mutationKey }) > 0) {
@@ -187,6 +206,7 @@ const queueOnce = (
             if (!isNetworkUsable()) {
                 toast.success(i18n.t('toasts:offline.saved'));
             }
+            return QUEUED;
         })
         .finally(() => {
             kinds.delete(mutationKey);
@@ -203,7 +223,7 @@ const useLedgerWrite = <Params>(
     const client = useQueryClient();
     const isEnabled = useIsUserWriteEnabled();
     const write = useCallback(
-        (params: Params): Promise<void> => {
+        (params: Params): Promise<LedgerWriteResult> => {
             const queue = isEnabled ? viaOutbox?.(client, params) : null;
 
             if (queue) {
@@ -216,7 +236,11 @@ const useLedgerWrite = <Params>(
             }
             const sessionVersion = getAuthSessionVersion();
 
-            return inItsSession(client, sessionVersion, mutateAsync({ ...params, sessionVersion }));
+            return inItsSession(
+                client,
+                sessionVersion,
+                mutateAsync({ ...params, sessionVersion }),
+            ).then(() => ANSWERED);
         },
         [client, isEnabled, mutateAsync, mutationKey, viaOutbox],
     );
@@ -259,8 +283,13 @@ export const useCreateSettlement = () => {
         ledgerOnlineMutationKeys.createEntry,
         mutateAsync,
     );
+    // Online only (§2.9): never queued, so the caller needs no result.
+    const createSettlement = useCallback(
+        (params: CreateSettlementParams): Promise<void> => write(params).then(() => undefined),
+        [write],
+    );
 
-    return { createSettlement: write, isPending };
+    return { createSettlement, isPending };
 };
 
 /** Deletes an expense or a settlement; resolves once what showed it has reloaded. */
