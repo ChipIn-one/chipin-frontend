@@ -23,14 +23,13 @@ const verifyWorkerFiles = serviceWorker =>
         }
     });
 
-// Both registrations (`virtual:pwa-register` through workbox-window, and the manual one) must
-// register `/sw.js` with scope `/` in the built bundle; the quote style is the minifier's. The
-// source scan `scripts/sw-registration-sites.test.mjs` forbids any other call site.
+// The single registration (`useRegisterSW` of `virtual:pwa-register/react`, through workbox-window,
+// spec 04 §2.11) must register `/sw.js` with scope `/` in the built bundle; the quote style is the
+// minifier's. The source scan `scripts/sw-registration-sites.test.mjs` forbids any other call site.
 const QUOTE = '["\'`]';
 const SW_ARGUMENTS = `${QUOTE}/sw\\.js${QUOTE},\\{scope:${QUOTE}/${QUOTE}`;
 const REQUIRED_REGISTRATIONS = [
     ['virtual:pwa-register', new RegExp(`new [\\w$]+\\(${SW_ARGUMENTS}`)],
-    ['the manual registration', new RegExp(`serviceWorker\\.register\\(${SW_ARGUMENTS}\\}\\)`)],
 ];
 
 const verifyRegistrationUrls = () => {

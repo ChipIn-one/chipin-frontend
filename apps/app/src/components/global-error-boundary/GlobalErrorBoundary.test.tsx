@@ -6,10 +6,10 @@ import { ROUTES } from 'constants/routes';
 import { APP_VERSION } from 'constants/version';
 
 const mocks = vi.hoisted(() => ({
-    activateServiceWorker: vi.fn<() => Promise<void>>(),
+    updateServiceWorker: vi.fn<(reloadPage?: boolean) => Promise<void>>(),
     captureMessage: vi.fn(),
-    checkForServiceWorkerUpdate: vi.fn<() => Promise<ServiceWorker | null>>(),
-    reloadCurrentPage: vi.fn(),
+    checkForServiceWorkerUpdate: vi.fn<() => Promise<boolean>>(),
+    reloadApp: vi.fn(),
 }));
 
 vi.mock('@sentry/react', () =>
@@ -25,10 +25,10 @@ vi.mock('i18n', () => ({
     },
 }));
 
-vi.mock('helpers/serviceWorkerRecovery', () => ({
-    activateServiceWorker: mocks.activateServiceWorker,
+vi.mock('helpers/appUpdate', () => ({
+    updateServiceWorker: mocks.updateServiceWorker,
     checkForServiceWorkerUpdate: mocks.checkForServiceWorkerUpdate,
-    reloadCurrentPage: mocks.reloadCurrentPage,
+    reloadApp: mocks.reloadApp,
 }));
 
 import { GlobalErrorBoundary } from './index';
@@ -41,8 +41,8 @@ const CrashingChild = () => {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    mocks.activateServiceWorker.mockResolvedValue(undefined);
-    mocks.checkForServiceWorkerUpdate.mockResolvedValue(null);
+    mocks.updateServiceWorker.mockResolvedValue(undefined);
+    mocks.checkForServiceWorkerUpdate.mockResolvedValue(false);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     window.history.replaceState({}, '', '/groups/current');
 });
@@ -87,7 +87,7 @@ test('reloads the current page once when Try again is clicked repeatedly', () =>
         .click(tryAgain)
         .then(() => user.click(tryAgain))
         .then(() => {
-            expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce();
+            expect(mocks.reloadApp).toHaveBeenCalledOnce();
             expect(tryAgain.hasAttribute('disabled')).toBe(true);
             expect(mocks.captureMessage).toHaveBeenCalledWith(
                 'Application recovery action',
@@ -103,8 +103,7 @@ test('reloads the current page once when Try again is clicked repeatedly', () =>
 });
 
 test('shows the update section only when an update is available', () => {
-    const waitingWorker = new EventTarget() as ServiceWorker;
-    mocks.checkForServiceWorkerUpdate.mockResolvedValue(waitingWorker);
+    mocks.checkForServiceWorkerUpdate.mockResolvedValue(true);
 
     render(
         <GlobalErrorBoundary>
@@ -118,15 +117,11 @@ test('shows the update section only when an update is available', () => {
     });
 });
 
-test('activates the available update before reloading', () => {
-    let resolveActivation: (() => void) | undefined;
-    const waitingWorker = new EventTarget() as ServiceWorker;
-    mocks.checkForServiceWorkerUpdate.mockResolvedValue(waitingWorker);
-    mocks.activateServiceWorker.mockReturnValue(
-        new Promise(resolve => {
-            resolveActivation = resolve;
-        }),
-    );
+// Spec 04 §2.11 (A-26): the fallback applies the update through the single path of
+// `ServiceWorkerManager` (`updateServiceWorker(true)`), which reloads once the new worker controls.
+test('applies the available update through updateServiceWorker(true)', () => {
+    mocks.checkForServiceWorkerUpdate.mockResolvedValue(true);
+    mocks.updateServiceWorker.mockReturnValue(new Promise<void>(() => undefined));
     const user = userEvent.setup();
 
     render(
@@ -135,12 +130,13 @@ test('activates the available update before reloading', () => {
         </GlobalErrorBoundary>,
     );
 
-    return screen
-        .findByRole('button', { name: 'errorBoundary.updateApp' })
-        .then(updateButton =>
-            user.click(updateButton).then(() => {
-                expect(mocks.activateServiceWorker).toHaveBeenCalledWith(waitingWorker);
-                expect(mocks.reloadCurrentPage).not.toHaveBeenCalled();
+    return screen.findByRole('button', { name: 'errorBoundary.updateApp' }).then(updateButton =>
+        user
+            .click(updateButton)
+            .then(() => user.click(updateButton))
+            .then(() => {
+                expect(mocks.updateServiceWorker).toHaveBeenCalledExactlyOnceWith(true);
+                expect(mocks.reloadApp).not.toHaveBeenCalled();
                 expect(updateButton.hasAttribute('disabled')).toBe(true);
                 expect(updateButton.textContent).toContain('errorBoundary.updatingApp');
                 expect(
@@ -148,44 +144,14 @@ test('activates the available update before reloading', () => {
                         .getByRole('link', { name: 'errorBoundary.goToDashboard' })
                         .getAttribute('aria-disabled'),
                 ).toBe('true');
-                resolveActivation?.();
+                expect(mocks.captureMessage).toHaveBeenCalledWith(
+                    'Application recovery action',
+                    expect.objectContaining({
+                        extra: expect.objectContaining({ action: 'update-applied' }),
+                    }),
+                );
             }),
-        )
-        .then(() => vi.waitFor(() => expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce()))
-        .then(() => {
-            expect(mocks.captureMessage).toHaveBeenCalledWith(
-                'Application recovery action',
-                expect.objectContaining({
-                    extra: expect.objectContaining({ action: 'update-applied' }),
-                }),
-            );
-        });
-});
-
-test('reloads safely when update activation fails', () => {
-    const waitingWorker = new EventTarget() as ServiceWorker;
-    mocks.checkForServiceWorkerUpdate.mockResolvedValue(waitingWorker);
-    mocks.activateServiceWorker.mockRejectedValue(new Error('activation failed'));
-    const user = userEvent.setup();
-
-    render(
-        <GlobalErrorBoundary>
-            <CrashingChild />
-        </GlobalErrorBoundary>,
     );
-
-    return screen
-        .findByRole('button', { name: 'errorBoundary.updateApp' })
-        .then(updateButton => user.click(updateButton))
-        .then(() => vi.waitFor(() => expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce()))
-        .then(() => {
-            expect(mocks.captureMessage).toHaveBeenCalledWith(
-                'Application recovery action',
-                expect.objectContaining({
-                    extra: expect.objectContaining({ action: 'update-activation-failed' }),
-                }),
-            );
-        });
 });
 
 test('hides the update section when the update check fails', () => {
@@ -220,7 +186,7 @@ test('reloads even when action diagnostics cannot be reported', () => {
     );
 
     return user.click(screen.getByRole('button', { name: 'errorBoundary.tryAgain' })).then(() => {
-        expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce();
+        expect(mocks.reloadApp).toHaveBeenCalledOnce();
     });
 });
 
@@ -239,6 +205,6 @@ test('does not automatically reload when the same crash renders again', () => {
         </GlobalErrorBoundary>,
     );
 
-    expect(mocks.reloadCurrentPage).not.toHaveBeenCalled();
-    expect(mocks.activateServiceWorker).not.toHaveBeenCalled();
+    expect(mocks.reloadApp).not.toHaveBeenCalled();
+    expect(mocks.updateServiceWorker).not.toHaveBeenCalled();
 });

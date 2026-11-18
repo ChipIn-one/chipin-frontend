@@ -5,11 +5,7 @@ import type { MouseEvent } from 'react';
 
 import { ROUTES } from 'constants/routes';
 import { APP_VERSION } from 'constants/version';
-import {
-    activateServiceWorker,
-    checkForServiceWorkerUpdate,
-    reloadCurrentPage,
-} from 'helpers/serviceWorkerRecovery';
+import { checkForServiceWorkerUpdate, reloadApp, updateServiceWorker } from 'helpers/appUpdate';
 import { i18n } from 'i18n';
 
 import BackgroundBox from 'basics/BackgroundBox';
@@ -23,7 +19,6 @@ interface GlobalErrorFallbackProps {
 const RECOVERY_ACTION = {
     dashboardNavigation: 'dashboard-navigation',
     manualReload: 'manual-reload',
-    updateActivationFailed: 'update-activation-failed',
     updateApplied: 'update-applied',
 } as const;
 
@@ -37,7 +32,7 @@ const reportRecoveryAction = (action: RecoveryAction, timestamp: string): void =
                 appVersion: APP_VERSION,
                 errorTimestamp: timestamp,
             },
-            level: action === RECOVERY_ACTION.updateActivationFailed ? 'warning' : 'info',
+            level: 'info',
             tags: {
                 errorBoundary: 'global',
                 recoveryAction: action,
@@ -51,16 +46,16 @@ const reportRecoveryAction = (action: RecoveryAction, timestamp: string): void =
 const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
     const [isActionPending, setIsActionPending] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+    const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
     const isActionPendingRef = useRef(false);
 
     useEffect(() => {
         let isMounted = true;
 
         checkForServiceWorkerUpdate().then(
-            worker => {
+            hasWaitingWorker => {
                 if (isMounted) {
-                    setWaitingWorker(worker);
+                    setIsUpdateAvailable(hasWaitingWorker);
                 }
             },
             () => {
@@ -81,7 +76,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
         isActionPendingRef.current = true;
         setIsActionPending(true);
         reportRecoveryAction(RECOVERY_ACTION.manualReload, timestamp);
-        reloadCurrentPage();
+        reloadApp();
     };
 
     const onDashboard = (event: MouseEvent<HTMLAnchorElement>): void => {
@@ -94,7 +89,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
     };
 
     const onUpdate = (): void => {
-        if (isActionPendingRef.current || !waitingWorker) {
+        if (isActionPendingRef.current || !isUpdateAvailable) {
             return;
         }
 
@@ -102,16 +97,10 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
         setIsActionPending(true);
         setIsUpdating(true);
 
-        activateServiceWorker(waitingWorker)
-            .then(
-                () => {
-                    reportRecoveryAction(RECOVERY_ACTION.updateApplied, timestamp);
-                },
-                () => {
-                    reportRecoveryAction(RECOVERY_ACTION.updateActivationFailed, timestamp);
-                },
-            )
-            .then(reloadCurrentPage, reloadCurrentPage);
+        // Spec 04 §2.11 (A-26): the single update path of `ServiceWorkerManager`. It reloads once
+        // the new worker takes control, or after its timeout when the activation fails.
+        reportRecoveryAction(RECOVERY_ACTION.updateApplied, timestamp);
+        void updateServiceWorker(true);
     };
 
     return (
@@ -147,7 +136,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
                         </a>
                     </div>
 
-                    {waitingWorker && (
+                    {isUpdateAvailable && (
                         <div className="global-error__update-section">
                             <div className="global-error__divider">
                                 <span>{i18n.t('errorBoundary.or')}</span>

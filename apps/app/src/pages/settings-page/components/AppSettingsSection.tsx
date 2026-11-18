@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { APP_VERSION } from 'constants/version';
 import { userTheme } from 'entities/users';
-import { applySwUpdate } from 'helpers/swUpdates';
+import { updateServiceWorker } from 'helpers/appUpdate';
 import type { ThemeName } from 'helpers/theme';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { useUpdateSelf } from 'hooks/useUserMutations';
@@ -121,7 +121,12 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                             </Flex>
                         </Flex>
                         {isSwUpdateAvailable && (
-                            <Button variant="soft" color="jade" size="2" onClick={applySwUpdate}>
+                            <Button
+                                variant="soft"
+                                color="jade"
+                                size="2"
+                                onClick={() => void updateServiceWorker(true)}
+                            >
                                 <RefreshCwIcon size={12} />
                                 {t('app.updateButton')}
                             </Button>

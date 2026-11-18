@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react';
 import { create } from 'zustand';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
+import { SS_KEY_EXPENSE_DRAFT } from 'constants/localstorage';
 import {
     AuthSessionExpiredError,
     AuthSessionPersistenceError,
@@ -23,6 +24,7 @@ import {
     getLocalUser,
     removeKeptOutboxUsers,
     saveLocalUser,
+    SessionStorage,
 } from 'helpers/localStorage';
 import { clearUserData, deleteUserKeys, detachUserData } from 'shared/offline/clearUserData';
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
@@ -91,10 +93,12 @@ const moveLocalUser = (nextUserId: string | null): void => {
     }
 };
 
-// Step (2a) of `clearUserData`: the legacy stores, the expense draft and the open `OutboxSheet`.
+// Step (2a) of `clearUserData`: the legacy stores, the expense draft (also the one saved for an app
+// reload, spec 04 §2.11 item 4) and the open `OutboxSheet`.
 const resetUserStores = () => {
     resetAuthScopedStores();
     useExpenseModalStore.getState().reset();
+    SessionStorage.remove(SS_KEY_EXPENSE_DRAFT);
     useOutboxSheetStore.getState().setIsOpen(false);
 };
 

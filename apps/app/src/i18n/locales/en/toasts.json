@@ -33,10 +33,7 @@
     "inviteJoinError": "Failed to add friend. Check the invite link and try again."
   },
   "pwa": {
-    "installing": "Installing application on your home screen...",
-    "updateAvailable": "New version available",
-    "updateAction": "Update",
-    "laterAction": "Later"
+    "installing": "Installing application on your home screen..."
   },
   "settings": {
     "logoutOtherDevicesSuccess": "Signed out on all other devices. You’re still signed in here.",

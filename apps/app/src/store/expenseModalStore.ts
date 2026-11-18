@@ -24,6 +24,7 @@ import {
     selectUsers,
 } from './expenseModalSelectors';
 import type {
+    ExpenseModalDraft,
     ExpenseModalSource,
     ExpenseModalState,
     ExpenseModalStore,
@@ -33,6 +34,7 @@ import type {
 
 export type {
     ExpenseModalContext,
+    ExpenseModalDraft,
     ExpenseModalEditContext,
     ExpenseModalEditInitialization,
     ExpenseModalGroup,
@@ -249,10 +251,12 @@ const stepAmount = (amount: Money, delta: number): string => {
     return digits > 0 ? `${units / LEDGER_UNIT}.${fraction}` : `${units / LEDGER_UNIT}`;
 };
 
-// TODO(04-2d): save the open draft to `sessionStorage` in an `onBeforeAppReload` callback of
-// `ServiceWorkerManager` and restore it at startup (spec 04 §2.11 item 4).
-// `editContext.original` holds `Money` (`bigint` units), so a plain `JSON.stringify` of the state
-// throws; the draft save and restore need a bigint-safe codec.
+// Spec 04 §2.11 item 4 (04-2d): `app/pwa/expenseDraftReload.ts` saves the open draft to
+// `sessionStorage` before an app reload (an `onBeforeAppReload` callback; `editContext.original`
+// holds `Money`, so it uses a bigint-safe codec) and restores it at startup through `restoreDraft`.
+// A restored create draft waits here for the `initialize` of the modal that opens on mount.
+let pendingCreateDraft: ExpenseModalDraft | null = null;
+
 export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
     ...INITIAL_EXPENSE_MODAL_STATE,
     open: options => {
@@ -282,9 +286,13 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         get().close();
     },
     initialize: source => {
+        const restored = pendingCreateDraft;
+
+        pendingCreateDraft = null;
         set(state => ({
             ...state,
             ...getInitializedState(source),
+            ...(restored ? { ...restored, source, isOpened: true } : {}),
         }));
     },
     applyLateGroups: source => {
@@ -347,9 +355,20 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         }));
     },
     reset: () => {
+        pendingCreateDraft = null;
         set(state => ({
             ...state,
             ...INITIAL_EXPENSE_MODAL_STATE,
+        }));
+    },
+    restoreDraft: draft => {
+        pendingCreateDraft = draft.mode === 'create' ? draft : null;
+        set(state => ({
+            ...state,
+            ...INITIAL_EXPENSE_MODAL_STATE,
+            ...draft,
+            source: draft.source ?? EMPTY_SOURCE,
+            isOpened: true,
         }));
     },
     setDescription: description => {

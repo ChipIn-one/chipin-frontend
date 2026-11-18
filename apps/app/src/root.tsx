@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import { persistedUserId } from 'app/providers/persistedUserId';
+import { ServiceWorkerManager } from 'app/pwa/ServiceWorkerManager';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
 import { LS_KEY_THEME } from 'constants/localstorage';
@@ -20,7 +21,6 @@ import { syncHtmlLang } from 'i18n/htmlLang';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { PublicTelemetry } from 'public-routes/PublicTelemetry';
 
-import PWABadge from 'basics/PWABadge';
 import { GlobalErrorBoundary } from 'components/global-error-boundary';
 
 import 'styles/index.css';
@@ -85,7 +85,7 @@ if (legacyHostAppUrl) {
                             </PublicBuildYearContext.Provider>
                             <PublicTelemetry />
                             {/* Public SSG entry must register the same service worker as the SPA. */}
-                            <PWABadge />
+                            <ServiceWorkerManager />
                         </GlobalErrorBoundary>,
                     ),
                 ),
@@ -95,9 +95,15 @@ if (legacyHostAppUrl) {
     // The user's query cache is restored from IndexedDB before the app (and its router) renders;
     // the public SSG branch above never touches IndexedDB. The first render waits for the initial
     // language's lazy chunks (spec 04 §2.10), so it never shows raw keys.
-    Promise.all([import('main'), import('shared/offline/restore')])
-        .then(([{ default: Main }, { startCacheRestore }]) => {
+    Promise.all([
+        import('main'),
+        import('shared/offline/restore'),
+        import('app/pwa/expenseDraftReload'),
+    ])
+        .then(([{ default: Main }, { startCacheRestore }, { startExpenseDraftReload }]) => {
             startCacheRestore(persistedUserId(getLocalUser()?.id));
+            // Spec 04 §2.11 item 4: an expense draft saved before an app reload reopens once.
+            startExpenseDraftReload();
             return i18nSettled.then(() => Main);
         })
         .then(Main => {
@@ -112,6 +118,8 @@ if (legacyHostAppUrl) {
                         <Analytics beforeSend={sanitizeTelemetryEvent} />
                         <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
                         <Main />
+                        {/* The single SW registration, once per page (above the per-user router). */}
+                        <ServiceWorkerManager />
                     </ThemeProvider>
                 </GlobalErrorBoundary>,
             );

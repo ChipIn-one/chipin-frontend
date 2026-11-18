@@ -75,11 +75,6 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/PWABadge.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/PageLoader.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -796,11 +791,6 @@
   "apps/app/src/helpers/numbers.ts": {
     "no-restricted-syntax": {
       "count": 3
-    }
-  },
-  "apps/app/src/helpers/swUpdates.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
     }
   },
   "apps/app/src/helpers/theme.test.ts": {
