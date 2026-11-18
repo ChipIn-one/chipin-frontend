@@ -23,7 +23,6 @@ import {
     discardOps,
     failedOutboxOps,
     getOutboxVersion,
-    hasPendingCreateOf,
     markPendingRemoval,
     noteOutboxVersion,
     type OutboxKind,
@@ -34,6 +33,7 @@ import {
     removeOutboxOp,
     resetOutbox,
     restoreOutboxVersions,
+    startOutbox,
     stopOutbox,
     writeOutbox,
 } from './outboxStore';
@@ -551,19 +551,28 @@ describe('C2-15/C3-04 discard', () => {
         const [op] = [await queue('entry-a', 'createExpense')];
         const { deps } = harness();
 
-        vi.mocked(removeOutboxOp).mockImplementationOnce(target =>
-            removal.promise.then(() => vi.mocked(removeOutboxOp).getMockImplementation()?.(target)),
+        vi.mocked(removeOutboxOp).mockImplementationOnce((target, fence) =>
+            removal.promise.then(() =>
+                vi.mocked(removeOutboxOp).getMockImplementation()?.(target, fence),
+            ),
         );
         const result = runOutboxOp(op, deps);
 
         await tick();
         await expect(result).resolves.toMatchObject({ kind: 'sent' });
         expect(pendingOutboxOps()).toEqual([op]);
-        expect(hasPendingCreateOf('entry-a')).toBe(false);
         await expect(discardOps(['op-1'])).resolves.toEqual({ discarded: [], refused: ['op-1'] });
+        // An edit appended now reads, under the write lock, that no create of the entry is queued.
+        let hasPendingCreate: boolean | null = null;
+
+        await appendOutboxOp((seq, view) => {
+            hasPendingCreate = view.hasPendingCreateOf('entry-a');
+            return { ...op, opId: `op-${seq}`, seq, kind: 'updateExpense' };
+        });
+        expect(hasPendingCreate).toBe(false);
         removal.resolve();
         await tick();
-        expect(pendingOutboxOps()).toEqual([]);
+        expect(pendingOutboxOps().map(({ opId }) => opId)).toEqual(['op-2']);
     });
 
     test('discarding a failed create with its edits: no request for the entry, the entry is unblocked', async () => {
@@ -597,8 +606,10 @@ test('D29 M4: a success does not unblock its entry; only a Retry of the failed o
     );
 
     // The removal of op-1 lands only after op-2 failed.
-    vi.mocked(removeOutboxOp).mockImplementationOnce(target =>
-        removal.promise.then(() => vi.mocked(removeOutboxOp).getMockImplementation()?.(target)),
+    vi.mocked(removeOutboxOp).mockImplementationOnce((target, fence) =>
+        removal.promise.then(() =>
+            vi.mocked(removeOutboxOp).getMockImplementation()?.(target, fence),
+        ),
     );
     const [, second, third] = runAll(ops, deps);
 
@@ -765,4 +776,35 @@ test('03-15b L3: the restore takes the persisted versions, except of an entry wh
     markPendingRemoval(first.opId);
     restoreOutboxVersions();
     expect(getOutboxVersion('entry-x')).toBe('v-newer');
+});
+
+test('03-15c1 R1 N3: a mutation of an older drain session failing before its run keeps the newer session turn', async () => {
+    const hold = deferred();
+    const [first] = [await queue('entry-a')];
+    const client = new QueryClient();
+
+    client.setMutationDefaults(['test', 'outbox'], {
+        mutationFn: () =>
+            hold.promise.then(() => Promise.reject(new Error('failed before its run'))),
+        networkMode: 'always',
+        retry: false,
+    });
+    adoptOutboxOps(
+        client,
+        () => ['test', 'outbox'],
+        () => true,
+    );
+    // The drain stops and starts again: the new session adopts op-1 again, op-2 waits behind it.
+    stopOutbox();
+    startOutbox(OWNER);
+    const second = await queue('entry-b');
+    let hasTurn = false;
+
+    outboxGate.adopt(first);
+    void outboxGate.whenTurn(second).then(() => {
+        hasTurn = true;
+    });
+    hold.resolve();
+    await tick(10);
+    expect(hasTurn).toBe(false);
 });

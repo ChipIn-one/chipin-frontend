@@ -65,7 +65,7 @@ Hard dependencies (arrow = "cannot merge earlier"):
 04-0a ─> 04-1b ; 04-0a ─> 05-2a ─> 05-2b ─> 05-3 ─> 05-7 ; 05-2b + 02-C4 ─> 05-5
 05-2a + 04-1a + 04-1b ─> 04-3a ─> 04-3b1 (+05-3), 04-3b2, 04-3c (+01-2), 04-3d (+04-2a1; site kill-switch and redirects; site Promote to prod before 04-4b)
 03-4b ─> 03-5 ─> 03-6, 03-7a ─> 03-7b ; 03-5 ─> 03-8, 03-9 ─> 03-10 ─> 03-11 ─> 03-12 ─> 03-13 ─> 03-14 ─> 03-14b ; 03-14 ─> 03-18
-03-7b + 03-14b (+ confirmation item 35) ─> 03-15a ─> 03-15b ─> 03-15c ─> 03-16a ─> 03-16b ─> 03-17 (+ BE-03-1, BE-03-2, BE-03-5, 03-20, 04-4a2 in prod)
+03-7b + 03-14b (+ confirmation item 35) ─> 03-15a ─> 03-15b ─> 03-15c1 ─> 03-15c2 ─> 03-16a ─> 03-16b ─> 03-17 (+ BE-03-1, BE-03-2, BE-03-5, 03-20, 04-4a2 in prod)
 03-21 (settle-up precision) ← 03-3, 03-4b
 04-4a1 ─> 04-4a2 (+ BE-04-2 + the owner adds app.chipin.one/app-dev.chipin.one; independent of 04-0a and of the site) ─(in prod)─> 03-17   (cutover step 1, D30)
 04-2g + 04-2h + 04-3b1 + 04-3b2 + 04-3c + 04-3d (in prod) + 04-4a2 (in prod) ─> 04-4b domain move to the site (cutover step 2) ─(7 days without rollback)─> 04-5a/b
@@ -97,7 +97,7 @@ From review C (specs 01/03 are edited by another executor; here — what 02/04/0
 
 ## Phase plan
 
-An honest estimate of parallelism (C2-14): tracks run in parallel only between freeze windows and only if they do not touch the same files. The critical path of offline is **20 sequential PRs**: 01-3 → 03-1 → 03-4a → 03-4b → 03-5 → 03-7a → 03-7b → 03-9 → 03-10 → 03-11 → 03-12 → 03-13 → 03-14 → 03-14b → 03-15a → 03-15b → 03-15c → 03-16a → 03-16b → 03-17 (plus 03-20, which needs 04-2d; 04-4a2 in prod, which runs in parallel; backend BE-03-1/2/5). At 2–3 merges a week on this chain that is ≈ 7–10 weeks, not counting waiting for the backend. The router chain up to 04-2d: 04-0a → 04-2a1 → 04-2a2 (+03-5) → 04-2d.
+An honest estimate of parallelism (C2-14): tracks run in parallel only between freeze windows and only if they do not touch the same files. The critical path of offline is **21 sequential PRs**: 01-3 → 03-1 → 03-4a → 03-4b → 03-5 → 03-7a → 03-7b → 03-9 → 03-10 → 03-11 → 03-12 → 03-13 → 03-14 → 03-14b → 03-15a → 03-15b → 03-15c1 → 03-15c2 → 03-16a → 03-16b → 03-17 (plus 03-20, which needs 04-2d; 04-4a2 in prod, which runs in parallel; backend BE-03-1/2/5). At 2–3 merges a week on this chain that is ≈ 7–10 weeks, not counting waiting for the backend. The router chain up to 04-2d: 04-0a → 04-2a1 → 04-2a2 (+03-5) → 04-2d.
 
 **Freeze windows (calendar, recorded in the epic Issue):**
 1. 02-C2a–c — one day, no open feature PRs (Prettier across all of `src`).
@@ -122,7 +122,7 @@ An honest estimate of parallelism (C2-14): tracks run in parallel only between f
 **Phase 3 — data layer/offline, data router, cutover step 1, site, remaining tooling.**
 - data (critical path): `03-5` → `03-6`/`03-7a`→`03-7b`/`03-8`/`03-9` → `03-10` → `03-11` → `03-12` → `03-13` → `03-14` → `03-14b`;
 - cutover step 1 (D30), right after the query chain and before the outbox: `04-4a1` → `04-4a2` (BE-04-2 on dev and prod before the merge; the owner adds `app.chipin.one`/`app-dev.chipin.one` to the current app project; `chipin.one` keeps today's landing, private app paths 302 to the app host; runbook part 1 in `DEPLOYMENT.md`);
-- outbox: `03-15a` → `03-15b` → `03-15c` → `03-16a` → `03-16b` → `03-20` → `03-17` (flag after BE-03-1/2/5 and 04-4a2 in prod);
+- outbox: `03-15a` → `03-15b` → `03-15c1` → `03-15c2` → `03-16a` → `03-16b` → `03-20` → `03-17` (flag after BE-03-1/2/5 and 04-4a2 in prod);
 - router (after 03-5): `04-2a2` → `04-2a2b` → `04-2a3` → `04-2a4`; `04-2b`, `04-2c`, `04-2d` → `04-2h`; `04-2f`;
 - site: `04-3a` → `04-3b1`, `04-3b2`, `04-3c`, `04-3d` (+04-2a1); then `04-2g` (after 04-2a4, 04-2d, 04-2f, 04-3c and 04-4a2 in prod);
 - tooling: `02-C6` → `02-C7a/b`, `02-C11`; `02-C8`, `02-C9`, `02-C10`, `02-C12`, `02-C13`;
@@ -207,10 +207,10 @@ Total: 44 items (20, 31, 32, 39, 40 withdrawn); still open are the owner actions
 |---|---|---|
 | 01 | 3 | ~820 lines total |
 | 02 | 22 (21 FE + 02-A0 in ai-workflow; 02-D1 withdrawn — the `React.FC` rule is deleted, 02 §D0; D31: 02-D2a–e and 02-D3a–e withdrawn, +02-C13) | 02-C2a–c are mechanical |
-| 03 | 26 (03-19 withdrawn by D21; +03-21; review C: 03-4a/b, 03-7a/b, 03-15a–c, 03-16a/b; +03-14b, 2026-11-10) | 03-17/20 wait for the backend |
+| 03 | 27 (03-19 withdrawn by D21; +03-21; review C: 03-4a/b, 03-7a/b, 03-15a–c, 03-16a/b; +03-14b, 2026-11-10; 03-15c → 03-15c1/c2, 2026-11-17) | 03-17/20 wait for the backend |
 | 04 | 25 (was 14: 04-0 → 0a/0b, 04-2a → 2a1–a4, +04-2f, 04-2g, 04-3d; review C: +04-2a2b, +04-2h, 04-3b → 3b1/3b2; D26: content of 04-2g/04-3d/04-4 rewritten; D30: 04-4 → 04-4a1, 04-4a2, 04-4b; D31: 04-2e withdrawn, 04-2b rewritten without a generator) | 04-0a — the move script, review = rerun + look at the non-rename edits |
 | 05 | 7 (review C: 05-2 → 05-2a/2b; D31: 05-4 withdrawn, folds into the design phase) | no single "pixel" PR; pixel changes come with the design-phase PRs |
-| **Total** | **83** (3 + 22 + 26 + 25 + 7; was 91 before 2026-11-10, C1-29) + 13 backend issues created, after closing chipin-backend#206 there are 12 active (BE-03-3, BE-04-3 and BE-04-1 withdrawn) | ≈ 79 PRs at the ~400-line guideline + 4 mechanical (02-C2a–c, 04-0a) |
+| **Total** | **84** (3 + 22 + 27 + 25 + 7; was 91 before 2026-11-10, C1-29; +1 by the 03-15c split, 2026-11-17) + 13 backend issues created, after closing chipin-backend#206 there are 12 active (BE-03-3, BE-04-3 and BE-04-1 withdrawn) | ≈ 80 PRs at the ~400-line guideline + 4 mechanical (02-C2a–c, 04-0a) |
 
 ## GitHub issues in the frontend repo (when creating: Type, Priority, assignee, Project 5)
 
@@ -226,7 +226,7 @@ Total: 44 items (20, 31, 32, 39, 40 withdrawn); still open are the owner actions
 - `03-B OpenAPI-generated API types and typed client`
 - `03-C TanStack Query core: client, persister, connectivity, session expiry`
 - `03-D Migrate server stores to TanStack Query (store by store, remove useConnect)` (#524: +03-14b, the expense payload on `Money`)
-- `03-E Offline outbox for expenses: queue, conflicts, online-only actions` (#525: 03-15c lock-based append + drain per D29, 03-16b conflict message + draft per D28)
+- `03-E Offline outbox for expenses: queue, conflicts, online-only actions` (#525: 03-15c1 write lock + send claim + drain fence, 03-15c2 drain lock + channel per D29, 03-16b conflict message + draft per D28)
 - `03-F Client version gate: X-Client-Version header and blocking update screen on 426 (before offline writes)`
 - `04-A Monorepo: npm workspaces, apps/app move, i18n-content package, CI path filters`
 - `04-B App routing: React Router data router, route manifest, generated vercel.json, lazy locales, single service worker` (#528, D31: no prefetch loaders — 04-2e withdrawn; 04-2b = hand-written host-scoped catch-all rewrite + SW allowlist coverage test, no generator; title to sync)
@@ -247,7 +247,7 @@ Total: 44 items (20, 31, 32, 39, 40 withdrawn); still open are the owner actions
 
 | # | Risk | Mitigation |
 |---|---|---|
-| 1 | Mass PRs (Prettier, 04-0 rename) and freeze windows slow down feature work; parallelism is lower than expected | calendar of windows 1–3 (Phase plan; window 4 withdrawn by D31, window 5 by D26), file-lock `expenseModal*`, no codemods (D31), `.git-blame-ignore-revs`; the offline critical path is 20 PRs — plan by it |
+| 1 | Mass PRs (Prettier, 04-0 rename) and freeze windows slow down feature work; parallelism is lower than expected | calendar of windows 1–3 (Phase plan; window 4 withdrawn by D31, window 5 by D26), file-lock `expenseModal*`, no codemods (D31), `.git-blame-ignore-revs`; the offline critical path is 21 PRs — plan by it |
 | 2 | Cutover breaks OAuth, invites, SEO, the site CSP, or deep links | base does not change (`/`, D26), the app moves to `app.chipin.one` first (step 1, 04-4a2, D30) while `chipin.one` keeps today's landing, so step 2 only swaps the public pages; BE-04-2 on dev and prod before the 04-4a2 merge; rehearsal on `dev.chipin.one` before prod; curl per §4.2, one CSP per host, Google sign-in (04 criteria 7, 9, 10); rollback — step 2: moving the domain back within minutes; step 1: a targeted PR that deletes only the legacy redirects (a full revert of 04-4a2 or an Instant Rollback requires removing the app domains too, 04 §4.5); reversible 302 redirects until 04-5a; 7 days before deletion |
 | 3 | Installed PWAs lose offline or get stuck on the old shell at cutover | PWAs installed on `chipin.one` before the move are not supported (D26, item 33, about 10 users). Getting stuck on the old shell is covered by the host-gated kill-switch of the shared app build on `chipin.one` (04-4a1, step 1, D30) and then by the kill-switch `/sw.js` of the site project (in site prod before the domain move 04-4b, ≥ 6 months); the app SW on `app.chipin.one` does not change scope; E2E 04-2h (offline reload on the app host, kill-switch on the site preview) |
 | 4 | The outbox loses or duplicates operations | offline write behind a flag until BE-03-1/2, separate persist, 03-15 split into a/b/c, msw tests of reload/tabs, limits 50/14 days (details — spec 03) |

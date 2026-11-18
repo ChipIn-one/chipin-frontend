@@ -33,13 +33,14 @@ the Sentry release and uploads source maps (see Build toolchain below).
 `VITE_FEATURE_OFFLINE_WRITES` turns on offline expense writes through the
 outbox (spec 03 §2.7) only when it is exactly `true`; it is unset (off) in every
 environment until PR 03-17 enables it. Since 03-15b the outbox is persisted in
-IndexedDB (`chipin:outbox:<userId>`, `chipin:outbox-failed:<userId>`), but it
-still coordinates one tab only (Web Locks arrive in 03-15c): with the flag on,
-two open tabs both drain and both read-modify-write the keys without a lock, so
-concurrent appends can overwrite each other and lose an op. Keep the flag unset in
-every deploy, previews included, until 03-15c. Off, the outbox modules are loaded
-but inert: nothing of the outbox is started, read or written (only `clearUserData`
-deletes its keys, as before).
+IndexedDB (`chipin:outbox:<userId>`, `chipin:outbox-failed:<userId>`). Since
+03-15c1 every read-modify-write of the keys runs under a Web Lock
+(`chipin-outbox-write:<userId>`), so concurrent appends from two tabs no longer
+lose an op; but every open tab still drains the queue until the drain lock of
+03-15c2. Keep the flag unset in every deploy, previews included, until 03-17
+enables it. Off, the outbox modules are loaded but inert: nothing of the outbox
+is started, read or written, and no lock or channel is created (only
+`clearUserData` deletes its keys, as before).
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.

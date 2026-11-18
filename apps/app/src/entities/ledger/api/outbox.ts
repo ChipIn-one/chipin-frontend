@@ -1,4 +1,4 @@
-// The ledger outbox (spec 03 §2.1, 03-15a/b): expenses only, one tab, persisted in IndexedDB,
+// The ledger outbox (spec 03 §2.1, 03-15a/b/c1): expenses only, persisted in IndexedDB under the write lock,
 // behind `VITE_FEATURE_OFFLINE_WRITES` (off: every write takes the online path and nothing of the
 // outbox is read or written, as before). With the flag on a user's new client registers the outbox
 // defaults and then restores the persisted ops (`startLedgerOutbox`). On the outbox path a write
@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { getAccessTokenUserId } from 'helpers/authSession';
 import { api, ApiError } from 'shared/api/client';
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
+import { hasWebLocks } from 'shared/offline/outboxIo';
 import {
     cachedEntryType,
     enqueueOutboxOp,
@@ -203,9 +204,10 @@ const OFFLINE_WRITE_CAPABILITIES: readonly BackendCapability[] = [
 ];
 
 /**
- * `offlineWritesAvailable` of §2.7 as far as 03-15b goes: the flag, the backend capabilities, this
- * tab's `outboxRestore === 'ok'` for the client's user, no failed append write this session, and
- * fewer than 50 ops (§2.8; 03-15c adds Web Locks and `BroadcastChannel`). Flag off: nothing is read.
+ * `offlineWritesAvailable` of §2.7 as far as 03-15c1 goes: the flag, the backend capabilities, Web
+ * Locks (the write lock, §2.3), this tab's `outboxRestore === 'ok'` for the client's user, no
+ * failed append write this session, and fewer than 50 ops (§2.8; 03-15c2 adds `BroadcastChannel`).
+ * Flag off: nothing is read.
  */
 export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
     if (!isOfflineWritesFlagOn()) {
@@ -221,6 +223,7 @@ export const isOfflineWriteAvailable = (client: QueryClient): boolean => {
 
     return (
         OFFLINE_WRITE_CAPABILITIES.every(name => capabilities.includes(name)) &&
+        hasWebLocks() &&
         owner !== null &&
         outboxRestoreState(owner) === 'ok' &&
         !isOutboxPersistFailed() &&
@@ -323,7 +326,7 @@ export const startLedgerOutbox = (
     return restoreOutbox(client, userId, ledgerAdoption(client));
 };
 
-// One tab: the tab that appends is the tab that drains (03-15c: the drain lock). The path choice
+// Every tab drains its own appends until the drain lock (03-15c2). The path choice
 // required this tab's restored outbox of the client's user, so its defaults are registered.
 const enqueueLedgerOp = <Op extends LedgerOutboxOp>(
     client: QueryClient,

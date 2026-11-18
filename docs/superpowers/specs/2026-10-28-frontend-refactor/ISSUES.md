@@ -117,3 +117,7 @@ Removed/renamed PR ids; the coordinator syncs the issue bodies (`gh issue edit -
 - The DS v1 overlap note above (#533 vs #487; #535 vs #488/#492) now leans further to DS v1: the themeColor migration moved into the DS v1 tasks.
 - Programme total: 83 PRs (01=3, 02=22, 03=26, 04=25, 05=7); was 91.
 
+## Spec sync after the 03-15c split (2026-11-17, size rule)
+
+- 03-E (#525): 03-15c → **03-15c1** (write lock, persisted `sending` claim, drain-session fence; M2/N3/N4 of the 03-15b reviews) + **03-15c2** (drain lock, `BroadcastChannel`, multi-tab adoption, Retry/discard from any tab, badge hint), c2 depends on c1; 03-16a depends on 03-15c2. Sync the #525 Scope.
+- Programme total: 84 PRs (01=3, 02=22, 03=27, 04=25, 05=7); the offline critical path is 21 PRs.

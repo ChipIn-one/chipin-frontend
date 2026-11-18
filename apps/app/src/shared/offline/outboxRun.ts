@@ -3,6 +3,7 @@
 // result or a final error; everything else (no network, 5xx, the auth and outdated gates) waits
 // inside it, holding the turn. It is the `mutationFn` of the outbox mutations (`retry: false`,
 // `networkMode: 'always'`: the wait is here, not in the TanStack retryer; owner item 35).
+import * as Sentry from '@sentry/react';
 import type { MutationKey, QueryClient } from '@tanstack/react-query';
 import { onlineManager } from '@tanstack/react-query';
 
@@ -15,24 +16,28 @@ import {
 import { ApiError } from 'shared/lib/apiError';
 
 import { outboxGate } from './outboxGate';
-import { OutboxWriteStoppedError } from './outboxIo';
+import { OutboxLockTimeoutError, OutboxWriteStoppedError } from './outboxIo';
 import { ledgerEntryKey } from './outboxRegistry';
 import {
     claimOutboxOp,
+    currentOutboxFence,
     failedEntryIds,
     type FailedReason,
     forgetCancelled,
     getOutboxVersion,
     hasNoFailureOf,
+    isDrainFence,
     isOpCancelled,
     isOpCancelledInKey,
     isOpFailed,
     isOutboxStopped,
+    isOwnerFence,
     isPendingRemoval,
     markPendingRemoval,
     noteOutboxVersion,
     onOutboxWake,
     outboxEntryIds,
+    type OutboxFence,
     type OutboxKind,
     type OutboxOpBase,
     outboxOwner,
@@ -156,6 +161,16 @@ const sleep = (ms: number): Promise<void> =>
         setTimeout(resolve, ms);
     });
 
+// A write the outbox refused (stopped, cleared) is no persistence failure; a write-lock timeout is
+// transient and reported on its own, without taking the once-per-session persist-failure report.
+const reportWriteFailure = (error: unknown): void => {
+    if (error instanceof OutboxLockTimeoutError) {
+        Sentry.captureMessage('outbox.write_lock_timeout', { level: 'warning' });
+    } else if (!(error instanceof OutboxWriteStoppedError)) {
+        reportPersistFailed(error);
+    }
+};
+
 /**
  * Repeats a failed queue write with backoff until it lands (true) or `shouldStop` (false: the op
  * stays queued and the next drain sends it again, idempotent). The request is never repeated. A
@@ -174,19 +189,27 @@ export const retryWrite = (
                 return false;
             }
             setOutboxStatus(op.opId, 'failed-unsaved');
-            reportPersistFailed(error);
+            reportWriteFailure(error);
             return sleep(backoff(attempt)).then(() =>
                 shouldStop() ? false : retryWrite(op, write, shouldStop, attempt + 1),
             );
         },
     );
 
-// A run of a previous owner (the tab switched accounts) is stopped: it never touches the state or
-// the gate of the new owner (M1).
-const isStale = (op: OutboxOpBase): boolean => isOutboxStopped() || op.owner !== outboxOwner();
+// A run outside this tab's current drain session (stopped, restarted, or the owner's data changed:
+// another owner, `clearUserData` and back, M2) is stale: it never touches the gate, never claims,
+// never sends again, and writes only what its fence still allows.
+const isStale = (op: OutboxOpBase, fence: OutboxFence): boolean =>
+    !isDrainFence(fence) || op.owner !== outboxOwner();
 
-const skipped = (op: OutboxOpBase): OutboxResult | null =>
-    isStale(op) ? STOPPED : isOpCancelled(op.opId) ? CANCELLED : null;
+const skipped = (op: OutboxOpBase, fence: OutboxFence): OutboxResult | null =>
+    isStale(op, fence) ? STOPPED : isOpCancelled(op.opId) ? CANCELLED : null;
+
+// Compare-and-clear of the run's own claim; a failure leaves it to the next claim or restore.
+const releaseClaim = (op: OutboxOpBase, fence: OutboxFence): Promise<void> =>
+    isOwnerFence(fence)
+        ? releaseOutboxClaim(op, fence).catch(reportWriteFailure)
+        : Promise.resolve();
 
 const noop = (): void => undefined;
 
@@ -195,7 +218,7 @@ type StartWait = (done: () => void) => () => void;
 // A wait for the network or a backoff ends early when the op is discarded or the drain stops
 // (§2.5: a cancelled op resolves at the nearest check, without a request); either way the
 // subscription and the timer are released.
-const waitUnlessSkipped = (op: OutboxOpBase, start: StartWait): Promise<void> =>
+const waitUnlessSkipped = (op: OutboxOpBase, fence: OutboxFence, start: StartWait): Promise<void> =>
     new Promise(resolve => {
         let settled = false;
         let stopWait = noop;
@@ -209,12 +232,12 @@ const waitUnlessSkipped = (op: OutboxOpBase, start: StartWait): Promise<void> =>
             }
         };
 
-        if (skipped(op)) {
+        if (skipped(op, fence)) {
             finish();
             return;
         }
         unsubscribe = onOutboxWake(() => {
-            if (skipped(op)) {
+            if (skipped(op, fence)) {
                 finish();
             }
         });
@@ -245,61 +268,74 @@ const timeout =
     };
 
 // A 2xx or a no-op answer: our version first, then the slot goes to the next op. The removal
-// write needs no turn and keeps retrying after the drain stops, until the user changes. Only a
+// write (it also clears the claim) needs no turn and keeps retrying after the drain stops, until
+// the owner's data changes (03-15a R2: a same-owner answer after a stop is processed). An answer
+// for an owner whose data changed meanwhile (M2) writes nothing and resolves `stopped`. Only a
 // Retry of a failed op (or a discard) unblocks an entry, never any other success (D29, M4).
-const onSent = (op: OutboxOpBase, sent: OutboxSent, isRetry: boolean): OutboxResult => {
-    if (isStale(op)) {
-        releaseOutboxClaim(op.opId);
+const onSent = (
+    op: OutboxOpBase,
+    sent: OutboxSent,
+    isRetry: boolean,
+    fence: OutboxFence,
+): OutboxResult => {
+    if (!isOwnerFence(fence) || op.owner !== outboxOwner()) {
         return STOPPED;
     }
     noteOutboxVersion(op, sent.version);
     markPendingRemoval(op.opId);
-    releaseOutboxClaim(op.opId);
-    outboxGate.releaseTurn(op.opId);
+    if (isDrainFence(fence)) {
+        outboxGate.releaseTurn(op.opId);
+    }
     void retryWrite(
         op,
-        () => removeOutboxOp(op),
-        // Until the owner changes (a token that is momentarily missing does not stop it).
-        () => outboxOwner() !== op.owner,
+        () => removeOutboxOp(op, fence),
+        // Until the owner's data changes (a token that is momentarily missing does not stop it).
+        () => !isOwnerFence(fence),
     ).then(landed => {
-        if (landed && isRetry && !isStale(op) && hasNoFailureOf(op.entryId)) {
+        if (landed && isRetry && !isStale(op, fence) && hasNoFailureOf(op.entryId)) {
             outboxGate.unblock(op.entryId);
         }
     });
     return { kind: 'sent', entry: sent.entry };
 };
 
-// The claim is cleared before a backoff or a gate wait (a discard is allowed meanwhile) and only
-// after the failed-list write for a final answer (a discard never races it).
+// The claim is cleared before a backoff or a gate wait (a discard is allowed meanwhile) and, for a
+// final answer, by the failed-list write itself (a discard never races it). A stale run only clears
+// its own claim and touches no gate (M2).
 const onSendError = async (
     op: OutboxOpBase,
     error: unknown,
     retry: () => Promise<OutboxResult>,
-    { attempt, isRetry }: { attempt: number; isRetry: boolean },
+    { attempt, isRetry, fence }: { attempt: number; isRetry: boolean; fence: OutboxFence },
 ): Promise<OutboxResult> => {
-    if (isStale(op)) {
-        releaseOutboxClaim(op.opId);
-        return STOPPED;
-    }
     const errorClass = classifyOutboxError(error, op.kind);
 
     if (errorClass.kind === 'noop') {
-        return onSent(op, NO_OP, isRetry);
+        return onSent(op, NO_OP, isRetry, fence);
     }
-    if (errorClass.kind !== 'final') {
-        releaseOutboxClaim(op.opId);
+    if (isStale(op, fence)) {
+        await releaseClaim(op, fence);
+        return STOPPED;
     }
     switch (errorClass.kind) {
         case 'network':
         case 'transient':
+            await releaseClaim(op, fence);
+            if (isStale(op, fence)) {
+                return STOPPED;
+            }
             setOutboxStatus(
                 op.opId,
                 errorClass.kind === 'network' ? 'waiting-network' : 'server-unavailable',
             );
-            await waitUnlessSkipped(op, timeout(backoff(attempt)));
+            await waitUnlessSkipped(op, fence, timeout(backoff(attempt)));
             return retry();
         case 'auth':
         case 'outdated':
+            await releaseClaim(op, fence);
+            if (isStale(op, fence)) {
+                return STOPPED;
+            }
             setOutboxStatus(
                 op.opId,
                 errorClass.kind === 'auth' ? 'sign-in-required' : 'update-required',
@@ -314,13 +350,13 @@ const onSendError = async (
                 op.entryId,
                 retryWrite(
                     op,
-                    () => recordFailedOp(op, errorClass.reason),
-                    () => isStale(op),
+                    () => recordFailedOp(op, errorClass.reason, fence),
+                    () => isStale(op, fence),
                 ),
             );
 
-            releaseOutboxClaim(op.opId);
             if (!landed) {
+                await releaseClaim(op, fence);
                 return STOPPED;
             }
             throw new OutboxTerminalError(errorClass.reason);
@@ -333,28 +369,62 @@ const attempt = async <Op extends OutboxOpBase>(
     deps: OutboxDeps<Op>,
     ignoreEntryBlock: boolean,
     count: number,
+    fence: OutboxFence,
 ): Promise<OutboxResult> => {
-    const retry = (): Promise<OutboxResult> => attempt(op, deps, ignoreEntryBlock, count + 1);
+    const retry = (): Promise<OutboxResult> =>
+        attempt(op, deps, ignoreEntryBlock, count + 1, fence);
+    const isOwnerSession = (): boolean => deps.sessionUserId() === op.owner;
 
-    await outboxGate.whenTurn(op, { ignoreEntryBlock, isSkipped: () => skipped(op) !== null });
-    await waitUnlessSkipped(op, online);
-    const skip = skipped(op);
+    // M2: a stale run never joins the turn order of a newer drain session.
+    if (isStale(op, fence)) {
+        return STOPPED;
+    }
+    await outboxGate.whenTurn(op, {
+        ignoreEntryBlock,
+        isSkipped: () => skipped(op, fence) !== null,
+    });
+    await waitUnlessSkipped(op, fence, online);
+    const skip = skipped(op, fence);
 
     if (skip) {
         return skip;
     }
-    // C3-07, first check: the in-memory token. The interceptor repeats it against the token it
-    // attaches (`expectedTokenSubject`), which a refresh may have replaced.
-    if (deps.sessionUserId() !== op.owner) {
+    // C3-07, first check: the in-memory token. The claim repeats it under the write lock (N4) and
+    // the interceptor against the token it attaches (`expectedTokenSubject`).
+    if (!isOwnerSession()) {
         setOutboxStatus(op.opId, 'sign-in-required');
         outboxGate.close('auth');
         return retry();
     }
     // M1: ordered after a discard whose write is in flight (§2.3: a discard never races a request).
-    const claim = await claimOutboxOp(op);
+    const claim = await claimOutboxOp(op, fence, isOwnerSession).catch((error: unknown) => {
+        reportWriteFailure(error);
+        return 'unsaved' as const;
+    });
 
-    if (claim !== 'claimed') {
-        return claim === 'gone' && !isStale(op) ? CANCELLED : STOPPED;
+    switch (claim) {
+        case 'unsaved':
+            // The claim write was rejected (or its lock timed out): transient, claim again later.
+            setOutboxStatus(op.opId, 'failed-unsaved');
+            await waitUnlessSkipped(op, fence, timeout(backoff(count)));
+            return retry();
+        case 'stopped':
+            return STOPPED;
+        case 'gone':
+            return isStale(op, fence) ? STOPPED : CANCELLED;
+        case 'auth':
+        case 'claimed':
+            break;
+    }
+    // N4: the drain session and the session's owner once more, right before the request.
+    if (claim === 'auth' || isStale(op, fence) || !isOwnerSession()) {
+        await releaseClaim(op, fence);
+        if (isStale(op, fence)) {
+            return STOPPED;
+        }
+        setOutboxStatus(op.opId, 'sign-in-required');
+        outboxGate.close('auth');
+        return retry();
     }
     const outcome = await deps.send(op, getOutboxVersion(op.entryId)).then(
         (sent: OutboxSent) => ({ sent }),
@@ -362,28 +432,36 @@ const attempt = async <Op extends OutboxOpBase>(
     );
 
     return 'sent' in outcome
-        ? onSent(op, outcome.sent, ignoreEntryBlock)
+        ? onSent(op, outcome.sent, ignoreEntryBlock, fence)
         : onSendError(op, outcome.error, retry, {
               attempt: count,
               isRetry: ignoreEntryBlock,
+              fence,
           });
 };
 
 /**
- * Sends one op when its turn comes. Resolves with a success, `stopped` or `cancelled`; rejects
- * only with `OutboxTerminalError`, after the op was recorded as failed.
+ * Sends one op when its turn comes, within the drain session it started in (its fence). Resolves
+ * with a success, `stopped` or `cancelled`; rejects only with `OutboxTerminalError`, after the op
+ * was recorded as failed.
  */
 export const runOutboxOp = <Op extends OutboxOpBase>(
     op: Op,
     deps: OutboxDeps<Op>,
     { ignoreEntryBlock = false }: { ignoreEntryBlock?: boolean } = {},
-): Promise<OutboxResult> =>
-    attempt(op, deps, ignoreEntryBlock, 0).finally(() => {
-        outboxGate.releaseTurn(op.opId);
+): Promise<OutboxResult> => {
+    const fence = currentOutboxFence();
+
+    return attempt(op, deps, ignoreEntryBlock, 0, fence).finally(() => {
+        // A newer session may have adopted the same op: its turn is not this run's to release.
+        if (isDrainFence(fence)) {
+            outboxGate.releaseTurn(op.opId);
+        }
         if (isOpCancelled(op.opId) || isOpCancelledInKey(op.opId)) {
-            void forgetCancelled(op.opId).catch(reportWriteFailure);
+            void forgetCancelled(op.opId, fence).catch(reportWriteFailure);
         }
     });
+};
 
 /**
  * Re-checks the owner (§2.3): the `auth` gate opens only while the token's `sub` is the outbox
@@ -397,13 +475,6 @@ export const recheckOutboxOwner = (sessionUserId: string | null): void => {
         outboxGate.open('auth');
     } else {
         outboxGate.close('auth');
-    }
-};
-
-// A write the outbox refused (stopped, cleared) is no persistence failure.
-const reportWriteFailure = (error: unknown): void => {
-    if (!(error instanceof OutboxWriteStoppedError)) {
-        reportPersistFailed(error);
     }
 };
 
@@ -431,6 +502,7 @@ export const adoptOutboxOps = (
     isAcceptable: OutboxOpCheck,
 ): void => {
     const cache = client.getMutationCache();
+    const fence = currentOutboxFence();
     const running = new Set(
         cache
             .getAll()
@@ -459,7 +531,7 @@ export const adoptOutboxOps = (
             outboxGate.block(op.entryId);
             void trackFailureWrite(
                 op.entryId,
-                retryWrite(op, () => recordFailedOp(op, failure)),
+                retryWrite(op, () => recordFailedOp(op, failure, fence)),
             );
             return;
         }
@@ -483,7 +555,10 @@ export const adoptOutboxOps = (
         // Like `resumePausedMutations`: a final error is handled by the defaults' `onError`. A
         // mutation that failed before its run started must not hold the turn of the later ops (L4).
         void mutation.continue().catch(() => {
-            outboxGate.releaseTurn(op.opId);
+            // A newer drain session may have adopted the op again: not this session's turn to release.
+            if (isDrainFence(fence)) {
+                outboxGate.releaseTurn(op.opId);
+            }
         });
     });
 };
@@ -497,7 +572,7 @@ export interface OutboxAdoption {
 }
 
 /**
- * The start of the outbox in this tab (§1.6, §2.3; one tab, no drain lock until 03-15c): the
+ * The start of the outbox in this tab (§1.6, §2.3; every tab drains until the drain lock of 03-15c2): the
  * `auth` gate is closed, `readOutbox` sets `outboxRestore`; only when it is `ok`: one write clears
  * a stale `sending` claim and moves the unreadable ops to failed, the versions are restored, every
  * entry with a failed op is blocked, the ops are adopted as paused mutations (by `seq`, skipping
