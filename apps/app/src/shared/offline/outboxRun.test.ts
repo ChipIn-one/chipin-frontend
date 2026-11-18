@@ -31,6 +31,7 @@ import {
     readOutbox,
     recordFailedOp,
     removeOutboxOp,
+    requestRetry,
     resetOutbox,
     restoreOutboxVersions,
     startOutbox,
@@ -185,6 +186,8 @@ beforeEach(async () => {
     vi.useFakeTimers();
     resetOutbox();
     await clear();
+    // This tab holds the drain lock (03-15c2: `readOutbox` alone does not drain).
+    startOutbox(OWNER);
     await readOutbox(OWNER);
 });
 
@@ -622,7 +625,9 @@ test('D29 M4: a success does not unblock its entry; only a Retry of the failed o
 
     // Retry: the failed op takes its turn by seq, its success unblocks the entry, op-3 follows.
     const [failed] = failedOutboxOps();
-    const retried = failed ? runOutboxOp(failed.op, deps, { ignoreEntryBlock: true }) : null;
+
+    await requestRetry(failed ? [failed.op.opId] : [], () => true);
+    const retried = failed ? runOutboxOp(failed.op, deps) : null;
 
     await tick();
     await expect(retried).resolves.toMatchObject({ kind: 'sent' });
@@ -642,6 +647,7 @@ describe('03 §2.3 owner check (C3-07)', () => {
 
         await tick();
         session = 'user-2';
+        startOutbox('user-2');
         await readOutbox('user-2');
         const own = await queue('entry-y', 'createExpense', { owner: 'user-2' });
         const ownRun = runOutboxOp(own, deps);
@@ -695,6 +701,7 @@ describe('03 §2.3 owner check (C3-07)', () => {
         expect([...answers.keys()]).toEqual([stale.opId]);
 
         session = 'user-2';
+        startOutbox('user-2');
         await readOutbox('user-2');
         const own = await appendOutboxOp(seq => ({
             opId: 'op-of-user-2',

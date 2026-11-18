@@ -1,8 +1,9 @@
 // Test support: an in-memory `navigator.locks` (exclusive locks only, a FIFO queue per name, the
-// `signal` option). jsdom has no Web Locks; every "tab" of a test shares this one manager, as the
+// `signal` and `ifAvailable` options). jsdom has no Web Locks; every "tab" of a test shares this one manager, as the
 // tabs of one origin share the browser's.
 interface LockRequestOptions {
     signal?: AbortSignal;
+    ifAvailable?: boolean;
 }
 
 type LockCallback = (lock: { name: string; mode: 'exclusive' } | null) => unknown;
@@ -68,6 +69,10 @@ const createFakeLockManager = () => {
             if (!held.has(name)) {
                 held.add(name);
                 run();
+                return;
+            }
+            if (options.ifAvailable === true) {
+                Promise.resolve(callback(null)).then(resolve, reject);
                 return;
             }
             const waiter: Waiter = { grant: run };

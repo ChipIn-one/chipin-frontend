@@ -98,10 +98,14 @@ export const outboxGate = {
         pump();
     },
     isBlocked: (entryId: string): boolean => blocked.has(entryId),
-    /** An adopted pending op joins the turn order before its run starts (adoption is by `seq`). */
-    adopt: (op: OutboxTurnOp): void => {
+    blockedEntryIds: (): string[] => [...blocked],
+    /**
+     * An adopted op joins the turn order before its run starts (adoption is by `seq`); a failed op
+     * under "Retry" ignores its entry's block.
+     */
+    adopt: (op: OutboxTurnOp, ignoreEntryBlock = false): void => {
         if (!adopted.has(op.opId)) {
-            adopt(op, false);
+            adopt(op, ignoreEntryBlock);
         }
     },
     /** Resolves once `op` holds the send slot (again, after a retry), or at once when skipped. */

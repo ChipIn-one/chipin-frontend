@@ -4,6 +4,7 @@ import { afterEach, vi } from 'vitest';
 
 import { resetTabUserId } from 'helpers/localStorage';
 
+import { installFakeBroadcastChannel } from './broadcastChannel';
 import { DefaultTestQueryProvider, resetTestQueryClients } from './renderWithQueryClient';
 import { installFakeWebLocks } from './webLocks';
 
@@ -72,11 +73,14 @@ Object.defineProperties(HTMLElement.prototype, {
     },
 });
 
-// jsdom has no Web Locks: the outbox write lock (spec 03 §2.3) runs on an in-memory one.
+// jsdom has no Web Locks: the outbox write lock (spec 03 §2.3) runs on an in-memory one; the
+// outbox ping between tabs on an in-memory `BroadcastChannel`.
 installFakeWebLocks();
+installFakeBroadcastChannel();
 
 afterEach(() => {
     installFakeWebLocks();
+    installFakeBroadcastChannel();
     cleanup();
     resetTestQueryClients();
     // The next test reads this tab's user from the `LocalUser` it sets up.
