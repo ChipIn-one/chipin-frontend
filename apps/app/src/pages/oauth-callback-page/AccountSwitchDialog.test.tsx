@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import i18n from 'i18n/index';
+import { i18n } from 'i18n';
 import {
     requestAccountSwitchConfirm,
     useAccountSwitchConfirmStore,
