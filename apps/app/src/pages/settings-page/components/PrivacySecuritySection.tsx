@@ -4,8 +4,12 @@ import { LogOutIcon, ShieldIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { useRequiresOnline } from 'hooks/useRequiresOnline';
 import { useAuthStore } from 'store/authStore';
+
+import { useSignOutConfirm } from 'components/sign-out-confirm';
 
 interface Props {
     isLoading: boolean;
@@ -14,11 +18,13 @@ interface Props {
 const PrivacySecuritySection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const logoutOtherDevices = useAuthStore(s => s.logoutOtherDevices);
-    const signOut = useAuthStore(s => s.signOut);
+    const { requestSignOut, dialog: signOutDialog } = useSignOutConfirm();
     const [isLoggingOutOtherDevices, setIsLoggingOutOtherDevices] = useState(false);
+    // §2.9: a menu-like card button, so the flag is read here instead of an `<OnlineOnly>` wrapper.
+    const isLogoutOtherDevicesBlocked = useRequiresOnline(ONLINE_ONLY_ACTIONS.logoutOtherDevices);
 
     const onLogoutOtherDevices = () => {
-        if (isLoggingOutOtherDevices) {
+        if (isLoggingOutOtherDevices || isLogoutOtherDevicesBlocked) {
             return;
         }
         setIsLoggingOutOtherDevices(true);
@@ -66,7 +72,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         <Card asChild>
                             <button
                                 onClick={onLogoutOtherDevices}
-                                disabled={isLoggingOutOtherDevices}
+                                disabled={isLoggingOutOtherDevices || isLogoutOtherDevicesBlocked}
                                 aria-busy={isLoggingOutOtherDevices}
                             >
                                 <Flex gap="3" align="start">
@@ -76,11 +82,13 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                                             {t('security.logoutOtherDevicesTitle')}
                                         </Text>
                                         <Text size="2" color="gray" as="p">
-                                            {t(
-                                                isLoggingOutOtherDevices
-                                                    ? 'security.logoutOtherDevicesLoading'
-                                                    : 'security.logoutOtherDevicesDescription',
-                                            )}
+                                            {isLogoutOtherDevicesBlocked
+                                                ? t('common:outbox.onlineRequired')
+                                                : t(
+                                                      isLoggingOutOtherDevices
+                                                          ? 'security.logoutOtherDevicesLoading'
+                                                          : 'security.logoutOtherDevicesDescription',
+                                                  )}
                                         </Text>
                                     </Box>
                                 </Flex>
@@ -103,13 +111,14 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
-                        <Button onClick={() => void signOut()} variant="soft" color="gray">
+                        <Button onClick={requestSignOut} variant="soft" color="gray">
                             <LogOutIcon size={16} />
                             {t('common:buttons.signOut')}
                         </Button>
                     </Skeleton>
                 </Flex>
             </Flex>
+            {signOutDialog}
         </Card>
     );
 };

@@ -92,6 +92,7 @@ const overlayOf = (patch: Partial<OutboxOverlay>): OutboxOverlay => ({
     pendingUpdatesByEntryId: new Map(),
     pendingDeletes: new Set(),
     statusByOpId: new Map(),
+    queuedGroupIds: new Set(),
     isStorageNotPersisted: false,
     ...patch,
 });

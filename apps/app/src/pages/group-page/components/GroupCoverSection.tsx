@@ -2,10 +2,12 @@ import { Badge, Box, Flex, Heading, IconButton, Skeleton, Text } from '@radix-ui
 import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import type { Group } from 'entities/groups';
 
 import { BackButton } from 'basics';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
+import { OnlineOnly } from 'components/online-only';
 
 import { CoverGradient, CoverWrapper, GroupCoverImage } from './styled';
 
@@ -68,14 +70,16 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                 {group && (
                     <Box ml="auto">
                         <CreateUpdateGroupModal type="update" group={group}>
-                            <IconButton
-                                variant="solid"
-                                color="gray"
-                                size="2"
-                                aria-label={t('modal.titleEdit')}
-                            >
-                                <PencilIcon size={16} />
-                            </IconButton>
+                            <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupUpdate}>
+                                <IconButton
+                                    variant="solid"
+                                    color="gray"
+                                    size="2"
+                                    aria-label={t('modal.titleEdit')}
+                                >
+                                    <PencilIcon size={16} />
+                                </IconButton>
+                            </OnlineOnly>
                         </CreateUpdateGroupModal>
                     </Box>
                 )}

@@ -4,6 +4,7 @@ import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { loadedActivityPreviews, useSelfActivityPreviewsQuery } from 'entities/activity';
 import { useCurrencyRatesQuery } from 'entities/currency-rates';
 import { useDashboardBalancesQuery } from 'entities/dashboard';
@@ -21,6 +22,7 @@ import { DashboardHeader, DashboardSummary } from 'components/dashboard-summary'
 import GroupsCards from 'components/GroupsCards';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
+import { OnlineOnly } from 'components/online-only';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
 const NO_GROUPS: Group[] = [];
@@ -163,10 +165,15 @@ const DashboardPage = () => {
                             action={
                                 dashboardView !== 'dashboard' ? undefined : (
                                     <CreateUpdateGroupModal type="create">
-                                        <FullWidthButton size="2" variant="soft">
-                                            <PlusIcon size={14} />
-                                            {t('common:buttons.createGroup')}
-                                        </FullWidthButton>
+                                        <OnlineOnly
+                                            action={ONLINE_ONLY_ACTIONS.groupCreate}
+                                            isFullWidth
+                                        >
+                                            <FullWidthButton size="2" variant="soft">
+                                                <PlusIcon size={14} />
+                                                {t('common:buttons.createGroup')}
+                                            </FullWidthButton>
+                                        </OnlineOnly>
                                     </CreateUpdateGroupModal>
                                 )
                             }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import type { ActivityEvent } from 'entities/activity';
 import {
     useIsOfflineWriteAvailable,
@@ -20,6 +21,7 @@ import { prepareExpenseEdit } from 'store/activityExpenseEdit';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
+import { OnlineOnly } from 'components/online-only';
 
 // Keeps the expense's `ledger.entry(id)` read while it is shown (spec 03 §2.9 C2-33: an outbox edit
 // or delete needs it). Rendered only while offline writes are available.
@@ -108,29 +110,47 @@ const ActivitySubeventsButtons = ({
         return null;
     }
 
+    const editButton = (
+        <Button
+            size="1"
+            variant="soft"
+            disabled={!parentEntryId || !isExpense || !isChangeable}
+            onClick={onEdit}
+        >
+            <PencilIcon size={14} />
+            {t('subeventsUpdateAction')}
+        </Button>
+    );
+    const deleteButton = (
+        <Button
+            size="1"
+            variant="soft"
+            color="red"
+            disabled={!parentEntryId || isRemoving || !isChangeable}
+        >
+            <Trash2Icon size={14} />
+            {t('subeventsDeleteAction')}
+        </Button>
+    );
+
+    // §2.9 C2-02: a settlement is changed only online (an expense may go through the outbox).
     return (
         <Flex align="center" gap="2" wrap="wrap">
             {observedEntryId ? <LedgerEntryObserver entryId={observedEntryId} /> : null}
-            <Button
-                size="1"
-                variant="soft"
-                disabled={!parentEntryId || !isExpense || !isChangeable}
-                onClick={onEdit}
-            >
-                <PencilIcon size={14} />
-                {t('subeventsUpdateAction')}
-            </Button>
+            {isExpense ? (
+                editButton
+            ) : (
+                <OnlineOnly action={ONLINE_ONLY_ACTIONS.settlementEdit}>{editButton}</OnlineOnly>
+            )}
 
             <RemoveLedgerEntryAlertDialog isActionLoading={isRemoving} onAction={onRemove}>
-                <Button
-                    size="1"
-                    variant="soft"
-                    color="red"
-                    disabled={!parentEntryId || isRemoving || !isChangeable}
-                >
-                    <Trash2Icon size={14} />
-                    {t('subeventsDeleteAction')}
-                </Button>
+                {isExpense ? (
+                    deleteButton
+                ) : (
+                    <OnlineOnly action={ONLINE_ONLY_ACTIONS.settlementDelete}>
+                        {deleteButton}
+                    </OnlineOnly>
+                )}
             </RemoveLedgerEntryAlertDialog>
         </Flex>
     );

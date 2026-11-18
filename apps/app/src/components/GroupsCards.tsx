@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { GROUP_DEBT_FILTERS, type GroupDebtFilter } from 'constants/groups';
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { legacyRatesFromDecimals } from 'entities/balance';
 import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
 import type { Group } from 'entities/groups';
@@ -22,6 +23,7 @@ import { useUserSetting } from 'hooks/useSelfUser';
 import { selectGroupsCardsView } from 'store/groupsSelectors';
 
 import { EmptyState } from 'basics/empty-states';
+import { OnlineOnly } from 'components/online-only';
 
 import { GroupCard } from './group-card';
 import {
@@ -182,14 +184,16 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                         </SearchButtonShell>
                     )}
                     <CreateUpdateGroupModal type="create">
-                        <IconButton
-                            type="button"
-                            size="2"
-                            variant="soft"
-                            aria-label={t('common:buttons.createGroup')}
-                        >
-                            <PlusIcon size={17} />
-                        </IconButton>
+                        <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupCreate}>
+                            <IconButton
+                                type="button"
+                                size="2"
+                                variant="soft"
+                                aria-label={t('common:buttons.createGroup')}
+                            >
+                                <PlusIcon size={17} />
+                            </IconButton>
+                        </OnlineOnly>
                     </CreateUpdateGroupModal>
                 </Flex>
             </Flex>

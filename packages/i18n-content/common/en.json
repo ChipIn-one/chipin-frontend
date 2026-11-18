@@ -220,6 +220,20 @@
         "unreadable_one": "{{count}} record can't be read on this device (maybe from a newer app version); it is kept",
         "unreadable_other": "{{count}} records can't be read on this device (maybe from a newer app version); they are kept",
         "balanceCounterHint_one": "unsent operation, open the list",
-        "balanceCounterHint_other": "unsent operations, open the list"
+        "balanceCounterHint_other": "unsent operations, open the list",
+        "onlineRequired": "An internet connection is required",
+        "settingsOnlineRequired": "Settings can be changed only with an internet connection",
+        "settleUpQueuedGroup": "Send or cancel the unsent expenses of this group first",
+        "settleUpQueued": "Send or cancel the unsent expenses first",
+        "showUnsent": "Show unsent operations",
+        "signOutDescription_one": "{{count}} unsent operation will be deleted. Sign out?",
+        "signOutDescription_other": "{{count}} unsent operations will be deleted. Sign out?",
+        "signOutDescriptionUnknown": "Unsent operations of this device may be deleted. Sign out?",
+        "accountSwitchTitle": "Another account",
+        "accountSwitchDescription_one": "This device has {{count}} unsent operation of another account. Delete it and sign in?",
+        "accountSwitchDescription_other": "This device has {{count}} unsent operations of another account. Delete them and sign in?",
+        "accountSwitchDescriptionUnknown": "This device may have unsent operations of another account. Delete them and sign in?",
+        "accountSwitchConfirm": "Delete and sign in",
+        "settleUpChecking": "Checking the unsent operations of this device…"
     }
 }

@@ -5,9 +5,12 @@ import { toast } from 'sonner';
 
 import { resolveApiErrorMessage, resolveApiErrorMessageFromError } from 'helpers/errors';
 import { resolveOAuthReturnTo } from 'helpers/url';
+import { isUnsentOpsConfirmOn } from 'hooks/unsentOpsConfirm';
 import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
+
+import { AccountSwitchDialog } from './AccountSwitchDialog';
 
 export const OAuthCallbackPage = () => {
     const { t } = useTranslation('errors');
@@ -46,5 +49,13 @@ export const OAuthCallbackPage = () => {
             });
     }, [exchangeGoogleOAuthCode, navigate, searchParams, setUnauthenticated, t]);
 
-    return <PageLoader />;
+    // §1.5: the exchange may wait for the account-switch answer (offline writes on only).
+    return isUnsentOpsConfirmOn() ? (
+        <>
+            <PageLoader />
+            <AccountSwitchDialog />
+        </>
+    ) : (
+        <PageLoader />
+    );
 };

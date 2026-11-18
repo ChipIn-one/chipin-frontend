@@ -2,6 +2,7 @@ import { Avatar, Button, Card, Code, Flex, Separator, Skeleton, Text } from '@ra
 import { MonitorIcon, MoonIcon, RefreshCwIcon, Settings2Icon, SunIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { APP_VERSION } from 'constants/version';
 import { userTheme } from 'entities/users';
 import { applySwUpdate } from 'helpers/swUpdates';
@@ -10,6 +11,7 @@ import { useUserSetting } from 'hooks/useSelfUser';
 import { useUpdateSelf } from 'hooks/useUserMutations';
 import { usePwaStore } from 'store/pwaStore';
 
+import { OnlineOnlyGroup } from 'components/online-only';
 import SegmentedControl from 'components/SegmentedControl';
 
 interface Props {
@@ -62,41 +64,43 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                         </Text>
                     </Flex>
 
-                    <Skeleton loading={isLoading}>
-                        <SegmentedControl
-                            value={theme}
-                            onValueChange={onChangeTheme}
-                            items={[
-                                {
-                                    value: 'dark',
-                                    label: (
-                                        <Flex align="center" gap="1">
-                                            <MoonIcon size={14} />
-                                            {t('app.themeOptions.dark')}
-                                        </Flex>
-                                    ),
-                                },
-                                {
-                                    value: 'light',
-                                    label: (
-                                        <Flex align="center" gap="1">
-                                            <SunIcon size={14} />
-                                            {t('app.themeOptions.light')}
-                                        </Flex>
-                                    ),
-                                },
-                                {
-                                    value: 'system',
-                                    label: (
-                                        <Flex align="center" gap="1">
-                                            <MonitorIcon size={14} />
-                                            {t('app.themeOptions.system')}
-                                        </Flex>
-                                    ),
-                                },
-                            ]}
-                        />
-                    </Skeleton>
+                    <OnlineOnlyGroup action={ONLINE_ONLY_ACTIONS.userSettings}>
+                        <Skeleton loading={isLoading}>
+                            <SegmentedControl
+                                value={theme}
+                                onValueChange={onChangeTheme}
+                                items={[
+                                    {
+                                        value: 'dark',
+                                        label: (
+                                            <Flex align="center" gap="1">
+                                                <MoonIcon size={14} />
+                                                {t('app.themeOptions.dark')}
+                                            </Flex>
+                                        ),
+                                    },
+                                    {
+                                        value: 'light',
+                                        label: (
+                                            <Flex align="center" gap="1">
+                                                <SunIcon size={14} />
+                                                {t('app.themeOptions.light')}
+                                            </Flex>
+                                        ),
+                                    },
+                                    {
+                                        value: 'system',
+                                        label: (
+                                            <Flex align="center" gap="1">
+                                                <MonitorIcon size={14} />
+                                                {t('app.themeOptions.system')}
+                                            </Flex>
+                                        ),
+                                    },
+                                ]}
+                            />
+                        </Skeleton>
+                    </OnlineOnlyGroup>
 
                     <Separator size="4" />
 

@@ -1,6 +1,9 @@
 import { Box, Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import type { InviteConfirmationStatus } from 'hooks/useInviteConfirmation';
+
+import { OnlineOnly } from 'components/online-only';
 
 interface Props {
     status: InviteConfirmationStatus;
@@ -67,13 +70,15 @@ const InviteJoinConfirmation = ({
                                     >
                                         {isError ? goHomeLabel : cancelLabel}
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        loading={status === 'joining' || status === 'waiting'}
-                                        onClick={onConfirm}
-                                    >
-                                        {isError ? retryLabel : confirmLabel}
-                                    </Button>
+                                    <OnlineOnly action={ONLINE_ONLY_ACTIONS.inviteAccept}>
+                                        <Button
+                                            type="button"
+                                            loading={status === 'joining' || status === 'waiting'}
+                                            onClick={onConfirm}
+                                        >
+                                            {isError ? retryLabel : confirmLabel}
+                                        </Button>
+                                    </OnlineOnly>
                                 </>
                             )}
                         </Flex>

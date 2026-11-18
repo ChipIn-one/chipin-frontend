@@ -100,6 +100,12 @@ export interface OutboxOverlay {
     /** Entries with a queued delete: their edit and delete are not offered again. */
     readonly pendingDeletes: ReadonlySet<string>;
     readonly statusByOpId: ReadonlyMap<string, OutboxItemStatus>;
+    /**
+     * The groups with a pending or failed op: a group settle-up is refused while its expenses are
+     * queued (03-16a C). Unreadable records do not count (M2): they have no action, so they would
+     * refuse it until another build sends them; the balance caption still counts them.
+     */
+    readonly queuedGroupIds: ReadonlySet<string>;
     /** §2.8 C3-10: the browser answered that it may evict the device's data. */
     readonly isStorageNotPersisted: boolean;
 }
@@ -114,6 +120,7 @@ const EMPTY_OVERLAY: OutboxOverlay = {
     pendingUpdatesByEntryId: new Map(),
     pendingDeletes: new Set(),
     statusByOpId: new Map(),
+    queuedGroupIds: new Set(),
     isStorageNotPersisted: false,
 };
 
@@ -121,6 +128,16 @@ const asLedgerOp = (op: OutboxOpBase): LedgerOutboxOp | null => {
     const parsed = LedgerOutboxOpSchema.safeParse(op);
 
     return parsed.success ? parsed.data : null;
+};
+
+// The op's group as stored (`LedgerOpFields.groupId`).
+const groupIdOf = (op: unknown): string | null => {
+    if (typeof op !== 'object' || op === null) {
+        return null;
+    }
+    const groupId: unknown = Reflect.get(op, 'groupId');
+
+    return typeof groupId === 'string' ? groupId : null;
 };
 
 const createAmount = (op: LedgerOutboxOp | null): Money | null =>
@@ -219,6 +236,7 @@ const buildOverlay = (): OutboxOverlay => {
             pendingOps.filter(op => op.kind === 'deleteExpense').map(op => op.entryId),
         ),
         statusByOpId,
+        queuedGroupIds: new Set(allOps.flatMap(op => groupIdOf(op) ?? [])),
         isStorageNotPersisted: isStoragePersisted() === false,
     };
 };

@@ -9,9 +9,11 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import type { Balance } from 'entities/balance';
 import { hasOutstandingDebt, type KnownUser } from 'entities/users';
 import { useCreateSettlement } from 'hooks/useLedgerMutations';
+import { useRequiresOnline } from 'hooks/useRequiresOnline';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import Dropdown from 'components/Dropdown';
@@ -29,7 +31,10 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
     const openAddExpenseModal = useExpenseModalStore(state => state.open);
     const { createSettlement } = useCreateSettlement();
-    const isRemoveDisabled = hasOutstandingDebt(friend);
+    // §2.9: menu items, so the flags are read here instead of an `<OnlineOnly>` wrapper.
+    const isSettleUpBlocked = useRequiresOnline(ONLINE_ONLY_ACTIONS.settleUp);
+    const isRemoveBlocked = useRequiresOnline(ONLINE_ONLY_ACTIONS.friendDelete);
+    const isRemoveDisabled = hasOutstandingDebt(friend) || isRemoveBlocked;
 
     const actions = useMemo(
         () => [
@@ -60,6 +65,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                           label: t('common:buttons.settleUp'),
                           icon: <ArrowLeftRightIcon size={16} />,
                           color: 'green' as const,
+                          isDisabled: isSettleUpBlocked,
                           onSelect: () => {
                               setIsSettleUpOpened(true);
                           },
@@ -77,7 +83,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 },
             },
         ],
-        [balance, friend.user.id, isRemoveDisabled, openAddExpenseModal, t],
+        [balance, friend.user.id, isRemoveDisabled, isSettleUpBlocked, openAddExpenseModal, t],
     );
 
     return (
