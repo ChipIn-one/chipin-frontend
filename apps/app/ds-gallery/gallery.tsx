@@ -23,7 +23,8 @@ import { ThemeProvider } from 'styled-components';
 
 import { SUPPORTED_LOCALES } from 'constants/locales';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
-import i18n from 'i18n';
+import { applyLanguage } from 'helpers/setAppLanguage';
+import { i18n, i18nReady } from 'i18n';
 
 import CopyButton from 'basics/buttons/CopyButton';
 import DebtAmount from 'basics/DebtAmount';
@@ -193,9 +194,13 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
     }, [locale, t]);
 
     const onLocaleChange = (next: string) => {
-        i18n.changeLanguage(next)
-            .then(() => setLocale(next))
-            .catch(() => undefined);
+        const supported = SUPPORTED_LOCALES.find(locale => locale === next);
+
+        if (supported) {
+            applyLanguage(supported)
+                .then(() => setLocale(next))
+                .catch(() => undefined);
+        }
     };
 
     return (
@@ -725,4 +730,7 @@ const App = () => {
     );
 };
 
-createRoot(document.getElementById('root')!).render(<App />);
+// The app's locale namespaces are lazy chunks (spec 04 §2.10): render once they are loaded.
+void i18nReady.then(() => {
+    createRoot(document.getElementById('root')!).render(<App />);
+});

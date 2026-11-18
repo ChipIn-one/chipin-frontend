@@ -11,7 +11,11 @@ import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 import { useSyncUserSettings } from './useSyncUserSettings';
 
 const setTheme = vi.hoisted(() => vi.fn());
-const changeLanguage = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+const setAppLanguage = vi.hoisted(() => vi.fn((_: string) => Promise.resolve()));
+// The language i18next runs in now (`i18n.resolvedLanguage`).
+const i18n = vi.hoisted(() => ({ resolvedLanguage: undefined as string | undefined }));
+// The target of a language switch still in flight (`getPendingLanguage()`).
+const pending = vi.hoisted(() => ({ language: null as string | null }));
 const captureException = vi.hoisted(() => vi.fn());
 const locale = vi.hoisted(() => ({
     matchLocale: vi.fn<(raw: string) => string | null>(() => 'en'),
@@ -31,9 +35,12 @@ vi.mock('helpers/locale', () => ({
     saveLocalePreference: locale.saveLocalePreference,
 }));
 
-vi.mock('i18n', () => ({
-    default: { changeLanguage },
+vi.mock('helpers/setAppLanguage', () => ({
+    getPendingLanguage: () => pending.language,
+    setAppLanguage,
 }));
+
+vi.mock('i18n', () => ({ i18n }));
 
 const settings = {
     defaultCurrency: 'USD',
@@ -50,6 +57,8 @@ const settings = {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    i18n.resolvedLanguage = undefined;
+    pending.language = null;
     saveLocalUser({ role: 'ADMIN', settings });
 });
 
@@ -79,12 +88,12 @@ test('does not reapply cached user settings after logout', () => {
 
     expect(setTheme).not.toHaveBeenCalled();
     expect(locale.saveLocalePreference).not.toHaveBeenCalled();
-    expect(changeLanguage).not.toHaveBeenCalled();
+    expect(setAppLanguage).not.toHaveBeenCalled();
 });
 
 test('records locale sync failures', () => {
     const error = new Error('Failed to change language');
-    changeLanguage.mockRejectedValueOnce(error);
+    setAppLanguage.mockRejectedValueOnce(error);
     useAuthStore.setState({ status: 'authenticated' });
 
     renderHook(() => useSyncUserSettings());
@@ -100,8 +109,53 @@ test('applies cached user theme settings while the authenticated user is loading
     renderHook(() => useSyncUserSettings());
 
     expect(setTheme).toHaveBeenCalledWith('light');
-    expect(locale.saveLocalePreference).toHaveBeenCalledWith('en');
-    expect(changeLanguage).toHaveBeenCalledWith('en');
+    // setAppLanguage saves the preference itself.
+    expect(setAppLanguage).toHaveBeenCalledWith('en');
+});
+
+// Spec 04 §2.10: the language is switched only when the server one differs from the current one;
+// the preference is still saved, as before.
+test('keeps the current language when the server language equals it', () => {
+    i18n.resolvedLanguage = 'en';
+    useAuthStore.setState({ status: 'authenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(setAppLanguage).not.toHaveBeenCalled();
+    expect(locale.saveLocalePreference).toHaveBeenCalledExactlyOnceWith('en');
+});
+
+// R1 L1: leaving a public page started a switch to `ru` (still loading) when the server says `en`,
+// the active language: the UI must end in `en`, so `en` is switched to (the latest switch wins).
+test('switches when the server language differs from a switch in flight', () => {
+    i18n.resolvedLanguage = 'en';
+    pending.language = 'ru';
+    useAuthStore.setState({ status: 'authenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(setAppLanguage).toHaveBeenCalledExactlyOnceWith('en');
+});
+
+test('does not switch again to the target of a switch in flight', () => {
+    i18n.resolvedLanguage = 'ru';
+    pending.language = 'en';
+    useAuthStore.setState({ status: 'authenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(setAppLanguage).not.toHaveBeenCalled();
+    expect(locale.saveLocalePreference).toHaveBeenCalledExactlyOnceWith('en');
+});
+
+test('switches through setAppLanguage when the server language differs', () => {
+    i18n.resolvedLanguage = 'ru';
+    useAuthStore.setState({ status: 'authenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(setAppLanguage).toHaveBeenCalledExactlyOnceWith('en');
+    expect(locale.saveLocalePreference).not.toHaveBeenCalled();
 });
 
 // #609: es, pt-BR and pt-PT were removed; a backend setting that still holds one
@@ -119,8 +173,7 @@ test.each(['es', 'pt-BR', 'pt-PT', 'pt'])(
                 renderHook(() => useSyncUserSettings());
 
                 expect(locale.matchLocale).toHaveBeenCalledWith(language);
-                expect(locale.saveLocalePreference).toHaveBeenCalledWith('en');
-                expect(changeLanguage).toHaveBeenCalledWith('en');
+                expect(setAppLanguage).toHaveBeenCalledWith('en');
                 expect(captureException).not.toHaveBeenCalled();
             }),
 );
@@ -133,7 +186,7 @@ test('applies the self query settings over the cached user', () => {
     renderHook(() => useSyncUserSettings());
 
     expect(setTheme).toHaveBeenCalledWith('dark');
-    expect(changeLanguage).toHaveBeenCalledWith('ru');
+    expect(setAppLanguage).toHaveBeenCalledWith('ru');
 });
 
 // Spec 03 §6 row 3: the language comes from `select`, so a new settings object with the same
@@ -144,17 +197,17 @@ test('changes the language only when the language changes', () =>
         locale.matchLocale.mockImplementation(raw => raw);
         seedSelfUser(selfUser({ language: 'ru' }));
         renderHook(() => useSyncUserSettings());
-        expect(changeLanguage).toHaveBeenCalledTimes(1);
+        expect(setAppLanguage).toHaveBeenCalledTimes(1);
 
         seedSelfUser(selfUser({ language: 'ru', defaultCurrency: 'EUR' }));
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
-            expect(changeLanguage).toHaveBeenCalledTimes(1);
+            expect(setAppLanguage).toHaveBeenCalledTimes(1);
             expect(setTheme).toHaveBeenCalledTimes(1);
 
             seedSelfUser(selfUser({ language: 'en' }));
             return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
-                expect(changeLanguage).toHaveBeenCalledTimes(2);
-                expect(changeLanguage).toHaveBeenLastCalledWith('en');
+                expect(setAppLanguage).toHaveBeenCalledTimes(2);
+                expect(setAppLanguage).toHaveBeenLastCalledWith('en');
             });
         });
     }));
@@ -188,7 +241,7 @@ test.each([
 
     renderHook(() => useSyncUserSettings());
 
-    expect(changeLanguage).toHaveBeenLastCalledWith('en');
+    expect(setAppLanguage).toHaveBeenLastCalledWith('en');
     expect(setTheme).toHaveBeenLastCalledWith('light');
 });
 
@@ -234,8 +287,8 @@ test('a restored self user does not override the newer cached language and theme
 
     renderHook(() => useSyncUserSettings());
 
-    expect(changeLanguage).toHaveBeenCalledWith('ru');
-    expect(changeLanguage).not.toHaveBeenCalledWith('en');
+    expect(setAppLanguage).toHaveBeenCalledWith('ru');
+    expect(setAppLanguage).not.toHaveBeenCalledWith('en');
     expect(locale.saveLocalePreference).not.toHaveBeenCalledWith('en');
     expect(setTheme).toHaveBeenCalledWith('dark');
     expect(setTheme).not.toHaveBeenCalledWith('light');
@@ -261,7 +314,7 @@ test('an optimistic change on the restored self user keeps the cached language',
             }
         });
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
-            expect(changeLanguage).not.toHaveBeenCalledWith('en');
+            expect(setAppLanguage).not.toHaveBeenCalledWith('en');
             expect(setTheme).toHaveBeenLastCalledWith('system');
         });
     }));
@@ -277,7 +330,7 @@ test('a server value loaded after the restore applies over the cached user', () 
         // Changed on another device: the refetch brings a newer server value.
         seedSelfUser(selfUser({ language: 'de', theme: 'light' }));
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
-            expect(changeLanguage).toHaveBeenLastCalledWith('de');
+            expect(setAppLanguage).toHaveBeenLastCalledWith('de');
             expect(setTheme).toHaveBeenLastCalledWith('light');
         });
     }));

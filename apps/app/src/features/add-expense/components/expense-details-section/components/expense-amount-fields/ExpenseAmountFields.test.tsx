@@ -3,7 +3,7 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
-import i18n from 'i18n/index';
+import { i18n } from 'i18n';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { ExpenseAmountFields } from './ExpenseAmountFields';

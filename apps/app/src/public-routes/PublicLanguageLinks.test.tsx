@@ -5,7 +5,7 @@ import { expect, test } from 'vitest';
 
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import { lightThemeStyled } from 'constants/styled-themes';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 
 import { PublicLanguageLinks } from './PublicLanguageLinks';
 
