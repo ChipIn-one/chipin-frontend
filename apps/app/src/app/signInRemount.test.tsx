@@ -100,8 +100,10 @@ const currentClient = (): QueryClient | undefined => clients[clients.length - 1]
 const DESTINATION_TEXT = 'destination';
 const Destination = () => <p>{DESTINATION_TEXT}</p>;
 
-// What main.tsx does: the provider follows this tab's user (`usePersistedUserId`), the router is
-// inside it (a MemoryRouter even restarts at its initial entry on the remount).
+// As in main.tsx, the provider follows this tab's user (`usePersistedUserId`) and the router is
+// inside it. main.tsx's `AppRouterProvider` starts its new router from the current URL (covered by
+// `app/router/AppRouterProvider.test.tsx`); this MemoryRouter even restarts at its initial entry on
+// the remount, the harder case for the single-use code.
 const App = ({ initialEntry = '/', probe }: { initialEntry?: string; probe?: ReactNode }) => {
     const userId = usePersistedUserId();
 
