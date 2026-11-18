@@ -946,6 +946,32 @@ describe('03-16a part A', () => {
         expect(versions).toEqual([null, 'v-op-1']);
     });
 
+    test('03-16a R2-L2: a discard that leaves no op of the entry forgets its version: the next edit goes with the refreshed cache (If-Match v3)', async () => {
+        const client = new QueryClient();
+        const { sent, failed } = await failedBehindSent();
+        const { deps, versions } = harness();
+        const [run] = runAll([sent], deps);
+
+        await tick();
+        await expect(run).resolves.toMatchObject({ kind: 'sent' });
+        expect(getOutboxVersion('entry-e')).toBe('v-op-1');
+        await discardOps([failed.opId]);
+        // The entry was read again after an edit made elsewhere.
+        client.setQueryData(ledgerEntryKey('entry-e'), { type: 'EXPENSE', version: 'v3' });
+        const edit = await enqueueOutboxOp(
+            client,
+            { kind: 'updateExpense', entryId: 'entry-e', owner: OWNER },
+            ({ base, baseVersion }) => ({ ...base, baseVersion }),
+        );
+        const [editRun] = runAll([edit], deps);
+
+        await tick();
+        await expect(editRun).resolves.toMatchObject({ kind: 'sent' });
+        // `If-Match` = the known version, else the base version: v3.
+        expect(versions).toEqual([null, null]);
+        expect(edit.baseVersion).toBe('v3');
+    });
+
     test('03-15c2 R3 N2, 03-16a R1 N4: a send that throws synchronously is classified like a rejected one: failed, no claim left, the tab not counted as sending', async () => {
         const op = await queue('entry-a', 'createExpense');
         const deps: OutboxDeps<OutboxOpBase> = {

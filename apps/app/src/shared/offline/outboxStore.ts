@@ -612,8 +612,8 @@ const countOps = (draft: OutboxState): number =>
 export const isOutboxFull = (): boolean => countOps(state) >= OUTBOX_LIMIT;
 
 /**
- * A repeated create of an entry (one client entry id, §2.7) with another draft, whose create is
- * already being sent, sent or failed: it cannot be replaced (R1 N1).
+ * A repeated create of an entry (one client entry id, §2.7) with another draft: the queued create
+ * may already be on the server, so it is never replaced (R2-L1).
  */
 export class OutboxCreateSentError extends Error {
     override readonly name = 'OutboxCreateSentError';
@@ -629,31 +629,28 @@ const createIn = (draft: OutboxState, entryId: string): OutboxOpBase | undefined
         op => op.entryId === entryId && op.kind === 'createExpense',
     );
 
+// Object keys in a fixed order: equal content has equal text whatever order it was built in.
+const sortedKeys = (_key: string, value: unknown): unknown =>
+    typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+        : value;
+
 // What an op asks the server for, without the fields each append makes anew.
 const contentOf = ({ opId: _opId, seq: _seq, createdAt: _createdAt, ...content }: OutboxOpBase) =>
-    persistCodec.stringify(content);
+    JSON.stringify(content, sortedKeys);
 
-// §2.7, R1 N1: a repeated create of an entry. The same content is not appended again (`null`); a
-// pending create that no tab has claimed is cancelled and replaced (its id); else it is refused.
-const replacedCreate = (draft: OutboxState, op: OutboxOpBase): string | null | undefined => {
+// §2.7: a repeated create of an entry. The same content is not appended again (true); another
+// draft is refused whatever the claim (R2-L1: a create in backoff may already be on the server).
+const isRepeatedCreate = (draft: OutboxState, op: OutboxOpBase): boolean => {
     const queued = op.kind === 'createExpense' ? createIn(draft, op.entryId) : undefined;
 
     if (queued === undefined) {
-        return undefined;
+        return false;
     }
-    if (contentOf(queued) === contentOf(op)) {
-        return null;
-    }
-    if (
-        !draft.ops.includes(queued) ||
-        draft.sending?.opId === queued.opId ||
-        pendingRemovals.has(queued.opId)
-    ) {
+    if (contentOf(queued) !== contentOf(op)) {
         throw new OutboxCreateSentError();
     }
-    draft.ops = draft.ops.filter(({ opId }) => opId !== queued.opId);
-    draft.cancelled.add(queued.opId);
-    return queued.opId;
+    return true;
 };
 
 // An unsent create of the entry (a sent one, still waiting for its removal, has a version).
@@ -672,9 +669,7 @@ export interface OutboxAppendView {
  * Appends the op that `build` makes with the next `seq` (C2-16), resolving once the write has
  * landed. A create of an entry that already has the same create in the queue (a repeated submit of
  * the same form, §2.7) is not appended: it resolves with the built op and writes nothing; with
- * another draft it replaces a pending unclaimed create (cancelled in the same write), else it is
- * refused (`OutboxCreateSentError`). Refused at
- * the limit (`OutboxLimitError`). A rejected write (`OutboxPersistError`): the op does not exist
+ * another draft it is refused (`OutboxCreateSentError`), nothing is appended. Refused at the limit (`OutboxLimitError`). A rejected write (`OutboxPersistError`): the op does not exist
  * and offline writing is off until restart (§2.8, Sentry `outbox.persist_failed`). A write-lock
  * timeout is a transient `OutboxPersistError` (the `saveRetry` toast): offline writing stays on
  * (Sentry `outbox.write_lock_timeout`).
@@ -690,25 +685,14 @@ export const appendOutboxOp = <Op extends OutboxOpBase>(
             hasPendingCreateOf: entryId => hasPendingCreateIn(draft, entryId),
         });
 
-        const replaced = replacedCreate(draft, op);
-
-        if (replaced !== null) {
+        if (!isRepeatedCreate(draft, op)) {
             draft.nextSeq += 1;
             draft.ops.push(op);
         }
-        return { op, replaced };
-    }).then(
-        ({ op, replaced }) => {
-            // The run of the replaced create resolves `CANCELLED` without a request.
-            if (typeof replaced === 'string') {
-                markOpsCancelled([replaced]);
-            }
-            return op;
-        },
-        (error: unknown) => {
-            throw toAppendError(error);
-        },
-    );
+        return op;
+    }).catch((error: unknown) => {
+        throw toAppendError(error);
+    });
 
 // Why an append was refused, as its caller shows it (§2.8).
 const toAppendError = (error: unknown): Error => {
@@ -1054,9 +1038,16 @@ export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
         return { discarded, refused, entries, pendingIds };
     }).then(({ discarded, refused, entries, pendingIds }) => {
         pendingIds.forEach(opId => cancelledOpIds.add(opId));
+        const leftEntries = entryIdsOf(state);
+
         entries.forEach(entryId => {
             if (hasNoFailureOf(entryId)) {
                 outboxGate.unblock(entryId);
+            }
+            // R2-L2: no op of the entry is left (nor being appended): a later write of it is based
+            // on the cache.
+            if (!leftEntries.has(entryId) && !appendsInFlight.has(entryId)) {
+                outboxVersions.delete(entryId);
             }
         });
         wake();

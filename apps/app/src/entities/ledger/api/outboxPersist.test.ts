@@ -1036,30 +1036,54 @@ describe('03-16a part A: ledger.entry(id)', () => {
         );
     });
 
-    test('03-16a R1 N1: a repeated create with another draft replaces the unsent one: one POST, with the new draft', async () => {
+    // A submit of the form opened as `entry-form`, with this description.
+    const submitForm = (client: QueryClient, description: string) =>
+        createExpenseViaOutbox(client, {
+            expense: { ...expense, description },
+            clientEntryId: 'entry-form',
+        })?.() ?? Promise.reject(new Error('the online path was chosen'));
+
+    test('03-16a R2-L1: a repeated create with another draft is refused while the first is queued (it may be on the server): nothing appended, the first is sent', async () => {
         const created = serveLedger();
         const client = await openTab();
-        const submit = (description: string) =>
-            createExpenseViaOutbox(client, {
-                expense: { ...expense, description },
-                clientEntryId: 'entry-form',
-            })?.() ?? Promise.reject(new Error('the online path was chosen'));
 
         onlineManager.setOnline(false);
-        await submit('Dinner');
-        const [first] = client.getMutationCache().getAll();
-
-        await submit('Lunch');
+        await submitForm(client, 'Dinner');
+        await expect(submitForm(client, 'Lunch')).rejects.toBeInstanceOf(OutboxCreateSentError);
         expect(pendingOutboxOps()).toEqual([
             expect.objectContaining({
                 entryId: 'entry-form',
-                draft: expect.objectContaining({ description: 'Lunch' }),
+                draft: expect.objectContaining({ description: 'Dinner' }),
             }),
         ]);
-        await vi.waitFor(() => expect(first?.state.data).toEqual({ kind: 'cancelled' }));
         onlineManager.setOnline(true);
         await vi.waitFor(() => expect(created).toEqual(['entry-form']));
         await wait(100);
+        expect(created).toEqual(['entry-form']);
+    });
+
+    test('03-16a R2-N3: a repeated create with another draft while the drain holds its claim is refused, nothing appended', async () => {
+        const held = deferred();
+        const created: string[] = [];
+
+        server.use(
+            http.post('*/ledger/entries', async () => {
+                created.push('entry-form');
+                await held.promise;
+                return HttpResponse.json({ id: 'entry-form', type: 'EXPENSE', version: '1' });
+            }),
+        );
+        const client = await openTab();
+
+        await submitForm(client, 'Dinner');
+        await vi.waitFor(() => expect(created).toEqual(['entry-form']));
+        await expect(readStored(OUTBOX_KEY)).resolves.toMatchObject({
+            sending: { opId: pendingOutboxOps()[0]?.opId },
+        });
+        await expect(submitForm(client, 'Lunch')).rejects.toBeInstanceOf(OutboxCreateSentError);
+        expect(pendingOutboxOps()).toHaveLength(1);
+        held.resolve();
+        await vi.waitFor(() => expect(pendingOutboxOps()).toEqual([]));
         expect(created).toEqual(['entry-form']);
     });
 

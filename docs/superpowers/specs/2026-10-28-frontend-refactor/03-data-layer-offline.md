@@ -801,13 +801,14 @@ still writes its type and version; a delete's entry, and an answer without a rea
 `ledger.entry(id)`; with the flag off nothing caches it, so the invalidation matches nothing. (2) Resolves 03-15a (5):
 the expense modal store makes `clientEntryId` when the create form opens (`null` in edit mode and without
 `crypto.randomUUID`); the online create ignores it. `appendOutboxOp` does not append a create of an entry that already
-has the same create queued, sent or failed, so a repeated submit of the same opening queues one op; a repeated create
-with another draft replaces a pending create no tab has claimed (cancelled in the same write), else it is refused
-(`OutboxCreateSentError`). (3) Resolves 03-15b (13)
+has the same create queued, sent or failed (compared with sorted keys), so a repeated submit of the same opening queues one op; a
+repeated create with another draft is refused (`OutboxCreateSentError`, nothing appended) whatever the claim: a create
+in backoff may already be on the server, so it is never replaced. (3) Resolves 03-15b (13)
 (M3): the registry reads the cached version inside the append's change, and `trackOutboxAppend` counts an append of
 the entry from its call until it settles; while one is counted, the removal of a sent op of the entry keeps the
 version (in memory; persisted only once an op of the entry is in the key), and it is forgotten when the last append
-settles with no op of the entry queued or failed; a failed op of the entry keeps it too (its Retry is sent with it).
+settles with no op of the entry queued or failed; a failed op of the entry keeps it too (its Retry is sent with it), and
+a discard that leaves no op of the entry forgets it (a later write is based on the refreshed cache).
 Across tabs the count is per tab: an append in tab B while A's removal lands relies on B having written A's
 `settled` entry first (the message is posted before the removal write lands), a residual window with no data loss. (4) Resolves 03-15c2 (3) (R1 L3): `settledVersions` is gone; the version
 lives only in `ledger.entry(id)`, so a fresher read wins. (5) L5: a ledger write resolves `{ queued }`; a queued write
