@@ -2,6 +2,7 @@ import { type ReactElement, useSyncExternalStore } from 'react';
 import { Slot } from '@radix-ui/themes';
 
 import { getLegacyHostAppDashboardUrl } from 'helpers/legacyHost';
+import { useLegacyHostStandaloneAppHost } from 'hooks/useLegacyHostStandaloneAppHost';
 
 import AuthModal from './AuthModal';
 
@@ -10,6 +11,9 @@ import AuthModal from './AuthModal';
 // the sign-in. Every other host (the app hosts, previews, localhost) opens the auth modal, as before.
 // The prerendered HTML and the hydration render have no host (server snapshot `null`), so both
 // render the modal trigger; the host decides right after hydration.
+// #758: in an icon installed from a legacy host (standalone display mode) that navigation opens an
+// in-app sheet whose session never reaches the icon, so the CTA is not rendered at all; the public
+// routes show `LegacyHostStandaloneNotice` instead.
 const subscribeToNothing = () => () => undefined;
 const getClientAppDashboardUrl = () => getLegacyHostAppDashboardUrl(window.location.hostname);
 const getServerAppDashboardUrl = () => null;
@@ -20,6 +24,11 @@ const SignInEntry = ({ children }: { children: ReactElement }) => {
         getClientAppDashboardUrl,
         getServerAppDashboardUrl,
     );
+    const standaloneAppHost = useLegacyHostStandaloneAppHost();
+
+    if (standaloneAppHost !== null) {
+        return null;
+    }
 
     if (appDashboardUrl !== null) {
         return (

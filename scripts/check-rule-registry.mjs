@@ -229,7 +229,11 @@ export const resolveMode = async (mode, script = SELF) => {
             cwd: repoRoot,
             env: modeEnv(mode),
             encoding: 'utf8',
-            maxBuffer: 256 * 1024 * 1024,
+            // The child prints the effective rules of every linted file (~260 KB each, mostly the
+            // boundaries policies): 1049 files passed 256 MiB in #758. With `encoding: 'utf8'` the
+            // real ceiling is V8's max string length (~512 MiB), so this is the useful maximum.
+            // Follow-up: shrink the output (e.g. dedupe identical rule sets) instead of growing it.
+            maxBuffer: 512 * 1024 * 1024,
         }));
     } catch (error) {
         throw new Error(

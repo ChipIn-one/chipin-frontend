@@ -433,7 +433,6 @@ const NEVER_REDIRECTED_PATHS = [
     '/sw.js',
     '/sw-kill.js',
     '/sw-app.js',
-    '/manifest.webmanifest',
     '/favicon.ico',
     '/pwa-192x192.png',
     '/apple-touch-icon-180x180.png',
@@ -444,6 +443,10 @@ const NEVER_REDIRECTED_PATHS = [
     '/Dashboard',
     '/not-found/x',
 ];
+
+// On the app hosts and previews the manifest is a plain file (#758 redirects it only on the legacy
+// hosts, see the block below).
+const APP_HOST_ONLY_PATHS = ['/manifest.webmanifest'];
 
 const legacyHostAppOrigin = host => LEGACY_HOST_APP_ORIGINS[host];
 
@@ -503,7 +506,11 @@ describe('Vercel step-1 legacy redirects (04-4a2)', () => {
             expect(hostRedirects.every(route => route.status === 301 && !route.has)).toBe(true);
             expect(resolveRoute(host, '/dashboard')).toEqual({ rewrite: '/app.html' });
             expect(resolveRoute(host, '/app.html')).toBeUndefined();
-            for (const path of [...STEP_1_PATHS, ...NEVER_REDIRECTED_PATHS]) {
+            for (const path of [
+                ...STEP_1_PATHS,
+                ...NEVER_REDIRECTED_PATHS,
+                ...APP_HOST_ONLY_PATHS,
+            ]) {
                 expect(resolveRoute(host, path)?.redirect).toBeUndefined();
             }
         },
@@ -596,6 +603,52 @@ describe('Vercel step-1 legacy redirects (04-4a2)', () => {
     });
 });
 
+// #758: the legacy hosts keep the landing but must not be installable as the app: iOS installed
+// `chipin.one` (scope `/`) as a standalone app whose sign-in opens the app host in an in-app sheet,
+// so the session never reaches the icon. `dist` has `/manifest.webmanifest` and Vercel runs the
+// rewrites after `handle: filesystem`, so a host-scoped rewrite cannot hide the file. The redirects
+// run before the filesystem: on the legacy hosts the manifest 302s to a path that is neither a
+// file nor a rewrite source, which Vercel answers with 404, so the browser gets no manifest. The
+// app hosts, previews and localhost keep the file with its headers.
+const LEGACY_HOST_MISSING_MANIFEST = '/legacy-host-has-no-manifest';
+
+describe('Vercel /manifest.webmanifest by host (#758)', () => {
+    test.each(LEGACY_HOSTS)('on %s redirects the manifest to a path that 404s', host => {
+        expect(resolveRoute(host, '/manifest.webmanifest')).toEqual({
+            redirect: LEGACY_HOST_MISSING_MANIFEST,
+            statusCode: 302,
+        });
+        expect(resolveRoute(host, LEGACY_HOST_MISSING_MANIFEST)).toBeUndefined();
+    });
+
+    test.each([...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'])(
+        'on %s serves the manifest file itself (no redirect, no rewrite)',
+        host => {
+            expect(resolveRoute(host, '/manifest.webmanifest')).toBeUndefined();
+        },
+    );
+
+    test('redirects the manifest on exactly the legacy hosts', () => {
+        const manifestHosts = config.redirects
+            .filter(redirect => redirect.source === '/manifest.webmanifest')
+            .flatMap(redirect => redirect.has.map(exactHost));
+
+        expect(manifestHosts.sort()).toEqual([...LEGACY_SERVICE_WORKER_HOSTNAMES].sort());
+        expect(Object.keys(LEGACY_HOST_APP_ORIGINS).sort()).toEqual(manifestHosts);
+    });
+
+    // On the legacy hosts the 302 is terminal, so only the hosts that serve the file are checked.
+    test.each([...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'])(
+        'keeps the manifest headers on %s',
+        host => {
+            expect(resolveHeaders(host, '/manifest.webmanifest')).toMatchObject({
+                'Content-Type': 'application/manifest+json',
+                'Cache-Control': 'public, max-age=3600, immutable',
+            });
+        },
+    );
+});
+
 const headerRoutes = (() => {
     const { routes, error } = getTransformedRoutes({ headers: config.headers ?? [] });
 
@@ -672,6 +725,11 @@ describe.runIf(existsSync(resolve(DIST, 'index.html')))('built dist worker files
         expect(existsSync(resolve(DIST, 'sw-app.js'))).toBe(true);
         expect(existsSync(resolve(DIST, 'sw-kill.js'))).toBe(true);
         expect(existsSync(resolve(DIST, 'sw.js'))).toBe(false);
+    });
+
+    test('has the manifest and no file at the legacy-host manifest target (#758)', () => {
+        expect(existsSync(resolve(DIST, 'manifest.webmanifest'))).toBe(true);
+        expect(existsSync(resolve(DIST, LEGACY_HOST_MISSING_MANIFEST.slice(1)))).toBe(false);
     });
 
     test('copies assetlinks.json with the legacy and the app hosts (04-4a2)', () => {

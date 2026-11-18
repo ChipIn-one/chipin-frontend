@@ -2,7 +2,10 @@ export const checkIsPwaInstalled = (): boolean => {
     if (typeof window === 'undefined') {
         return false;
     }
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(display-mode: standalone)').matches
+    ) {
         return true;
     }
 

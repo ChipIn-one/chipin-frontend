@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { SECOND } from 'constants/time';
 import type { Group } from 'entities/groups';
 import { copyTextToClipboard } from 'helpers/clipboard';
+import { getLegacyHostAppOrigin } from 'helpers/legacyHost';
 import { detectNativeShare, type InviteShareContent, shareInvite } from 'helpers/share';
 import { buildFriendInviteLink, buildGroupInviteLink } from 'helpers/url';
 import { usePwaStore } from 'store/pwaStore';
@@ -31,11 +32,19 @@ export const useCheckPwa = () => {
     };
 
     useEffect(() => {
-        window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+        // #758: the legacy hosts are not installable as the app (no manifest, no web-app metas), so
+        // their landing never offers the install buttons, even if a browser still fires the event.
+        const isInstallable = getLegacyHostAppOrigin(window.location.hostname) === null;
+
+        if (isInstallable) {
+            window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+        }
         window.addEventListener('appinstalled', onAppInstalled);
 
         return () => {
-            window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+            if (isInstallable) {
+                window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+            }
             window.removeEventListener('appinstalled', onAppInstalled);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps

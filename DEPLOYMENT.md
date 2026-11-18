@@ -170,15 +170,24 @@ The app moves to its own host in two steps (spec 04 §4.5,
 Step 1 (04-4a2) is below; step 2 (the site takes `chipin.one`, 04-4b) adds its
 own section.
 
+Neither step makes `chipin.one` or `dev.chipin.one` installable as the app
+(#758). In step 1 the legacy hosts serve no manifest and no web-app metas and
+show the standalone notice (below). 04-4b must keep the site the same way: no
+`manifest.webmanifest`, no `<link rel="manifest">`, no `mobile-web-app-capable`
+/ `apple-mobile-web-app-*` metas, and a notice pointing to the app host when the
+site runs in standalone mode (an icon installed from `chipin.one` before step 1,
+or any icon iOS 26+ makes from a Home Screen bookmark). Only the app hosts are
+installable.
+
 ### Step 1: the app moves to `app.chipin.one`
 
 After 04-4a2 the existing app project serves both host groups from one build:
 
-| Host                                          | Serves                                                                                                                                    |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `app.chipin.one`, `app-dev.chipin.one`        | the app, `/api/*` → `api.chipin.one` / `api-dev.chipin.one`, the app worker at `/sw.js`, `X-Robots-Tag: noindex, nofollow`                |
-| `*.vercel.app` (previews)                     | the same as the app hosts, `/api/*` → `api-dev.chipin.one`                                                                                |
-| `chipin.one`, `dev.chipin.one` (legacy hosts) | today's landing (`/`, `/privacy`, `/terms`, `/ru/*`), the worker kill-switch at `/sw.js` (04-4a1), `302` of private paths to the app host |
+| Host                                          | Serves                                                                                                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.chipin.one`, `app-dev.chipin.one`        | the app, `/api/*` → `api.chipin.one` / `api-dev.chipin.one`, the app worker at `/sw.js`, `X-Robots-Tag: noindex, nofollow`                                    |
+| `*.vercel.app` (previews)                     | the same as the app hosts, `/api/*` → `api-dev.chipin.one`                                                                                                    |
+| `chipin.one`, `dev.chipin.one` (legacy hosts) | today's landing (`/`, `/privacy`, `/terms`, `/ru/*`), the worker kill-switch at `/sw.js` (04-4a1), `302` of private paths to the app host, no manifest (#758) |
 
 On the legacy hosts `/dashboard*`, `/solo*`, `/activity*`, `/settings*`,
 `/group*`, `/friends*`, `/oauth*`, `/not-found` and `/app.html` answer `302` to
@@ -195,6 +204,23 @@ page (`/`, `/ru/`) is sent there without any `/api` auth call; on `/privacy`,
 `/terms` and their `/ru/` variants such a visitor stays and reads the page. The
 session hint on the legacy host is never cleared (no auth call runs there), so a
 former user opening `chipin.one/` always lands on the app host.
+
+The legacy hosts are not installable as the app (#758). An icon installed from
+`chipin.one` has scope `chipin.one/`, so its sign-in opened the app host in an
+in-app sheet and the session never reached the icon. `/manifest.webmanifest`
+there answers `302` to `/legacy-host-has-no-manifest`, which is neither a file
+nor a rewrite and so answers `404` (Vercel runs the rewrites after the
+filesystem, so a rewrite could not hide the existing file; the redirects run
+before it). The HTML is shared with the app hosts, so `root.tsx` removes
+`<link rel="manifest">`, `mobile-web-app-capable`,
+`apple-mobile-web-app-capable` and `apple-mobile-web-app-status-bar-style` on a
+legacy host before anything renders (the icons stay); the landing there never
+offers its install buttons. When the landing runs in standalone mode on a legacy
+host (an old icon; since iOS 26 any Home Screen bookmark opens as a web app), it
+hides every sign-in button, does not hand a visitor with a session hint to the
+app host, and shows one notice: the icon is out of date, open `app.chipin.one`
+(`app-dev.chipin.one` on dev) in the browser and add it to the Home Screen
+again. Nothing of this applies to the app hosts, previews or localhost.
 
 Preconditions:
 
@@ -235,6 +261,7 @@ points at it):
    - `https://chipin.one/`, `/privacy`, `/ru/`, `/robots.txt`, `/.well-known/assetlinks.json` → `200`, no redirect, no `X-Robots-Tag`;
    - `https://chipin.one/index.html` → `302` to `/` on the same host;
    - `https://chipin.one/sw.js` → `200`, `Cache-Control: no-cache`, the kill-switch body; `https://app.chipin.one/sw.js` → the app worker;
+   - `curl -sIL https://chipin.one/manifest.webmanifest` → `302` to `/legacy-host-has-no-manifest`, then `404`; `https://app.chipin.one/manifest.webmanifest` → `200`, `Content-Type: application/manifest+json` (#758);
    - `https://app.chipin.one/` and `/dashboard` → `200` with `X-Robots-Tag: noindex, nofollow`; `https://app.chipin.one/api/health` → `200`;
    - `assetlinks.json` lists `chipin.one`, `dev.chipin.one`, `app.chipin.one`, `app-dev.chipin.one`;
    - on `app.chipin.one`: Google sign-in, a deep link reload (`/group/<uuid>`), an offline reload of `/dashboard` from precache, and `Set-Cookie` of sign-in and refresh with the `__Host-` prefix and no `Domain=`;
@@ -259,8 +286,9 @@ Rollback criterion: 404 or 5xx on `chipin.one` or `app.chipin.one` rising above
 - Targeted (tens of minutes: a PR, CI and a Promote): a PR that deletes only the
   step-1 legacy redirects in `apps/app/vercel.json` (the `302` rows with a
   `chipin.one`/`dev.chipin.one` host condition) and the legacy-host changes of
-  04-4a2 (`helpers/legacyHost.ts` users: `root.tsx`, `SignInEntry`,
-  `PublicSession`), then Promote. For an immediate stop, use the full rollback
+  04-4a2 and #758 (`helpers/legacyHost.ts` users: `root.tsx`, `SignInEntry`,
+  `PublicSession`, `useCheckPwa`, `useLegacyHostStandaloneAppHost`,
+  `LegacyHostStandaloneNotice`), then Promote. For an immediate stop, use the full rollback
   below (Instant Rollback first, then remove the app domains; in the other
   order `chipin.one` keeps redirecting to a host that no longer resolves).
   The app hosts keep their `/api` rewrites, `X-Robots-Tag` and domains, so users

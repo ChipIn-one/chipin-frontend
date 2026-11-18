@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { getLegacyHostAppDashboardUrl } from 'helpers/legacyHost';
 import { hasAuthSessionHint } from 'helpers/localStorage';
+import { checkIsPwaInstalled } from 'helpers/pwa';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
@@ -18,6 +19,9 @@ const PublicSessionCheck = () => {
 // and any visitor of another public page (privacy, terms: linked from stores, OAuth consent and
 // mail), is anonymous locally (no request), so the page renders its header. Nothing on the legacy
 // host clears the hint, so this handoff of the home page is permanent for such a browser.
+// #758: not in an icon installed from the legacy host (standalone display mode): there the app host
+// opens in an in-app sheet whose session never reaches the icon, so the visitor stays on the landing
+// and `LegacyHostStandaloneNotice` tells them to install the app host instead.
 const LegacyHostSessionHandoff = ({
     appDashboardUrl,
     isHome,
@@ -28,7 +32,7 @@ const LegacyHostSessionHandoff = ({
     const setUnauthenticated = useAuthStore(state => state.setUnauthenticated);
 
     useEffect(() => {
-        if (isHome && hasAuthSessionHint()) {
+        if (isHome && hasAuthSessionHint() && !checkIsPwaInstalled()) {
             window.location.replace(appDashboardUrl);
             return;
         }

@@ -1,11 +1,12 @@
 import { act, renderHook } from '@testing-library/react';
 import { toast } from 'sonner';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { SECOND } from 'constants/time';
 import type { Group } from 'entities/groups';
+import { usePwaStore } from 'store/pwaStore';
 
-import { useFriendInvite, useGroupInvite } from './pwaHooks';
+import { useCheckPwa, useFriendInvite, useGroupInvite } from './pwaHooks';
 
 const hookMocks = vi.hoisted(() => ({
     copyTextToClipboard: vi.fn((): Promise<'copied' | 'unsupported'> => Promise.resolve('copied')),
@@ -191,4 +192,73 @@ test('clears the pending copy feedback timer on unmount', () => {
 
         expect(clearTimeoutSpy).toHaveBeenCalledTimes(clearedBeforeUnmount + 1);
     });
+});
+
+// #758: the legacy hosts are not installable as the app, so their landing never stores the install
+// prompt (the hero and CTA install buttons stay hidden); every other host keeps the install flow.
+const pwaStoreActions = {
+    setIsPwaInstalled: vi.fn(),
+    setPwaInstallPrompt: vi.fn(),
+};
+const pwaStoreState: Parameters<Parameters<typeof usePwaStore>[0]>[0] = {
+    isPwaInstalled: false,
+    pwaInstallPrompt: null,
+    isSwUpdateAvailable: false,
+    setIsSwUpdateAvailable: vi.fn(),
+    callPWAInstall: vi.fn(() => Promise.resolve()),
+    ...pwaStoreActions,
+};
+
+const renderCheckPwaOn = (hostname: string) => {
+    vi.stubGlobal('location', { ...window.location, hostname });
+    vi.mocked(usePwaStore).mockImplementation(selector => selector(pwaStoreState));
+    return renderHook(() => useCheckPwa());
+};
+
+const fireBeforeInstallPrompt = () => {
+    const event = new Event('beforeinstallprompt', { cancelable: true });
+    window.dispatchEvent(event);
+    return event;
+};
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
+
+test.each(['chipin.one', 'dev.chipin.one'])(
+    'on the legacy host %s ignores beforeinstallprompt',
+    hostname => {
+        const { unmount } = renderCheckPwaOn(hostname);
+
+        const event = fireBeforeInstallPrompt();
+
+        expect(pwaStoreActions.setPwaInstallPrompt).not.toHaveBeenCalled();
+        expect(event.defaultPrevented).toBe(false);
+        unmount();
+    },
+);
+
+test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app', 'localhost'])(
+    'on %s stores the install prompt, as before',
+    hostname => {
+        const { unmount } = renderCheckPwaOn(hostname);
+
+        const event = fireBeforeInstallPrompt();
+
+        expect(pwaStoreActions.setPwaInstallPrompt).toHaveBeenCalledExactlyOnceWith(event);
+        expect(event.defaultPrevented).toBe(true);
+        unmount();
+        fireBeforeInstallPrompt();
+        expect(pwaStoreActions.setPwaInstallPrompt).toHaveBeenCalledOnce();
+    },
+);
+
+test.each(['chipin.one', 'app.chipin.one'])('on %s still records appinstalled', hostname => {
+    const { unmount } = renderCheckPwaOn(hostname);
+
+    window.dispatchEvent(new Event('appinstalled'));
+
+    expect(pwaStoreActions.setIsPwaInstalled).toHaveBeenCalledExactlyOnceWith(true);
+    expect(pwaStoreActions.setPwaInstallPrompt).toHaveBeenCalledExactlyOnceWith(null);
+    unmount();
 });
