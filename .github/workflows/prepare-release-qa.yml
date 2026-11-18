@@ -98,15 +98,10 @@ jobs:
       matrix:
         include:
           - profile: chromium
-            browser: chromium
           - profile: firefox
-            browser: firefox
           - profile: webkit
-            browser: webkit
           - profile: pixel
-            browser: chromium
           - profile: iphone
-            browser: webkit
     steps:
       # Created before anything else, so the final purge step can delete the run's users even when
       # the test step is cancelled, times out or crashes. Unique per profile job.
@@ -145,14 +140,6 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      # The candidate's code (an npm ci with install scripts) runs before this step: no matrix job ever
-      # saves a cache. It only restores the browser that master pushes cached (e2e-smoke.yml).
-      - name: Restore Playwright browser
-        id: browsers
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browser }}
       # A candidate from before the matrix has no project for this profile: reported as such, nothing
       # runs. Any other failure to list the tests fails the job.
       - name: Check the candidate has this profile
@@ -173,19 +160,22 @@ jobs:
             printf '%s\n' "$output" | tail -20
             exit 1
           fi
-      - name: Install the profile's browser
-        if: steps.project.outputs.available == 'true' && steps.browsers.outputs.cache-hit != 'true'
-        working-directory: apps/app
+      # The browsers and their system libraries come in the official Playwright image of the pinned
+      # @playwright/test version (docs/e2e-tests.md#release-browser-matrix): no apt and no browser
+      # download on the runner, no cache. Pulled apart from the tests, so a slow pull shows here.
+      - name: Pull the Playwright image
+        if: steps.project.outputs.available == 'true'
+        timeout-minutes: 5
         env:
-          BROWSER: ${{ matrix.browser }}
-        run: npx playwright install --with-deps "$BROWSER"
-      # The cache holds only the browser; its system libraries are installed on every runner.
-      - name: Install the browser's system dependencies
-        if: steps.project.outputs.available == 'true' && steps.browsers.outputs.cache-hit == 'true'
-        working-directory: apps/app
-        env:
-          BROWSER: ${{ matrix.browser }}
-        run: npx playwright install-deps "$BROWSER"
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          docker pull "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
       - name: Check staging API
         if: steps.project.outputs.available == 'true'
         shell: bash
@@ -198,6 +188,9 @@ jobs:
       # The target is the resolved immutable Preview; playwright.config.ts rejects anything outside
       # its allowlist (production is forbidden). The run's purge is the global teardown inside this
       # step. The optional Vercel bypass secret is sent only to the Preview origin.
+      # Only this command runs in the image, on the host's npm ci tree and under the runner's Node,
+      # mounted read-only: as the runner user (results stay runner-owned), with the workspace and
+      # RUNNER_TEMP at their own paths, and with exactly this step's variables, passed by name.
       - name: Run e2e on the Preview (smoke + money flows)
         id: e2e
         if: steps.project.outputs.available == 'true'
@@ -211,7 +204,51 @@ jobs:
           CHIPIN_E2E_BASE_URL: ${{ needs.resolve.outputs.url }}
           CHIPIN_E2E_JSON_REPORT: ${{ runner.temp }}/playwright-results.json
           PROFILE: ${{ matrix.profile }}
-        run: npx playwright test --project="$PROFILE"
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          # Without a target the suite would start the local dev server; the matrix tests only the
+          # resolved Preview.
+          if [[ -z "$CHIPIN_E2E_BASE_URL" ]]; then
+            echo "::error::The resolved Preview URL (CHIPIN_E2E_BASE_URL) is empty; the matrix does not run without it."
+            exit 1
+          fi
+          # The repository's Node (setup-node, engines 24.x), not the image's own, runs the tests.
+          node_home="$(dirname "$(dirname "$(command -v node)")")"
+          docker run --rm --ipc=host --init \
+            --name "$CHIPIN_E2E_RUN_ID" \
+            --user "$(id -u):$(id -g)" \
+            -v "$node_home:/opt/host-node:ro" \
+            -e PATH=/opt/host-node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -e HOME=/tmp \
+            -e CI \
+            -e PROFILE \
+            -e CHIPIN_CONTRACT_SWAGGER_USER \
+            -e CHIPIN_CONTRACT_SWAGGER_PASSWORD \
+            -e VERCEL_AUTOMATION_BYPASS_SECRET \
+            -e CHIPIN_E2E_RUN_ID \
+            -e CHIPIN_E2E_BASE_URL \
+            -e CHIPIN_E2E_JSON_REPORT \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+            -v "$RUNNER_TEMP:$RUNNER_TEMP" \
+            -w "$PWD" \
+            "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble" \
+            bash -c 'node --version && exec npx playwright test --project="$PROFILE"'
+      # A cancel or timeout can kill the docker client and leave the container running: it is
+      # removed before the result, artifact and purge steps, so nothing writes to the workspace or
+      # registers users on staging after this point. The container is named after the run id.
+      - name: Stop the test container
+        if: always() && steps.run.outputs.id != ''
+        timeout-minutes: 1
+        env:
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: docker rm -f "$RUN_ID" >/dev/null 2>&1 || true
       # A fixed-shape summary for `prepare`: counts from the JSON report, status from the step
       # outcome, `error` when the suite produced no report. It holds no secret or session material.
       - name: Write profile result

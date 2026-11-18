@@ -61,6 +61,76 @@ const OWNER_GUARD =
     "github.actor == 'syllik' && github.triggering_actor == 'syllik' && github.ref == 'refs/heads/master'";
 const secretsOf = job =>
     [...JSON.stringify(job).matchAll(/secrets\.([A-Z0-9_]+)/g)].map(match => match[1]);
+const PLAYWRIGHT_IMAGE = '"mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"';
+const STRICT_VERSION_CHECK = '[[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\\.[0-9]+\\.[0-9]+$ ]]';
+
+/**
+ * Asserts the job gets its browsers only from the pinned Playwright image (#750): no apt, no browser
+ * install, no cache; a separate pull step; the test step runs `command` in the image under the
+ * runner's Node (mounted read-only, first on PATH) as the runner user, with the workspace and
+ * RUNNER_TEMP at their own paths, and passes exactly `names` (by name) plus CI into it. The container
+ * is named after the run id and removed by an always-run step before the purge.
+ */
+const expectTestsInPlaywrightImage = (job, testStepId, command, names) => {
+    const { steps } = job;
+    for (const step of steps) {
+        expect(step.run ?? '', step.name).not.toMatch(/playwright install|apt(-get)? /);
+        expect(step.uses ?? '', step.name).not.toMatch(/^actions\/cache/);
+    }
+    expect(JSON.stringify(job)).not.toContain('ms-playwright');
+    expect(job.container).toBeUndefined();
+    const version = steps.find(step => step.id === 'playwright');
+    expect(version.run).toContain('^[0-9]+\\.[0-9]+\\.[0-9]+$');
+    const pull = steps.find(step => step.name === 'Pull the Playwright image');
+    expect(pull['timeout-minutes']).toBe(5);
+    expect(pull.env).toEqual({ PLAYWRIGHT_VERSION: '${{ steps.playwright.outputs.version }}' });
+    expect(pull.run).toContain(STRICT_VERSION_CHECK);
+    expect(pull.run).toContain(`docker pull ${PLAYWRIGHT_IMAGE}`);
+    expect(steps.indexOf(pull)).toBeLessThan(steps.findIndex(step => step.id === testStepId));
+    const test = steps.find(step => step.id === testStepId);
+    expect(test.env.PLAYWRIGHT_VERSION).toBe('${{ steps.playwright.outputs.version }}');
+    expect(test.run).toContain(STRICT_VERSION_CHECK);
+    expect(test.run).toContain('docker run --rm --ipc=host --init');
+    expect(test.run).toContain('--user "$(id -u):$(id -g)"');
+    expect(test.run).toContain('-v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE"');
+    expect(test.run).toContain('-v "$RUNNER_TEMP:$RUNNER_TEMP"');
+    expect(test.run).toContain('-w "$PWD"');
+    expect(test.run).toContain('--name "$CHIPIN_E2E_RUN_ID"');
+    expect(test.env.CHIPIN_E2E_RUN_ID).toBe('${{ steps.run.outputs.id }}');
+    // The repository's Node 24 from setup-node, not the image's own Node, runs the tests.
+    expect(test.run).toContain('node_home="$(dirname "$(dirname "$(command -v node)")")"');
+    expect(test.run).toContain('-v "$node_home:/opt/host-node:ro"');
+    expect(test.run).toContain(
+        '-e PATH=/opt/host-node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \\',
+    );
+    expect(
+        test.run
+            .trimEnd()
+            .endsWith(`${PLAYWRIGHT_IMAGE} \\\n  bash -c 'node --version && exec ${command}'`),
+    ).toBe(true);
+    // Every variable by name only (its value stays in the step's env), never `-e NAME=value`; only
+    // the fixed HOME and PATH carry a value.
+    const passed = [...test.run.matchAll(/-e ([A-Z0-9_]+)(=\S*)?/g)];
+    expect(passed.filter(match => match[2] && !['HOME', 'PATH'].includes(match[1]))).toEqual([]);
+    expect(passed.map(match => match[1]).sort()).toEqual(['CI', 'HOME', 'PATH', ...names].sort());
+    expect(test.run).not.toMatch(/--env(-file)?\b/);
+    // Each passed name has its value in this step's env (CI comes from the runner).
+    for (const [, name] of passed.filter(match => !['HOME', 'PATH', 'CI'].includes(match[1])))
+        expect(Object.keys(test.env), name).toContain(name);
+    // A container orphaned by a killed docker client is removed right after the test step, before
+    // the artifact steps and the purge.
+    const stop = steps.find(step => step.name === 'Stop the test container');
+    expect(steps.indexOf(stop)).toBe(steps.indexOf(test) + 1);
+    expect(steps.indexOf(stop)).toBeLessThan(
+        steps.findIndex(step => step.name === 'Purge the run on staging'),
+    );
+    expect(stop.if).toBe("always() && steps.run.outputs.id != ''");
+    expect(stop['timeout-minutes']).toBe(1);
+    expect(stop.env).toEqual({ RUN_ID: '${{ steps.run.outputs.id }}' });
+    expect(stop.run).toBe('docker rm -f "$RUN_ID" >/dev/null 2>&1 || true');
+    // Secrets stay in this step's env only (and in the later scan and purge steps), never job-wide.
+    expect(job.env).toBeUndefined();
+};
 
 test('preparation runs resolve, then one e2e job per profile, then prepare, each behind the owner guard', () => {
     expect(Object.keys(prepare.jobs)).toEqual(['resolve', 'e2e', 'prepare']);
@@ -124,11 +194,11 @@ test('the matrix runs five profiles without fail-fast, installs only its own bro
     expect(e2e.name).toBe('e2e ${{ matrix.profile }}');
     expect(e2e.strategy['fail-fast']).toBe(false);
     expect(e2e.strategy.matrix.include).toEqual([
-        { profile: 'chromium', browser: 'chromium' },
-        { profile: 'firefox', browser: 'firefox' },
-        { profile: 'webkit', browser: 'webkit' },
-        { profile: 'pixel', browser: 'chromium' },
-        { profile: 'iphone', browser: 'webkit' },
+        { profile: 'chromium' },
+        { profile: 'firefox' },
+        { profile: 'webkit' },
+        { profile: 'pixel' },
+        { profile: 'iphone' },
     ]);
     // Hard caps, not the wall-time target: a test step cut at 7 minutes still leaves room for the purge.
     expect(e2e['timeout-minutes']).toBe(15);
@@ -137,20 +207,29 @@ test('the matrix runs five profiles without fail-fast, installs only its own bro
         ref: '${{ needs.resolve.outputs.sha }}',
         'persist-credentials': false,
     });
-    const installs = e2e.steps.filter(step => /playwright install/.test(step.run ?? ''));
-    expect(installs).toHaveLength(2);
-    for (const step of installs) {
-        expect(step.env).toEqual({ BROWSER: '${{ matrix.browser }}' });
-        expect(step.run).toMatch(/ "\$BROWSER"$/);
-        expect(step.if).toMatch(/^steps\.project\.outputs\.available == 'true' && /);
-    }
-    // Restore only: the candidate's install scripts run in this job, so it never saves a cache.
-    const caches = e2e.steps.filter(step => step.uses?.startsWith('actions/cache'));
-    expect(caches.map(step => step.uses)).toEqual([
-        'actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
+    expectTestsInPlaywrightImage(e2e, 'e2e', 'npx playwright test --project="$PROFILE"', [
+        'PROFILE',
+        'CHIPIN_CONTRACT_SWAGGER_USER',
+        'CHIPIN_CONTRACT_SWAGGER_PASSWORD',
+        'VERCEL_AUTOMATION_BYPASS_SECRET',
+        'CHIPIN_E2E_RUN_ID',
+        'CHIPIN_E2E_BASE_URL',
+        'CHIPIN_E2E_JSON_REPORT',
     ]);
+    const pull = e2e.steps.find(step => step.name === 'Pull the Playwright image');
+    expect(pull.if).toBe("steps.project.outputs.available == 'true'");
     const test = e2e.steps.find(step => step.id === 'e2e');
-    expect(test.run).toBe('npx playwright test --project="$PROFILE"');
+    expect(test['working-directory']).toBe('apps/app');
+    // The matrix never falls back to the local dev server: an empty Preview URL fails before docker.
+    const guard = test.run.indexOf('if [[ -z "$CHIPIN_E2E_BASE_URL" ]]; then');
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(test.run.indexOf('docker run'));
+    expect(test.run.slice(guard)).toMatch(
+        /^[^\n]*\n\s*echo "::error::[^"]*CHIPIN_E2E_BASE_URL[^"]*"\n\s*exit 1\n/,
+    );
+    // The result step reads the JSON report where the container wrote it.
+    const write = e2e.steps.find(step => step.name === 'Write profile result');
+    expect(test.env.CHIPIN_E2E_JSON_REPORT).toBe(write.env.REPORT);
     expect(test.env).toMatchObject({
         CHIPIN_E2E_BASE_URL: '${{ needs.resolve.outputs.url }}',
         CHIPIN_E2E_RUN_ID: '${{ steps.run.outputs.id }}',
@@ -189,16 +268,17 @@ test('each profile job provisions and purges like the PR smoke: own run id first
     expect(write.run).toContain('status=unsupported');
 });
 
-test('pull requests still run and install only the desktop Chromium project', () => {
-    const steps = smoke.jobs['e2e-smoke'].steps;
-    expect(steps.find(step => step.id === 'smoke').run).toBe(
-        'npm run test:e2e -- --project=chromium',
-    );
-    for (const step of steps.filter(step => /playwright install/.test(step.run ?? '')))
-        expect(step.run).toMatch(/ chromium$/);
-    expect(smoke.jobs['e2e-smoke'].steps.find(step => step.id === 'browsers').with.key).toMatch(
-        /-chromium$/,
-    );
+test('pull requests still run only the desktop Chromium project, in the Playwright image', () => {
+    const job = smoke.jobs['e2e-smoke'];
+    expectTestsInPlaywrightImage(job, 'smoke', 'npm run test:e2e -- --project=chromium', [
+        'CHIPIN_CONTRACT_SWAGGER_USER',
+        'CHIPIN_CONTRACT_SWAGGER_PASSWORD',
+        'CHIPIN_E2E_RUN_ID',
+    ]);
+    expect(job['timeout-minutes']).toBe(15);
+    const test = job.steps.find(step => step.id === 'smoke');
+    expect(test['timeout-minutes']).toBe(10);
+    for (const step of job.steps) expect(step.run ?? '', step.name).not.toContain('${{');
 });
 
 test('the Playwright projects are exactly the matrix profiles', async () => {

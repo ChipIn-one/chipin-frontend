@@ -91,21 +91,21 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - name: Install Chromium
-        if: steps.browsers.outputs.cache-hit != 'true'
-        working-directory: apps/app
-        run: npx playwright install --with-deps chromium
-      # The cache holds only the browser; its system libraries are installed on every runner.
-      - name: Install Chromium system dependencies
-        if: steps.browsers.outputs.cache-hit == 'true'
-        working-directory: apps/app
-        run: npx playwright install-deps chromium
+      # The browsers and their system libraries come in the official Playwright image of the pinned
+      # @playwright/test version (docs/e2e-tests.md): no apt and no browser download on the runner,
+      # no cache. Pulled apart from the tests, so a slow pull shows here.
+      - name: Pull the Playwright image
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          docker pull "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
       - name: Check staging API
         shell: bash
         run: |
@@ -116,6 +116,10 @@ jobs:
           fi
       # The run's purge is the global teardown inside this step, so it has finished, after a pass
       # or a failure, before any artifact step below.
+      # Only this command runs in the image (the Vite dev server included), on the host's npm ci
+      # tree and under the runner's Node, mounted read-only: as the runner user (results stay
+      # runner-owned), with the workspace and RUNNER_TEMP at their own paths, and with exactly this
+      # step's variables, passed by name.
       - name: Run Chromium e2e (smoke + money flows)
         id: smoke
         timeout-minutes: 10
@@ -123,9 +127,43 @@ jobs:
           CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
           CHIPIN_CONTRACT_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
           CHIPIN_E2E_RUN_ID: ${{ steps.run.outputs.id }}
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
         # Only the desktop Chromium project; the other profiles run on release candidates
         # (prepare-release-qa.yml).
-        run: npm run test:e2e -- --project=chromium
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          # The repository's Node (setup-node, engines 24.x), not the image's own, runs the tests.
+          node_home="$(dirname "$(dirname "$(command -v node)")")"
+          docker run --rm --ipc=host --init \
+            --name "$CHIPIN_E2E_RUN_ID" \
+            --user "$(id -u):$(id -g)" \
+            -v "$node_home:/opt/host-node:ro" \
+            -e PATH=/opt/host-node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -e HOME=/tmp \
+            -e CI \
+            -e CHIPIN_CONTRACT_SWAGGER_USER \
+            -e CHIPIN_CONTRACT_SWAGGER_PASSWORD \
+            -e CHIPIN_E2E_RUN_ID \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+            -v "$RUNNER_TEMP:$RUNNER_TEMP" \
+            -w "$PWD" \
+            "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble" \
+            bash -c 'node --version && exec npm run test:e2e -- --project=chromium'
+      # A cancel or timeout can kill the docker client and leave the container running: it is
+      # removed before the result, artifact and purge steps, so nothing writes to the workspace or
+      # registers users on staging after this point. The container is named after the run id.
+      - name: Stop the test container
+        if: always() && steps.run.outputs.id != ''
+        timeout-minutes: 1
+        env:
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: docker rm -f "$RUN_ID" >/dev/null 2>&1 || true
       # The teardown writes the marker, holding the run id, only after its second purge found no
       # user of the run left. Without it nothing is scanned or uploaded.
       - name: Check verified purge
