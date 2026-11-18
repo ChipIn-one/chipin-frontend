@@ -6,12 +6,13 @@ import { toast } from 'sonner';
 import { ROUTES } from 'constants/routes';
 
 import { type InviteConfirmationState, useInviteConfirmation } from './useInviteConfirmation';
-import { useAcceptFriendInvite } from './useUserMutations';
+import { useAcceptFriendInvite, useIsUserWriteEnabled } from './useUserMutations';
 
 const useFriendInviteLink = (): InviteConfirmationState => {
     const navigate = useNavigate();
     const { inviteToken } = useParams<{ inviteToken: string }>();
     const onAccept = useAcceptFriendInvite();
+    const isAcceptEnabled = useIsUserWriteEnabled();
     const onAccepted = useCallback(
         ({ displayName }: { displayName: string }) => {
             const friendName = displayName.trim();
@@ -29,6 +30,8 @@ const useFriendInviteLink = (): InviteConfirmationState => {
     return useInviteConfirmation({
         inviteToken,
         errorFallbackMessage: i18n.t('toasts:friend.inviteJoinError'),
+        isAcceptEnabled,
+        sessionLoadErrorMessage: i18n.t('friends:join.sessionLoadError'),
         onAccept,
         onAccepted,
     });

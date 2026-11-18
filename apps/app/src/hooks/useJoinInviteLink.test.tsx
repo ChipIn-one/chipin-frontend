@@ -1,12 +1,21 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
+import { clearLocalUserIdentity } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
+import {
+    getSessionSelfLoad,
+    loadSelfUserForSession,
+    resetSessionSelfLoad,
+} from 'store/sessionUser';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
+import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
 import { useJoinInviteLink } from './useJoinInviteLink';
@@ -137,4 +146,101 @@ test('a join that gets no response shows the error and a retry joins', async () 
         expect(mocks.navigate).toHaveBeenCalledWith(`${ROUTES.GROUP}/group-1`, { replace: true });
     });
     expect(mocks.joinGroup).toHaveBeenCalledTimes(2);
+});
+
+test('GRP-030 waits on the anonymous client: confirm sends nothing until the session is restored', async () => {
+    const anonymousClient = createTestQueryClient();
+    const { result } = renderHook(() => useJoinInviteLink(), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+            <QueryClientProvider client={anonymousClient}>{children}</QueryClientProvider>
+        ),
+    });
+
+    expect(result.current.status).toBe('waiting');
+
+    act(() => {
+        result.current.confirm();
+    });
+    await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+    expect(result.current.status).toBe('waiting');
+    expect(mocks.joinGroup).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+});
+
+const renderOnAnonymousClient = () => {
+    const anonymousClient = createTestQueryClient();
+
+    return renderHook(() => useJoinInviteLink(), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+            <QueryClientProvider client={anonymousClient}>{children}</QueryClientProvider>
+        ),
+    });
+};
+
+// Counts `GET /users/self`; each answer is `status` (a first sign-in whose load fails).
+const serveSelf = (status: number): { count: number } => {
+    const requests = { count: 0 };
+
+    server.use(
+        http.get('*/users/self', () => {
+            requests.count += 1;
+            return HttpResponse.json({}, { status });
+        }),
+    );
+    return requests;
+};
+
+afterEach(() => {
+    resetSessionSelfLoad();
+    clearLocalUserIdentity();
+});
+
+test('GRP-030 keeps waiting while the first-sign-in account load is pending', async () => {
+    clearLocalUserIdentity();
+    serveSelf(500);
+    const { result } = renderOnAnonymousClient();
+    let load: Promise<unknown> = Promise.resolve();
+
+    act(() => {
+        load = loadSelfUserForSession();
+    });
+
+    expect(result.current.status).toBe('waiting');
+    await act(() => load);
+    expect(result.current.status).toBe('error');
+});
+
+test('GRP-030 a failed first-sign-in account load is an error whose Retry loads it again', async () => {
+    clearLocalUserIdentity();
+    const requests = serveSelf(500);
+    const { result } = renderOnAnonymousClient();
+
+    await act(() => loadSelfUserForSession());
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.errorMessage).toBe('group:join.sessionLoadError');
+
+    act(() => {
+        result.current.confirm();
+    });
+    await waitFor(() => {
+        expect(requests.count).toBe(2);
+    });
+    await waitFor(() => {
+        expect(result.current.status).toBe('error');
+    });
+    expect(mocks.joinGroup).not.toHaveBeenCalled();
+});
+
+test('GRP-030 on the user client a failed account load does not block the invite', async () => {
+    // The page runs on the user's client (`mountAsUserClient`): a failed session load does not
+    // turn the confirmation into an error there.
+    serveSelf(500);
+    await loadSelfUserForSession();
+    expect(getSessionSelfLoad().status).toBe('failed');
+
+    const { result } = renderHook(() => useJoinInviteLink());
+
+    expect(result.current.status).toBe('ready');
 });

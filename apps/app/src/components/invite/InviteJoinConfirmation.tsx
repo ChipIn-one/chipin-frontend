@@ -69,7 +69,7 @@ const InviteJoinConfirmation = ({
                                     </Button>
                                     <Button
                                         type="button"
-                                        loading={status === 'joining'}
+                                        loading={status === 'joining' || status === 'waiting'}
                                         onClick={onConfirm}
                                     >
                                         {isError ? retryLabel : confirmLabel}

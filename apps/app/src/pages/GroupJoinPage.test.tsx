@@ -1,19 +1,22 @@
 import { Theme } from '@radix-ui/themes';
-import type { QueryClient } from '@tanstack/react-query';
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
 import { ProtectedRoute } from 'features/routing/ProtectedRoute';
+import { clearLocalUserIdentity } from 'helpers/localStorage';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
+import { loadSelfUserForSession, resetSessionSelfLoad } from 'store/sessionUser';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
+import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
 import GroupJoinPage from './GroupJoinPage';
@@ -407,4 +410,88 @@ test('an expired session shows the auth modal, then the confirmation screen with
 
     expect(joinButton()).toBeTruthy();
     expect(mocks.joinGroup).not.toHaveBeenCalled();
+});
+
+// Issue #730: before `/users/self` answers the page still runs on the anonymous client, where a
+// join is refused. The page is rendered on `pageClient`; a new `key` remounts it, as the app does
+// when the session load reveals the user.
+const renderOnClient = (pageClient: QueryClient, key: string) => (
+    <MemoryRouter initialEntries={[`${ROUTES.GROUP_JOIN}/${TEST_INVITE_TOKEN}`]}>
+        <Theme>
+            <QueryClientProvider key={key} client={pageClient}>
+                <Routes>
+                    <Route path={`${ROUTES.GROUP_JOIN}/:inviteToken`} element={<GroupJoinPage />} />
+                    <Route path="*" element={null} />
+                </Routes>
+            </QueryClientProvider>
+            <CurrentRoute />
+        </Theme>
+    </MemoryRouter>
+);
+
+afterEach(() => {
+    resetSessionSelfLoad();
+    clearLocalUserIdentity();
+});
+
+test('GRP-030 the join button waits for the session, then joins', async () => {
+    const user = userEvent.setup();
+    mocks.joinGroup.mockResolvedValue({ id: 'group-1' });
+    const userClient = mountAsUserClient();
+
+    const { rerender } = render(renderOnClient(createTestQueryClient(), 'anonymous'));
+
+    // The regression guard is `disabled`: on master the button was enabled, and the click was
+    // refused before any request, so the no-request check below passes there too.
+    expect(joinButton().hasAttribute('disabled')).toBe(true);
+    await user.click(joinButton());
+    expect(mocks.joinGroup).not.toHaveBeenCalled();
+
+    rerender(renderOnClient(userClient, 'user-1'));
+
+    expect(joinButton().hasAttribute('disabled')).toBe(false);
+    await user.click(joinButton());
+    await waitFor(() => {
+        expect(currentRoute()).toBe(`${ROUTES.GROUP}/group-1`);
+    });
+    expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
+});
+
+test('GRP-030 a failed first-sign-in account load shows an error whose Retry loads it again', async () => {
+    const user = userEvent.setup();
+    let selfRequests = 0;
+    // A first sign-in: no stored user id, so a failed load leaves the page on the anonymous client.
+    clearLocalUserIdentity();
+    server.use(
+        http.get('*/users/self', () => {
+            selfRequests += 1;
+            return HttpResponse.json({}, { status: 500 });
+        }),
+    );
+    mocks.joinGroup.mockResolvedValue({ id: 'group-1' });
+    const userClient = mountAsUserClient();
+
+    const { rerender } = render(renderOnClient(createTestQueryClient(), 'anonymous'));
+    await act(() => loadSelfUserForSession());
+
+    expect(screen.getByRole('alert').textContent).toBe(i18n.t('group:join.sessionLoadError'));
+
+    await user.click(screen.getByRole('button', { name: i18n.t('group:join.retry') }));
+    await waitFor(() => {
+        expect(selfRequests).toBe(2);
+    });
+    await waitFor(() => {
+        expect(screen.getByRole('alert').textContent).toBe(i18n.t('group:join.sessionLoadError'));
+    });
+    expect(mocks.joinGroup).not.toHaveBeenCalled();
+
+    // A load that succeeds remounts the page onto the user's client: Join works there.
+    rerender(renderOnClient(userClient, 'user-1'));
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    await user.click(joinButton());
+    await waitFor(() => {
+        expect(currentRoute()).toBe(`${ROUTES.GROUP}/group-1`);
+    });
+    expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
 });
