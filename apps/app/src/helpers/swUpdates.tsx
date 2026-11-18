@@ -8,7 +8,7 @@ import { TOASTS_IDS } from 'constants/toasts';
 import { LocalStorage } from 'helpers/localStorage';
 import { shouldRegisterServiceWorker } from 'helpers/serviceWorkerHost';
 import { activateServiceWorker, reloadCurrentPage } from 'helpers/serviceWorkerRecovery';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 import { usePwaStore } from 'store/pwaStore';
 const UPDATE_DISMISS_TTL_MS = 4 * HOUR;
 

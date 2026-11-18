@@ -816,9 +816,6 @@
   "apps/app/src/i18n/index.ts": {
     "boundaries/dependencies": {
       "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
     }
   },
   "apps/app/src/main.tsx": {

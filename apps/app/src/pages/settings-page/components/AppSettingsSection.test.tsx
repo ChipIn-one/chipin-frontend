@@ -15,7 +15,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { type SelfUser, usersKeys } from 'entities/users';
 import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
 import { useSyncUserSettings } from 'hooks/useSyncUserSettings';
-import i18n from 'i18n/index';
+import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { loadSelfUserForSession } from 'store/sessionUser';
 import { runCacheRestoredHandler } from 'test/cacheRestored';

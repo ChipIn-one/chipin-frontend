@@ -63,7 +63,7 @@ const main = () =>
         return Promise.all([
             server.ssrLoadModule('/src/public-routes/entry-server.tsx'),
             server.ssrLoadModule('/src/constants/publicRoutes.ts'),
-            server.ssrLoadModule('/src/i18n/resources.ts'),
+            server.ssrLoadModule('/src/public-routes/serverResources.ts'),
             readFile('dist/index.html', 'utf8'),
         ])
             .then(([renderer, routes, translations, template]) => {

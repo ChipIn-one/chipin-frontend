@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { ROUTES } from 'constants/routes';
 import { ProtectedRoute } from 'features/routing/ProtectedRoute';
 import { clearLocalUserIdentity } from 'helpers/localStorage';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { loadSelfUserForSession, resetSessionSelfLoad } from 'store/sessionUser';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';

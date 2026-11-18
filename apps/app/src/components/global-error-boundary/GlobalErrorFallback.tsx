@@ -10,7 +10,7 @@ import {
     checkForServiceWorkerUpdate,
     reloadCurrentPage,
 } from 'helpers/serviceWorkerRecovery';
-import i18n from 'i18n';
+import { i18n } from 'i18n';
 
 import BackgroundBox from 'basics/BackgroundBox';
 

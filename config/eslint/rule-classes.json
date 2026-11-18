@@ -86,6 +86,7 @@
     "no-restricted-imports#runtime-api-in-numbers": "b",
     "no-restricted-imports#runtime-api-in-ui": "b",
     "no-restricted-properties": "b",
+    "no-restricted-syntax#change-language": "b",
     "no-restricted-syntax#export-all": "b",
     "no-restricted-syntax#i18n-attributes": "b",
     "no-restricted-syntax#img-element": "b",
