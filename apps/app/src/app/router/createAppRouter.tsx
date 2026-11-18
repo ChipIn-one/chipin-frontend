@@ -14,6 +14,7 @@ import {
 import PageLoader from 'basics/PageLoader';
 
 import { InternalLayout } from './InternalLayout';
+import { RethrowRouteError } from './RethrowRouteError';
 import { RootLayout } from './RootLayout';
 import { APP_ROUTES, type AppRouteDef, type AppRouteId } from './routeManifest';
 import { ROUTE_MODULES } from './routeModules';
@@ -74,6 +75,7 @@ const buildAppRoutes = (_queryClient: QueryClient): RouteObject[] => [
     {
         path: '/',
         element: <RootLayout />,
+        errorElement: <RethrowRouteError />,
         hydrateFallbackElement: <PageLoader />,
         children: [
             ...publicLocaleRoutes(),

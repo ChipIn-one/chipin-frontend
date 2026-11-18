@@ -1,3 +1,4 @@
+import { Component, type ReactNode } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import type { RouteObject } from 'react-router-dom';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
@@ -13,10 +14,21 @@ import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { signInWithSelf } from 'test/selfUser';
 
 import { buildAppRoutes } from './createAppRouter';
+import { APP_ROUTES } from './routeManifest';
 
-const gate = vi.hoisted(() => ({ pages: Promise.resolve() }));
+const { CHUNK_ERROR, RENDER_ERROR } = vi.hoisted(() => ({
+    CHUNK_ERROR: 'Failed to fetch dynamically imported module',
+    RENDER_ERROR: 'The page failed to render',
+}));
 
-// Each page is a `<main>` with its route id; the pages wait for `gate.pages`.
+const gate = vi.hoisted(() => ({
+    pages: Promise.resolve(),
+    failChunks: false,
+    throwIn: null as string | null,
+}));
+
+// Each page is a `<main>` with its route id; the pages wait for `gate.pages`. With `failChunks` a
+// chunk load rejects; the page `throwIn` throws while it renders.
 vi.mock('./routeModules', async () => {
     const { APP_ROUTES } = await import('./routeManifest');
 
@@ -24,7 +36,17 @@ vi.mock('./routeModules', async () => {
         ROUTE_MODULES: Object.fromEntries(
             APP_ROUTES.map(route => [
                 route.id,
-                () => gate.pages.then(() => ({ Component: () => <main>{route.id}</main> })),
+                () =>
+                    gate.failChunks
+                        ? Promise.reject(new Error(CHUNK_ERROR))
+                        : gate.pages.then(() => ({
+                              Component: () => {
+                                  if (gate.throwIn === route.id) {
+                                      throw new Error(RENDER_ERROR);
+                                  }
+                                  return <main>{route.id}</main>;
+                              },
+                          })),
             ]),
         ),
     };
@@ -98,18 +120,42 @@ const leafPaths = (routes: RouteObject[], parent = ''): string[] =>
 
 let routers: ReturnType<typeof createMemoryRouter>[] = [];
 
+/** What `GlobalErrorBoundary` (outside `RouterProvider` in root.tsx) stands for here. */
+class OuterBoundary extends Component<{ children: ReactNode }, { error: unknown }> {
+    state: { error: unknown } = { error: undefined };
+
+    static getDerivedStateFromError(error: unknown) {
+        return { error };
+    }
+
+    render() {
+        const { error } = this.state;
+
+        if (error === undefined) {
+            return this.props.children;
+        }
+        return <p role="alert">{error instanceof Error ? error.message : 'error'}</p>;
+    }
+}
+
 const renderAt = (path: string) => {
     const router = createMemoryRouter(buildAppRoutes(createTestQueryClient()), {
         initialEntries: [path],
     });
 
     routers.push(router);
-    render(<RouterProvider router={router} />);
+    render(
+        <OuterBoundary>
+            <RouterProvider router={router} />
+        </OuterBoundary>,
+    );
     return router;
 };
 
 beforeEach(() => {
     gate.pages = Promise.resolve();
+    gate.failChunks = false;
+    gate.throwIn = null;
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
     return i18n.changeLanguage('en');
 });
@@ -241,5 +287,112 @@ describe('navigation', () => {
 
         expect(await screen.findByText('activity')).toBeTruthy();
         expect(screen.getByRole('complementary', { name: 'Desktop navigation' })).toBe(sidebar);
+    });
+});
+
+// Until 04-2a3 (`RootErrorBoundary`), route errors go on to `GlobalErrorBoundary` as before the
+// data router, never to React Router's default error page.
+describe('errors reach the boundary outside the router', () => {
+    const DEFAULT_ERROR_PAGE = /Unexpected Application Error/;
+
+    beforeEach(() => {
+        // React and React Router log the caught errors.
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    test('a page chunk that fails on the first load', async () => {
+        gate.failChunks = true;
+        renderAt('/dashboard');
+
+        expect((await screen.findByRole('alert')).textContent).toBe(CHUNK_ERROR);
+        expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
+    });
+
+    test('a page chunk that fails on a later navigation', async () => {
+        signIn();
+        const router = renderAt('/dashboard');
+        await screen.findByText('dashboard');
+
+        gate.failChunks = true;
+        await act(() => router.navigate('/activity'));
+
+        expect((await screen.findByRole('alert')).textContent).toBe(CHUNK_ERROR);
+        expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
+    });
+
+    test('a page that throws while it renders', async () => {
+        gate.throwIn = 'notFound';
+        renderAt('/not-found');
+
+        expect((await screen.findByRole('alert')).textContent).toBe(RENDER_ERROR);
+        expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
+    });
+});
+
+/** A concrete URL of a manifest path: every `:param` is `x`. */
+const urlOf = (path: string) => `/${path.replace(/:\w+/g, 'x')}`;
+const SIDEBAR = { name: 'Desktop navigation' } as const;
+// Solo is unreleased: its guard redirects every user (covered above).
+const regularRoutes = APP_ROUTES.filter(route => !route.transitional && route.guard !== 'solo');
+
+describe('the guard and layout chain of every manifest route', () => {
+    test.each(regularRoutes)('signed in, $id renders inside its layout ($layout)', async route => {
+        signIn();
+        const router = renderAt(urlOf(route.path));
+
+        const page = await screen.findByText(route.id);
+        const sidebar = screen.queryByRole('complementary', SIDEBAR);
+
+        expect(router.state.location.pathname).toBe(urlOf(route.path));
+        if (route.layout === 'internal') {
+            expect(sidebar).not.toBeNull();
+            expect(sidebar?.compareDocumentPosition(page)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        } else {
+            expect(sidebar).toBeNull();
+        }
+    });
+
+    test.each(regularRoutes)('signed out, $id is $access', async route => {
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
+        renderAt(urlOf(route.path));
+
+        if (route.access === 'protected') {
+            expect(await screen.findByTestId('auth-modal')).toBeTruthy();
+            expect(screen.queryByText(route.id)).toBeNull();
+        } else {
+            expect(await screen.findByText(route.id)).toBeTruthy();
+            expect(screen.queryByTestId('auth-modal')).toBeNull();
+        }
+        expect(screen.queryByRole('complementary', SIDEBAR)).toBeNull();
+    });
+
+    test.each(PUBLIC_ROUTE_ENTRIES)('signed out, the public $path renders $page', async entry => {
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
+        const router = renderAt(entry.path);
+
+        const id = APP_ROUTES.find(
+            route => route.transitional && route.path === (entry.page === 'home' ? '' : entry.page),
+        )?.id;
+        expect(await screen.findByText(id ?? 'no route')).toBeTruthy();
+        expect(router.state.location.pathname).toBe(entry.path);
+    });
+
+    test.each(['/privacy', '/terms', '/ru/privacy', '/ru/terms'])(
+        'signed in, %s stays: HomeRouteGuard is only on the home pages',
+        async path => {
+            signIn();
+            const router = renderAt(path);
+
+            await screen.findByRole('main');
+            expect(router.state.location.pathname).toBe(path);
+        },
+    );
+
+    test.each(['/', '/ru/'])('signed in, %s goes to the preferred mode', async path => {
+        signIn();
+        const router = renderAt(path);
+
+        expect(await screen.findByText('dashboard')).toBeTruthy();
+        expect(router.state.location.pathname).toBe('/dashboard');
     });
 });
