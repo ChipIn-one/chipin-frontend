@@ -6,6 +6,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import {
     appendOutboxOp,
+    notifyOutboxChange,
     type OutboxKind,
     type OutboxOpBase,
     trackOutboxAppend,
@@ -86,7 +87,9 @@ const requestPersistentStorage = (): void => {
             () => {
                 storagePersisted = false;
             },
-        );
+        )
+        // The `storageNotPersisted` caption of `OutboxSheet` reads the answer (03-16a part B).
+        .finally(notifyOutboxChange);
 };
 
 /** `navigator.storage.persisted()` after the first op of the session; null until then. */

@@ -5,7 +5,11 @@ import { toast } from 'sonner';
 
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 import type { ActivityEvent } from 'entities/activity';
-import { useIsOfflineWriteAvailable, useLedgerEntryObserver } from 'entities/ledger';
+import {
+    useIsOfflineWriteAvailable,
+    useLedgerEntryObserver,
+    useOutboxOverlay,
+} from 'entities/ledger';
 import {
     getActivityCategory,
     getActivityLedgerEntryId,
@@ -55,11 +59,15 @@ const ActivitySubeventsButtons = ({
         currentEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
     const isOfflineWritable = useIsOfflineWriteAvailable();
+    // 03-16a A review N5: a queued delete of the entry is its last word; no edit or second delete.
+    const { pendingDeletes } = useOutboxOverlay();
+    const isDeleteQueued = parentEntryId !== undefined && pendingDeletes.has(parentEntryId);
+    const isChangeable = canChange && !isDeleteQueued;
     const observedEntryId =
         isOfflineWritable && isExpense && canChange && !isEntryReversed ? parentEntryId : undefined;
 
     const onEdit = (): void => {
-        if (!parentEntryId || !isExpense || !canChange) {
+        if (!parentEntryId || !isExpense || !isChangeable) {
             return;
         }
 
@@ -75,7 +83,7 @@ const ActivitySubeventsButtons = ({
     };
 
     const onRemove = (): Promise<void> => {
-        if (!parentEntryId || !canChange) {
+        if (!parentEntryId || !isChangeable) {
             return Promise.reject(new Error('No ledger entry found to remove'));
         }
 
@@ -106,7 +114,7 @@ const ActivitySubeventsButtons = ({
             <Button
                 size="1"
                 variant="soft"
-                disabled={!parentEntryId || !isExpense || !canChange}
+                disabled={!parentEntryId || !isExpense || !isChangeable}
                 onClick={onEdit}
             >
                 <PencilIcon size={14} />
@@ -118,7 +126,7 @@ const ActivitySubeventsButtons = ({
                     size="1"
                     variant="soft"
                     color="red"
-                    disabled={!parentEntryId || isRemoving || !canChange}
+                    disabled={!parentEntryId || isRemoving || !isChangeable}
                 >
                     <Trash2Icon size={14} />
                     {t('subeventsDeleteAction')}

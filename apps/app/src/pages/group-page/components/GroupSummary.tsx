@@ -5,6 +5,7 @@ import { userCurrency } from 'entities/users';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { calcGroupSummary, selectGroupBalances } from 'store/groupsSelectors';
 
+import { OutboxBalanceCaption } from 'components/outbox-balance-caption';
 import { SummaryDebtCards } from 'components/summary-debt-cards';
 
 interface Props {
@@ -22,15 +23,19 @@ const GroupSummary = ({ group, isLoading }: Props) => {
         defaultCurrency,
     );
 
+    // §3: the balance excludes unsent operations (rendered only while there are some).
     return (
-        <SummaryDebtCards
-            isLoading={isLoading}
-            owedToYouTotal={owedTotalInBase}
-            youOweTotal={owingTotalInBase}
-            owedEntries={owedEntries}
-            oweEntries={oweEntries}
-            defaultCurrency={defaultCurrency}
-        />
+        <>
+            <SummaryDebtCards
+                isLoading={isLoading}
+                owedToYouTotal={owedTotalInBase}
+                youOweTotal={owingTotalInBase}
+                owedEntries={owedEntries}
+                oweEntries={oweEntries}
+                defaultCurrency={defaultCurrency}
+            />
+            <OutboxBalanceCaption />
+        </>
     );
 };
 

@@ -30,6 +30,7 @@ import {
     abortOutboxSends,
     cancelledInKey,
     currentOutboxFence,
+    discardEntryOps,
     discardOps,
     type DiscardResult,
     failedEntryIds,
@@ -38,6 +39,7 @@ import {
     hasNoFailureOf,
     isOutboxStopped,
     markOpsCancelled,
+    notifyOutboxChange,
     onOutboxStatus,
     onOutboxWritten,
     type OutboxOpBase,
@@ -201,6 +203,7 @@ const sync = (current: Drain): Promise<void> => {
                     remoteStatuses.delete(opId);
                 }
             });
+            notifyOutboxChange();
             return holder() === current && !isOutboxStopped() ? applyQueue(current) : undefined;
         })
         .catch(report);
@@ -222,6 +225,7 @@ const onMessage = (current: Drain, message: OutboxChannelMessage): void => {
             return;
         case 'status':
             remoteStatuses.set(message.opId, message.status);
+            notifyOutboxChange();
             return;
         case 'settled':
             current.hooks.onRemoteSettled(message);
@@ -246,6 +250,8 @@ const hold = (current: Drain, started: () => void): Promise<boolean> => {
     }
     current.holding = true;
     remoteStatuses.clear();
+    // The statuses now come from this tab's runs (`outboxOpStatus`).
+    notifyOutboxChange();
     return new Promise<void>(release => {
         current.release = release;
         void restoreOutbox(current.client, current.userId, current.hooks)
@@ -265,6 +271,7 @@ const hold = (current: Drain, started: () => void): Promise<boolean> => {
             current.holding = false;
             current.releasing = false;
             current.release = null;
+            notifyOutboxChange();
         })
         .then(() => true);
 };
@@ -444,6 +451,7 @@ export const stopOutboxDrain = (): Promise<void> => {
     current.unlisten();
     closeOutboxChannel();
     remoteStatuses.clear();
+    notifyOutboxChange();
     current.request?.abort();
     if (current.holding) {
         // Another tab of the same user may hold the lock next: no request stays in flight (L2).
@@ -503,6 +511,10 @@ const syncIfHolder = (): Promise<void> => {
 /** "Cancel" from any tab (C3-04): a claimed op is refused; the holder applies it at once. */
 export const discardOutboxOps = (opIds: readonly string[]): Promise<DiscardResult> =>
     discardOps(opIds).then(result => syncIfHolder().then(() => result));
+
+/** "Cancel" of a create with the ops of its entry, all or nothing (C2-15, 03-16a part B R1). */
+export const discardOutboxEntry = (createOpId: string): Promise<DiscardResult> =>
+    discardEntryOps(createOpId).then(result => syncIfHolder().then(() => result));
 
 /** "Retry" from any tab (§2.3): the holder adopts the failed ops; resolves with the requested ids. */
 export const retryOutboxOps = (opIds: readonly string[]): Promise<string[]> => {

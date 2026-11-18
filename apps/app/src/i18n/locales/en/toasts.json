@@ -61,6 +61,10 @@
     "saved": "Saved, we will send it when the network is back",
     "saveFailed": "Could not save on the device — connect to the network",
     "saveRetry": "Could not save, try again",
-    "limitReached": "Too many unsent operations — connect to the network"
+    "limitReached": "Too many unsent operations — connect to the network",
+    "savedSending": "Saved, sending…",
+    "createAlreadySending": "This expense is already being sent; edit it once it is saved",
+    "cancelRefused": "It is already being sent and can no longer be cancelled",
+    "actionFailed": "Could not change the operation, try again"
   }
 }

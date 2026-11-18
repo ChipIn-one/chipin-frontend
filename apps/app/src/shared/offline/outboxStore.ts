@@ -349,6 +349,33 @@ const writeListeners = new Set<() => void>();
 // Entries whose failed-list write is still pending: their block must stay (D29).
 const failureWrites = new Map<string, number>();
 
+// The UI's view of the queue (03-16a part B, `useOutboxOverlay`): told whenever what it reads
+// changed (a write landed, a re-read, the restore, the owner, a status). No listener, no work.
+const changeListeners = new Set<() => void>();
+let changeRevision = 0;
+
+/** Tells the overlay its view changed; a failing listener is reported, never thrown. */
+export const notifyOutboxChange = (): void => {
+    changeRevision += 1;
+    changeListeners.forEach(listener => {
+        try {
+            listener();
+        } catch (error: unknown) {
+            Sentry.captureException(error);
+        }
+    });
+};
+
+export const onOutboxChange = (listener: () => void): (() => void) => {
+    changeListeners.add(listener);
+    return () => {
+        changeListeners.delete(listener);
+    };
+};
+
+/** Grows with every `notifyOutboxChange`: the overlay rebuilds its view only when it moved. */
+export const outboxChangeRevision = (): number => changeRevision;
+
 const forgetMemory = (): void => {
     state = emptyState();
     restoreState = 'pending';
@@ -359,6 +386,7 @@ const forgetMemory = (): void => {
     statusByOpId.clear();
     appendsInFlight.clear();
     failureWrites.clear();
+    notifyOutboxChange();
 };
 
 /** What a run started with: the owner epoch and the drain session (M2). */
@@ -493,6 +521,7 @@ export const readOutbox = (userId: string): Promise<OutboxRestore> => {
             }
             state = read.state;
             restoreState = 'ok';
+            notifyOutboxChange();
             return 'ok';
         },
         (error: unknown) => {
@@ -504,6 +533,7 @@ export const readOutbox = (userId: string): Promise<OutboxRestore> => {
                 level: 'warning',
                 tags: { 'offline.error': errorName(error) },
             });
+            notifyOutboxChange();
             return 'failed';
         },
     );
@@ -568,6 +598,7 @@ export const writeOutbox = <T>(
                             Sentry.captureException(error);
                         }
                     });
+                    notifyOutboxChange();
                 }
                 return result;
             });
@@ -598,6 +629,7 @@ export const refreshOutbox = (): Promise<boolean> => {
         read => {
             if (ownerId === owner && ownerEpoch === epoch) {
                 state = read.state;
+                notifyOutboxChange();
             }
             return true;
         },
@@ -746,6 +778,12 @@ export const pendingOutboxOps = (): readonly OutboxOpBase[] => [...state.ops].so
 export const failedOutboxOps = (): readonly FailedOp[] => [...state.failed.values()];
 
 export const isOpFailed = (opId: string): boolean => state.failed.has(opId);
+
+/** The op claimed for sending by any tab (`OutboxState.sending`, §2.3): it cannot be cancelled. */
+export const outboxSendingOpId = (): string | null => state.sending?.opId ?? null;
+
+/** Failed records whose op is not readable (§2.5 `unreadable`): kept, counted by the limit. */
+export const unreadableOutboxCount = (): number => state.unreadable.length;
 
 /** Discarded in the key (`OutboxState.cancelled`): a restore or an adoption skips it. */
 export const isOpCancelledInKey = (opId: string): boolean => state.cancelled.has(opId);
@@ -928,6 +966,7 @@ export const forgetCancelled = (opId: string, fence: OutboxFence): Promise<void>
 export const setOutboxStatus = (opId: string, status: OutboxStatus): void => {
     statusByOpId.set(opId, status);
     statusListeners.forEach(listener => listener(opId, status));
+    notifyOutboxChange();
 };
 
 /** The drain tab tells the other tabs (`status`, §2.3). */
@@ -1023,46 +1062,89 @@ export interface DiscardResult {
  * records them as cancelled; once it has landed a waiting run resolves `CANCELLED` without a
  * request. A failed create is discarded together with the ops of its entry by the caller (`opIds`).
  */
-export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
-    writeOutboxFirst(draft => {
-        // The claim is read from the draft under the lock: any tab's request in flight is refused.
-        const isSent = (opId: string): boolean =>
-            draft.sending?.opId === opId || pendingRemovals.has(opId);
-        const refused = opIds.filter(isSent);
-        const discarded: string[] = [];
-        const pendingIds: string[] = [];
-        const entries = new Set<string>();
+interface DraftDiscard {
+    discarded: string[];
+    refused: string[];
+    entries: Set<string>;
+    pendingIds: string[];
+}
 
-        opIds.forEach(opId => {
-            const pending = draft.ops.find(op => op.opId === opId);
-            const op = pending ?? draft.failed.get(opId)?.op;
+// The claim is read from the draft under the lock: any tab's request in flight is refused.
+const isSentIn = (draft: OutboxState, opId: string): boolean =>
+    draft.sending?.opId === opId || pendingRemovals.has(opId);
 
-            if (!op || isSent(opId)) {
-                return;
-            }
-            discarded.push(opId);
-            entries.add(op.entryId);
-            draft.failed.delete(opId);
-            draft.retryRequested = draft.retryRequested.filter(id => id !== opId);
-            // Only a pending op has a run that must resolve `CANCELLED`; it forgets the id.
-            if (pending) {
-                draft.cancelled.add(opId);
-                pendingIds.push(opId);
-            }
-        });
-        draft.ops = draft.ops.filter(({ opId }) => !discarded.includes(opId));
-        return { discarded, refused, entries, pendingIds };
-    }).then(({ discarded, refused, entries, pendingIds }) => {
-        pendingIds.forEach(opId => cancelledOpIds.add(opId));
-        entries.forEach(entryId => {
-            if (hasNoFailureOf(entryId)) {
-                outboxGate.unblock(entryId);
-            }
-        });
-        forgetOrphanVersions();
-        wake();
-        return { discarded, refused };
+// Removes `opIds` from the draft (those queued or failed and not being sent).
+const discardInDraft = (draft: OutboxState, opIds: readonly string[]): DraftDiscard => {
+    const refused = opIds.filter(opId => isSentIn(draft, opId));
+    const discarded: string[] = [];
+    const pendingIds: string[] = [];
+    const entries = new Set<string>();
+
+    opIds.forEach(opId => {
+        const pending = draft.ops.find(op => op.opId === opId);
+        const op = pending ?? draft.failed.get(opId)?.op;
+
+        if (!op || isSentIn(draft, opId)) {
+            return;
+        }
+        discarded.push(opId);
+        entries.add(op.entryId);
+        draft.failed.delete(opId);
+        draft.retryRequested = draft.retryRequested.filter(id => id !== opId);
+        // Only a pending op has a run that must resolve `CANCELLED`; it forgets the id.
+        if (pending) {
+            draft.cancelled.add(opId);
+            pendingIds.push(opId);
+        }
     });
+    draft.ops = draft.ops.filter(({ opId }) => !discarded.includes(opId));
+    return { discarded, refused, entries, pendingIds };
+};
+
+const afterDiscard = ({ discarded, refused, entries, pendingIds }: DraftDiscard): DiscardResult => {
+    pendingIds.forEach(opId => cancelledOpIds.add(opId));
+    entries.forEach(entryId => {
+        if (hasNoFailureOf(entryId)) {
+            outboxGate.unblock(entryId);
+        }
+    });
+    forgetOrphanVersions();
+    wake();
+    return { discarded, refused };
+};
+
+export const discardOps = (opIds: readonly string[]): Promise<DiscardResult> =>
+    writeOutboxFirst(draft => discardInDraft(draft, opIds)).then(afterDiscard);
+
+/**
+ * Cancels a create with every op of its entry (C2-15), all or nothing (03-16a part B R1 M1/L1): the
+ * group is read from the draft under the write lock (an op another tab appended since this tab's
+ * last read is in it). When the create is no longer queued or failed (sent, or already
+ * discarded), or any op of the group is being sent or waits for its removal, nothing is discarded:
+ * the create would reach the server without its later edits, or they would go out for a record
+ * that will not exist.
+ */
+export const discardEntryOps = (createOpId: string): Promise<DiscardResult> =>
+    writeOutboxFirst((draft): DraftDiscard => {
+        const create =
+            draft.ops.find(op => op.opId === createOpId) ?? draft.failed.get(createOpId)?.op;
+        const nothing: DraftDiscard = {
+            discarded: [],
+            refused: [],
+            entries: new Set(),
+            pendingIds: [],
+        };
+
+        if (create?.kind !== 'createExpense') {
+            return nothing;
+        }
+        const group = [...draft.ops, ...[...draft.failed.values()].map(({ op }) => op)]
+            .filter(op => op.entryId === create.entryId)
+            .map(op => op.opId);
+        const refused = group.filter(opId => isSentIn(draft, opId));
+
+        return refused.length > 0 ? { ...nothing, refused } : discardInDraft(draft, group);
+    }).then(afterDiscard);
 
 /**
  * "Retry" of failed ops from any tab (§2.3): their ids join `retryRequested` in one write; the drain

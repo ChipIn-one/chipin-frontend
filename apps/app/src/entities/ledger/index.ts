@@ -1,7 +1,8 @@
 // Public entry of entities/ledger: the online ledger mutations (an expense create and update, a
 // settlement create, an entry delete), the expense outbox path and its start (03-15a/b, behind
 // its flag), the expense draft and patch and the settlement draft with their wire mappers, and the
-// backend capabilities query, and the cached ledger entry (`ledger.entry(id)`, 03-16a).
+// backend capabilities query, the cached ledger entry (`ledger.entry(id)`, 03-16a) and the outbox
+// overlay with its Retry and Cancel (03-16a part B).
 export type {
     CreateExpenseParams,
     CreateSettlementParams,
@@ -37,6 +38,13 @@ export {
     updateExpenseViaOutbox,
     useIsOfflineWriteAvailable,
 } from './api/outbox';
+export type {
+    FailedOutboxItem,
+    OutboxItemStatus,
+    OutboxOverlay,
+    PendingOutboxItem,
+} from './api/outboxOverlay';
+export { discardOutboxItem, retryOutboxItem, useOutboxOverlay } from './api/outboxOverlay';
 export type { BackendCapability } from './api/queries';
 export {
     capabilitiesKeys,

@@ -171,5 +171,55 @@
     "noDebtsDescription": "Nothing to settle right now.",
     "amount": {
         "notInteger": "Value is not integer!"
+    },
+    "outbox": {
+        "badge": "Unsent: {{count}}",
+        "title": "Unsent operations",
+        "description": "Operations saved on this device that the server has not received yet",
+        "empty": "Nothing waits to be sent",
+        "pendingTitle": "Waiting to be sent",
+        "failedTitle": "Not sent",
+        "kind": {
+            "createExpense": "New expense",
+            "updateExpense": "Expense edit",
+            "deleteExpense": "Expense deletion"
+        },
+        "status": {
+            "queued": "Waiting to be sent",
+            "sending": "Sending",
+            "waiting-network": "Waiting for network",
+            "server-unavailable": "Server unavailable",
+            "sign-in-required": "Sign-in required",
+            "update-required": "Update required",
+            "failed-unsaved": "Sent, saving the result on the device",
+            "blocked": "Waiting: an earlier operation of this expense was not sent"
+        },
+        "reason": {
+            "validation": "The server rejected the data",
+            "forbidden": "No access to the group",
+            "deletedRemotely": "The expense was deleted by someone else",
+            "idConflict": "The expense could not be created",
+            "conflict": "The expense was changed by someone else",
+            "rejected": "The server rejected the operation",
+            "unreadable": "This operation cannot be read on this device",
+            "stale": "Older than 14 days"
+        },
+        "yourShare": "Your share:",
+        "retry": "Retry",
+        "sendAnyway": "Send anyway",
+        "retrying": "Retrying…",
+        "cancel": "Cancel operation",
+        "cancelTitle": "Cancel this operation?",
+        "cancelDescription": "It will not be sent. This cannot be undone.",
+        "cancelDescriptionRelated_one": "It will not be sent, and neither will {{count}} related edit. This cannot be undone.",
+        "cancelDescriptionRelated_other": "It will not be sent, and neither will {{count}} related edits. This cannot be undone.",
+        "storageNotPersisted": "The browser may delete unsaved data of this device (Safari — after 7 days without opening; a private window — on close)",
+        "unavailable": "Offline saving is unavailable. Operations on the device are preserved — restart the app",
+        "balanceExcludesPending": "Excluding unsent operations",
+        "badgeHint": ", open the list",
+        "unreadable_one": "{{count}} record can't be read on this device (maybe from a newer app version); it is kept",
+        "unreadable_other": "{{count}} records can't be read on this device (maybe from a newer app version); they are kept",
+        "balanceCounterHint_one": "unsent operation, open the list",
+        "balanceCounterHint_other": "unsent operations, open the list"
     }
 }
