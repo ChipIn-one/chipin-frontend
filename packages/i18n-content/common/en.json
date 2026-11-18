@@ -233,6 +233,7 @@
         "accountSwitchDescription_one": "This device has {{count}} unsent operation of another account. Delete it and sign in?",
         "accountSwitchDescription_other": "This device has {{count}} unsent operations of another account. Delete them and sign in?",
         "accountSwitchDescriptionUnknown": "This device may have unsent operations of another account. Delete them and sign in?",
-        "accountSwitchConfirm": "Delete and sign in"
+        "accountSwitchConfirm": "Delete and sign in",
+        "settleUpChecking": "Checking the unsent operations of this device…"
     }
 }

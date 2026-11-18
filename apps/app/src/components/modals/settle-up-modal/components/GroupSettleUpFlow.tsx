@@ -15,7 +15,7 @@ import { MODAL_SIZES } from '../../base-modal';
 import { OverlayBody, OverlayFooter } from '../../components';
 import { type ModalNavigation, type ModalRoute, ModalRouter } from '../../modal-router';
 import { type DebtOption, getDebtOptions } from '../internal';
-import { useIsSettleUpRefused } from '../internal/useIsSettleUpRefused';
+import { useSettleUpRefusal } from '../internal/useSettleUpRefusal';
 import type { GroupSettleUpProps } from '../types';
 
 import DebtSelectionStep from './DebtSelectionStep';
@@ -41,7 +41,8 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     // §2.9: the flow is closed entirely while settle-up needs the network it does not have.
     const isOnlineRequired = useRequiresOnline(ONLINE_ONLY_ACTIONS.settleUp);
     // 03-16a part C: refused while expenses of this group are unsent (a started payment finishes).
-    const isRefused = useIsSettleUpRefused(group.id) && !isSettlementPending;
+    const groupRefusal = useSettleUpRefusal(group.id);
+    const refusal = isSettlementPending ? null : groupRefusal;
     const groupSettlementOptions = currentUser
         ? selectGroupSettlementOptions(group, currentUser.id)
         : { youOwe: [], owedToYou: [] };
@@ -79,13 +80,17 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
 
     // §2.9: the network went away with the flow open: it is closed (and stays closed when the
     // network comes back), as if the user closed it.
-    if (isOpened && isOnlineRequired) {
+    // N4: a payment already sent finishes first.
+    if (isOpened && isOnlineRequired && !isSettlementPending) {
         onOpenChange(false);
     }
 
-    const renderRefusal = (navigation: ModalNavigation<SettlementRouteId>) => (
+    const renderRefusal = (
+        navigation: ModalNavigation<SettlementRouteId>,
+        reason: 'queued' | 'checking',
+    ) => (
         <OverlayBody>
-            <SettleUpQueuedHint isGroup onClose={navigation.close} />
+            <SettleUpQueuedHint isGroup reason={reason} onClose={navigation.close} />
         </OverlayBody>
     );
 
@@ -94,8 +99,8 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             title: t('group:page.settleUp.chooseDebtTitle'),
             accessibleDescription: t('group:page.settleUp.chooseDebtAccessibleDescription'),
             render: navigation =>
-                isRefused ? (
-                    renderRefusal(navigation)
+                refusal !== null ? (
+                    renderRefusal(navigation, refusal)
                 ) : (
                     <>
                         <OverlayBody maxHeight="min(60dvh, 640px)">
@@ -137,8 +142,8 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             title: t('friends:settleUp.recordPayment'),
             accessibleDescription: t('friends:settleUp.noMoneyMoves'),
             render: navigation =>
-                isRefused ? (
-                    renderRefusal(navigation)
+                refusal !== null ? (
+                    renderRefusal(navigation, refusal)
                 ) : selectedOption ? (
                     <SettlementFormContent
                         key={selectedOption.user.id + '-' + selectedOption.balance.net.currency}

@@ -7,11 +7,27 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { exchangeApiGoogleOAuthCode, refreshApiAuthTokens } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
-import { setAccessTokenRefreshListener, startAuthLogout } from 'helpers/authSession';
-import { getLocalUser, getTabUserId, LocalStorage, saveLocalUser } from 'helpers/localStorage';
+import { ledgerKeys } from 'entities/ledger';
+import {
+    establishAuthSession,
+    markAuthSessionSignedOut,
+    setAccessTokenRefreshListener,
+    startAuthLogout,
+} from 'helpers/authSession';
+import {
+    addKeptOutboxUser,
+    getKeptOutboxUsers,
+    getLocalUser,
+    getTabUserId,
+    LocalStorage,
+    removeKeptOutboxUsers,
+    saveLocalUser,
+} from 'helpers/localStorage';
 import { outboxFailedKey, outboxStateKey, queryCacheKey } from 'shared/offline/constants';
 import { persistCodec } from 'shared/offline/persistCodec';
+import { cachesByUser, isCacheWriteAllowed } from 'shared/offline/userCaches';
 import { fakeAccessToken } from 'test/fakeAccessToken';
+import { mountAsUserClient } from 'test/userClient';
 
 import { useAccountSwitchConfirmStore } from './accountSwitchConfirmStore';
 import { onAccessTokenRefreshed, useAuthStore } from './authStore';
@@ -39,6 +55,9 @@ vi.mock('helpers/authSession', async importOriginal => ({
 
 const USER_X = 'user-x';
 const USER_Y = 'user-y';
+const USER_K = 'user-k';
+// One of X's queries (any key of the app's factories).
+const X_QUERY_KEY = ledgerKeys.entry('x-entry');
 
 const settings = {
     defaultCurrency: 'USD',
@@ -66,10 +85,10 @@ const selfUser = (id: string): SelfUser => ({
     updatedAt: 1,
 });
 
-const op = (seq: number) => ({
+const op = (seq: number, owner = USER_X) => ({
     opId: `op-${seq}`,
     seq,
-    owner: USER_X,
+    owner,
     entryKind: 'expense',
     createdAt: Date.now(),
     schema: 1,
@@ -80,24 +99,29 @@ const op = (seq: number) => ({
     draft: {},
 });
 
-const xKeys = [queryCacheKey(USER_X), outboxStateKey(USER_X), outboxFailedKey(USER_X)];
+const keysOf = (userId: string): string[] => [
+    queryCacheKey(userId),
+    outboxStateKey(userId),
+    outboxFailedKey(userId),
+];
+const xKeys = keysOf(USER_X);
 
-const storedXKeys = (): Promise<string[]> =>
-    Promise.all(xKeys.map(key => get(key).then(value => (value === undefined ? [] : [key])))).then(
-        keys => keys.flat(),
-    );
+const storedKeys = (userId: string): Promise<string[]> =>
+    Promise.all(
+        keysOf(userId).map(key => get(key).then(value => (value === undefined ? [] : [key]))),
+    ).then(keys => keys.flat());
 
-const settleIdb = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 30));
+const storedXKeys = (): Promise<string[]> => storedKeys(USER_X);
 
-/** X used this device: its cache and an outbox with `pending` ops and one failed op (N = pending + 1). */
-const signInX = async (pending: number): Promise<void> => {
-    await Promise.all([
-        set(queryCacheKey(USER_X), 'x-cache'),
+// `userId`'s cache and an outbox with `pending` ops and, when any, one failed op.
+const storeUserData = (userId: string, pending: number): Promise<void> =>
+    Promise.all([
+        set(queryCacheKey(userId), `${userId}-cache`),
         set(
-            outboxStateKey(USER_X),
+            outboxStateKey(userId),
             persistCodec.stringify({
                 nextSeq: 20,
-                ops: Array.from({ length: pending }, (_, index) => op(index + 1)),
+                ops: Array.from({ length: pending }, (_, index) => op(index + 1, userId)),
                 versions: {},
                 cancelled: [],
                 retryRequested: [],
@@ -106,12 +130,18 @@ const signInX = async (pending: number): Promise<void> => {
             }),
         ),
         set(
-            outboxFailedKey(USER_X),
+            outboxFailedKey(userId),
             persistCodec.stringify(
-                pending === 0 ? [] : [{ op: op(10), reason: 'validation', failedAt: 1 }],
+                pending === 0 ? [] : [{ op: op(10, userId), reason: 'validation', failedAt: 1 }],
             ),
         ),
-    ]);
+    ]).then(() => undefined);
+
+const settleIdb = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 30));
+
+/** X used this device: its cache and an outbox with `pending` ops and one failed op (N = pending + 1). */
+const signInX = async (pending: number): Promise<void> => {
+    await storeUserData(USER_X, pending);
     saveLocalUser({ id: USER_X, role: 'USER', settings });
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
 };
@@ -149,6 +179,7 @@ const waitForQuestion = async (): Promise<void> => {
 beforeEach(() => {
     vi.clearAllMocks();
     LocalStorage.remove(LS_KEY_USER);
+    removeKeptOutboxUsers([USER_X, USER_Y, USER_K]);
     useAccountSwitchConfirmStore.setState({ request: null });
 });
 
@@ -167,9 +198,10 @@ describe('flag on: the initiating tab asks', () => {
 
         await waitForQuestion();
         expect(question()).toEqual({ count: 3 });
-        // Nothing is deleted or moved while the user decides.
+        // Nothing is deleted or moved while the user decides, and Y's session is not set (L2).
         expect(await storedXKeys()).toEqual(xKeys);
         expect(getLocalUser()?.id).toBe(USER_X);
+        expect(establishAuthSession).not.toHaveBeenCalled();
 
         useAccountSwitchConfirmStore.getState().answer(true);
         await signIn;
@@ -196,6 +228,8 @@ describe('flag on: the initiating tab asks', () => {
         expect(getLocalUser()).toEqual({ id: USER_X, settings });
         expect(getTabUserId()).toBe(USER_X);
         expect(startAuthLogout).toHaveBeenCalledExactlyOnceWith({ broadcast: false });
+        // L2: Y's session was never established in this tab.
+        expect(establishAuthSession).not.toHaveBeenCalled();
         expect(useAuthStore.getState()).toMatchObject({
             status: 'unauthenticated',
             unauthReason: 'signed_out',
@@ -243,6 +277,153 @@ describe('flag on: the initiating tab asks', () => {
     });
 });
 
+describe('flag on: the session changes while the question is open (M1), X as asked (L1)', () => {
+    beforeEach(() => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+    });
+
+    test('a remote logout answers it Cancel; a later confirm signs nothing in, no data loaded', async () => {
+        await signInX(1);
+        const signIn = signInY();
+
+        await waitForQuestion();
+        // As the remote-logout listener of `useCheckSignIn`.
+        markAuthSessionSignedOut();
+        useAuthStore.getState().setUnauthenticated('signed_out');
+        expect(question()).toBeNull();
+        useAccountSwitchConfirmStore.getState().answer(true);
+        await signIn;
+
+        expect(useAuthStore.getState().status).toBe('unauthenticated');
+        expect(establishAuthSession).not.toHaveBeenCalled();
+        expect(loadSelfUserForSession).not.toHaveBeenCalled();
+        expect(loadKnownUsersForSession).not.toHaveBeenCalled();
+    });
+
+    test('an expiry answers it Cancel', async () => {
+        await signInX(1);
+        const signIn = signInY();
+
+        await waitForQuestion();
+        useAuthStore.getState().expireSession();
+        await signIn;
+
+        expect(question()).toBeNull();
+        expect(useAuthStore.getState().status).toBe('unauthenticated');
+        expect(await storedXKeys()).toEqual(xKeys);
+        expect(establishAuthSession).not.toHaveBeenCalled();
+    });
+
+    test('Cancel restores LS_KEY_USER = X when it changed meanwhile', async () => {
+        await signInX(1);
+        const signIn = signInY();
+
+        await waitForQuestion();
+        saveLocalUser({ id: 'someone-else', settings });
+        useAccountSwitchConfirmStore.getState().answer(false);
+        await signIn;
+
+        expect(getLocalUser()).toEqual({ id: USER_X, settings });
+        expect(await storedXKeys()).toEqual(xKeys);
+    });
+
+    test('Delete deletes the X that was asked about, not a later cached user', async () => {
+        await signInX(1);
+        await storeUserData(USER_K, 0);
+        const signIn = signInY();
+
+        await waitForQuestion();
+        saveLocalUser({ id: USER_K, settings });
+        useAccountSwitchConfirmStore.getState().answer(true);
+        await signIn;
+        await settleIdb();
+
+        expect(await storedXKeys()).toEqual([]);
+        expect(await storedKeys(USER_K)).toEqual(keysOf(USER_K));
+    });
+});
+
+describe('M3: users whose outbox a refresh switch kept', () => {
+    beforeEach(() => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+    });
+
+    test('the account-switch N counts them; Delete deletes them and empties the list', async () => {
+        await signInX(1);
+        await storeUserData(USER_K, 3);
+        addKeptOutboxUser(USER_K);
+        const signIn = signInY();
+
+        await waitForQuestion();
+        // X: 1 pending + 1 failed; K: 3 pending + 1 failed.
+        expect(question()).toEqual({ count: 6 });
+        useAccountSwitchConfirmStore.getState().answer(true);
+        await signIn;
+        await settleIdb();
+
+        expect(await storedXKeys()).toEqual([]);
+        expect(await storedKeys(USER_K)).toEqual([]);
+        expect(getKeptOutboxUsers()).toEqual([]);
+    });
+
+    test('kept users alone (the same user signs in again) are asked about too', async () => {
+        await signInX(0);
+        await storeUserData(USER_K, 1);
+        addKeptOutboxUser(USER_K);
+        useAuthStore.getState().expireSession();
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: fakeAccessToken(USER_X),
+            is_new_user: false,
+        });
+        mockSignedInFetches(USER_X);
+        const signIn = useAuthStore.getState().exchangeGoogleOAuthCode('kept-only-code');
+
+        await waitForQuestion();
+        expect(question()).toEqual({ count: 2 });
+        useAccountSwitchConfirmStore.getState().answer(false);
+        await signIn;
+
+        expect(await storedKeys(USER_K)).toEqual(keysOf(USER_K));
+        expect(getKeptOutboxUsers()).toEqual([USER_K]);
+    });
+
+    test('a sign-in of a kept user takes them off the list; their queue stays', async () => {
+        await storeUserData(USER_Y, 2);
+        addKeptOutboxUser(USER_Y);
+
+        await signInY();
+        await settleIdb();
+
+        expect(question()).toBeNull();
+        expect(getKeptOutboxUsers()).toEqual([]);
+        expect(await storedKeys(USER_Y)).toEqual(keysOf(USER_Y));
+    });
+
+    test('signOut() deletes the kept users with the signed-in one', async () => {
+        await signInX(0);
+        await storeUserData(USER_K, 2);
+        addKeptOutboxUser(USER_K);
+
+        await useAuthStore.getState().signOut();
+        await settleIdb();
+
+        expect(await storedKeys(USER_K)).toEqual([]);
+        expect(getKeptOutboxUsers()).toEqual([]);
+    });
+
+    test('a remote logout deletes them too', async () => {
+        await signInX(0);
+        await storeUserData(USER_K, 2);
+        addKeptOutboxUser(USER_K);
+
+        useAuthStore.getState().setUnauthenticated('signed_out');
+        await settleIdb();
+
+        expect(await storedKeys(USER_K)).toEqual([]);
+        expect(getKeptOutboxUsers()).toEqual([]);
+    });
+});
+
 test('flag off = master: no dialog, X is cleared synchronously with the sign-in', async () => {
     await signInX(2);
 
@@ -269,44 +450,73 @@ describe('another tab: a refreshed token of Y', () => {
         return useAuthStore.getState().refreshAuthTokens();
     };
 
-    test('flag on, X has unsent ops: the tab moves to Y, X keeps its data', async () => {
+    test('flag on, X has unsent ops: X is detached at once, its keys stay, X is recorded', async () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         await signInX(1);
-
-        await refreshToY();
-        await vi.waitFor(() => {
-            expect(getLocalUser()?.id).toBe(USER_Y);
+        // X's client in this tab with a query in flight.
+        const xClient = mountAsUserClient(USER_X);
+        let answerX = (): void => undefined;
+        const xQuery = xClient.fetchQuery({
+            queryKey: X_QUERY_KEY,
+            queryFn: () =>
+                new Promise<string>(resolve => {
+                    answerX = () => resolve('x-answer');
+                }),
         });
-        await settleIdb();
 
+        const refresh = refreshToY();
+
+        // Synchronous at the token (B1): this tab is on Y and holds nothing of X.
+        await refresh;
+        expect(getLocalUser()?.id).toBe(USER_Y);
+        expect(cachesByUser.has(USER_X)).toBe(false);
+        expect(xClient.getQueryCache().getAll()).toEqual([]);
+        expect(isCacheWriteAllowed(queryCacheKey(USER_X))).toBe(false);
+        answerX();
+        await xQuery.catch(() => undefined);
+        expect(xClient.getQueryData(X_QUERY_KEY)).toBeUndefined();
+
+        await settleIdb();
         expect(await storedXKeys()).toEqual(xKeys);
+        expect(getKeptOutboxUsers()).toEqual([USER_X]);
         expect(question()).toBeNull();
     });
 
-    test('flag on, X has nothing queued: X is cleared as before', async () => {
+    test('flag on, X has nothing queued: X is cleared as before, not recorded', async () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         await signInX(0);
 
         await refreshToY();
-        await vi.waitFor(() => {
-            expect(getLocalUser()?.id).toBe(USER_Y);
-        });
+        expect(getLocalUser()?.id).toBe(USER_Y);
         await settleIdb();
 
         expect(await storedXKeys()).toEqual([]);
+        expect(getKeptOutboxUsers()).toEqual([]);
     });
 
-    test('flag on: a newer transition while X is counted is not overwritten', async () => {
+    test('flag on, an unreadable outbox of X: kept and recorded', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        await signInX(1);
+        await set(outboxStateKey(USER_X), 'not json');
+
+        await refreshToY();
+        await settleIdb();
+
+        expect(await storedXKeys()).toEqual(xKeys);
+        expect(getKeptOutboxUsers()).toEqual([USER_X]);
+    });
+
+    test('flag on: kept X, then a sign-out of Y counts and deletes X too', async () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         await signInX(1);
 
-        const refresh = refreshToY();
-        // This tab signs out before the count answers.
+        await refreshToY();
+        await settleIdb();
         await useAuthStore.getState().signOut();
-        await refresh;
         await settleIdb();
 
-        expect(getLocalUser()).toEqual({ settings });
+        expect(await storedXKeys()).toEqual([]);
+        expect(getKeptOutboxUsers()).toEqual([]);
     });
 
     test('flag off = master: X is cleared even with unsent ops', async () => {

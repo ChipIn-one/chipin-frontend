@@ -1,24 +1,33 @@
 import { onlineManager } from '@tanstack/react-query';
 import { act, render, waitFor } from '@testing-library/react';
+import { get, set } from 'idb-keyval';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
+import { ledgerKeys } from 'entities/ledger';
 import {
     invalidateAuthSession,
     isAuthSessionSignedOut,
     validateAuthSession,
 } from 'helpers/authSession';
 import * as localStorageHelpers from 'helpers/localStorage';
-import { useAuthStore } from 'store/authStore';
+import { outboxStateKey, queryCacheKey } from 'shared/offline/constants';
+import { persistCodec } from 'shared/offline/persistCodec';
+import { cachesByUser, isCacheWriteAllowed } from 'shared/offline/userCaches';
+import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { loadGroupsListForSession } from 'store/groupsList';
 import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { fakeAccessToken } from 'test/fakeAccessToken';
+import { mountAsUserClient } from 'test/userClient';
 
 import { useCheckSignIn } from './useCheckSignIn';
+
+import 'fake-indexeddb/auto';
 
 // The store's own refresh, over a mocked cookie refresh (`null` = 401).
 vi.mock('helpers/authSession', async importOriginal => {
@@ -616,4 +625,72 @@ test('a boot refresh of the same cached user keeps the active app mode', () => {
     }).then(() => {
         expect(setDefaultAppMode).not.toHaveBeenCalled();
     });
+});
+
+// 03-16a part C (R1 B1), offline writes on: the boot refresh of another tab's account switch moves
+// this tab to Y at once and detaches X (no X data in memory, no write of X's cache); X's unsent
+// outbox stays in IndexedDB and X is recorded as a kept user.
+test('flag on: a cold-start refresh that finds Y over X with unsent ops detaches X at once', async () => {
+    vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+    useAuthStore.setState({ refreshAuthTokens: storeRefreshAuthTokens });
+    cacheSignedInUser();
+    await set(
+        outboxStateKey(user.id),
+        persistCodec.stringify({
+            nextSeq: 2,
+            ops: [
+                {
+                    opId: 'op-1',
+                    seq: 1,
+                    owner: user.id,
+                    entryKind: 'expense',
+                    createdAt: Date.now(),
+                    schema: 1,
+                    kind: 'createExpense',
+                    entryId: 'entry-1',
+                    groupId: null,
+                    parentActivityId: null,
+                    draft: {},
+                },
+            ],
+            versions: {},
+            cancelled: [],
+            retryRequested: [],
+            sending: null,
+            conflictDrafts: {},
+        }),
+    );
+    const xClient = mountAsUserClient(user.id);
+    // A query of X in flight; the detach cancels it.
+    void xClient
+        .fetchQuery({
+            queryKey: ledgerKeys.entry('x-entry'),
+            queryFn: () => new Promise<string>(() => undefined),
+        })
+        .catch(() => undefined);
+    const yToken = fakeAccessToken('user-y');
+
+    // As the cookie refresh with the listener `bootstrap/initializeApi` wires.
+    vi.mocked(validateAuthSession).mockImplementation(() => {
+        onAccessTokenRefreshed(yToken);
+        return Promise.resolve(yToken);
+    });
+    mockAuthenticatedDataFetches();
+    vi.mocked(loadSelfUserForSession).mockResolvedValue({ ...user, id: 'user-y' });
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(useAuthStore.getState().status).toBe('authenticated');
+    });
+    expect(localStorageHelpers.getLocalUser()?.id).toBe('user-y');
+    expect(cachesByUser.has(user.id)).toBe(false);
+    expect(xClient.getQueryCache().getAll()).toEqual([]);
+    expect(isCacheWriteAllowed(queryCacheKey(user.id))).toBe(false);
+    await waitFor(() => {
+        expect(localStorageHelpers.getKeptOutboxUsers()).toEqual([user.id]);
+    });
+    expect(await get(outboxStateKey(user.id))).toBeDefined();
+    localStorageHelpers.removeKeptOutboxUsers([user.id]);
+    vi.unstubAllEnvs();
 });

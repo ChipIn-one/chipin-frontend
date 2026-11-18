@@ -54,3 +54,178 @@ describe('ONLINE_ONLY_ACTIONS: every action has a wrapped entry point (§2.9)', 
         expect(history).toContain('action={ONLINE_ONLY_ACTIONS.settlementEdit}');
     });
 });
+
+// R1 L6: not one entry point per action, every one. Each JSX usage of an online-only trigger
+// component, and each caller of an online-only mutation hook, must sit behind a wrapper.
+describe('every entry point of an online-only action is wrapped (§2.9)', () => {
+    const GUARD = /<OnlineOnly(?:Group)?\s+action=\{|useRequiresOnline\(\s*ONLINE_ONLY_ACTIONS\./;
+    const isGuarded = (source: string): boolean => GUARD.test(source);
+    const nameOf = (path: string): string => path.replace(/^.*\//, '').replace(/\.tsx?$/, '');
+    const fileOf = (name: string): string | undefined =>
+        Object.keys(sources).find(path => nameOf(path) === name);
+    const sourceOf = (path: string): string => sources[path] ?? '';
+
+    /** Modals whose children are their trigger: every child must be `<OnlineOnly action=…>`. */
+    const TRIGGER_MODALS = [
+        'CreateUpdateGroupModal',
+        'LeaveGroupAlertDialog',
+        'RemoveGroupAlertDialog',
+        'KickGroupMemberAlertDialog',
+        'UserAvatarModal',
+    ];
+    /** Opened by the caller's state: the calling file reads `useRequiresOnline`. */
+    const CONTROLLED_MODALS = ['RemoveFriendAlertDialog', 'SettleUpModal'];
+    /** Their own action button is wrapped inside them. */
+    const SELF_WRAPPED = ['GroupSettleUpFlow', 'InviteJoinConfirmation'];
+    /** Development only (not in a production build's UI). */
+    const EXEMPT = ['DevMenu'];
+    const ONLINE_ONLY_HOOKS = [
+        'useCreateGroup',
+        'useUpdateGroup',
+        'useUploadGroupCover',
+        'useJoinGroup',
+        'useLeaveGroup',
+        'useKickGroupMember',
+        'useRemoveGroup',
+        'useUpdateSelf',
+        'useUploadAvatar',
+        'useRemoveKnownUser',
+        'useAcceptFriendInvite',
+        'useCreateSettlement',
+        'logoutOtherDevices',
+    ];
+    const DEFINITIONS =
+        /\/(?:hooks\/use(?:Group|User|Ledger)Mutations\.ts|store\/|api\/|helpers\/)/;
+
+    interface Usage {
+        readonly path: string;
+        readonly openTag: string;
+        /** The children, null for a self-closing usage. */
+        readonly body: string | null;
+    }
+
+    // Every `<Name …>` in the sources outside its own file; the opening tag is read brace-aware.
+    const usagesOf = (name: string): Usage[] =>
+        Object.entries(sources).flatMap(([path, source]) => {
+            if (nameOf(path) === name) {
+                return [];
+            }
+            const usages: Usage[] = [];
+            const opening = new RegExp(`<${name}(?![\\w.])`, 'g');
+
+            for (const match of source.matchAll(opening)) {
+                let depth = 0;
+                let end = match.index + match[0].length;
+
+                for (; end < source.length; end += 1) {
+                    const char = source[end];
+
+                    if (char === '{') {
+                        depth += 1;
+                    } else if (char === '}') {
+                        depth -= 1;
+                    } else if (char === '>' && depth === 0) {
+                        break;
+                    }
+                }
+                const openTag = source.slice(match.index, end + 1);
+                const close = source.indexOf(`</${name}>`, end);
+
+                usages.push({
+                    path,
+                    openTag,
+                    body: openTag.endsWith('/>') ? null : source.slice(end + 1, close),
+                });
+            }
+            return usages;
+        });
+
+    const WRAPPED_CHILD = /^\s*<OnlineOnly\s+action=\{ONLINE_ONLY_ACTIONS\.\w+\}/;
+
+    test.each(TRIGGER_MODALS)('%s: every trigger child is <OnlineOnly action>', name => {
+        const usages = usagesOf(name);
+
+        expect(usages.length).toBeGreaterThan(0);
+        expect(
+            usages
+                .filter(({ path, body }) =>
+                    body === null ? !isGuarded(sourceOf(path)) : !WRAPPED_CHILD.test(body),
+                )
+                .map(({ path }) => path),
+        ).toEqual([]);
+    });
+
+    test.each(CONTROLLED_MODALS)(
+        '%s: opened only from a file that reads useRequiresOnline',
+        name => {
+            const unguarded = usagesOf(name).filter(
+                ({ path, openTag }) =>
+                    // The group settle-up's trigger lives in GroupSettleUpFlow (checked below).
+                    !openTag.includes('source="group"') && !isGuarded(sourceOf(path)),
+            );
+
+            expect(unguarded.map(({ path }) => path)).toEqual([]);
+        },
+    );
+
+    test.each(SELF_WRAPPED)('%s wraps its own action button', name => {
+        expect(isGuarded(sourceOf(fileOf(name) ?? ''))).toBe(true);
+    });
+
+    const MODALS = [...TRIGGER_MODALS, ...CONTROLLED_MODALS, ...SELF_WRAPPED];
+
+    // A file calling an online-only hook is covered when it is guarded itself, is one of the
+    // checked modals, renders a self-wrapped confirmation, is a hook whose callers are covered, or a
+    // component rendered only inside `<OnlineOnlyGroup action>` or by covered components. A
+    // renderer's own guard does not cover what it renders (`asCaller` false): it may guard another
+    // control of the same file.
+    const isCovered = (path: string, seen: ReadonlySet<string>, asCaller = true): boolean => {
+        const source = sourceOf(path);
+        const name = nameOf(path);
+
+        if (seen.has(path)) {
+            return false;
+        }
+        const next = new Set([...seen, path]);
+
+        if ((asCaller && isGuarded(source)) || EXEMPT.includes(name) || MODALS.includes(name)) {
+            return true;
+        }
+        if (SELF_WRAPPED.some(wrapped => source.includes(`<${wrapped}`))) {
+            return true;
+        }
+        if (path.includes('/hooks/')) {
+            const exported = [...source.matchAll(/export const (use\w+)/g)].map(([, hook]) => hook);
+
+            return exported.every(hook =>
+                callersOf(hook ?? '').every(caller => isCovered(caller, next)),
+            );
+        }
+        const renderers = usagesOf(name);
+
+        return (
+            renderers.length > 0 &&
+            renderers.every(
+                ({ path: renderer }) =>
+                    new RegExp(`<OnlineOnlyGroup\\s+action=\\{[^}]*\\}>\\s*<${name}\\b`).test(
+                        sourceOf(renderer),
+                    ) || isCovered(renderer, next, false),
+            )
+        );
+    };
+
+    const callersOf = (hook: string): string[] =>
+        Object.keys(sources).filter(
+            path =>
+                !DEFINITIONS.test(path) &&
+                new RegExp(`\\b${hook}\\b`).test(sourceOf(path)) &&
+                !new RegExp(`export const ${hook}\\b`).test(sourceOf(path)),
+        );
+
+    test.each(ONLINE_ONLY_HOOKS)('%s: every caller is behind a wrapper', hook => {
+        const callers = callersOf(hook);
+
+        expect(callers.length).toBeGreaterThan(0);
+        expect(callers.filter(path => !isCovered(path, new Set()))).toEqual([]);
+    });
+});

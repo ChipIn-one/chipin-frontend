@@ -36,3 +36,10 @@ export const requestAccountSwitchConfirm = (count: number | null): Promise<boole
         useAccountSwitchConfirmStore.setState({ request: { count } });
     });
 };
+
+/** M1: the session changed (a remote logout, an expiry): an open question is answered Cancel. */
+export const dismissAccountSwitchConfirm = (): void => {
+    if (pendingAnswer !== null) {
+        useAccountSwitchConfirmStore.getState().answer(false);
+    }
+};

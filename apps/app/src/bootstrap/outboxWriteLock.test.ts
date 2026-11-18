@@ -16,7 +16,7 @@ import {
     startLedgerOutbox,
 } from 'entities/ledger/api/outbox';
 import { capabilitiesQueryOptions } from 'entities/ledger/api/queries';
-import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
+import { getKeptOutboxUsers, getLocalUser, saveLocalUser } from 'helpers/localStorage';
 import { createQueryClient } from 'shared/api/queryClient';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
@@ -695,9 +695,11 @@ describe('03-15c1 the drain-session fence (M2)', () => {
         await idb.del(OUTBOX_KEY);
         await idb.del(FAILED_KEY);
         onAccessTokenRefreshed(fakeAccessToken(OTHER));
-        await vi.waitFor(() => expect(getLocalUser()?.id).toBe(OTHER));
+        expect(getLocalUser()?.id).toBe(OTHER);
+        // X detached at once; its keys are deleted once its (empty) outbox is counted.
+        await vi.waitFor(() => expect(idbLog).toContain(`del ${OUTBOX_KEY}`));
         onAccessTokenRefreshed(fakeAccessToken(USER));
-        await vi.waitFor(() => expect(getLocalUser()?.id).toBe(USER));
+        expect(getLocalUser()?.id).toBe(USER);
         await wait(20);
         const client = newClient();
 
@@ -754,6 +756,54 @@ describe('03-15c1 the drain-session fence (M2)', () => {
             expect(requests).toHaveLength(1);
         },
     );
+
+    // 03-16a part C (R1 L3): a refresh switch keeps a non-empty outbox of X in IndexedDB.
+    test("X's request in flight across Y → X with X's outbox kept: the old run stops, the op is resent once by the new session, no stale gate change", async () => {
+        const answer = deferred();
+        const requests = serveLedger(() => 200, [answer]);
+
+        saveLocalUser({ id: USER, settings });
+        await storeOutbox([storedOp(1, 'entry-a')]);
+        const first = await openTab();
+
+        await vi.waitFor(() => expect(requests).toHaveLength(1));
+        const mutation = firstMutation(first);
+
+        // Back to back, before X's outbox is counted.
+        onAccessTokenRefreshed(fakeAccessToken(OTHER));
+        onAccessTokenRefreshed(fakeAccessToken(USER));
+        await wait(30);
+        // Back on X: its keys stay, it is not recorded as a kept user.
+        expect(getLocalUser()?.id).toBe(USER);
+        expect((await readOutboxKey())?.ops).toHaveLength(1);
+        expect(getKeptOutboxUsers()).toEqual([]);
+        expect(idbLog).not.toContain(`del ${OUTBOX_KEY}`);
+
+        await startLedgerOutbox(newClient(), USER, effects);
+        answer.resolve();
+
+        await vi.waitFor(() => expect(mutation?.state.data).toEqual({ kind: 'stopped' }));
+        await vi.waitFor(async () => expect((await readOutboxKey())?.ops).toEqual([]));
+        await wait(50);
+        // The same op (the same client entry id) once more: idempotent on the server.
+        expect(requests).toEqual(['POST entry-a', 'POST entry-a']);
+        expect(outboxGate.isClosed('auth')).toBe(false);
+        expect(outboxGate.isBlocked('entry-a')).toBe(false);
+    });
+
+    test('Y then X back to back with an empty outbox of X: X is back, its keys are not deleted', async () => {
+        saveLocalUser({ id: USER, settings });
+        await storeOutbox([]);
+        await openTab();
+
+        onAccessTokenRefreshed(fakeAccessToken(OTHER));
+        onAccessTokenRefreshed(fakeAccessToken(USER));
+        await wait(50);
+
+        expect(getLocalUser()?.id).toBe(USER);
+        expect(idbLog).not.toContain(`del ${OUTBOX_KEY}`);
+        expect(await idb.get(OUTBOX_KEY)).toBeDefined();
+    });
 });
 
 // `AbortSignal.timeout` of the next lock requests: an already timed-out signal.

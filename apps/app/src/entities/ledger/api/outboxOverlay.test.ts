@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { currencyCode, fromUnits } from 'shared/money';
-import { outboxFailedKey } from 'shared/offline/constants';
+import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
 import { stopOutboxDrain } from 'shared/offline/outboxDrain';
 import {
     failedOutboxOps,
@@ -399,4 +399,54 @@ test('03-16a part B R1 N4: a cancelled edit has its cached entry read again', as
     }
     await expect(act(() => discardOutboxItem(client, edit))).resolves.toBe(true);
     expect(client.getQueryState(ledgerKeys.entry('entry-e'))?.isInvalidated).toBe(true);
+});
+
+// 03-16a part C (R1 L4, M2): the groups a group settle-up is refused for.
+test('queuedGroupIds: the groups of pending and failed ops; not a personal op, not an unreadable record', async () => {
+    const pendingOp = (seq: number, groupId: string | null) => ({
+        ...failedRecord(`op-p${seq}`, `entry-p${seq}`, 'createExpense', 'validation').op,
+        seq,
+        groupId,
+    });
+
+    await set(
+        outboxStateKey('user-1'),
+        persistCodec.stringify({
+            nextSeq: 10,
+            ops: [pendingOp(3, 'group-pending'), pendingOp(4, null)],
+            versions: {},
+            cancelled: [],
+            retryRequested: [],
+            sending: null,
+            conflictDrafts: {},
+        }),
+    );
+    await set(
+        outboxFailedKey('user-1'),
+        persistCodec.stringify([
+            {
+                ...failedRecord('op-f', 'entry-f', 'createExpense', 'validation'),
+                op: {
+                    ...failedRecord('op-f', 'entry-f', 'createExpense', 'validation').op,
+                    groupId: 'group-failed',
+                },
+            },
+            // An op of a newer build that names a group: unreadable here.
+            {
+                op: { entryId: 'entry-u', groupId: 'group-unreadable' },
+                reason: 'validation',
+                failedAt: 1,
+            },
+        ]),
+    );
+    await startOutbox();
+    onlineManager.setOnline(false);
+    const { result } = renderHook(useOutboxOverlay);
+
+    await waitFor(() => {
+        expect(result.current.restore).toBe('ok');
+    });
+    expect(result.current.count).toBe(4);
+    expect(result.current.unreadableCount).toBe(1);
+    expect([...result.current.queuedGroupIds].sort()).toEqual(['group-failed', 'group-pending']);
 });

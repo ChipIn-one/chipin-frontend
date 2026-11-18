@@ -285,6 +285,7 @@ The "reason → what is deleted" table (C3-08; real constants `store/authConstan
 | cold start without a session hint (`useCheckSignIn.tsx:64`) | `missing` | keep (not restored without sign-in) | keep | keep | unchanged |
 | refresh at startup failed with non-401 (`useCheckSignIn.tsx:89`); OAuth exchange error (`authStore.ts:100-122`, `OAuthCallbackPage.tsx:37`) | `error` / `persistence_error` | keep | keep | keep | unchanged |
 | sign-in of Y when `LocalUser.id === X ≠ Y` or the token `sub` ≠ the outbox owner (§2.3) | — (after sign-in) | `clearUserData(X)` | delete; non-empty → dialog (N as in the `signOut()` row) "This device has N unsent operations of account X. Delete and sign in?"; "Cancel" → `signOut()` Y, X's data stays | reset | `{ id: Y, settings }` |
+| token of Y by a refresh in another tab while X's outbox is non-empty or unreadable (03-16a part C, offline writes on) | — (stays authenticated, now Y) | X detached at once (writes blocked, client cleared and forgotten, outbox stopped in this tab); X's key deleted only if X's outbox is empty, otherwise kept | kept; X recorded in `LS_KEY_KEPT_OUTBOX_USERS`; the next sign-out or account switch counts and deletes them (a sign-in of X takes X off the list, its queue continues) | reset | `{ id: Y, settings }` |
 
 - **Session expiry ≠ logout** (finding 11, `02-routing-state-pwa.md:22`): the cache, outbox and draft are kept,
   `AuthModal` is shown, after sign-in with the same `userId` the queue continues (the `auth` gate is opened only by the
@@ -849,41 +850,52 @@ toasts `savedSending` ("Saved, sending…"), a changed repeat of a create being 
 stays open); a queued delete disables the entry's Edit and Delete (A review N5).
 
 Deviation (03-16a part C): online-only actions and the sign-out and account-switch confirms; flag off, nothing of it
-renders, subscribes or reads IDB. (1) `useRequiresOnline(action)` (`hooks/`, blocked = flag on and either
-`!isNetworkUsable()`, re-rendered on `onlineManager`, or `sessionMode === offline-cached`) and `<OnlineOnly action>`
-(`components/online-only`): not blocked, the child as it is (a Radix trigger's `asChild` props reach it through `Slot`);
-blocked, the child gets `disabled` + `aria-disabled`, the trigger's props are dropped and a focusable span carries the
-tooltip "An internet connection is required". `<OnlineOnlyGroup>` puts the user-settings cards in a disabled `fieldset`
-(a page caption says why); menu items and a card button read the hook. `ONLINE_ONLY_ACTIONS` (`constants/`) has
-`settleUp`, `settlement.delete`/`edit`, `group.create`/`update`/`cover`/`leave`/`kick`/`delete`, `invite.accept`,
-`avatar.upload`, `user.settings`, `friend.delete`, `logoutOtherDevices`; "invites" of the table are the join
-confirmations (sharing an existing invite link stays local) and the group delete is added. A source scan test checks
-that every key is used by an `action={…}` or `useRequiresOnline(…)` entry point. The group settle-up trigger is
-wrapped and an open `GroupSettleUpFlow` closes when the network goes (it does not reopen). The refusals before
-`mutate` stay as the guard for flag off and for a control used as the network went. (2) C2-02: the history's Update
-and Delete of a non-expense are wrapped (`settlement.edit`/`delete`); `chooseLedgerWritePath` already takes the online
-path for an entry not cached as an `EXPENSE` (the history observes only expenses). (3) Resolves 03-15a (11): settle-up
-refuses rather than shows the caption alone. A group's flow shows "Send or cancel the unsent expenses of this group
-first" with a button that opens `OutboxSheet` while the group has a pending, failed or unreadable op
-(`OutboxOverlay.queuedGroupIds`; an unreadable record counts when its raw op names the group; a payment already sent
-finishes); the friends' form refuses while anything is queued (its balances span groups). The part B caption stays.
-Since an unreadable record has no action, a friends' settle-up stays refused until the app that wrote it sends it.
-(4) Sign-out: one hook (`useSignOutConfirm`, both buttons) reads N from the stored keys of the cached user
+renders, subscribes or reads IDB, and every auth transition runs in master's order. (1) `useRequiresOnline(action)`
+(`hooks/`, blocked = flag on and either `!isNetworkUsable()`, re-rendered on `onlineManager`, or
+`sessionMode === offline-cached`) and `<OnlineOnly action>` (`components/online-only`): not blocked, the child as it is
+(a Radix trigger's `asChild` props reach it through `Slot`); blocked, the child gets `disabled` + `aria-disabled`, the
+trigger's props are dropped and a focusable span carries the tooltip "An internet connection is required".
+`<OnlineOnlyGroup>` puts the user-settings cards in a disabled `fieldset` (a page caption says why); menu items and a
+card button read the hook. `ONLINE_ONLY_ACTIONS` (`constants/`) has `settleUp`, `settlement.delete`/`edit`,
+`group.create`/`update`/`cover`/`leave`/`kick`/`delete`, `invite.accept`, `avatar.upload`, `user.settings`,
+`friend.delete`, `logoutOtherDevices`; "invites" of the table are the join confirmations (sharing an existing invite
+link stays local) and the group delete is added. Source-scan tests check that every key has an entry point and that
+every JSX usage of the online-only trigger modals and every caller of the online-only mutation hooks sits behind a
+wrapper (`DevMenu`, development only, is exempt). The group settle-up trigger is wrapped and an open
+`GroupSettleUpFlow` closes when the network goes (not while its payment request runs; it does not reopen). The refusals
+before `mutate` stay as the guard for flag off and for a control used as the network went. (2) C2-02: the history's
+Update and Delete of a non-expense are wrapped (`settlement.edit`/`delete`); `chooseLedgerWritePath` already takes the
+online path for an entry not cached as an `EXPENSE`. (3) Resolves 03-15a (11): settle-up refuses rather than shows the
+caption alone. A group's flow shows "Send or cancel the unsent expenses of this group first" with a button that opens
+`OutboxSheet` while the group has a pending or failed op (`OutboxOverlay.queuedGroupIds`); the friends' form refuses
+while any pending or failed op exists (its balances span groups); a payment already sent finishes. Unreadable records
+do not refuse (they have no action and would block settle-up until another build sends them); the part B caption still
+counts them. While this tab's outbox restore is `pending` settle-up is refused with "Checking the unsent operations of
+this device…"; a `failed` restore does not refuse (its banner and the caption stay). (4) Sign-out: one hook
+(`useSignOutConfirm`, both buttons) counts the cached user and the kept users (see (6)) from their stored keys
 (`readOutboxRecordCount`: pending ops + failed + unreadable records, validated as a restore reads them, no write lock,
-loaded lazily off the landing path); N > 0 → "N unsent operations will be deleted. Sign out?", a failed read → the
-same without N, 0 → sign-out. The conflict drafts are not counted: `conflictDrafts` is still kept as read; 03-16b adds
-them to N. The remote logout asks nothing. (5) Account switch: the initiating tab (`exchangeGoogleOAuthCode`), after
-the token is set and its `sub` ≠ the cached id, counts X's stored outbox (this tab runs on the anonymous client);
-N > 0 or a failed read asks through `requestAccountSwitchConfirm` (a UI store; the dialog is rendered by
-`OAuthCallbackPage`, flag on only). "Delete and sign in" goes on as before. Cancel signs Y out in this tab only:
-`startAuthLogout({ broadcast: false })` (a broadcast would make the tabs still on X run the remote logout and delete
-X's data), which also writes the session hint false; `LS_KEY_USER` keeps X, nothing is cleared, the status is
-`unauthenticated`/`signed_out` and the exchange resolves, so the callback page navigates as after a sign-out. A newer
-question answers an older one with Cancel. Another tab that gets Y's token by refresh counts X's outbox too: empty →
-X is dropped as before; not empty (or unreadable) → the tab moves to Y (`LS_KEY_USER` = Y, user stores reset) without
-`clearUserData(X)`; the answer applies only if this tab's user and token did not change meanwhile. Deferred: the
-"Create as a new expense" and 24 h caption of part B (4) stay deferred; conflict drafts in N (03-16b); `DevMenu`'s
-settings writes are not wrapped (development only).
+loaded lazily off the landing path); N > 0 → "N unsent operations will be deleted. Sign out?", a failed read → the same
+without N, 0 → sign-out; the answer applies only while the tab's user is the one counted. The conflict drafts are not
+counted: `conflictDrafts` is still kept as read; 03-16b adds them to N. The remote logout asks nothing. (5) Account
+switch: the initiating tab (`exchangeGoogleOAuthCode`) asks before it establishes Y's session (the count needs no
+token): X (the cached id, captured when asked) and the kept users other than Y are counted; N > 0 or a failed read asks
+through `requestAccountSwitchConfirm` (a UI store; the dialog is rendered by `OAuthCallbackPage`, flag on only). The
+copy says "another account" instead of naming X (no personal data in the dialog). "Delete and sign in" establishes Y,
+drops the captured X and deletes the kept users (other than Y). Cancel signs Y out without ever establishing it:
+`startAuthLogout({ broadcast: false })` logs Y's refresh cookie out (a broadcast would make the tabs still on X run the
+remote logout and delete X's data), the hint stays false, `LS_KEY_USER` is X again if it changed, nothing is cleared,
+the status is `unauthenticated`/`signed_out` and the exchange resolves, so the callback page navigates as after a
+sign-out. The session version is captured when asking: any session change while the question is open (a remote
+logout, an expiry) answers it Cancel, and an answer after a change signs nothing in. A newer question answers an older
+one with Cancel. (6) The refresh path stays synchronous at the token, as in master: this tab moves to Y and X is
+detached at once (`clearUserData` is split into `detachUserData`, steps 1, 2, 2a, 4, and `deleteUserKeys`, step 3), so
+no data of X stays in memory and no X request or cache write follows. Only the key delete waits for X's stored count:
+none → X's keys are deleted (unless this tab is back on X); some or unreadable (reported to Sentry by the error name)
+→ the keys stay and X goes to `LS_KEY_KEPT_OUTBOX_USERS` (ids only, `helpers/localStorage.ts`, validated reader): the
+§1.5 row "token of Y by a refresh". The next sign-out (this tab or remote) and the next confirmed account switch delete
+the kept users' data (`clearUserData` per user, under the write lock) and empty the list; a sign-in of a kept user
+takes it off the list and its queue continues. Deferred: the "Create as a new expense" and 24 h caption of part B (4)
+stay deferred; conflict drafts in N (03-16b).
 
 #### 2.5 Error handling
 

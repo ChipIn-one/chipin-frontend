@@ -11,7 +11,7 @@ import { useAuthStore } from 'store/authStore';
 import { useSignOutConfirm } from './index';
 
 const count = vi.hoisted(() => ({
-    read: vi.fn<() => Promise<number | null>>(),
+    read: vi.fn<() => Promise<{ userId: string | undefined; count: number | null }>>(),
 }));
 
 vi.mock('hooks/unsentOpsConfirm', async importOriginal => ({
@@ -71,7 +71,7 @@ describe('flag on', () => {
     });
 
     test('N = 0: signs out without asking', async () => {
-        count.read.mockResolvedValue(0);
+        count.read.mockResolvedValue({ userId: undefined, count: 0 });
         renderButton();
         await clickSignOut();
 
@@ -82,7 +82,7 @@ describe('flag on', () => {
     });
 
     test('N > 0: "N unsent operations will be deleted. Sign out?"; Cancel keeps the session', async () => {
-        count.read.mockResolvedValue(3);
+        count.read.mockResolvedValue({ userId: undefined, count: 3 });
         renderButton();
         await clickSignOut();
         const dialog = await screen.findByRole('alertdialog');
@@ -97,7 +97,7 @@ describe('flag on', () => {
     });
 
     test('N > 0, confirmed: signs out', async () => {
-        count.read.mockResolvedValue(1);
+        count.read.mockResolvedValue({ userId: undefined, count: 1 });
         renderButton();
         await clickSignOut();
         const dialog = await screen.findByRole('alertdialog');
@@ -110,8 +110,18 @@ describe('flag on', () => {
         });
     });
 
+    test('N2: the tab user changed while counting: nothing happens', async () => {
+        count.read.mockResolvedValue({ userId: 'someone-else', count: 0 });
+        renderButton();
+        await clickSignOut();
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+        expect(signOut).not.toHaveBeenCalled();
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
     test('a failed count: the confirm without a number', async () => {
-        count.read.mockResolvedValue(null);
+        count.read.mockResolvedValue({ userId: undefined, count: null });
         renderButton();
         await clickSignOut();
 
@@ -126,7 +136,7 @@ describe('flag on', () => {
         [5, '5 неотправленных операций будут удалены. Выйти?'],
     ])('ru plural, %i', async (n, text) => {
         await act(() => i18n.changeLanguage('ru'));
-        count.read.mockResolvedValue(n);
+        count.read.mockResolvedValue({ userId: undefined, count: n });
         renderButton();
         await clickSignOut();
 

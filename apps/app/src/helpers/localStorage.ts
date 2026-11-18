@@ -3,6 +3,7 @@ import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import {
     LS_KEY_AUTH_SESSION_HINT,
+    LS_KEY_KEPT_OUTBOX_USERS,
     type LS_KEY_LOCALE,
     type LS_KEY_SW_UPDATE_DISMISSED_AT,
     type LS_KEY_THEME,
@@ -78,6 +79,7 @@ type StorageSchema = {
     [LS_KEY_LOCALE]: string;
     [LS_KEY_THEME]: ThemeName;
     [LS_KEY_SW_UPDATE_DISMISSED_AT]: number;
+    [LS_KEY_KEPT_OUTBOX_USERS]: string[];
 };
 
 type StorageKey = keyof StorageSchema;
@@ -261,13 +263,48 @@ const setAuthSessionHint = (hasSession: boolean): boolean => {
     }
 };
 
+// Spec 03 §1.5 (03-16a part C): the users whose data a refresh switch detached from this tab but
+// whose non-empty (or unreadable) outbox it kept in IndexedDB. Ids only; the next sign-out or
+// account switch counts and deletes their data, a sign-in of one of them takes it off the list.
+// Validated on read: anything but a list of non-empty strings reads as empty.
+const getKeptOutboxUsers = (): string[] => {
+    const value = getStorageValue<unknown>(LS_KEY_KEPT_OUTBOX_USERS);
+
+    return Array.isArray(value)
+        ? [...new Set(value.filter((id): id is string => typeof id === 'string' && id !== ''))]
+        : [];
+};
+
+const setKeptOutboxUsers = (userIds: readonly string[]): void => {
+    if (userIds.length === 0) {
+        LocalStorage.remove(LS_KEY_KEPT_OUTBOX_USERS);
+    } else {
+        LocalStorage.set(LS_KEY_KEPT_OUTBOX_USERS, [...new Set(userIds)]);
+    }
+};
+
+const addKeptOutboxUser = (userId: string): void => {
+    setKeptOutboxUsers([...getKeptOutboxUsers(), userId]);
+};
+
+const removeKeptOutboxUsers = (userIds: readonly string[]): void => {
+    const kept = getKeptOutboxUsers();
+
+    if (kept.some(id => userIds.includes(id))) {
+        setKeptOutboxUsers(kept.filter(id => !userIds.includes(id)));
+    }
+};
+
 export {
+    addKeptOutboxUser,
     clearLocalUserIdentity,
     clearLocalUserRole,
+    getKeptOutboxUsers,
     getLocalUser,
     getTabUserId,
     hasAuthSessionHint,
     LocalStorage,
+    removeKeptOutboxUsers,
     resetTabUserId,
     saveLocalUser,
     setAuthSessionHint,

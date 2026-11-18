@@ -3,17 +3,27 @@
 import { clear, set } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
+import {
+    addKeptOutboxUser,
+    clearLocalUserIdentity,
+    removeKeptOutboxUsers,
+    saveLocalUser,
+} from 'helpers/localStorage';
 import { outboxFailedKey, outboxStateKey } from 'shared/offline/constants';
 import { persistCodec } from 'shared/offline/persistCodec';
 
-import { isUnsentOpsConfirmOn, readSignOutOutboxCount } from './unsentOpsConfirm';
+import {
+    isSignOutUserCurrent,
+    isUnsentOpsConfirmOn,
+    readSignOutOutboxCount,
+} from './unsentOpsConfirm';
 
 import 'fake-indexeddb/auto';
 
 vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 
 const USER = 'user-x';
+const KEPT = 'user-kept';
 
 const op = (seq: number) => ({
     opId: `op-${seq}`,
@@ -29,10 +39,10 @@ const op = (seq: number) => ({
     draft: {},
 });
 
-const storeOutbox = (pending: unknown[], failed: unknown[]): Promise<void> =>
+const storeOutbox = (pending: unknown[], failed: unknown[], userId = USER): Promise<void> =>
     Promise.all([
         set(
-            outboxStateKey(USER),
+            outboxStateKey(userId),
             persistCodec.stringify({
                 nextSeq: 10,
                 ops: pending,
@@ -43,7 +53,7 @@ const storeOutbox = (pending: unknown[], failed: unknown[]): Promise<void> =>
                 conflictDrafts: {},
             }),
         ),
-        set(outboxFailedKey(USER), persistCodec.stringify(failed)),
+        set(outboxFailedKey(userId), persistCodec.stringify(failed)),
     ]).then(() => undefined);
 
 beforeEach(async () => {
@@ -68,6 +78,7 @@ beforeEach(async () => {
 afterEach(() => {
     vi.unstubAllEnvs();
     clearLocalUserIdentity();
+    removeKeptOutboxUsers([KEPT]);
 });
 
 describe('readSignOutOutboxCount', () => {
@@ -77,24 +88,44 @@ describe('readSignOutOutboxCount', () => {
             [{ op: op(3), reason: 'validation', failedAt: 1 }],
         );
 
-        expect(await readSignOutOutboxCount()).toBe(4);
+        expect(await readSignOutOutboxCount()).toEqual({ userId: USER, count: 4 });
     });
 
     test('nothing stored: 0', async () => {
-        expect(await readSignOutOutboxCount()).toBe(0);
+        expect(await readSignOutOutboxCount()).toEqual({ userId: USER, count: 0 });
     });
 
     test('a key unreadable as a whole: null (the confirm asks without a number)', async () => {
         await set(outboxStateKey(USER), 'not json');
 
-        expect(await readSignOutOutboxCount()).toBeNull();
+        expect(await readSignOutOutboxCount()).toEqual({ userId: USER, count: null });
     });
 
     test('no cached user: 0', async () => {
         await storeOutbox([op(1)], []);
         clearLocalUserIdentity();
 
-        expect(await readSignOutOutboxCount()).toBe(0);
+        expect(await readSignOutOutboxCount()).toEqual({ userId: undefined, count: 0 });
+    });
+
+    test('M3: the kept users are counted with the tab user', async () => {
+        await storeOutbox([op(1)], []);
+        await storeOutbox(
+            [
+                { ...op(1), owner: KEPT },
+                { ...op(2), owner: KEPT },
+            ],
+            [],
+            KEPT,
+        );
+        addKeptOutboxUser(KEPT);
+
+        expect(await readSignOutOutboxCount()).toEqual({ userId: USER, count: 3 });
+    });
+
+    test('N2: the counted user is compared with the tab user', () => {
+        expect(isSignOutUserCurrent(USER)).toBe(true);
+        expect(isSignOutUserCurrent('someone-else')).toBe(false);
     });
 });
 

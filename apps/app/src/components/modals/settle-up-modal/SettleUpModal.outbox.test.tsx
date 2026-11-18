@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import type { Group } from 'entities/groups';
-import type { OutboxOverlay } from 'entities/ledger';
+import type { OutboxOverlay, PendingOutboxItem } from 'entities/ledger';
 import { currencyCode, fromUnits } from 'shared/money';
 import { useOutboxSheetStore } from 'store/outboxSheetStore';
 import { groupBalances } from 'test/groupFixtures';
@@ -19,7 +19,7 @@ import SettleUpModal from './SettleUpModal';
 import 'i18n/index';
 
 const ledger = vi.hoisted(() => ({
-    patch: null as { count: number; queuedGroupIds: ReadonlySet<string> } | null,
+    patch: null as Partial<OutboxOverlay> | null,
 }));
 
 // The real overlay (flag off: the empty view) unless a test queues something.
@@ -111,9 +111,29 @@ const friend = {
     updatedAt: 1,
 };
 
+const pendingItem = (opId: string): PendingOutboxItem => ({
+    opId,
+    entryId: `entry-${opId}`,
+    kind: 'createExpense',
+    description: null,
+    amount: null,
+    share: null,
+    relatedOpIds: [],
+    canCancel: true,
+    status: 'queued',
+});
+
+// `count` readable pending ops of `groupIds` (the restore done).
 const queue = (count: number, groupIds: string[] = []): void => {
-    ledger.patch = { count, queuedGroupIds: new Set(groupIds) };
+    ledger.patch = {
+        restore: 'ok',
+        count,
+        pending: Array.from({ length: count }, (_, index) => pendingItem(`op-${index}`)),
+        queuedGroupIds: new Set(groupIds),
+    };
 };
+
+const CHECKING = 'Checking the unsent operations of this device…';
 
 const openGroupSettleUp = async (): Promise<void> => {
     render(<SettleUpModal source="group" group={group} />, { wrapper: Theme });
@@ -174,6 +194,40 @@ describe('a group settle-up with unsent expenses of the group', () => {
 
         expect(screen.queryByText(GROUP_HINT)).toBeNull();
         expect(screen.getByRole('button', { name: /Debtor Person/ })).toBeTruthy();
+    });
+});
+
+describe('M2, L5: what does not refuse, and the restore still running', () => {
+    test('unreadable records (they have no action) refuse neither the group nor the friends', async () => {
+        ledger.patch = { restore: 'ok', count: 2, unreadableCount: 2 };
+        await openGroupSettleUp();
+
+        expect(screen.queryByText(GROUP_HINT)).toBeNull();
+        expect(screen.getByRole('button', { name: /Debtor Person/ })).toBeTruthy();
+    });
+
+    test('unreadable records do not refuse the friends form', () => {
+        ledger.patch = { restore: 'ok', count: 1, unreadableCount: 1 };
+        renderFriendSettleUp();
+
+        expect(screen.queryByText(FRIENDS_HINT)).toBeNull();
+        expect(screen.getByRole('textbox')).toBeTruthy();
+    });
+
+    test('the stored outbox not read yet: refused with "checking", no list button', async () => {
+        ledger.patch = { restore: 'pending' };
+        await openGroupSettleUp();
+
+        expect(screen.getByText(CHECKING)).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Show unsent operations' })).toBeNull();
+    });
+
+    test('a failed read of the outbox does not refuse (its banner and caption stay)', () => {
+        ledger.patch = { restore: 'failed' };
+        renderFriendSettleUp();
+
+        expect(screen.queryByText(CHECKING)).toBeNull();
+        expect(screen.getByRole('textbox')).toBeTruthy();
     });
 });
 

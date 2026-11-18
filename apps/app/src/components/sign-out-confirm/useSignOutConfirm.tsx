@@ -1,7 +1,11 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { isUnsentOpsConfirmOn, readSignOutOutboxCount } from 'hooks/unsentOpsConfirm';
+import {
+    isSignOutUserCurrent,
+    isUnsentOpsConfirmOn,
+    readSignOutOutboxCount,
+} from 'hooks/unsentOpsConfirm';
 import { useAuthStore } from 'store/authStore';
 
 import { BaseAlertDialog } from 'components/modals';
@@ -10,6 +14,8 @@ interface Confirm {
     isOpen: boolean;
     /** The unsent operations to delete; null when they could not be counted. */
     count: number | null;
+    /** The tab's user that was counted. */
+    userId: string | undefined;
 }
 
 interface SignOutConfirm {
@@ -28,18 +34,26 @@ interface SignOutConfirm {
 export const useSignOutConfirm = (): SignOutConfirm => {
     const { t } = useTranslation('common');
     const signOut = useAuthStore(state => state.signOut);
-    const [confirm, setConfirm] = useState<Confirm>({ isOpen: false, count: null });
+    const [confirm, setConfirm] = useState<Confirm>({
+        isOpen: false,
+        count: null,
+        userId: undefined,
+    });
 
     const requestSignOut = (): void => {
         if (!isUnsentOpsConfirmOn()) {
             void signOut();
             return;
         }
-        void readSignOutOutboxCount().then(count => {
+        void readSignOutOutboxCount().then(({ userId, count }) => {
+            // N2: the tab moved to another user (or signed out) while it counted: nothing to do.
+            if (!isSignOutUserCurrent(userId)) {
+                return undefined;
+            }
             if (count === 0) {
                 return signOut();
             }
-            setConfirm({ isOpen: true, count });
+            setConfirm({ isOpen: true, count, userId });
             return undefined;
         });
     };
@@ -58,7 +72,7 @@ export const useSignOutConfirm = (): SignOutConfirm => {
             }
             actionLabel={t('buttons.signOut')}
             actionColor="red"
-            onAction={signOut}
+            onAction={() => (isSignOutUserCurrent(confirm.userId) ? signOut() : Promise.resolve())}
         />
     ) : null;
 
