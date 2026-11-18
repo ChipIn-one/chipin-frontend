@@ -34,23 +34,37 @@ const LedgerEntryObserver = ({ entryId }: { entryId: string }) => {
     return null;
 };
 
+const subscribeNothing = (): (() => void) => () => undefined;
+const alwaysFresh = (): boolean => true;
+
 // R1 L2: the expense history is fresh: not being read and not invalidated (the conflict invalidates
-// it), so a draft opens on the expense as it is now. No history cached: nothing to wait for.
-const useIsHistoryFresh = (parentActivityId: string | undefined): boolean => {
+// it), so a draft opens on the expense as it is now. No history cached, or a refetch that cannot
+// answer (paused offline, failed: R2-L1), opens on the cached history. Watched only while a reopen
+// request waits (`isWaiting`; never with offline writes off, R2-N1).
+const useIsHistoryFresh = (parentActivityId: string | undefined, isWaiting: boolean): boolean => {
     const client = useQueryClient();
-    const isFresh = (): boolean => {
+    const isFresh = useCallback((): boolean => {
         const state =
             parentActivityId === undefined
                 ? undefined
                 : client.getQueryState(activityKeys.children(parentActivityId));
 
-        return !state || (state.fetchStatus === 'idle' && !state.isInvalidated);
-    };
+        return (
+            !state ||
+            state.fetchStatus === 'paused' ||
+            state.status === 'error' ||
+            (state.fetchStatus === 'idle' && !state.isInvalidated)
+        );
+    }, [client, parentActivityId]);
+    const subscribe = useCallback(
+        (listener: () => void) => client.getQueryCache().subscribe(listener),
+        [client],
+    );
 
     return useSyncExternalStore(
-        listener => client.getQueryCache().subscribe(listener),
-        isFresh,
-        isFresh,
+        isWaiting ? subscribe : subscribeNothing,
+        isWaiting ? isFresh : alwaysFresh,
+        isWaiting ? isFresh : alwaysFresh,
     );
 };
 
@@ -129,28 +143,30 @@ const ActivitySubeventsButtons = ({
         parentEvent,
     ]);
 
+    const isRequested = parentEntryId !== undefined && requestedDraftEntryId === parentEntryId;
+
+    // R2-L1: a manual Edit answers a waiting "Open my changes" request of this entry too.
     const onEdit = (): void => {
-        openEdit();
+        const store = useConflictDraftStore.getState();
+
+        if (openEdit() && parentEntryId !== undefined && store.requestedEntryId === parentEntryId) {
+            store.clearRequest();
+        }
     };
-    const isHistoryFresh = useIsHistoryFresh(parentActivityId);
+    const isHistoryFresh = useIsHistoryFresh(parentActivityId, isRequested);
 
     // "Open my changes" (the toast, `OutboxSheet`) navigated here: once the history is fresh (R1
-    // L2), open the form on the draft; the request is consumed only by an editor that opened.
+    // L2), open the form on the draft. The request is answered by that one attempt (R2-L1): an
+    // entry that cannot be edited does not keep it waiting to open an editor later.
     useEffect(() => {
         const store = useConflictDraftStore.getState();
 
-        if (
-            parentEntryId === undefined ||
-            !isHistoryFresh ||
-            requestedDraftEntryId !== parentEntryId ||
-            store.requestedEntryId !== parentEntryId
-        ) {
+        if (!isRequested || !isHistoryFresh || store.requestedEntryId !== parentEntryId) {
             return;
         }
-        if (openEdit()) {
-            store.clearRequest();
-        }
-    }, [isHistoryFresh, openEdit, parentEntryId, requestedDraftEntryId]);
+        store.clearRequest();
+        openEdit();
+    }, [isHistoryFresh, isRequested, openEdit, parentEntryId]);
 
     // §2.6: a reversed expense drops its draft (the history shows the deletion).
     useEffect(() => {

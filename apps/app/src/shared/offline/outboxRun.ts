@@ -720,8 +720,13 @@ export const restoreOutbox = (
         })
             .then(
                 dropped => {
-                    if (dropped.length > 0) {
-                        adoption.onConflictDeletesDropped?.(dropped);
+                    // R2-N2: a throwing listener never fails the restore.
+                    try {
+                        if (dropped.length > 0) {
+                            adoption.onConflictDeletesDropped?.(dropped);
+                        }
+                    } catch (error: unknown) {
+                        Sentry.captureException(error);
                     }
                 },
                 (error: unknown) => {

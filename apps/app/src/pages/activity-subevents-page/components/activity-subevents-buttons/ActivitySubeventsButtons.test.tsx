@@ -275,6 +275,21 @@ test('03-16b flag off = master: Edit opens the editor as before, never on a draf
     expect(useConflictDraftStore.getState().openedEntryId).toBeNull();
 });
 
+test('03-16b R2-N1 flag off = master: no query cache subscription', () => {
+    const client = signIn();
+    const subscribe = vi.spyOn(client.getQueryCache(), 'subscribe');
+
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[updatedEvent]}
+        />,
+    );
+
+    expect(subscribe).not.toHaveBeenCalled();
+});
+
 test('hides edit and delete actions when the latest event is reversed', () => {
     render(
         <ActivitySubeventsButtons
@@ -827,7 +842,7 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
         expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
     });
 
-    test('03-16b R1 L2: an entry that cannot be edited does not consume the request', async () => {
+    test('03-16b R2-L1: a request for an entry that cannot be edited is answered without an editor', async () => {
         const client = signIn();
 
         serveEntry();
@@ -841,11 +856,74 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
                 canChange={false}
             />,
         );
+
+        await waitFor(() => {
+            expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+        });
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+    });
+
+    test('03-16b R2-L1: request → manual Edit → fresh history: no second open', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Update' }));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(true);
+        expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+        act(() => {
+            useExpenseModalStore.getState().reset();
+            client.setQueryData(historyKey, emptyHistory);
+        });
         await act(() => new Promise(resolve => setTimeout(resolve, 20)));
 
         expect(useExpenseModalStore.getState().isOpened).toBe(false);
-        expect(useConflictDraftStore.getState().requestedEntryId).toBe('expense-id');
     });
+
+    test.each(['paused', 'error'] as const)(
+        '03-16b R2-L1: a history refetch that cannot answer (%s) opens on the cached history',
+        async kind => {
+            const client = signIn();
+
+            serveEntry();
+            await withDraft(client);
+            await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+            client
+                .getQueryCache()
+                .find({ queryKey: historyKey })
+                ?.setState(
+                    kind === 'paused'
+                        ? { fetchStatus: 'paused' }
+                        : { status: 'error', error: new Error('read failed'), fetchStatus: 'idle' },
+                );
+            useConflictDraftStore.getState().requestOpen('expense-id');
+            render(
+                <ActivitySubeventsButtons
+                    parentEvent={parentEvent}
+                    parentActivityId={parentEvent.id}
+                    childEvents={[]}
+                />,
+            );
+
+            await waitFor(() => {
+                expect(useExpenseModalStore.getState()).toMatchObject({
+                    isOpened: true,
+                    description: 'Mine',
+                });
+            });
+            expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+        },
+    );
 
     test('03-16b R1 M1: an unreadable draft opens the ordinary editor, not marked as opened on a draft', async () => {
         const client = signIn();

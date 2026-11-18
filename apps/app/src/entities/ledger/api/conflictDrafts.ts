@@ -3,6 +3,7 @@
 // or discards them. The notices (the conflict toasts, "The expense was deleted") are told to a
 // listener the UI mounts with offline writes on; with the flag off nothing here reads or writes.
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/react';
 
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
 import { reportOutboxWriteFailure } from 'shared/offline/outboxRun';
@@ -24,10 +25,30 @@ export interface LedgerConflictNotice {
 }
 
 const listeners = new Set<(notice: LedgerConflictNotice) => void>();
+// R2-L2: notices told before the UI listens (the restore runs before `ConflictNotices` mounts);
+// the first listener gets them. Bounded: a restore drops a few at most.
+const undelivered: LedgerConflictNotice[] = [];
+const UNDELIVERED_LIMIT = 20;
 
-/** Tells the mounted listeners (none: nothing happens). */
+const deliver = (
+    listener: (notice: LedgerConflictNotice) => void,
+    notice: LedgerConflictNotice,
+) => {
+    try {
+        listener(notice);
+    } catch (error: unknown) {
+        Sentry.captureException(error);
+    }
+};
+
+/** Tells the mounted listeners; with none yet, kept for the first one. */
 export const noticeLedgerConflict = (notice: LedgerConflictNotice): void => {
-    listeners.forEach(listener => listener(notice));
+    if (listeners.size === 0) {
+        undelivered.push(notice);
+        undelivered.splice(0, Math.max(0, undelivered.length - UNDELIVERED_LIMIT));
+        return;
+    }
+    listeners.forEach(listener => deliver(listener, notice));
 };
 
 /**
@@ -43,6 +64,7 @@ export const onLedgerConflictNotice = (
     listener: (notice: LedgerConflictNotice) => void,
 ): (() => void) => {
     listeners.add(listener);
+    undelivered.splice(0).forEach(notice => deliver(listener, notice));
     return () => {
         listeners.delete(listener);
     };
