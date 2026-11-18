@@ -5,8 +5,8 @@
 // `VITE_FEATURE_OFFLINE_WRITES` on, an expense is queued in the outbox instead (03-15a). A write of
 // a kind that is already running is refused as well (a double submit sends one request), and so
 // is the answer of a write whose session ended meanwhile. A queued expense resolves
-// `{ queued: true }` once its op is saved on the device (03-15b; offline it says so, and the caller
-// shows no success toast of its own: the server has not answered, 03-16a L5). A refusal or a
+// `{ queued: true }` once its op is saved on the device (03-15b; its toast says it was saved, and
+// the caller shows no success toast of its own: the server has not answered, 03-16a L5). A refusal or a
 // failure rejects: the caller shows it with `toastLedgerWriteError`. `isPending` is true while a
 // write of that kind runs on the user's client: until what shows the entry has reloaded, or until
 // the write failed.
@@ -39,7 +39,11 @@ import {
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { isNetworkUsable } from 'shared/offline/network';
-import { OutboxLimitError, OutboxPersistError } from 'shared/offline/outboxStore';
+import {
+    OutboxCreateSentError,
+    OutboxLimitError,
+    OutboxPersistError,
+} from 'shared/offline/outboxStore';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { invalidateGroup } from 'store/groupsList';
 import { invalidateDashboard } from 'store/internal/dashboardQueryBridge';
@@ -88,6 +92,12 @@ export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): 
     }
     if (error instanceof OutboxLimitError) {
         toast.error(i18n.t('toasts:offline.limitReached'));
+        return;
+    }
+    // 03-16a A (R2): the create of this form is already queued and may be on the server; a
+    // changed repeat is refused (nothing queued) and the form stays open for an edit later.
+    if (error instanceof OutboxCreateSentError) {
+        toast.error(i18n.t('toasts:offline.createAlreadySending'));
         return;
     }
     toast.error(resolveApiErrorMessageFromError(error, fallbackMessage));
@@ -202,10 +212,11 @@ const queueOnce = (
     queuing.set(client, kinds);
     return queue()
         .then(() => {
-            // §2.8: only after the append write has landed; online the caller's own toast says it.
-            if (!isNetworkUsable()) {
-                toast.success(i18n.t('toasts:offline.saved'));
-            }
+            // §2.8: only after the append write has landed. Online it is sent at once, but the
+            // server has not answered yet (03-16a part B: no "created" until it does).
+            toast.success(
+                i18n.t(isNetworkUsable() ? 'toasts:offline.savedSending' : 'toasts:offline.saved'),
+            );
             return QUEUED;
         })
         .finally(() => {

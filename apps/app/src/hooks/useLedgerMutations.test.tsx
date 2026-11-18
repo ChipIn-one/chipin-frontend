@@ -30,6 +30,7 @@ import { createQueryClient } from 'shared/api/queryClient';
 import { currencyCode, fromUnits } from 'shared/money';
 import { OutboxLockTimeoutError } from 'shared/offline/outboxIo';
 import {
+    OutboxCreateSentError,
     OutboxLimitError,
     OutboxPersistError,
     pendingOutboxOps,
@@ -798,6 +799,13 @@ test('03 §2.8: an expense not saved on the device says so; a full outbox asks f
     expect(toast.success).not.toHaveBeenCalled();
 });
 
+test('03-16a part B: a changed repeat of a create being sent has its own toast', () => {
+    toastLedgerWriteError(new OutboxCreateSentError(), 'Request failed');
+    expect(vi.mocked(toast.error).mock.calls).toEqual([
+        ['This expense is already being sent; edit it once it is saved'],
+    ]);
+});
+
 test('a settlement is sent with its amount as a scale-4 literal and reloads the group, the dashboard and the feeds', async () => {
     const client = signIn();
     const sent = serve();
@@ -903,6 +911,26 @@ describe('C1-10 two create paths', () => {
         expect(vi.mocked(toast.success).mock.calls).toEqual([
             ['Saved, we will send it when the network is back'],
         ]);
+    });
+
+    test('03-16a part B: queued while online, the toast says it is saved and being sent (no "created")', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        const client = signIn();
+
+        await clear();
+        await startUserLedgerOutbox(client, 'user-1');
+        client.setQueryData(capabilitiesQueryOptions().queryKey, [
+            'ledger.clientEntryId',
+            'ledger.entryVersion',
+            'client.minVersion',
+        ]);
+        serve();
+        const { result } = renderHook(useCreateExpense);
+
+        await expect(act(() => result.current.createExpense({ expense }))).resolves.toEqual({
+            queued: true,
+        });
+        expect(vi.mocked(toast.success).mock.calls).toEqual([['Saved, sending…']]);
     });
 
     test('M2: a second submit in the same tick, while the first is being queued, is refused as busy: one op', async () => {

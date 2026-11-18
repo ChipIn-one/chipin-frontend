@@ -38,6 +38,7 @@ import {
     hasNoFailureOf,
     isOutboxStopped,
     markOpsCancelled,
+    notifyOutboxChange,
     onOutboxStatus,
     onOutboxWritten,
     type OutboxOpBase,
@@ -201,6 +202,7 @@ const sync = (current: Drain): Promise<void> => {
                     remoteStatuses.delete(opId);
                 }
             });
+            notifyOutboxChange();
             return holder() === current && !isOutboxStopped() ? applyQueue(current) : undefined;
         })
         .catch(report);
@@ -222,6 +224,7 @@ const onMessage = (current: Drain, message: OutboxChannelMessage): void => {
             return;
         case 'status':
             remoteStatuses.set(message.opId, message.status);
+            notifyOutboxChange();
             return;
         case 'settled':
             current.hooks.onRemoteSettled(message);
@@ -246,6 +249,8 @@ const hold = (current: Drain, started: () => void): Promise<boolean> => {
     }
     current.holding = true;
     remoteStatuses.clear();
+    // The statuses now come from this tab's runs (`outboxOpStatus`).
+    notifyOutboxChange();
     return new Promise<void>(release => {
         current.release = release;
         void restoreOutbox(current.client, current.userId, current.hooks)
@@ -265,6 +270,7 @@ const hold = (current: Drain, started: () => void): Promise<boolean> => {
             current.holding = false;
             current.releasing = false;
             current.release = null;
+            notifyOutboxChange();
         })
         .then(() => true);
 };
@@ -444,6 +450,7 @@ export const stopOutboxDrain = (): Promise<void> => {
     current.unlisten();
     closeOutboxChannel();
     remoteStatuses.clear();
+    notifyOutboxChange();
     current.request?.abort();
     if (current.holding) {
         // Another tab of the same user may hold the lock next: no request stays in flight (L2).

@@ -662,6 +662,35 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
         expect(reads).toEqual(['expense-id']);
     });
 
+    test('N5: once a delete of the expense is queued, its Update and Delete are disabled', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withOfflineWrites(client);
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await waitFor(() => {
+            expect(client.getQueryData(ledgerKeys.entry('expense-id'))).toBeTruthy();
+        });
+        onlineManager.setOnline(false);
+        const user = userEvent.setup();
+
+        expect(screen.getByRole('button', { name: 'Update' })).toHaveProperty('disabled', false);
+        await user.click(screen.getByRole('button', { name: 'Delete' }));
+        await user.click(screen.getByRole('button', { name: 'Delete entry' }));
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: 'Delete' })).toHaveProperty('disabled', true);
+        });
+        expect(screen.getByRole('button', { name: 'Update' })).toHaveProperty('disabled', true);
+        onlineManager.setOnline(true);
+    });
+
     test('flag on but offline writes unavailable (no backend capabilities): no ledger entry is read or cached', async () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         const client = signIn();

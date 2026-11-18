@@ -349,6 +349,33 @@ const writeListeners = new Set<() => void>();
 // Entries whose failed-list write is still pending: their block must stay (D29).
 const failureWrites = new Map<string, number>();
 
+// The UI's view of the queue (03-16a part B, `useOutboxOverlay`): told whenever what it reads
+// changed (a write landed, a re-read, the restore, the owner, a status). No listener, no work.
+const changeListeners = new Set<() => void>();
+let changeRevision = 0;
+
+/** Tells the overlay its view changed; a failing listener is reported, never thrown. */
+export const notifyOutboxChange = (): void => {
+    changeRevision += 1;
+    changeListeners.forEach(listener => {
+        try {
+            listener();
+        } catch (error: unknown) {
+            Sentry.captureException(error);
+        }
+    });
+};
+
+export const onOutboxChange = (listener: () => void): (() => void) => {
+    changeListeners.add(listener);
+    return () => {
+        changeListeners.delete(listener);
+    };
+};
+
+/** Grows with every `notifyOutboxChange`: the overlay rebuilds its view only when it moved. */
+export const outboxChangeRevision = (): number => changeRevision;
+
 const forgetMemory = (): void => {
     state = emptyState();
     restoreState = 'pending';
@@ -359,6 +386,7 @@ const forgetMemory = (): void => {
     statusByOpId.clear();
     appendsInFlight.clear();
     failureWrites.clear();
+    notifyOutboxChange();
 };
 
 /** What a run started with: the owner epoch and the drain session (M2). */
@@ -493,6 +521,7 @@ export const readOutbox = (userId: string): Promise<OutboxRestore> => {
             }
             state = read.state;
             restoreState = 'ok';
+            notifyOutboxChange();
             return 'ok';
         },
         (error: unknown) => {
@@ -504,6 +533,7 @@ export const readOutbox = (userId: string): Promise<OutboxRestore> => {
                 level: 'warning',
                 tags: { 'offline.error': errorName(error) },
             });
+            notifyOutboxChange();
             return 'failed';
         },
     );
@@ -568,6 +598,7 @@ export const writeOutbox = <T>(
                             Sentry.captureException(error);
                         }
                     });
+                    notifyOutboxChange();
                 }
                 return result;
             });
@@ -598,6 +629,7 @@ export const refreshOutbox = (): Promise<boolean> => {
         read => {
             if (ownerId === owner && ownerEpoch === epoch) {
                 state = read.state;
+                notifyOutboxChange();
             }
             return true;
         },
@@ -746,6 +778,9 @@ export const pendingOutboxOps = (): readonly OutboxOpBase[] => [...state.ops].so
 export const failedOutboxOps = (): readonly FailedOp[] => [...state.failed.values()];
 
 export const isOpFailed = (opId: string): boolean => state.failed.has(opId);
+
+/** The op claimed for sending by any tab (`OutboxState.sending`, §2.3): it cannot be cancelled. */
+export const outboxSendingOpId = (): string | null => state.sending?.opId ?? null;
 
 /** Discarded in the key (`OutboxState.cancelled`): a restore or an adoption skips it. */
 export const isOpCancelledInKey = (opId: string): boolean => state.cancelled.has(opId);
@@ -928,6 +963,7 @@ export const forgetCancelled = (opId: string, fence: OutboxFence): Promise<void>
 export const setOutboxStatus = (opId: string, status: OutboxStatus): void => {
     statusByOpId.set(opId, status);
     statusListeners.forEach(listener => listener(opId, status));
+    notifyOutboxChange();
 };
 
 /** The drain tab tells the other tabs (`status`, §2.3). */

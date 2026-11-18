@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { PUBLIC_ROUTE_ENTRIES, type PublicPage } from 'constants/publicRoutes';
 import { ROUTES } from 'constants/routes';
+import { OutboxControls } from 'features/offline-queue';
+import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
 
 import PageLoader from 'basics/PageLoader';
 import { InternalPageLayout } from 'components/internal-page-layout';
@@ -39,9 +41,12 @@ const FriendsPage = lazy(() => import('pages/friends-page/'));
 const SettingsPage = lazy(() => import('pages/settings-page/'));
 const Page404 = lazy(() => import('pages/404-page'));
 
+// The outbox badge, banner and sheet (03-16a part B) exist only with offline writes on.
 const InternalRoute = ({ children }: { children: ReactNode }) => (
     <ProtectedRoute>
-        <InternalPageLayout>{children}</InternalPageLayout>
+        <InternalPageLayout outbox={isOfflineWritesFlagOn() ? <OutboxControls /> : undefined}>
+            {children}
+        </InternalPageLayout>
     </ProtectedRoute>
 );
 

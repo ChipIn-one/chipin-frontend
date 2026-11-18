@@ -13,6 +13,7 @@ import { BalanceBadges } from 'basics';
 import DebtAmount from 'basics/DebtAmount';
 import { NoDebtsEmptyState } from 'basics/empty-states';
 import { Amount } from 'basics/numbers';
+import { OutboxBalanceCaption } from 'components/outbox-balance-caption';
 
 import { SummaryCardButton } from './styled';
 import { summarizeDashboard } from './summary';
@@ -123,16 +124,32 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
         return <Skeleton loading>{summaryCard}</Skeleton>;
     }
 
+    // §3: the caption is a sibling (the summary card may be a button), shown only with unsent ops.
     if (netTotalInBase === 0) {
         if (!hasDetails) {
-            return hasExpenseHistory ? <NoDebtsEmptyState /> : null;
+            return (
+                <>
+                    {hasExpenseHistory ? <NoDebtsEmptyState /> : null}
+                    <OutboxBalanceCaption />
+                </>
+            );
         }
 
-        return <Card size="1">{detailsContent}</Card>;
+        return (
+            <>
+                <Card size="1">{detailsContent}</Card>
+                <OutboxBalanceCaption />
+            </>
+        );
     }
 
     if (!hasDetails) {
-        return summaryCard;
+        return (
+            <>
+                {summaryCard}
+                <OutboxBalanceCaption />
+            </>
+        );
     }
 
     return (
@@ -156,6 +173,7 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
             </Card>
 
             {isExpanded && <Card size="1">{detailsContent}</Card>}
+            <OutboxBalanceCaption />
         </Flex>
     );
 };

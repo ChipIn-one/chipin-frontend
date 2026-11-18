@@ -5,6 +5,7 @@ import { balanceDirection, legacyAmountFromMoney } from 'entities/balance';
 import type { FriendCurrencyGroup } from 'entities/users';
 
 import DebtAmount from 'basics/DebtAmount';
+import { OutboxBalanceCaption } from 'components/outbox-balance-caption';
 
 import FriendListItem from './FriendListItem';
 
@@ -44,6 +45,8 @@ const CurrencyGroupCard = ({ currency, net, friends }: FriendCurrencyGroup) => {
                         <FriendListItem friend={friend} balance={balance} />
                     </Flex>
                 ))}
+                {/* §3: the balances exclude unsent operations (shown only while there are some). */}
+                <OutboxBalanceCaption />
             </Flex>
         </Card>
     );
