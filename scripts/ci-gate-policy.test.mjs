@@ -232,10 +232,8 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         expect(matches, name).toHaveLength(1);
         return matches[0];
     };
-    const modesOf = condition =>
-        [...String(condition).matchAll(/steps\.gate\.outputs\.mode == '([a-z-]+)'/gu)].map(
-            match => match[1],
-        );
+    const APP_OR_FULL = "steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full'";
+    const PR_ONLY = "github.event_name == 'pull_request' && ";
 
     test('stays one required job named frontend-ci', () => {
         expect(job.name).toBe('frontend-ci');
@@ -244,10 +242,18 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         ]);
     });
 
-    test('never cancels master push runs', () => {
-        expect(workflow.concurrency['cancel-in-progress']).toBe(
-            "${{ github.event_name == 'pull_request' }}",
-        );
+    test('master pushes never share a concurrency group; PR runs cancel superseded ones', () => {
+        expect(workflow.concurrency).toEqual({
+            group: 'frontend-ci-${{ github.event.pull_request.number || github.sha }}',
+            'cancel-in-progress': "${{ github.event_name == 'pull_request' }}",
+        });
+    });
+
+    test('no gate can fail open through continue-on-error', () => {
+        expect(job).not.toHaveProperty('continue-on-error');
+        for (const candidate of job.steps) {
+            expect(candidate, candidate.name).not.toHaveProperty('continue-on-error');
+        }
     });
 
     test('admission runs once and is not gated on the mode', () => {
@@ -265,6 +271,8 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
     });
 
     test('the mode step rejects an unknown mode', () => {
+        // A skipped mode step leaves the mode empty, and every gate step would skip with it.
+        expect(step('Resolve verification mode')).not.toHaveProperty('if');
         expect(step('Resolve verification mode').run).toMatch(
             /case "\$mode" in\s+docs-only \| app \| site \| full\) ;;\s+\*\)[\s\S]*?exit 1/u,
         );
@@ -275,27 +283,31 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         expect(step('Install dependencies').if).toBe("steps.gate.outputs.mode != 'docs-only'");
     });
 
-    test('app gates run in app and full mode', () => {
-        for (const name of [
-            'Check lint baseline does not grow',
-            'Check file layout baseline does not grow',
-            'Check generated API types',
-            'Verify frontend',
-        ]) {
-            expect(modesOf(step(name).if).sort(), name).toEqual(['app', 'full']);
-        }
+    test('app gates run in exactly app and full mode', () => {
+        expect(step('Check lint baseline does not grow').if).toBe(`${PR_ONLY}(${APP_OR_FULL})`);
+        expect(step('Check file layout baseline does not grow').if).toBe(
+            `${PR_ONLY}(${APP_OR_FULL})`,
+        );
+        expect(step('Check generated API types').if).toBe(APP_OR_FULL);
+        expect(step('Verify frontend').if).toBe(APP_OR_FULL);
         expect(step('Verify frontend').run).toBe('npm run verify:full');
     });
 
-    test('the site gate runs in site and full mode and fails closed', () => {
+    test('the site gate runs in exactly site and full mode and fails closed', () => {
         const site = step('Verify site');
 
-        expect(modesOf(site.if).sort()).toEqual(['full', 'site']);
+        expect(site.if).toBe(
+            "steps.gate.outputs.mode == 'site' || steps.gate.outputs.mode == 'full'",
+        );
         expect(site.env).toEqual({
             MODE: '${{ steps.gate.outputs.mode }}',
             BASE_SHA: '${{ steps.gate.outputs.base_sha }}',
         });
+        expect(site.run).toContain('git cat-file -e "$BASE_SHA^{commit}"');
         expect(site.run).toContain('git cat-file -e "$BASE_SHA:apps/site/package.json"');
+        expect(site.run.indexOf('^{commit}')).toBeLessThan(
+            site.run.indexOf(':apps/site/package.json"'),
+        );
         expect(site.run).toContain('CHIPIN_ESLINT_FULL=1 npx --no-install eslint apps/site');
         expect(site.run).not.toContain('--pass-on-unpruned-suppressions');
         expect(site.run).toContain('npm run test -w @chipin/site --if-present');

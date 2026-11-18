@@ -13,8 +13,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: frontend-ci-${{ github.event.pull_request.number || github.ref }}
-  # Master pushes are never cancelled: each push run is release-QA evidence for its exact SHA.
+  # PRs share a group per PR number and cancel superseded runs. Each master push gets its own group
+  # (keyed by SHA), so a push run is never cancelled nor replaced while pending: each one is
+  # release-QA evidence for its exact SHA and covers the diff from the previous push.
+  group: frontend-ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -111,15 +113,23 @@ jobs:
 
           # apps/site arrives in 04-3a. Fail closed: site mode always needs the workspace, and full
           # mode needs it whenever the base already had it (a PR must not delete the site gate).
+          # Removing the site on purpose (e.g. a revert of 04-3a) must edit this guard in the same
+          # PR; that PR's own copy of this workflow is the one that runs.
           if [[ ! -f apps/site/package.json ]]; then
             if [[ "$MODE" == site ]]; then
               echo "::error::site mode without apps/site/package.json"
               exit 1
             fi
-            if [[ "$BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$BASE_SHA" =~ ^0+$ ]] &&
-              git cat-file -e "$BASE_SHA:apps/site/package.json" 2> /dev/null; then
-              echo "::error::apps/site/package.json existed at $BASE_SHA but is missing now"
-              exit 1
+            if [[ "$BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] && [[ ! "$BASE_SHA" =~ ^0+$ ]]; then
+              # A missing base commit must not read as "the base had no site".
+              if ! git cat-file -e "$BASE_SHA^{commit}" 2> /dev/null; then
+                echo "::error::base commit $BASE_SHA is not available; cannot tell whether it had apps/site"
+                exit 1
+              fi
+              if git cat-file -e "$BASE_SHA:apps/site/package.json" 2> /dev/null; then
+                echo "::error::apps/site/package.json existed at $BASE_SHA but is missing now"
+                exit 1
+              fi
             fi
             echo "apps/site/package.json is absent; site checks skipped (workspace not created yet)."
             exit 0
