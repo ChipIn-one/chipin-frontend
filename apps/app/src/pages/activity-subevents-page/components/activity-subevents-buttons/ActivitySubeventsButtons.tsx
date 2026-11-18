@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 import type { ActivityEvent } from 'entities/activity';
+import { useLedgerEntryForWrites } from 'entities/ledger';
 import {
     getActivityCategory,
     getActivityLedgerEntryId,
@@ -47,6 +48,9 @@ const ActivitySubeventsButtons = ({
         currentEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
 
+    // Spec 03 §2.9 C2-33: an outbox edit or delete needs the cached entry (offline writes on).
+    useLedgerEntryForWrites(isExpense && !isEntryReversed ? (parentEntryId ?? null) : null);
+
     const onEdit = (): void => {
         if (!parentEntryId || !isExpense || !canChange) {
             return;
@@ -73,8 +77,11 @@ const ActivitySubeventsButtons = ({
             groupId: parentEvent.groupId ?? undefined,
             parentActivityId,
         })
-            .then(() => {
-                toast.success(t('toasts:ledger.entryDeleted'));
+            .then(({ queued }) => {
+                // A queued delete is not done on the server yet: its toast is the outbox's (L5).
+                if (!queued) {
+                    toast.success(t('toasts:ledger.entryDeleted'));
+                }
             })
             .catch((error: unknown) => {
                 toastLedgerWriteError(error, t('toasts:common.requestFailed'));

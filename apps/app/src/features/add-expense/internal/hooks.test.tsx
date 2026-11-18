@@ -1,14 +1,19 @@
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { clear } from 'idb-keyval';
 import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { activityKeys } from 'entities/activity';
-import type { ExpenseDraftSharingMode } from 'entities/ledger';
+import { capabilitiesQueryOptions, type ExpenseDraftSharingMode } from 'entities/ledger';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
-import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
+import {
+    LedgerWriteRefusedError,
+    startUserLedgerOutbox,
+    toastLedgerWriteError,
+} from 'hooks/useLedgerMutations';
 import { currencyCode, fromUnits } from 'shared/money';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from 'store/expenseModalStore';
@@ -16,10 +21,12 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
+import { pendingOutboxOps, resetOutbox } from 'test/outbox';
 import { mountAsUserClient } from 'test/userClient';
 
 import { useExpenseModalOpenChange, useExpenseModalSubmit } from './hooks';
 
+import 'fake-indexeddb/auto';
 import 'i18n/index';
 
 vi.mock('sonner', () => ({
@@ -597,4 +604,79 @@ describe.each<[string, () => void]>([
         expect(toast.error).not.toHaveBeenCalled();
         expect(isHistoryStale(client)).toBe(false);
     });
+});
+
+describe('03-16a with offline writes on', () => {
+    const signInWithOutbox = async (): Promise<QueryClient> => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        const client = signIn();
+
+        await clear();
+        await startUserLedgerOutbox(client, currentUser.id);
+        client.setQueryData(capabilitiesQueryOptions().queryKey, [
+            'ledger.clientEntryId',
+            'ledger.entryVersion',
+            'client.minVersion',
+        ]);
+        return client;
+    };
+
+    afterEach(() => {
+        resetOutbox();
+        vi.unstubAllEnvs();
+    });
+
+    test('03-15b R1 L5: a queued create shows one toast, the outbox one; the form says nothing of a created expense', async () => {
+        await signInWithOutbox();
+        const sent = serveLedger();
+        const onClose = vi.fn();
+
+        onlineManager.setOnline(false);
+        openCreate(sourceFor('dashboard'));
+        submit(onClose);
+
+        await waitFor(() => {
+            expect(onClose).toHaveBeenCalledOnce();
+        });
+        expect(vi.mocked(toast.success).mock.calls).toEqual([
+            ['Saved, we will send it when the network is back'],
+        ]);
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(sent).toEqual([]);
+    });
+
+    test('§2.7: the client entry id is made when the form opens; a repeated submit queues one op with it', async () => {
+        await signInWithOutbox();
+        serveLedger();
+        const onClose = vi.fn();
+
+        onlineManager.setOnline(false);
+        openCreate(sourceFor('dashboard'));
+        const { clientEntryId } = useExpenseModalStore.getState();
+        const { result } = submit(onClose);
+
+        await waitFor(() => {
+            expect(onClose).toHaveBeenCalledOnce();
+        });
+        act(() => {
+            result.current.onSubmit();
+        });
+        await waitFor(() => {
+            expect(onClose).toHaveBeenCalledTimes(2);
+        });
+
+        expect(clientEntryId).toEqual(expect.any(String));
+        expect(pendingOutboxOps()).toEqual([
+            expect.objectContaining({ kind: 'createExpense', entryId: clientEntryId }),
+        ]);
+        // A new opening of the form makes a new id.
+        openCreate(sourceFor('dashboard'));
+        expect(useExpenseModalStore.getState().clientEntryId).not.toBe(clientEntryId);
+    });
+});
+
+test('§2.7: an edit has no client entry id', () => {
+    useExpenseModalStore.getState().initializeEdit(editInitialization);
+
+    expect(useExpenseModalStore.getState().clientEntryId).toBeNull();
 });

@@ -78,8 +78,16 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     includedParticipantIds: {},
     isPercentManuallyEdited: false,
     editContext: null,
+    clientEntryId: null,
     ownerId: null,
 };
+
+// `crypto.randomUUID` needs a secure context and a recent browser; without it there is no id (the
+// online path never sends one).
+const newClientEntryId = (): string | null =>
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : null;
 
 const getDefaultFriendId = (source: ExpenseModalSource) => {
     if (
@@ -208,6 +216,7 @@ const getInitializedState = (source: ExpenseModalSource): ExpenseModalState => {
         openingContext: source.context === 'friends' ? 'friends' : undefined,
         openingFriendId: source.preferredFriendId,
         source,
+        clientEntryId: newClientEntryId(),
         ownerId: source.currentUser?.id ?? getLocalUser()?.id ?? null,
         targetMode,
         groupId,
@@ -329,6 +338,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         set(state => ({
             ...state,
             ...initialization,
+            clientEntryId: null,
             ownerId: initialization.source.currentUser?.id ?? getLocalUser()?.id ?? null,
             isOpened: true,
             isCurrencyManuallyEdited: true,

@@ -785,6 +785,34 @@ will forget (ops discarded before any tab adopted them). (6) Badge hint: state o
 `isSendingInAnotherTab`, `outboxOpStatus`), no subscription and no copy (03-16a). (7) Without Web Locks a tab still
 drains without the lock (03-15c1 (1)); offline writing is off without Web Locks or `BroadcastChannel`.
 
+Deviation (03-16a part A): the data layer of the row; the UI (`OutboxSheet`, `<OnlineOnly>`, banners, the balance
+caption, the sign-out and account-switch confirms) is parts B1/B2. (1) Resolves 03-15a (6)(11): `ledgerKeys.entry(id)`
+(`entities/ledger/api/queries.ts`, the same key the registry reads), `ledgerEntryQueryOptions`, `toLedgerEntry`
+(`entities/ledger/model/toLedgerEntry.ts`: zod, money through `moneyFromWire`; the model is the type, the version, the
+group and the expense fields the app reads). The cache is filled from reads in one place: the expense history's
+edit/delete buttons prefetch the entry of an expense (`useLedgerEntryForWrites`), only with the flag on (off: no
+request and no cache entry). The optimistic write follows the append write in the enqueueing tab (`cancelQueries`, then
+`setQueryData`): a create writes an entry without a version unless one is cached, an edit applies its patch and keeps
+the base version, a delete writes nothing (the overlay shows it). The 2xx entry is written in the drain tab's
+`onSettled` and, from `settled`, in the other tabs before their invalidation; a delete's entry leaves the cache; an
+unreadable answer is only invalidated. `LedgerWriteContext.entryId` makes every settle (online and outbox) invalidate
+`ledger.entry(id)`; with the flag off nothing caches it, so the invalidation matches nothing. (2) Resolves 03-15a (5):
+the expense modal store makes `clientEntryId` when the create form opens (`null` in edit mode and without
+`crypto.randomUUID`); the online create ignores it. `appendOutboxOp` does not append a create of an entry that already
+has a create queued, sent or failed, so a repeated submit of the same opening queues one op. (3) Resolves 03-15b (13)
+(M3): the registry reads the cached version inside the append's change, and `trackOutboxAppend` counts an append of
+the entry from its call until it settles; while one is counted, the removal of a sent op of the entry keeps the
+version (in memory; persisted only once an op of the entry is in the key), and it is forgotten when the last append
+settles with no op of the entry queued. (4) Resolves 03-15c2 (3) (R1 L3): `settledVersions` is gone; the version
+lives only in `ledger.entry(id)`, so a fresher read wins. (5) L5: a ledger write resolves `{ queued }`; a queued write
+shows only the outbox's toast (`saved` while the network is unusable, none online until the `OutboxSheet` of B1), the
+expense form and the history's delete show their success toast only for an answered write. Settle-up still resolves
+`void` (online only). (6) N2: a discard writes the outbox key before the failed key. (7) Resolves 03-15c1 (6): a
+write-lock timeout on append is a transient `OutboxPersistError` (`isTransient`) and shows `offline:saveRetry`; the
+app has two locales (en, ru), not five. (8) From the 03-15c2 R3 review: N2 is done (the in-flight count of a send is
+released in `finally`); L1 (a stale session's removal when the claim is not its own also leaves the op in `ops`) is
+not: the op would stay unadopted in this tab until the next ping, it stays a residual false conflict with no data loss.
+
 #### 2.5 Error handling
 
 409 is distinguished **by `code`**, not by status: `SYSTEM.CONFLICT` — transient (retry), `LEDGER.VERSION_CONFLICT` —

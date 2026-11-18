@@ -85,3 +85,13 @@ test('03 §2.1: the base version is null while a create of the same entry is sti
         enqueue(client, { kind: 'updateExpense', entryId: 'entry-x' }),
     ).resolves.toMatchObject({ baseVersion: null });
 });
+
+test('03-15b R1 M3: the cached version is read when the append is written, not when it is called', async () => {
+    client.setQueryData(ledgerEntryKey('entry-x'), { type: 'EXPENSE', version: '41' });
+
+    const edited = enqueue(client, { kind: 'updateExpense', entryId: 'entry-x' });
+
+    // The entry's 2xx (or a refetch) wrote a fresher version before the append's write ran.
+    client.setQueryData(ledgerEntryKey('entry-x'), { type: 'EXPENSE', version: '42' });
+    await expect(edited).resolves.toMatchObject({ baseVersion: '42' });
+});

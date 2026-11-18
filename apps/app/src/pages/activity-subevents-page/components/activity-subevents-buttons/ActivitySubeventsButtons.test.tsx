@@ -9,6 +9,7 @@ import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { activityKeys } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
+import { ledgerKeys } from 'entities/ledger';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
@@ -545,4 +546,79 @@ test('an offline delete is refused with a toast and nothing is sent after the re
     });
     await new Promise(resolve => setTimeout(resolve, 50));
     expect(sent).toEqual([]);
+});
+
+describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2-33)', () => {
+    // `GET /ledger/entries/{id}`: the ids read, in order.
+    const serveEntry = (): string[] => {
+        const reads: string[] = [];
+
+        server.use(
+            http.get('*/ledger/entries/:id', ({ params }) => {
+                reads.push(String(params.id));
+                return HttpResponse.json({
+                    id: String(params.id),
+                    type: 'EXPENSE',
+                    scope: 'USER',
+                    version: '7',
+                    createdAt: 1,
+                    updatedAt: 1,
+                });
+            }),
+        );
+        return reads;
+    };
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
+    test('offline writes off (master): the history reads no ledger entry', async () => {
+        const client = signIn();
+        const reads = serveEntry();
+
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+
+        expect(reads).toEqual([]);
+        expect(client.getQueryState(ledgerKeys.entry('expense-id'))).toBeUndefined();
+    });
+
+    test('offline writes on: the expense is read into the cache, a settlement is not', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        const client = signIn();
+        const reads = serveEntry();
+
+        render(
+            <>
+                <ActivitySubeventsButtons
+                    parentEvent={parentEvent}
+                    parentActivityId={parentEvent.id}
+                    childEvents={[]}
+                />
+                <ActivitySubeventsButtons
+                    parentEvent={settlementEvent(false)}
+                    parentActivityId="settlement-activity-id"
+                    childEvents={[]}
+                />
+            </>,
+        );
+
+        await waitFor(() => {
+            expect(client.getQueryData(ledgerKeys.entry('expense-id'))).toEqual({
+                id: 'expense-id',
+                type: 'EXPENSE',
+                version: '7',
+                groupId: null,
+                expense: null,
+            });
+        });
+        expect(reads).toEqual(['expense-id']);
+    });
 });

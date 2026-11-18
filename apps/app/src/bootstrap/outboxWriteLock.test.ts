@@ -332,14 +332,16 @@ describe('03-15c1 the write lock (§2.3)', () => {
         tabB.resetOutbox();
     });
 
-    test('a write-lock timeout on append: the saveFailed error, offline writing stays on', async () => {
+    test('a write-lock timeout on append: a transient save error (the saveRetry toast), offline writing stays on', async () => {
         await openTab();
         const release = await holdWebLock(WRITE_LOCK);
 
         vi.spyOn(AbortSignal, 'timeout').mockReturnValue(
             AbortSignal.abort(new DOMException('timed out', 'TimeoutError')),
         );
-        await expect(appendCreate('entry-a')).rejects.toBeInstanceOf(OutboxPersistError);
+        await expect(appendCreate('entry-a')).rejects.toSatisfy(
+            error => error instanceof OutboxPersistError && error.isTransient,
+        );
         expect(isOutboxPersistFailed()).toBe(false);
         expect(Sentry.captureMessage).toHaveBeenCalledWith('outbox.write_lock_timeout', {
             level: 'warning',

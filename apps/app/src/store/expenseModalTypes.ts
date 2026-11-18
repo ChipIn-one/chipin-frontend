@@ -64,6 +64,11 @@ export interface ExpenseModalState {
     includedParticipantIds: Record<string, boolean>;
     isPercentManuallyEdited: boolean;
     editContext: ExpenseModalEditContext | null;
+    /**
+     * Spec 03 §2.7: the client entry id of a create, made when the form opens (a repeated submit
+     * carries it; only the outbox path sends it). Null in edit mode or without `crypto.randomUUID`.
+     */
+    clientEntryId: string | null;
     /** The user the draft belongs to (spec 03 §1.5): another user's sign-in resets it. */
     ownerId: string | null;
 }

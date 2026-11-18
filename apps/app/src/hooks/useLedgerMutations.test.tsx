@@ -17,6 +17,7 @@ import {
     capabilitiesQueryOptions,
     type ExpenseDraft,
     type ExpensePatch,
+    ledgerKeys,
     ledgerOnlineMutationKeys,
     ledgerOutboxMutationKeys,
     type SettlementDraft,
@@ -27,6 +28,7 @@ import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
 import { createQueryClient } from 'shared/api/queryClient';
 import { currencyCode, fromUnits } from 'shared/money';
+import { OutboxLockTimeoutError } from 'shared/offline/outboxIo';
 import {
     OutboxLimitError,
     OutboxPersistError,
@@ -239,8 +241,8 @@ test('a double submit sends one request: the repeated write is refused as busy w
     const gate = deferred();
     const sent = serve(gate);
     const { result } = renderHook(() => useCreateExpense());
-    let first: Promise<void> = Promise.resolve();
-    let repeated: Promise<void> = Promise.resolve();
+    let first: Promise<unknown> = Promise.resolve();
+    let repeated: Promise<unknown> = Promise.resolve();
 
     act(() => {
         first = result.current.createExpense({ expense });
@@ -275,7 +277,7 @@ test('the saving flag comes from the mutation: on from the submit until the view
         watcher: useCreateExpense(),
         other: useUpdateExpense(),
     }));
-    let write: Promise<void> = Promise.resolve();
+    let write: Promise<unknown> = Promise.resolve();
 
     expect(result.current.watcher.isPending).toBe(false);
     act(() => {
@@ -330,7 +332,7 @@ test('a successful write waits for the shown activity feed to reload: pending un
         ),
     });
     let isSettled = false;
-    let write: Promise<void> = Promise.resolve();
+    let write: Promise<unknown> = Promise.resolve();
 
     try {
         await waitFor(() => {
@@ -430,7 +432,7 @@ const useWrites = () => ({
 
 type Writes = ReturnType<typeof useWrites>;
 
-const groupWrites: [string, string, (writes: Writes) => Promise<void>][] = [
+const groupWrites: [string, string, (writes: Writes) => Promise<unknown>][] = [
     [
         'create',
         'POST /ledger/entries',
@@ -786,9 +788,12 @@ test('03 §2.8: an expense not saved on the device says so; a full outbox asks f
         'Request failed',
     );
     toastLedgerWriteError(new OutboxLimitError(), 'Request failed');
+    // 03-16a: a write-lock timeout is transient; offline saving stays on.
+    toastLedgerWriteError(new OutboxPersistError(new OutboxLockTimeoutError()), 'Request failed');
     expect(vi.mocked(toast.error).mock.calls).toEqual([
         ['Could not save on the device — connect to the network'],
         ['Too many unsent operations — connect to the network'],
+        ['Could not save, try again'],
     ]);
     expect(toast.success).not.toHaveBeenCalled();
 });
@@ -823,7 +828,7 @@ test('a settlement while an expense is being created is refused as busy: one led
     const gate = deferred();
     const sent = serve(gate);
     const { result } = renderHook(useWrites);
-    let first: Promise<void> = Promise.resolve();
+    let first: Promise<unknown> = Promise.resolve();
 
     act(() => {
         first = result.current.create.createExpense({ expense });
@@ -856,7 +861,9 @@ describe('C1-10 two create paths', () => {
         const sent = serve();
         const { result } = renderHook(useCreateExpense);
 
-        await act(() => result.current.createExpense({ expense }));
+        await expect(
+            act(() => result.current.createExpense({ expense, clientEntryId: 'entry-form' })),
+        ).resolves.toEqual({ queued: false });
         expect(mutationKeys(client)).toEqual([ledgerOnlineMutationKeys.createEntry]);
         expect(client.getMutationCache().getAll()[0]?.options).toMatchObject({
             networkMode: 'online',
@@ -881,7 +888,10 @@ describe('C1-10 two create paths', () => {
         onlineManager.setOnline(false);
         const { result } = renderHook(useCreateExpense);
 
-        await act(() => result.current.createExpense({ expense }));
+        // 03-15b R1 L5: queued, not answered: the caller shows no success toast of its own.
+        await expect(act(() => result.current.createExpense({ expense }))).resolves.toEqual({
+            queued: true,
+        });
         expect(mutationKeys(client)).toEqual([ledgerOutboxMutationKeys.createExpense]);
         expect(client.getMutationCache().getAll()[0]?.options).toMatchObject({
             networkMode: 'always',
@@ -909,8 +919,8 @@ describe('C1-10 two create paths', () => {
         serve();
         onlineManager.setOnline(false);
         const { result } = renderHook(useCreateExpense);
-        let first: Promise<void> = Promise.resolve();
-        let second: Promise<void> = Promise.resolve();
+        let first: Promise<unknown> = Promise.resolve();
+        let second: Promise<unknown> = Promise.resolve();
 
         act(() => {
             first = result.current.createExpense({ expense });
@@ -919,5 +929,37 @@ describe('C1-10 two create paths', () => {
         await expect(second).rejects.toEqual(new LedgerWriteRefusedError('busy'));
         await act(() => first);
         expect(mutationKeys(client)).toEqual([ledgerOutboxMutationKeys.createExpense]);
+    });
+});
+
+describe('03-16a flag off = master', () => {
+    test('an online edit and delete read no ledger entry and cache none; the create sends no client id', async () => {
+        const client = signIn();
+        const sent = serve();
+        const bodies: unknown[] = [];
+
+        server.use(
+            http.get('*/ledger/entries/:id', ({ request }) => {
+                sent.push(`GET ${new URL(request.url).pathname}`);
+                return HttpResponse.json({ id: 'entry-1', type: 'EXPENSE', version: '1' });
+            }),
+            http.post('*/ledger/entries', async ({ request }) => {
+                bodies.push(await request.json());
+                return HttpResponse.json({ id: 'entry-2' });
+            }),
+        );
+        const { result } = renderHook(useWrites);
+
+        await act(() => result.current.update.updateExpense({ entryId: 'entry-1', entry: patch }));
+        await act(() => result.current.remove.deleteLedgerEntry({ entryId: 'entry-1' }));
+        await act(() =>
+            result.current.create.createExpense({ expense, clientEntryId: 'entry-form' }),
+        );
+
+        expect(
+            sent.filter(line => line.includes('/ledger/entries/entry-1') && line.startsWith('GET')),
+        ).toEqual([]);
+        expect(client.getQueryState(ledgerKeys.entry('entry-1'))).toBeUndefined();
+        expect(bodies).toEqual([expect.not.objectContaining({ id: expect.anything() })]);
     });
 });

@@ -369,7 +369,10 @@ describe('update an expense', () => {
         ]);
         expect(sent[0]?.text).not.toContain('"date"');
         expect(onEntryWritten.mock.calls).toEqual([
-            [{ groupId: 'group-1', parentActivityId: 'a-1' }, getDefaultTestQueryClient()],
+            [
+                { groupId: 'group-1', parentActivityId: 'a-1', entryId: 'entry-1' },
+                getDefaultTestQueryClient(),
+            ],
         ]);
     });
 });
@@ -382,7 +385,10 @@ describe('delete a ledger entry', () => {
 
         expect(sent).toEqual([{ method: 'DELETE', path: '/ledger/entries/entry-1', text: '' }]);
         expect(onEntryWritten.mock.calls).toEqual([
-            [{ groupId: undefined, parentActivityId: 'activity-1' }, getDefaultTestQueryClient()],
+            [
+                { groupId: undefined, parentActivityId: 'activity-1', entryId: 'entry-1' },
+                getDefaultTestQueryClient(),
+            ],
         ]);
     });
 });
@@ -428,7 +434,7 @@ describe('a rejected or unanswered request', () => {
         ['a 5xx answer', 500],
         ['no response', 'no-response'],
     ])('%s', (_name, status) => {
-        test.each(writes)('a %s fails and what may be stale is read again', async (_kind, send) => {
+        test.each(writes)('a %s fails and what may be stale is read again', async (kind, send) => {
             serveLedger(status);
 
             const failure: unknown = await send().then(
@@ -445,7 +451,12 @@ describe('a rejected or unanswered request', () => {
             }
             expect(onWriteFailed.mock.calls).toEqual([
                 [
-                    { groupId: 'group-1', parentActivityId: 'activity-1' },
+                    {
+                        groupId: 'group-1',
+                        parentActivityId: 'activity-1',
+                        // `ledger.entry(id)` is read again too (§2.2); a create has no id yet.
+                        ...(kind !== 'create' && { entryId: 'entry-1' }),
+                    },
                     getDefaultTestQueryClient(),
                 ],
             ]);

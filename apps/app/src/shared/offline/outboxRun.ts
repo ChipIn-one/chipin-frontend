@@ -36,7 +36,6 @@ import {
     isRetryRequested,
     markPendingRemoval,
     noteOutboxVersion,
-    noteSettledVersion,
     onOutboxWake,
     outboxEntryIds,
     type OutboxFence,
@@ -318,7 +317,6 @@ const onSent = (
         return STOPPED;
     }
     noteOutboxVersion(op, sent.version);
-    noteSettledVersion(op.entryId, sent.version);
     markPendingRemoval(op.opId);
     if (isDrainFence(fence)) {
         outboxGate.releaseTurn(op.opId);
@@ -474,23 +472,25 @@ const attempt = async <Op extends OutboxOpBase>(
         return retry();
     }
     inFlight += 1;
-    const outcome = await deps.send(op, getOutboxVersion(op.entryId), signal).then(
-        (sent: OutboxSent) => ({ sent }),
-        (error: unknown) => ({ error }),
-    );
     // Still in flight until the answer is processed: a success has started its removal (counted
-    // on its own) before the tab may count as idle.
-    const result =
-        'sent' in outcome
+    // on its own) before the tab may count as idle. `finally`: a throwing send never leaves the
+    // count up (03-15c2 R3 N2: every hidden release would wait for the timeout).
+    try {
+        const outcome = await deps.send(op, getOutboxVersion(op.entryId), signal).then(
+            (sent: OutboxSent) => ({ sent }),
+            (error: unknown) => ({ error }),
+        );
+
+        return 'sent' in outcome
             ? onSent(op, outcome.sent, ignoreEntryBlock, fence)
             : onSendError(op, outcome.error, retry, {
                   attempt: count,
                   isRetry: ignoreEntryBlock,
                   fence,
               });
-
-    endSend();
-    return result;
+    } finally {
+        endSend();
+    }
 };
 
 /**

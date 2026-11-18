@@ -40,8 +40,9 @@ import {
     isOfflineWriteAvailable,
     ledgerOutboxMutationKeys,
     startLedgerOutbox,
+    updateExpenseViaOutbox,
 } from './outbox';
-import { capabilitiesQueryOptions } from './queries';
+import { capabilitiesQueryOptions, ledgerKeys } from './queries';
 
 import 'fake-indexeddb/auto';
 
@@ -862,5 +863,112 @@ describe('03-15b R1', () => {
             [],
         );
         expect(await idb.get(OUTBOX_KEY)).toBeUndefined();
+    });
+});
+
+describe('03-16a part A: ledger.entry(id)', () => {
+    test('§2.2: a queued create writes its optimistic entry after the append; the 2xx writes the answered entry', async () => {
+        serveLedger();
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        await queueCreate(client);
+        const [op] = pendingOutboxOps();
+        const entryKey = ledgerKeys.entry(op?.entryId ?? '');
+
+        expect(client.getQueryData(entryKey)).toMatchObject({
+            id: op?.entryId,
+            type: 'EXPENSE',
+            version: null,
+            groupId: 'group-1',
+            expense: { description: 'Dinner', payerId: USER, amount: expense.amount },
+        });
+        onlineManager.setOnline(true);
+        await vi.waitFor(() =>
+            expect(client.getQueryData(entryKey)).toEqual({
+                id: op?.entryId,
+                type: 'EXPENSE',
+                version: '1',
+                groupId: null,
+                expense: null,
+            }),
+        );
+    });
+
+    test('§2.2: a queued edit applies its patch to the cached entry and keeps its version', async () => {
+        const client = await openTab();
+        const entryKey = ledgerKeys.entry('entry-x');
+
+        onlineManager.setOnline(false);
+        client.setQueryData(entryKey, {
+            id: 'entry-x',
+            type: 'EXPENSE',
+            version: 'v41',
+            groupId: 'group-1',
+            expense: {
+                description: 'Dinner',
+                amount: expense.amount,
+                category: 'food',
+                date: 1,
+                payerId: USER,
+                participantIds: [USER],
+            },
+        });
+        await updateExpenseViaOutbox(client, {
+            entryId: 'entry-x',
+            entry: { description: 'Lunch' },
+        })?.();
+
+        expect(pendingOutboxOps()).toEqual([
+            expect.objectContaining({ kind: 'updateExpense', baseVersion: 'v41' }),
+        ]);
+        expect(client.getQueryData(entryKey)).toMatchObject({
+            version: 'v41',
+            expense: { description: 'Lunch', category: 'food' },
+        });
+    });
+
+    test('§2.7: a repeated submit queues one op (the client entry id made at the form opening)', async () => {
+        const client = await openTab();
+
+        onlineManager.setOnline(false);
+        const submit = () =>
+            createExpenseViaOutbox(client, { expense, clientEntryId: 'entry-form' })?.() ??
+            Promise.reject(new Error('the online path was chosen'));
+
+        await submit();
+        await submit();
+
+        expect(pendingOutboxOps()).toEqual([
+            expect.objectContaining({ kind: 'createExpense', entryId: 'entry-form', seq: 1 }),
+        ]);
+        expect((await storedOpIds()).ops).toHaveLength(1);
+    });
+
+    test('03-15b R1 N2: a crash between the two writes of a discard of a failed create leaves no edit of it pending', async () => {
+        const patched = servePatches();
+
+        await storeFailed([{ op: storedOp(1, 'entry-c'), reason: 'validation', failedAt: 1 }]);
+        await storeOutbox([updateOp(2, 'entry-c', null)], { nextSeq: 3 });
+        onlineManager.setOnline(false);
+        await openTab();
+        // The first key the discard writes lands, the second does not ("crash").
+        let writes = 0;
+
+        vi.mocked(set).mockImplementation((key, value) => {
+            writes += 1;
+            return writes === 2
+                ? Promise.reject(new DOMException('crash', 'AbortError'))
+                : idb.set(key, value);
+        });
+        await discardOps(['op-1', 'op-2']).catch(() => undefined);
+
+        // The dependent edit left `ops`; the create is still failed (it can be discarded again).
+        expect(await storedOpIds()).toEqual({ ops: [], failed: ['op-1'] });
+        vi.mocked(set).mockImplementation(idb.set);
+        await openTab();
+        onlineManager.setOnline(true);
+        await wait(100);
+        expect(patched).toEqual([]);
     });
 });
