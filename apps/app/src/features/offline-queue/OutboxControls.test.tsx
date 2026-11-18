@@ -121,6 +121,8 @@ describe('03-16a part B flag off = master', () => {
         const { container } = render(<OutboxControls />);
 
         expect(container.innerHTML).toBe('');
+        // R2 N2: no row, so no ledger entry is observed or added to the cache.
+        expect(getDefaultTestQueryClient().getQueryCache().getAll()).toEqual([]);
     });
 });
 
@@ -214,14 +216,7 @@ describe('03-16a part B OutboxSheet', () => {
         });
     });
 
-    test('R1 N3: a delete without a description is named by the cached entry', async () => {
-        getDefaultTestQueryClient().setQueryData(ledgerKeys.entry('entry-9'), {
-            id: 'entry-9',
-            type: 'EXPENSE',
-            version: '3',
-            groupId: null,
-            expense: { description: 'Lunch' },
-        });
+    test('R1 N3: a delete without a description is named by the cached entry, as it is read', async () => {
         ledger.overlay = overlayOf({
             pending: [
                 {
@@ -237,7 +232,19 @@ describe('03-16a part B OutboxSheet', () => {
         render(<OutboxControls />);
         const sheet = await openSheet();
 
-        expect(within(sheet).getByText('Lunch')).toBeTruthy();
+        // R2 N2: the row follows the cache (the entry is read after the sheet opened).
+        act(() => {
+            getDefaultTestQueryClient().setQueryData(ledgerKeys.entry('entry-9'), {
+                id: 'entry-9',
+                type: 'EXPENSE',
+                version: '3',
+                groupId: null,
+                expense: { description: 'Lunch' },
+            });
+        });
+        expect(await within(sheet).findByText('Lunch')).toBeTruthy();
+        // R2 N2: observed, not fetched.
+        expect(getDefaultTestQueryClient().isFetching()).toBe(0);
         expect(within(sheet).getByText('Expense deletion · Waiting to be sent')).toBeTruthy();
     });
 

@@ -31,7 +31,7 @@ export const OutboxBalanceCaption = () => {
                     setIsOpen(true);
                 }}
             >
-                {count} <VisuallyHidden>{t('outbox.balanceCounterHint')}</VisuallyHidden>
+                {count} <VisuallyHidden>{t('outbox.balanceCounterHint', { count })}</VisuallyHidden>
             </Button>
         </Flex>
     );

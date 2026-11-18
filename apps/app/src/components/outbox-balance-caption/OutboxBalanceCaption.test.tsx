@@ -1,13 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import type { OutboxOverlay } from 'entities/ledger';
+import i18n from 'i18n/index';
 import { useOutboxSheetStore } from 'store/outboxSheetStore';
 
 import { OutboxBalanceCaption } from './index';
-
-import 'i18n/index';
 
 const ledger = vi.hoisted(() => ({ count: null as number | null }));
 
@@ -25,7 +24,8 @@ vi.mock('entities/ledger', async importOriginal => {
     };
 });
 
-afterEach(() => {
+afterEach(async () => {
+    await i18n.changeLanguage('en');
     ledger.count = null;
     useOutboxSheetStore.setState({ isOpen: false });
 });
@@ -45,4 +45,20 @@ test('§3: with unsent ops the balance says it excludes them; the counter opens 
         .setup()
         .click(screen.getByRole('button', { name: '2 unsent operations, open the list' }));
     expect(useOutboxSheetStore.getState().isOpen).toBe(true);
+});
+
+describe('R2 N1: the counter names the operations in the plural form of N', () => {
+    test.each([
+        ['en', 1, '1 unsent operation, open the list'],
+        ['en', 3, '3 unsent operations, open the list'],
+        ['ru', 1, '1 неотправленная операция, открыть список'],
+        ['ru', 3, '3 неотправленные операции, открыть список'],
+        ['ru', 5, '5 неотправленных операций, открыть список'],
+    ])('%s, %i', async (language, count, name) => {
+        await act(() => i18n.changeLanguage(language));
+        ledger.count = count;
+        render(<OutboxBalanceCaption />);
+
+        expect(screen.getByRole('button', { name })).toBeTruthy();
+    });
 });

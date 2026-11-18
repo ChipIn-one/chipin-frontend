@@ -217,8 +217,9 @@
         "unavailable": "Offline saving is unavailable. Operations on the device are preserved — restart the app",
         "balanceExcludesPending": "Excluding unsent operations",
         "badgeHint": ", open the list",
-        "balanceCounterHint": "unsent operations, open the list",
         "unreadable_one": "{{count}} record can't be read on this device (maybe from a newer app version); it is kept",
-        "unreadable_other": "{{count}} records can't be read on this device (maybe from a newer app version); they are kept"
+        "unreadable_other": "{{count}} records can't be read on this device (maybe from a newer app version); they are kept",
+        "balanceCounterHint_one": "unsent operation, open the list",
+        "balanceCounterHint_other": "unsent operations, open the list"
     }
 }

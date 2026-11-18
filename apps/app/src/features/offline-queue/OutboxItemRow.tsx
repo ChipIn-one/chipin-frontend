@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Card, Flex, Text } from '@radix-ui/themes';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -8,8 +8,7 @@ import { legacyAmountFromMoney } from 'entities/balance';
 import {
     discardOutboxItem,
     type FailedOutboxItem,
-    type LedgerEntry,
-    ledgerKeys,
+    ledgerEntryQueryOptions,
     type PendingOutboxItem,
     retryOutboxItem,
 } from 'entities/ledger';
@@ -109,13 +108,14 @@ const RetryOperation = ({ item }: { item: FailedOutboxItem }) => {
 /** One op of `OutboxSheet`: what it is, its status or failure, and what may be done with it. */
 export const OutboxItemRow = ({ item }: { item: Item }) => {
     const { t } = useTranslation('common');
-    const client = useQueryClient();
+    // R1 N3: an edit without a new description and a delete name the expense as cached; observed
+    // (a later read updates the row) but never fetched here (R2 N2).
+    const { data: cached } = useQuery({
+        ...ledgerEntryQueryOptions(item.entryId),
+        enabled: false,
+    });
     const failed = isFailed(item) ? item : null;
-    // R1 N3: an edit without a new description and a delete name the expense as cached.
-    const description =
-        item.description ??
-        client.getQueryData<LedgerEntry>(ledgerKeys.entry(item.entryId))?.expense?.description ??
-        null;
+    const description = item.description ?? cached?.expense?.description ?? null;
     const state = failed
         ? t(`outbox.reason.${failed.reason}`)
         : 'status' in item

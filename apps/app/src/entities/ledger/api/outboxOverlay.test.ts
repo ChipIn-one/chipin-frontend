@@ -1,6 +1,7 @@
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { clear, set } from 'idb-keyval';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { currencyCode, fromUnits } from 'shared/money';
@@ -14,6 +15,7 @@ import {
     writeOutbox,
 } from 'shared/offline/outboxStore';
 import { persistCodec } from 'shared/offline/persistCodec';
+import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
@@ -30,6 +32,8 @@ vi.mock('helpers/authSession', async importOriginal => ({
     ...(await importOriginal<typeof import('helpers/authSession')>()),
     getAccessTokenUserId: () => 'user-1',
 }));
+
+const server = setupMswServer();
 
 const effects: LedgerWriteEffects = {
     onEntryWritten: vi.fn(() => Promise.resolve()),
@@ -279,6 +283,31 @@ describe('03-16a part B R1 M1/L1: a create is cancelled with its entry, all or n
 
         await expect(discardOutboxItem(client, create)).resolves.toBe(false);
         expect(opIds()).toEqual(before);
+
+        // R2 N3: the claim ends (that tab let go of it) and the network is back: the create is
+        // sent, then its edit with the version the create answered.
+        const sent: string[] = [];
+
+        server.use(
+            http.post('*/ledger/entries', () => {
+                sent.push('POST');
+                return HttpResponse.json({ id: 'entry-a', type: 'EXPENSE', version: '1' });
+            }),
+            http.patch('*/ledger/entries/:id', ({ request, params }) => {
+                sent.push(`PATCH ${String(params.id)} ${request.headers.get('If-Match')}`);
+                return HttpResponse.json({ id: 'entry-a', type: 'EXPENSE', version: '2' });
+            }),
+        );
+        await writeOutbox(draft => {
+            draft.sending = null;
+        });
+        onlineManager.setOnline(true);
+        await waitFor(() => {
+            expect(sent).toEqual(['POST', 'PATCH entry-a "1"']);
+        });
+        await waitFor(() => {
+            expect(opIds()).toEqual([]);
+        });
     });
 
     test('the create already sent and removed before confirm: its edit is kept', async () => {
