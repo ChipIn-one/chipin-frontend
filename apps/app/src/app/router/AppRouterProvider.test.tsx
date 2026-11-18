@@ -16,6 +16,7 @@ import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { fetchSelfUser } from 'entities/users';
 import { establishAuthSession } from 'helpers/authSession';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
+import i18n from 'i18n';
 import { UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 import { resetSessionSelfLoad } from 'store/sessionUser';
@@ -144,6 +145,10 @@ const App = () => {
     );
 };
 
+// The real i18n instance: the OAuth callback returns to `/`, whose `PublicLocaleRoute` switches the
+// language before `HomeRouteGuard` sends the signed-in user on.
+beforeEach(() => i18n.changeLanguage('en').then(() => undefined));
+
 beforeEach(() => {
     probe.mounts = 0;
     probe.routers.length = 0;
@@ -202,9 +207,10 @@ test('a fresh OAuth sign-in across the remount: the code is exchanged once', asy
     await waitFor(() => {
         expect(probe.mounts).toBe(2);
     });
-    await waitFor(() => {
-        expect(window.location.pathname).not.toBe('/oauth/callback');
-    });
+    // The end of the chain (callback → `/` → `HomeRouteGuard` → `/dashboard`), so no navigation or
+    // effect outlives the test.
+    expect(await screen.findByText('dashboard')).toBeTruthy();
+    expect(window.location.pathname).toBe('/dashboard');
     expect(routers()).toHaveLength(2);
     const first = getOrThrow(routers(), 0);
     const second = getOrThrow(routers(), 1);
