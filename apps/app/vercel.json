@@ -269,6 +269,42 @@
         {
             "source": "/not-found",
             "destination": "/app.html"
+        },
+        {
+            "source": "/((?!api/|assets/|_vercel/|\\.well-known/)(?!.*\\.[^/]+$).*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "app.chipin.one"
+                    }
+                }
+            ],
+            "destination": "/app.html"
+        },
+        {
+            "source": "/((?!api/|assets/|_vercel/|\\.well-known/)(?!.*\\.[^/]+$).*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "app-dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "/app.html"
+        },
+        {
+            "source": "/((?!api/|assets/|_vercel/|\\.well-known/)(?!.*\\.[^/]+$).*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "suf": ".vercel.app"
+                    }
+                }
+            ],
+            "destination": "/app.html"
         }
     ],
     "headers": [

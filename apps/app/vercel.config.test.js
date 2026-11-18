@@ -5,8 +5,12 @@ import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
+import { APP_ROUTES } from './src/app/router/routeManifest.ts';
+import { LOCALE_PREFIX } from './src/constants/publicRouteManifest.ts';
+import { INVITE_TOKEN_PATTERN } from './src/helpers/inviteToken.ts';
 import { LEGACY_HOST_APP_ORIGINS } from './src/helpers/legacyHost.ts';
 import { LEGACY_SERVICE_WORKER_HOSTNAMES } from './src/helpers/serviceWorkerHost.ts';
+import { TEST_INVITE_TOKEN } from './src/test/fixtures/inviteToken.ts';
 
 const API_SOURCE = '/api/:path*';
 const config = JSON.parse(readFileSync(resolve(import.meta.dirname, 'vercel.json'), 'utf8'));
@@ -101,7 +105,6 @@ describe('Vercel API proxy routing', () => {
         expect(lastApiRewriteIndex).toBeGreaterThanOrEqual(0);
         expect(appRewrites.length).toBeGreaterThan(0);
         expect(appRewrites.every(rewrite => rewrite.index > lastApiRewriteIndex)).toBe(true);
-        expect(appRewrites.every(rewrite => rewrite.source !== '/(.*)')).toBe(true);
         expect(appRewrites.map(rewrite => rewrite.source)).toEqual(
             expect.arrayContaining([
                 '/dashboard/:path*',
@@ -255,10 +258,10 @@ describe('Vercel redirects for removed public locales (#609)', () => {
 // worker script `/sw.js` serves. All routes (redirects, then rewrites after `handle: filesystem`)
 // come from `getTransformedRoutes`; a route applies when its `has` host condition holds. Routes
 // with `continue` (headers) do not end the match. The first matching route wins.
-const allRoutes = (() => {
+const compileRoutes = vercelConfig => {
     const { routes, error } = getTransformedRoutes({
-        redirects: config.redirects ?? [],
-        rewrites: config.rewrites ?? [],
+        redirects: vercelConfig.redirects ?? [],
+        rewrites: vercelConfig.rewrites ?? [],
     });
 
     if (error) {
@@ -266,7 +269,9 @@ const allRoutes = (() => {
     }
 
     return (routes ?? []).filter(route => route.src && !route.continue);
-})();
+};
+
+const allRoutes = compileRoutes(config);
 
 const hostMatches = (route, host) =>
     (route.has ?? []).every(condition => hostConditionMatches(condition, host));
@@ -276,11 +281,11 @@ const hostMatches = (route, host) =>
 // destination that has none, so `url` may carry a query and the redirect keeps it. The helper
 // assumes that runtime behaviour (L2 of the 04-4a2 review); the blocking dev smoke curl of
 // `/oauth/callback?code=x&returnTo=…` in DEPLOYMENT.md verifies it before Promote.
-const resolveRoute = (host, url) => {
+const resolveRouteIn = (routes, host, url) => {
     const queryIndex = url.indexOf('?');
     const pathname = queryIndex === -1 ? url : url.slice(0, queryIndex);
     const query = queryIndex === -1 ? '' : url.slice(queryIndex);
-    const route = allRoutes.find(
+    const route = routes.find(
         candidate => hostMatches(candidate, host) && new RegExp(candidate.src).test(pathname),
     );
 
@@ -303,6 +308,8 @@ const resolveRoute = (host, url) => {
         statusCode: route.status,
     };
 };
+
+const resolveRoute = (host, url) => resolveRouteIn(allRoutes, host, url);
 
 const LEGACY_HOSTS = ['chipin.one', 'dev.chipin.one'];
 const APP_WORKER_HOSTS = [
@@ -388,8 +395,9 @@ const STEP_1_PATHS = [
 ];
 
 // Every prefix of the enumerated SPA rewrites (`/dashboard/:path*` → `/dashboard`, `/dashboard/a/b`).
+// Only the host-agnostic enumerated rules: the host-scoped catch-all (04-2b) is not a prefix list.
 const spaRewritePaths = config.rewrites
-    .filter(rewrite => rewrite.destination === '/app.html')
+    .filter(rewrite => rewrite.destination === '/app.html' && !rewrite.has)
     .flatMap(({ source }) => {
         if (!source.endsWith('/:path*')) {
             return [source];
@@ -601,6 +609,357 @@ describe('Vercel step-1 legacy redirects (04-4a2)', () => {
             ).toBe(true);
         }
     });
+});
+
+// 04-2b (spec 04 §2.9, D31): one host-scoped catch-all to the shell per app host group, at the end
+// of the rewrites. It skips `api/`, `assets/`, `_vercel/`, `.well-known/` and any path whose last
+// segment has a file extension, so a missing chunk or icon stays a 404 and never gets the shell.
+// The filesystem is checked before the rewrites (§4.1), so `dist` files and the transitional
+// prerender pages are served as files; the route table below models only the rules. The enumerated
+// host-agnostic rewrites stay for the legacy hosts until 04-5a.
+const CATCH_ALL_SOURCE = '/((?!api/|assets/|_vercel/|\\.well-known/)(?!.*\\.[^/]+$).*)';
+const ENUMERATED_SPA_SOURCES = [
+    '/dashboard/:path*',
+    '/solo/:path*',
+    '/group/:path*',
+    '/activity/:path*',
+    '/friends/:path*',
+    '/settings/:path*',
+    '/oauth/:path*',
+    '/not-found',
+];
+const APP_HOST_CONDITIONS = [
+    { eq: 'app.chipin.one' },
+    { eq: 'app-dev.chipin.one' },
+    { suf: '.vercel.app' },
+];
+const SHELL = { rewrite: '/app.html' };
+
+// Invite tokens are base64url (`INVITE_TOKEN_PATTERN`, backend InviteTokenGenerator): no `.`, so a
+// join link never looks like a file. Today the enumerated `/group/:path*` and `/friends/:path*`
+// rewrites catch the join links; the catch-all takes over when 04-5a deletes them.
+const PARAM_VALUES = {
+    groupId: '0b6f6a9e-3c1d-4f2a-9b7e-5d8c2a1f4e3b',
+    parentActivityId: '7d2e9c4a-1b3f-4e5d-8a6c-9f0b1e2d3c4a',
+    inviteToken: TEST_INVITE_TOKEN,
+};
+
+const substituteParams = path =>
+    path.replace(/:([A-Za-z]+)/g, (_, name) => {
+        if (!(name in PARAM_VALUES)) {
+            throw new Error(`No test value for the route parameter :${name}`);
+        }
+
+        return PARAM_VALUES[name];
+    });
+
+/** A manifest `path` (relative, no leading slash) as a URL path. */
+const manifestUrlPath = route => `/${substituteParams(route.path)}`;
+
+const regularRoutes = APP_ROUTES.filter(route => !route.transitional);
+const transitionalRoutes = APP_ROUTES.filter(route => route.transitional);
+
+// Every form of a transitional path: `/privacy`, `/ru/privacy`, `/ru/privacy/`, `/`, `/ru`, `/ru/`.
+const transitionalUrlPaths = transitionalRoutes.flatMap(route =>
+    Object.values(LOCALE_PREFIX).flatMap(prefix => {
+        const path = route.path ? `${prefix}/${route.path}` : `${prefix}/`;
+
+        return [...new Set([path, `${path.replace(/\/$/, '')}/`, path.replace(/(.)\/$/, '$1')])];
+    }),
+);
+
+const NOT_SHELL_PATHS = [
+    '/assets/x.js',
+    '/assets/missing-chunk.js',
+    '/assets/x',
+    '/_vercel/insights/script.js',
+    '/_vercel/speed-insights/script.js',
+    '/_vercel/insights/view',
+    '/_vercel/speed-insights/vitals',
+    '/.well-known/assetlinks.json',
+    '/.well-known/other',
+    '/sw.js',
+    '/sw-app.js',
+    '/manifest.webmanifest',
+    '/pwa-192x192.png',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/app.html',
+    '/favicon.ico',
+];
+
+// Under an enumerated prefix a file-like path still gets the shell on the app hosts from the
+// host-agnostic `/group/:path*` rule (as before 04-2b; on the legacy hosts the step-1 302 fires
+// first) until 04-5a deletes the enumerated list; only the catch-all itself is checked to skip it.
+const ENUMERATED_FILE_LIKE_PATHS = ['/group/x.json', '/dashboard/x.js'];
+
+const ASSET_PATHS = [
+    '/assets/x.js',
+    '/sw.js',
+    '/manifest.webmanifest',
+    '/robots.txt',
+    '/.well-known/assetlinks.json',
+    '/api/x',
+];
+
+const allowsPrivateFallback = pathname =>
+    PRIVATE_SPA_NAVIGATION_ALLOWLIST.some(pattern => pattern.test(pathname));
+
+const isCatchAllSource = rewrite =>
+    rewrite.destination === '/app.html' && !ENUMERATED_SPA_SOURCES.includes(rewrite.source);
+
+// The same config with every non-enumerated shell rewrite (the catch-all) removed: the baseline of
+// the differential check below.
+const routesWithoutCatchAll = compileRoutes({
+    ...config,
+    rewrites: config.rewrites.filter(rewrite => !isCatchAllSource(rewrite)),
+});
+
+// The same config without the enumerated host-agnostic shell rewrites (only the catch-all serves
+// the shell): what 04-5a leaves behind.
+const routesWithoutEnumerated = compileRoutes({
+    ...config,
+    rewrites: config.rewrites.filter(
+        rewrite => !(rewrite.destination === '/app.html' && !isCatchAllSource(rewrite)),
+    ),
+});
+
+const APP_SHELL_HOSTS = [...APP_HOSTS, ...PREVIEW_HOSTS];
+const OTHER_HOSTS = [
+    ...LEGACY_HOSTS,
+    'localhost',
+    'example.com',
+    'issue-199.dev.chipin.one',
+    'chipin.one.evil.com',
+    'evilchipin.one',
+    'app.chipin.one.evil.com',
+];
+const DIFFERENTIAL_PATHS = [
+    ...new Set([
+        '/',
+        '/unknown',
+        '/unknown/x',
+        '/login',
+        '/privacy',
+        '/ru/',
+        '/dashboard',
+        '/group/join/x',
+        `/group/${PARAM_VALUES.groupId}`,
+        `/group/${PARAM_VALUES.groupId}/x`,
+        '/oauth/callback?code=x',
+        '/app.html',
+        '/index.html',
+        '/legacy-host-has-no-manifest',
+        ...NEVER_REDIRECTED_PATHS,
+        ...NOT_SHELL_PATHS,
+        ...ENUMERATED_FILE_LIKE_PATHS,
+        ...STEP_1_PATHS,
+        ...APP_ROUTES.map(manifestUrlPath),
+        ...transitionalUrlPaths,
+        '/api/x',
+    ]),
+];
+
+describe('Vercel app-host catch-all to the shell (04-2b)', () => {
+    const catchAll = config.rewrites
+        .map((rewrite, index) => ({ ...rewrite, index }))
+        .filter(isCatchAllSource);
+
+    test('has one catch-all per app host group, each scoped by exactly that host', () => {
+        expect(catchAll.map(rewrite => rewrite.source)).toEqual(
+            APP_HOST_CONDITIONS.map(() => CATCH_ALL_SOURCE),
+        );
+        for (const rewrite of catchAll) {
+            expect(rewrite.has).toHaveLength(1);
+            expect(rewrite.has[0].type).toBe('host');
+        }
+        expect(catchAll.map(rewrite => rewrite.has[0].value)).toEqual(APP_HOST_CONDITIONS);
+    });
+
+    test('places the catch-all at the end, after the last /api rewrite and the enumerated list', () => {
+        const lastApiIndex = config.rewrites.findLastIndex(
+            rewrite => rewrite.source === API_SOURCE,
+        );
+        const lastOtherIndex = config.rewrites.findLastIndex(rewrite => !isCatchAllSource(rewrite));
+
+        expect(lastApiIndex).toBeGreaterThanOrEqual(0);
+        expect(catchAll.every(rewrite => rewrite.index > lastApiIndex)).toBe(true);
+        expect(catchAll.every(rewrite => rewrite.index > lastOtherIndex)).toBe(true);
+    });
+
+    test('keeps every host-agnostic shell rewrite in the enumerated list', () => {
+        const hostAgnostic = config.rewrites.filter(
+            rewrite => rewrite.destination === '/app.html' && !rewrite.has,
+        );
+
+        expect(hostAgnostic.map(rewrite => rewrite.source)).toEqual(ENUMERATED_SPA_SOURCES);
+    });
+
+    test('never scopes a shell rewrite to a legacy host', () => {
+        const legacyShellRewrites = config.rewrites.filter(
+            rewrite =>
+                rewrite.destination === '/app.html' &&
+                (rewrite.has ?? []).some(condition =>
+                    LEGACY_HOSTS.some(host => hostConditionMatches(condition, host)),
+                ),
+        );
+
+        expect(legacyShellRewrites).toEqual([]);
+    });
+
+    test('compiles the catch-all source', () => {
+        const compiled = allRoutes.filter(route => route.dest === '/app.html' && route.has);
+
+        expect(compiled).toHaveLength(APP_HOST_CONDITIONS.length);
+        for (const route of compiled) {
+            expect(route.src).toBe(`^(?:${CATCH_ALL_SOURCE})$`);
+            for (const path of [...NOT_SHELL_PATHS, ...ENUMERATED_FILE_LIKE_PATHS, '/api/x']) {
+                expect(new RegExp(route.src).test(path)).toBe(false);
+            }
+        }
+    });
+
+    test.each(
+        APP_SHELL_HOSTS.flatMap(host =>
+            regularRoutes.map(manifestUrlPath).map(path => [host, path]),
+        ),
+    )('on %s routes the manifest path %s to the shell', (host, path) => {
+        expect(resolveRoute(host, path)).toEqual(SHELL);
+    });
+
+    // The rule table gives the shell only where no file matches: on Vercel the filesystem is
+    // checked before the rewrites (§4.1), so the prerender files of these pages are served first.
+    test.each(APP_SHELL_HOSTS.flatMap(host => transitionalUrlPaths.map(path => [host, path])))(
+        'on %s routes the transitional path %s to the shell only when no prerender file matches',
+        (host, path) => {
+            expect(resolveRoute(host, path)).toEqual(SHELL);
+        },
+    );
+
+    // 04-5a deletes the enumerated rewrites: the catch-all alone must serve every manifest path.
+    test.each(
+        APP_SHELL_HOSTS.flatMap(host =>
+            [...APP_ROUTES.map(manifestUrlPath), ...transitionalUrlPaths].map(path => [host, path]),
+        ),
+    )('on %s routes %s to the shell by the catch-all alone', (host, path) => {
+        expect(resolveRouteIn(routesWithoutEnumerated, host, path)).toEqual(SHELL);
+    });
+
+    test.each(
+        APP_SHELL_HOSTS.flatMap(host =>
+            [
+                '/unknown',
+                '/unknown/x',
+                '/login',
+                `/group/${PARAM_VALUES.groupId}/x`,
+                '/oauth/callback?code=x',
+                '/a.b/c',
+            ].map(path => [host, path]),
+        ),
+    )('on %s serves the shell at the nested or unknown path %s', (host, path) => {
+        expect(resolveRoute(host, path)).toEqual(SHELL);
+    });
+
+    test.each(APP_SHELL_HOSTS)(
+        'on %s sends /api/x and /api to the backend, not the shell',
+        host => {
+            expect(resolveRoute(host, '/api/x')?.rewrite).toMatch(
+                /^https:\/\/api(?:-dev)?\.chipin\.one\//,
+            );
+            expect(resolveRoute(host, '/api')?.rewrite).toMatch(
+                /^https:\/\/api(?:-dev)?\.chipin\.one\//,
+            );
+            expect(resolveRoute(host, '/api/')).not.toEqual(SHELL);
+        },
+    );
+
+    test.each(APP_SHELL_HOSTS.flatMap(host => NOT_SHELL_PATHS.map(path => [host, path])))(
+        'on %s never rewrites %s to the shell',
+        (host, path) => {
+            expect(resolveRoute(host, path)).not.toEqual(SHELL);
+        },
+    );
+
+    test.each(LEGACY_HOSTS)('on %s leaves /unknown to the filesystem (a real 404)', host => {
+        expect(resolveRoute(host, '/unknown')).toBeUndefined();
+    });
+
+    test.each(OTHER_HOSTS.flatMap(host => DIFFERENTIAL_PATHS.map(path => [host, path])))(
+        'on %s resolves %s exactly as without the catch-all',
+        (host, path) => {
+            expect(resolveRoute(host, path)).toEqual(
+                resolveRouteIn(routesWithoutCatchAll, host, path),
+            );
+        },
+    );
+
+    test.each(APP_SHELL_HOSTS.flatMap(host => DIFFERENTIAL_PATHS.map(path => [host, path])))(
+        'on %s changes %s at most from unrouted to the shell',
+        (host, path) => {
+            const before = resolveRouteIn(routesWithoutCatchAll, host, path);
+            const after = resolveRoute(host, path);
+
+            if (before === undefined) {
+                expect([undefined, SHELL]).toContainEqual(after);
+            } else {
+                expect(after).toEqual(before);
+            }
+        },
+    );
+
+    test('the invite token shape has no dot', () => {
+        expect(INVITE_TOKEN_PATTERN.test(TEST_INVITE_TOKEN)).toBe(true);
+        expect(INVITE_TOKEN_PATTERN.test(`${TEST_INVITE_TOKEN}.js`)).toBe(false);
+    });
+});
+
+// The SW navigation allowlist is hand-written (§2.9): a new manifest route must be added to it, and
+// it must stay narrower than the catch-all (no transitional page, no asset).
+describe('PRIVATE_SPA_NAVIGATION_ALLOWLIST against the route manifest (04-2b)', () => {
+    test('has regular and transitional routes to check', () => {
+        expect(regularRoutes.length).toBeGreaterThan(0);
+        expect(transitionalUrlPaths).toEqual(expect.arrayContaining(['/', '/ru/', '/ru/privacy']));
+    });
+
+    test.each(regularRoutes.map(route => [route.id, manifestUrlPath(route)]))(
+        'allows the %s path %s',
+        (_, path) => {
+            expect(allowsPrivateFallback(path)).toBe(true);
+        },
+    );
+
+    test.each(transitionalUrlPaths)('does not allow the transitional path %s', path => {
+        expect(allowsPrivateFallback(path)).toBe(false);
+    });
+
+    test.each(ASSET_PATHS)('does not allow the asset path %s', path => {
+        expect(allowsPrivateFallback(path)).toBe(false);
+    });
+
+    // Self-check: a manifest route the allowlist does not know fails the check above.
+    test('does not allow a path no allowlist entry names', () => {
+        expect(allowsPrivateFallback('/brand-new')).toBe(false);
+    });
+});
+
+// §2.9 cross-check (04-2b lands after 04-4a2): every `legacyPaths` entry of the manifest is a step-1
+// redirect on both legacy hosts.
+describe('Vercel step-1 redirects against the route manifest (04-2b)', () => {
+    const legacyUrlPaths = APP_ROUTES.flatMap(route => route.legacyPaths.map(substituteParams));
+
+    test('the manifest has legacy paths to check', () => {
+        expect(legacyUrlPaths.length).toBeGreaterThan(0);
+    });
+
+    test.each(LEGACY_HOSTS.flatMap(host => legacyUrlPaths.map(path => [host, path])))(
+        'on %s redirects the legacy path %s to the app host with 302',
+        (host, path) => {
+            expect(resolveRoute(host, path)).toEqual({
+                redirect: `${legacyHostAppOrigin(host)}${path}`,
+                statusCode: 302,
+            });
+        },
+    );
 });
 
 // #758: the legacy hosts keep the landing but must not be installable as the app: iOS installed
