@@ -153,7 +153,7 @@ jobs:
             -v "$RUNNER_TEMP:$RUNNER_TEMP" \
             -w "$PWD" \
             "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble" \
-            bash -c 'node --version && exec npm run test:e2e -- --project=chromium --repeat-each=20 e2e/specs/money/offline.spec.ts'
+            bash -c 'node --version && npm run test:e2e -- --project=chromium --repeat-each=20 e2e/specs/money/offline.spec.ts && exec npm run test:e2e -- --project=chromium --repeat-each=3 e2e/specs/money'
       # A cancel or timeout can kill the docker client and leave the container running: it is
       # removed before the result, artifact and purge steps, so nothing writes to the workspace or
       # registers users on staging after this point. The container is named after the run id.
