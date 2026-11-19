@@ -1,10 +1,14 @@
-// 04-4a1 (spec 04 §2.11): every service worker registration call site registers `/sw.js` with
-// scope `/` and is gated by `shouldRegisterServiceWorker`. The scan fails when a new call site
-// appears, when one loses its gate, or when one registers another URL or scope.
+// Spec 04 §2.11 (04-4a1, 04-2d): there is a single service worker registration call site,
+// `useRegisterSW` in `src/app/pwa/ServiceWorkerManager.tsx`, gated by `shouldRegisterServiceWorker`,
+// and it registers `/sw.js` with scope `/` (the VitePWA options of `pwa.config.ts`). The scan fails
+// when a new call site appears, when it loses its gate, or when it would register another URL or
+// scope. The gate itself is exercised by `ServiceWorkerManager.test.tsx`.
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, test } from 'vitest';
+
+import { buildPwaOptions } from '../pwa.config.ts';
 
 const APP_ROOT = path.resolve(import.meta.dirname, '..');
 const SOURCE_ROOT = 'src';
@@ -28,9 +32,6 @@ const listSourceFiles = directory =>
 const PWA_CALL_PATTERNS = [/\buseRegisterSW\s*\(/g, /\bregisterSW\s*\(/g, /\bnew\s+Workbox\s*\(/g];
 const ANY_REGISTER_CALL = /\.\s*register\s*\(/g;
 const MENTIONS_SERVICE_WORKER = /serviceWorker|virtual:pwa-register|workbox-window/;
-const GATE =
-    /if\s*\(\s*!shouldRegisterServiceWorker\(\s*window\.location\.hostname\s*\)\s*\)\s*\{\s*return;?\s*\}/g;
-const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch', 'return']);
 
 const isImportLine = (source, index) =>
     /^\s*import\b/.test(source.slice(source.lastIndexOf('\n', index) + 1));
@@ -49,26 +50,10 @@ const findRegistrationCalls = source => {
         .sort((left, right) => left - right);
 };
 
-// Start of the innermost function body before `index`: an arrow body `=> {`, a `function … {`, or a
-// method shorthand `name(…) {` (control statements such as `if (…) {` are not functions).
-const enclosingFunctionStart = (source, index) => {
-    const head = source.slice(0, index);
-    const starts = [
-        ...Array.from(head.matchAll(/=>\s*\{/g), match => match.index),
-        ...Array.from(head.matchAll(/\bfunction\b[^{]*\{/g), match => match.index),
-        ...Array.from(head.matchAll(/\b(\w+)\s*\([^()]*\)\s*\{/g))
-            .filter(match => !CONTROL_KEYWORDS.has(match[1]))
-            .map(match => match.index),
-    ];
-
-    return Math.max(-1, ...starts);
-};
-
-const EXPECTED_CALL_SITES = {
-    // `virtual:pwa-register`: the URL is VitePWA buildBase + filename, checked below via vite.config.ts.
-    'src/basics/PWABadge.tsx': 'virtual',
-    'src/helpers/swUpdates.tsx': 'manual',
-};
+const CALL_SITE = 'src/app/pwa/ServiceWorkerManager.tsx';
+// The component returns before rendering the registering child on a legacy host (04-4a1).
+const GATE =
+    /if\s*\(\s*!shouldRegisterServiceWorker\(\s*window\.location\.hostname\s*\)\s*\)\s*\{\s*return null;?\s*\}/;
 
 const sources = Object.fromEntries(
     listSourceFiles(SOURCE_ROOT).map(file => [
@@ -82,55 +67,49 @@ const callSites = Object.keys(sources).filter(
 );
 
 describe('service worker registration call sites', () => {
-    test('are exactly the known ones', () => {
-        expect(callSites.sort()).toEqual(Object.keys(EXPECTED_CALL_SITES).sort());
+    test('there is exactly one, in ServiceWorkerManager', () => {
+        expect(callSites).toEqual([CALL_SITE]);
     });
 
-    test.each(Object.keys(EXPECTED_CALL_SITES))(
-        '%s has one registration call, gated inside the same function',
-        file => {
-            const source = sources[file];
+    test('it is one useRegisterSW call of virtual:pwa-register/react behind the host gate', () => {
+        const source = sources[CALL_SITE];
 
-            expect(source).toMatch(
-                /import\s*\{[^}]*\bshouldRegisterServiceWorker\b[^}]*\}\s*from\s*'helpers\/serviceWorkerHost'/,
-            );
+        expect(source).toMatch(
+            /import\s*\{[^}]*\bshouldRegisterServiceWorker\b[^}]*\}\s*from\s*'helpers\/serviceWorkerHost'/,
+        );
+        expect(source).toMatch(
+            /import\s*\{\s*useRegisterSW\s*\}\s*from\s*'virtual:pwa-register\/react'/,
+        );
 
-            const calls = findRegistrationCalls(source);
+        const calls = findRegistrationCalls(source);
 
-            expect(calls).toHaveLength(1);
+        expect(calls).toHaveLength(1);
+        expect(source.slice(calls[0])).toMatch(/^useRegisterSW\s*\(/);
+        expect(source).toMatch(GATE);
+        // No scope or URL is passed at the call site: both come from the VitePWA options.
+        const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-            for (const callIndex of calls) {
-                const functionStart = enclosingFunctionStart(source, callIndex);
-                const gates = Array.from(source.matchAll(GATE), match => match.index);
-
-                expect(functionStart).toBeGreaterThanOrEqual(0);
-                expect(gates.some(gate => gate > functionStart && gate < callIndex)).toBe(true);
-            }
-        },
-    );
-
-    test('the manual registration uses /sw.js with scope /', () => {
-        const manualCalls = Object.entries(EXPECTED_CALL_SITES)
-            .filter(([, kind]) => kind === 'manual')
-            .flatMap(([file]) =>
-                Array.from(
-                    sources[file].matchAll(/serviceWorker\s*\??\.\s*register\s*\(([^)]*)\)/g),
-                    match => match[1].replace(/\s+/g, ' ').trim(),
-                ),
-            );
-
-        expect(manualCalls).toEqual(["'/sw.js', { scope: '/' }"]);
+        expect(code).not.toMatch(/\bscope\s*:/);
+        expect(code).not.toMatch(/['"`]\/sw(?:-app)?\.js['"`]/);
     });
 
-    test('virtual:pwa-register resolves to /sw.js with scope / (VitePWA defaults)', () => {
+    test('the registration is /sw.js with scope / (pwa.config.ts)', () => {
+        const options = buildPwaOptions({ appName: 'ChipIn' });
+
+        // vite-plugin-pwa registers `buildBase + filename` with `scope`.
+        expect(`${options.buildBase}${options.filename}`).toBe('/sw.js');
+        expect(options.scope).toBe('/');
+        expect(options.strategies).toBeUndefined();
+    });
+
+    test('vite.config.ts uses buildPwaOptions, with the rename plugin after VitePWA', () => {
         const viteConfig = readFileSync(path.join(APP_ROOT, 'vite.config.ts'), 'utf8');
-        const pwaIndex = viteConfig.indexOf('VitePWA({');
+        const pwaIndex = viteConfig.indexOf('VitePWA(buildPwaOptions(');
         const renameIndex = viteConfig.indexOf('swAppPlugin()');
 
-        // filename defaults to sw.js, buildBase and scope to the Vite base `/`.
-        expect(viteConfig).not.toMatch(/\b(?:filename|buildBase|base|srcDir|strategies)\s*:/);
-        // The only `scope:` is the web manifest's `scope: '/'`.
-        expect(Array.from(viteConfig.matchAll(/\bscope\s*:\s*([^,\n]+)/g), m => m[1])).toEqual([
+        // No PWA option is set beside the pure function, and the base stays `/`.
+        expect(viteConfig).not.toMatch(/\b(?:filename|buildBase|srcDir|strategies|scope)\s*:/);
+        expect(Array.from(viteConfig.matchAll(/\bbase\s*:\s*([^,\n]+)/g), m => m[1])).toEqual([
             "'/'",
         ]);
         // The rename plugin comes after VitePWA (spec 04 §2.11 option (a)).

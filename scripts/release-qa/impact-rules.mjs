@@ -34,6 +34,7 @@ export const SMOKE_SHORT = {
         'apps/app/src/public-routes/', // public route tree and prerendered entry
         'apps/app/src/api/', // API client, interceptors and resources
         'apps/app/src/bootstrap/', // API and Sentry bootstrap
+        'apps/app/src/app/pwa/', // service worker registration and update policy
     ],
     files: new Set([
         // routing
@@ -58,13 +59,13 @@ export const SMOKE_SHORT = {
         'apps/app/src/hooks/useSyncUserSettings.tsx',
         // service worker / PWA
         'apps/app/src/helpers/pwa.ts',
-        'apps/app/src/helpers/serviceWorkerRecovery.ts',
+        'apps/app/src/helpers/appUpdate.ts',
         'apps/app/src/helpers/serviceWorkerHost.ts',
         'apps/app/public/sw-kill.js',
         'apps/app/scripts/sw-app-plugin.ts',
         'apps/app/src/hooks/pwaHooks.tsx',
-        'apps/app/src/basics/PWABadge.tsx',
         'apps/app/vite.config.ts',
+        'apps/app/pwa.config.ts',
         'apps/app/pwa-assets.config.ts',
         'apps/app/scripts/prerender-before-workbox.mjs',
         'apps/app/app.html',

@@ -525,10 +525,11 @@ describe('scope and canonical QA identity', () => {
             'apps/app/src/features/routing/AppRouter.tsx',
             'apps/app/src/root.tsx',
             'apps/app/src/bootstrap/initializeApi.ts',
-            'apps/app/src/helpers/serviceWorkerRecovery.ts',
+            'apps/app/src/app/pwa/ServiceWorkerManager.tsx',
             'apps/app/src/helpers/theme.ts',
             'apps/app/vercel.json',
             'apps/app/vite.config.ts',
+            'apps/app/pwa.config.ts',
         ]) {
             const result = buildChecklist({
                 files: [file],

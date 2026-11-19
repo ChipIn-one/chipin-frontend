@@ -73,6 +73,14 @@ export interface ExpenseModalState {
     ownerId: string | null;
 }
 
+/**
+ * The draft of an open modal as saved before an app reload and restored at startup (spec 04 §2.11
+ * item 4, 04-2d). A create draft has no `source`: the modal rebuilds it from the live data.
+ */
+export type ExpenseModalDraft = Omit<ExpenseModalState, 'isOpened' | 'source'> & {
+    source: ExpenseModalSource | null;
+};
+
 export interface ExpenseModalEditInitialization {
     mode: 'edit';
     source: ExpenseModalSource;
@@ -105,6 +113,11 @@ interface ExpenseModalActions {
     applyLateGroups: (source: ExpenseModalSource) => void;
     initializeEdit: (initialization: ExpenseModalEditInitialization) => void;
     reset: () => void;
+    /**
+     * Reopens the modal with a draft saved before an app reload. A create draft is kept by the next
+     * `initialize`, which only takes the live source (the opened modal initializes on mount).
+     */
+    restoreDraft: (draft: ExpenseModalDraft) => void;
     setDescription: (description: string) => void;
     setAmount: (amount: string) => void;
     setDate: (date: number) => void;

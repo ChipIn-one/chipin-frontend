@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import { persistedUserId } from 'app/providers/persistedUserId';
+import { ServiceWorkerManager } from 'app/pwa/ServiceWorkerManager';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
 import { LS_KEY_THEME } from 'constants/localstorage';
@@ -20,7 +21,6 @@ import { syncHtmlLang } from 'i18n/htmlLang';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { PublicTelemetry } from 'public-routes/PublicTelemetry';
 
-import PWABadge from 'basics/PWABadge';
 import { GlobalErrorBoundary } from 'components/global-error-boundary';
 
 import 'styles/index.css';
@@ -39,6 +39,19 @@ syncHtmlLang(i18n);
 const i18nSettled = i18nReady.catch((error: unknown) => {
     Sentry.captureException(error);
 });
+
+// The SW manager sits outside the app's error boundary; its own boundary keeps a failure of the
+// manager from blanking the page (renders nothing; the controls it handed over outlive it).
+const IsolatedServiceWorkerManager = () => (
+    <Sentry.ErrorBoundary
+        beforeCapture={scope => {
+            scope.setTag('errorBoundary', 'serviceWorkerManager');
+        }}
+        fallback={<></>}
+    >
+        <ServiceWorkerManager />
+    </Sentry.ErrorBoundary>
+);
 
 const rootElement = document.getElementById('root')!;
 const publicBuildYear = Number(rootElement.dataset.publicBuildYear);
@@ -73,20 +86,22 @@ if (legacyHostAppUrl) {
                 .then(() =>
                     hydrateRoot(
                         rootElement,
-                        <GlobalErrorBoundary>
-                            <PublicBuildYearContext.Provider
-                                value={
-                                    Number.isInteger(publicBuildYear) && publicBuildYear > 2000
-                                        ? publicBuildYear
-                                        : null
-                                }
-                            >
-                                <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
-                            </PublicBuildYearContext.Provider>
-                            <PublicTelemetry />
+                        <>
+                            <GlobalErrorBoundary>
+                                <PublicBuildYearContext.Provider
+                                    value={
+                                        Number.isInteger(publicBuildYear) && publicBuildYear > 2000
+                                            ? publicBuildYear
+                                            : null
+                                    }
+                                >
+                                    <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
+                                </PublicBuildYearContext.Provider>
+                                <PublicTelemetry />
+                            </GlobalErrorBoundary>
                             {/* Public SSG entry must register the same service worker as the SPA. */}
-                            <PWABadge />
-                        </GlobalErrorBoundary>,
+                            <IsolatedServiceWorkerManager />
+                        </>,
                     ),
                 ),
         )
@@ -95,25 +110,36 @@ if (legacyHostAppUrl) {
     // The user's query cache is restored from IndexedDB before the app (and its router) renders;
     // the public SSG branch above never touches IndexedDB. The first render waits for the initial
     // language's lazy chunks (spec 04 §2.10), so it never shows raw keys.
-    Promise.all([import('main'), import('shared/offline/restore')])
-        .then(([{ default: Main }, { startCacheRestore }]) => {
+    Promise.all([
+        import('main'),
+        import('shared/offline/restore'),
+        import('app/pwa/expenseDraftReload'),
+    ])
+        .then(([{ default: Main }, { startCacheRestore }, { startExpenseDraftReload }]) => {
             startCacheRestore(persistedUserId(getLocalUser()?.id));
+            // Spec 04 §2.11 item 4: an expense draft saved before an app reload reopens once.
+            startExpenseDraftReload();
             return i18nSettled.then(() => Main);
         })
         .then(Main => {
             createRoot(rootElement).render(
-                <GlobalErrorBoundary>
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme={resolveStoredTheme()}
-                        storageKey={LS_KEY_THEME}
-                        enableSystem
-                    >
-                        <Analytics beforeSend={sanitizeTelemetryEvent} />
-                        <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
-                        <Main />
-                    </ThemeProvider>
-                </GlobalErrorBoundary>,
+                <>
+                    <GlobalErrorBoundary>
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme={resolveStoredTheme()}
+                            storageKey={LS_KEY_THEME}
+                            enableSystem
+                        >
+                            <Analytics beforeSend={sanitizeTelemetryEvent} />
+                            <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
+                            <Main />
+                        </ThemeProvider>
+                    </GlobalErrorBoundary>
+                    {/* The single SW registration, once per page, outside the error boundary: it
+                        keeps running for the error fallback when the app crashes on first render. */}
+                    <IsolatedServiceWorkerManager />
+                </>,
             );
         })
         .catch(error => Sentry.captureException(error));

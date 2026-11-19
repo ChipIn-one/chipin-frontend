@@ -6,8 +6,10 @@ import {
     LS_KEY_KEPT_OUTBOX_USERS,
     type LS_KEY_LOCALE,
     type LS_KEY_SW_UPDATE_DISMISSED_AT,
+    type LS_KEY_SW_WAITING_SINCE,
     type LS_KEY_THEME,
     LS_KEY_USER,
+    type SS_KEY_EXPENSE_DRAFT,
 } from 'constants/localstorage';
 
 export interface LocalUser {
@@ -79,6 +81,7 @@ type StorageSchema = {
     [LS_KEY_LOCALE]: string;
     [LS_KEY_THEME]: ThemeName;
     [LS_KEY_SW_UPDATE_DISMISSED_AT]: number;
+    [LS_KEY_SW_WAITING_SINCE]: number;
     [LS_KEY_KEPT_OUTBOX_USERS]: string[];
 };
 
@@ -126,6 +129,36 @@ const LocalStorage = {
             return localStorage.getItem(key);
         } catch {
             return null;
+        }
+    },
+};
+
+type SessionStorageKey = typeof SS_KEY_EXPENSE_DRAFT;
+
+// sessionStorage holds raw text only: its one reader (the expense draft restore) decodes and
+// validates it itself (bigint codec + zod). Blocked or full storage is ignored like above.
+const SessionStorage = {
+    getRaw(key: SessionStorageKey): string | null {
+        try {
+            return sessionStorage.getItem(key);
+        } catch {
+            return null;
+        }
+    },
+
+    setRaw(key: SessionStorageKey, value: string): void {
+        try {
+            sessionStorage.setItem(key, value);
+        } catch {
+            // ignore write errors (storage full, private mode, etc.)
+        }
+    },
+
+    remove(key: SessionStorageKey): void {
+        try {
+            sessionStorage.removeItem(key);
+        } catch {
+            // ignore
         }
     },
 };
@@ -307,8 +340,9 @@ export {
     removeKeptOutboxUsers,
     resetTabUserId,
     saveLocalUser,
+    SessionStorage,
     setAuthSessionHint,
     subscribeTabUserId,
     toLocalUser,
 };
-export type { StorageKey, StorageSchema };
+export type { SessionStorageKey, StorageKey, StorageSchema };

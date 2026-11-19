@@ -1,7 +1,8 @@
 // Validate the final public HTML was actually scanned by Workbox after SSG.
 // Also checks the worker files of 04-4a1 (spec 04 §2.11 option (a)): the app worker is
 // `sw-app.js`, the legacy-host kill-switch `sw-kill.js` is not precached, and no file sits at
-// `sw.js` (vercel.json serves `/sw.js` by host).
+// `sw.js` (vercel.json serves `/sw.js` by host). The Workbox runtime is inlined (04-2d,
+// `inlineWorkboxRuntime`): no `workbox-*.js` next to the worker and no `importScripts` in it.
 import { createHash } from 'node:crypto';
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -17,20 +18,31 @@ const verifyWorkerFiles = serviceWorker =>
             },
             () => undefined,
         ),
+        readdir(outputRoot).then(files => {
+            const runtimeFiles = files.filter(file => /^workbox-.*\.js$/.test(file));
+
+            if (runtimeFiles.length > 0) {
+                throw new Error(
+                    `The Workbox runtime must be inlined, found: ${runtimeFiles.join(', ')}.`,
+                );
+            }
+        }),
     ]).then(() => {
         if (serviceWorker.includes('sw-kill.js')) {
             throw new Error('The kill-switch sw-kill.js must not be precached by the app worker.');
         }
+        if (/\bimportScripts\s*\(/.test(serviceWorker)) {
+            throw new Error('sw-app.js must not importScripts: the Workbox runtime is inlined.');
+        }
     });
 
-// Both registrations (`virtual:pwa-register` through workbox-window, and the manual one) must
-// register `/sw.js` with scope `/` in the built bundle; the quote style is the minifier's. The
-// source scan `scripts/sw-registration-sites.test.mjs` forbids any other call site.
+// The single registration (`useRegisterSW` of `virtual:pwa-register/react`, through workbox-window,
+// spec 04 §2.11) must register `/sw.js` with scope `/` in the built bundle; the quote style is the
+// minifier's. The source scan `scripts/sw-registration-sites.test.mjs` forbids any other call site.
 const QUOTE = '["\'`]';
 const SW_ARGUMENTS = `${QUOTE}/sw\\.js${QUOTE},\\{scope:${QUOTE}/${QUOTE}`;
 const REQUIRED_REGISTRATIONS = [
     ['virtual:pwa-register', new RegExp(`new [\\w$]+\\(${SW_ARGUMENTS}`)],
-    ['the manual registration', new RegExp(`serviceWorker\\.register\\(${SW_ARGUMENTS}\\}\\)`)],
 ];
 
 const verifyRegistrationUrls = () => {

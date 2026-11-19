@@ -7,11 +7,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 import { resolveAppVersionInfo } from '../../scripts/version-resolver.mjs';
 
-import {
-    addPublicDirectoryAliases,
-    runPrerenderPublic,
-} from './scripts/prerender-before-workbox.mjs';
-import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
+import { buildPwaOptions } from './pwa.config.ts';
 import { shouldUploadSourcemaps } from './scripts/sentry-sourcemaps.ts';
 import { swAppPlugin } from './scripts/sw-app-plugin.ts';
 
@@ -126,6 +122,8 @@ export default defineConfig(({ mode }) => {
     };
 
     return {
+        // The app is served from the host root (spec 04 §2.11: `buildBase` and the SW scope are `/`).
+        base: '/',
         define: {
             __APP_VERSION__: JSON.stringify(appVersion),
             'import.meta.env.VITE_SENTRY_ENABLED': JSON.stringify(sentryBuildConfig.enabled),
@@ -137,93 +135,7 @@ export default defineConfig(({ mode }) => {
             svgr(),
             react(),
             tsconfigPaths(),
-            VitePWA({
-                // Run SSG after Vite writes client assets, before Workbox scans dist.
-                // This prevents missing localized pages and stale root HTML revisions.
-                integration: {
-                    beforeBuildServiceWorker: runPrerenderPublic,
-                },
-                registerType: 'prompt', // or autoUpdate
-                injectRegister: false,
-
-                manifest: {
-                    name: pwaAppName,
-                    short_name: pwaAppName,
-                    description: 'Share expenses without stress',
-                    theme_color: '#3e9b4f',
-                    display: 'standalone',
-                    // DEEP LINKING PARAMS
-                    start_url: '/',
-                    scope: '/',
-                    id: '/',
-
-                    icons: [
-                        {
-                            src: '/pwa-64x64.png',
-                            sizes: '64x64',
-                            type: 'image/png',
-                        },
-                        {
-                            src: '/apple-touch-icon-180x180.png',
-                            sizes: '180x180',
-                            type: 'image/png',
-                        },
-                        {
-                            src: '/pwa-192x192.png',
-                            sizes: '192x192',
-                            type: 'image/png',
-                        },
-                        {
-                            src: '/pwa-512x512.png',
-                            sizes: '512x512',
-                            type: 'image/png',
-                        },
-                        {
-                            src: '/maskable-icon-512x512.png',
-                            sizes: '512x512',
-                            type: 'image/png',
-                            purpose: 'maskable',
-                        },
-                        {
-                            src: '/favicon.ico',
-                            sizes: '48x48',
-                            type: 'image/x-icon',
-                        },
-                        {
-                            src: '/favicon.svg',
-                            sizes: 'any',
-                            type: 'image/svg+xml',
-                        },
-                    ],
-                },
-                includeManifestIcons: true,
-
-                workbox: {
-                    globPatterns: ['**/*.{js,css,html,svg,png,webp,ico}'],
-                    // Canonical public URLs omit index.html and often the slash.
-                    // Precache both URL variants so offline navigation resolves.
-                    manifestTransforms: [addPublicDirectoryAliases],
-                    // Serve the noindex SPA shell for service-worker navigation fallback.
-                    navigateFallback: 'app.html',
-                    // Only explicitly private SPA paths may use offline app.html.
-                    // All public URLs use exact precache entries, and unknown URLs retain 404.
-                    navigateFallbackAllowlist: PRIVATE_SPA_NAVIGATION_ALLOWLIST,
-                    // The legacy-host kill-switch is never precached (04-4a1); the first entry is
-                    // the Workbox default that an explicit list would otherwise drop.
-                    globIgnores: ['**/node_modules/**/*', 'sw-kill.js'],
-                    sourcemap: false,
-                    cleanupOutdatedCaches: true,
-                    clientsClaim: true,
-                    skipWaiting: false,
-                },
-
-                devOptions: {
-                    enabled: false,
-                    navigateFallback: 'index.html',
-                    suppressWarnings: true,
-                    type: 'module',
-                },
-            }),
+            VitePWA(buildPwaOptions({ appName: pwaAppName })),
             // After VitePWA: renames dist/sw.js to dist/sw-app.js once the worker is written (04-4a1).
             swAppPlugin(),
             ...(sentryUploadConfig

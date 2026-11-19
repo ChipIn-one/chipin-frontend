@@ -36,6 +36,7 @@ const I18N_NAMESPACES = [
     'friends',
     'skeletons',
     'meta',
+    'pwa',
 ] as const;
 
 /** Settles once the initial language and the fallback were read; a failed namespace shows `en` or keys. */
@@ -50,7 +51,7 @@ const i18nReady = i18n
         supportedLngs: SUPPORTED_LOCALES,
         nonExplicitSupportedLngs: false,
         load: 'languageOnly',
-        // The initial language and the fallback (13 namespaces each) load in one wave.
+        // The initial language and the fallback (14 namespaces each) load in one wave.
         maxParallelReads: 32,
 
         ns: [...I18N_NAMESPACES],

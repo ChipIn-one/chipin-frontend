@@ -6,6 +6,8 @@ import { Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
 import { RestoreGate } from 'app/providers/RestoreGate';
+import { ServiceWorkerSafePoints } from 'app/pwa/ServiceWorkerSafePoints';
+import { UpdateRequiredScreen } from 'app/pwa/UpdateRequiredScreen';
 import { AddExpenseModal } from 'features/add-expense';
 import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
@@ -13,7 +15,6 @@ import GlobalHooks from 'pages/GlobalHooks';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PageLoader from 'basics/PageLoader';
-import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import { Header } from 'components/Header';
@@ -48,7 +49,8 @@ const RootLayout = () => {
                     <AddExpenseButton />
                     <AddExpenseModal />
                 </RestoreGate>
-                <PWABadge />
+                {/* The SW registration itself is in root.tsx: once per page, not per user. */}
+                <ServiceWorkerSafePoints />
 
                 <Toaster
                     theme={isThemeDark(resolvedTheme) ? 'dark' : 'light'}
@@ -67,6 +69,7 @@ const RootLayout = () => {
                 />
             </BackendUnavailableGate>
             <EarlySupporterPromoModal />
+            <UpdateRequiredScreen />
         </BackgroundBox>
     );
 };

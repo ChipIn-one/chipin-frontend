@@ -1,0 +1,14 @@
+{
+  "update": {
+    "available": "New version available",
+    "action": "Update",
+    "later": "Later"
+  },
+  "updateRequired": {
+    "title": "App update required",
+    "description": "This version of ChipIn is out of date. Update the app to keep going: your unsent changes are kept.",
+    "action": "Update",
+    "checking": "Looking for the update…",
+    "notPublished": "The update has not been published yet, try again later"
+  }
+}

@@ -6,6 +6,7 @@ const boot = vi.hoisted(() => ({
     createRoot: vi.fn(() => ({ render: vi.fn() })),
     hydrateRoot: vi.fn(),
     startCacheRestore: vi.fn(),
+    startExpenseDraftReload: vi.fn(),
     syncHtmlLang: vi.fn(),
     i18n: {},
     // What the i18n init promise does in a test; a rejection is set per test.
@@ -38,7 +39,10 @@ vi.mock('helpers/setAppLanguage', () => ({ applyLanguage: boot.applyLanguage }))
 vi.mock('i18n/htmlLang', () => ({ syncHtmlLang: boot.syncHtmlLang }));
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 vi.mock('@vercel/speed-insights/react', () => ({ SpeedInsights: () => null }));
-vi.mock('basics/PWABadge', () => ({ default: () => null }));
+vi.mock('app/pwa/ServiceWorkerManager', () => ({ ServiceWorkerManager: () => null }));
+vi.mock('app/pwa/expenseDraftReload', () => ({
+    startExpenseDraftReload: boot.startExpenseDraftReload,
+}));
 vi.mock('styles/index.css', () => ({}));
 
 const bootOn = async (
@@ -298,3 +302,23 @@ test.each(['https://app.chipin.one/dashboard', 'https://chipin-git-x.vercel.app/
         expect(replace).not.toHaveBeenCalled();
     },
 );
+
+// Spec 04 §2.11 item 4 (04-2d): the app branch restores a draft saved before a reload and registers
+// its save; the public pages have no expense modal and never touch it.
+test('the app branch starts the expense draft reload before it renders, the public branch does not', async () => {
+    await bootOn('https://app.chipin.one/dashboard', { publicSsg: false });
+
+    await vi.waitFor(() => {
+        expect(boot.createRoot).toHaveBeenCalledOnce();
+    });
+    expect(boot.startExpenseDraftReload).toHaveBeenCalledOnce();
+
+    vi.resetModules();
+    boot.startExpenseDraftReload.mockClear();
+    await bootOn('https://app.chipin.one/ru/privacy', { publicSsg: true });
+
+    await vi.waitFor(() => {
+        expect(boot.hydrateRoot).toHaveBeenCalledOnce();
+    });
+    expect(boot.startExpenseDraftReload).not.toHaveBeenCalled();
+});

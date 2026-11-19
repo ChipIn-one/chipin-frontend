@@ -45,6 +45,15 @@ first). Off, the outbox modules are loaded but inert: nothing of the outbox is
 started, read or written, and no lock, channel or page listener is created
 (only `clearUserData` deletes its keys, as before).
 
+`VITE_FEATURE_UPDATE_REQUIRED` turns on the blocking "App update required"
+screen (spec 04 §2.11 item 4) only when it is exactly `true`; it is unset (off)
+in every environment until 03-20 enables it together with BE-03-5. On,
+`showUpdateRequired()` closes the outbox gate with the reason `outdated` (the
+outbox is kept and sent by the updated version) and shows the screen, whose
+button activates a waiting service worker or says the update is not published
+yet. Off, `showUpdateRequired()` does nothing; only the update policy (toast,
+forced update after 24 h at a safe point) is active.
+
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.
 

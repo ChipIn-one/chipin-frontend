@@ -5,13 +5,23 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode, refreshApiAuthTokens } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
-import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
+import {
+    LS_KEY_AUTH_SESSION_HINT,
+    LS_KEY_USER,
+    SS_KEY_EXPENSE_DRAFT,
+} from 'constants/localstorage';
 import {
     AuthSessionPersistenceError,
     establishAuthSession,
     setAccessTokenRefreshListener,
 } from 'helpers/authSession';
-import { getLocalUser, getTabUserId, LocalStorage, saveLocalUser } from 'helpers/localStorage';
+import {
+    getLocalUser,
+    getTabUserId,
+    LocalStorage,
+    saveLocalUser,
+    SessionStorage,
+} from 'helpers/localStorage';
 import { outboxKeys, queryCacheKey } from 'shared/offline/constants';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 
@@ -93,6 +103,7 @@ const signInX = async (): Promise<void> => {
         ownerId: USER_X,
     });
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
+    SessionStorage.setRaw(SS_KEY_EXPENSE_DRAFT, '{"v":1,"userId":"user-x"}');
 };
 
 const expectDraftReset = (): void => {
@@ -101,6 +112,8 @@ const expectDraftReset = (): void => {
         groupId: '',
         ownerId: null,
     });
+    // Spec 04 §2.11 item 4 (04-2d): a draft saved for an app reload goes with it.
+    expect(SessionStorage.getRaw(SS_KEY_EXPENSE_DRAFT)).toBeNull();
 };
 
 const expectDraftKept = (): void => {
