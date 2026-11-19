@@ -2,22 +2,20 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-router-dom';
 
+import { requireSession } from 'app/auth/requireSession';
 import { PUBLIC_ROUTE_ENTRIES, type PublicPage } from 'constants/publicRoutes';
 import { ROUTES } from 'constants/routes';
-import {
-    HomeRouteGuard,
-    ProtectedRoute,
-    PublicLocaleRoute,
-    SoloRouteGuard,
-} from 'features/routing';
+import { GuardLoader, HomeRouteGuard, PublicLocaleRoute } from 'features/routing';
 
 import PageLoader from 'basics/PageLoader';
 
-import { InternalLayout } from './InternalLayout';
+import { AuthLayout } from './AuthLayout';
+import { BareLayout, InternalLayout } from './InternalLayout';
 import { RethrowRouteError } from './RethrowRouteError';
 import { RootLayout } from './RootLayout';
 import { APP_ROUTES, type AppRouteDef, type AppRouteId } from './routeManifest';
 import { ROUTE_MODULES } from './routeModules';
+import { SoloGuardLayout, soloGuardLoader } from './SoloGuardLayout';
 
 // The transitional public ids (spec 04 §2.2) by the public page they render, until 04-5a.
 const TRANSITIONAL_ROUTE_IDS: Record<PublicPage, AppRouteId> = {
@@ -46,7 +44,7 @@ const internalRoutes = APP_ROUTES.filter(route => route.layout === 'internal');
 // `<Outlet/>`, as the `<Suspense fallback={<PageLoader/>}>` around `<Routes>` did before.
 const withPageFallback = (route: RouteObject): RouteObject => ({
     ...route,
-    hydrateFallbackElement: <PageLoader />,
+    hydrateFallbackElement: route.hydrateFallbackElement ?? <PageLoader />,
 });
 
 const publicLocaleRoutes = (): RouteObject[] =>
@@ -68,10 +66,11 @@ const publicLocaleRoutes = (): RouteObject[] =>
     });
 
 /**
- * The app route tree (spec 04 §2.3), 1:1 with the former `AppRouter`. Guards are still the
- * component guards; `queryClient` is for the guard loaders of 04-2a2b (no loaders yet, D31).
+ * The app route tree (spec 04 §2.3), 1:1 with the former `AppRouter`. The protected routes sit under
+ * `AuthLayout` (loader `requireSession`), Solo also under `SoloGuardLayout`; `queryClient` is the
+ * client of this router (one router per user client, `AppRouterProvider`).
  */
-const buildAppRoutes = (_queryClient: QueryClient): RouteObject[] => [
+const buildAppRoutes = (queryClient: QueryClient): RouteObject[] => [
     {
         path: '/',
         element: <RootLayout />,
@@ -81,27 +80,32 @@ const buildAppRoutes = (_queryClient: QueryClient): RouteObject[] => [
             ...publicLocaleRoutes(),
             ...byLayout('public', 'bare').map(leaf),
             {
-                element: (
-                    <ProtectedRoute>
-                        <Outlet />
-                    </ProtectedRoute>
-                ),
-                children: byLayout('protected', 'bare').map(leaf),
-            },
-            {
-                element: <InternalLayout />,
-                children: internalRoutes.map(route =>
-                    route.guard === 'solo'
-                        ? {
-                              element: (
-                                  <SoloRouteGuard>
-                                      <Outlet />
-                                  </SoloRouteGuard>
-                              ),
-                              children: [leaf(route)],
-                          }
-                        : leaf(route),
-                ),
+                id: 'auth',
+                element: <AuthLayout />,
+                loader: requireSession,
+                // While the loader waits for the session (up to 5 s): offline the banner with its
+                // Retry above the loader, as `AuthLayout` shows after; online the same PageLoader.
+                hydrateFallbackElement: <GuardLoader />,
+                // Until 04-2a3 (`RouteErrorView`): on to the root boundary and Sentry, as before.
+                errorElement: <RethrowRouteError />,
+                children: [
+                    {
+                        element: <BareLayout />,
+                        children: byLayout('protected', 'bare').map(leaf),
+                    },
+                    {
+                        element: <InternalLayout />,
+                        children: internalRoutes.map(route =>
+                            route.guard === 'solo'
+                                ? {
+                                      element: <SoloGuardLayout />,
+                                      loader: soloGuardLoader(queryClient),
+                                      children: [leaf(route)],
+                                  }
+                                : leaf(route),
+                        ),
+                    },
+                ],
             },
             { path: '*', element: <Navigate to={ROUTES.NOT_FOUND_404} /> },
         ].map(withPageFallback),
