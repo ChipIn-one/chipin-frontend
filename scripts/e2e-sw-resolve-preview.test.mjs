@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse } from 'yaml';
@@ -11,6 +11,7 @@ import {
     createGitHubClient,
     main,
     pickPreview,
+    readPrHeadSha,
     resolveTargetSha,
     retryTransient,
     TransientGitHubError,
@@ -442,9 +443,34 @@ describe('main', () => {
         GITHUB_TOKEN: 'test-token',
         ...overrides,
     });
+    const prEvent = (sha = SHA) => {
+        const path = join(mkdtempSync(join(tmpdir(), 'e2e-sw-event-')), 'event.json');
+        writeFileSync(path, JSON.stringify({ pull_request: { head: { sha } } }));
+        return path;
+    };
+
+    test('reads the pull request head from the event payload, only on pull_request', async () => {
+        await expect(
+            readPrHeadSha({ EVENT_NAME: 'pull_request', GITHUB_EVENT_PATH: prEvent() }),
+        ).resolves.toBe(SHA);
+        await expect(readPrHeadSha({ EVENT_NAME: 'pull_request' })).rejects.toThrow(
+            /GITHUB_EVENT_PATH/,
+        );
+        const readEvent = vi.fn();
+        await expect(
+            readPrHeadSha({ EVENT_NAME: 'workflow_dispatch', GITHUB_EVENT_PATH: 'x' }, readEvent),
+        ).resolves.toBeUndefined();
+        expect(readEvent).not.toHaveBeenCalled();
+    });
+
+    test('the workflow passes no pull request head expression to the resolver', () => {
+        expect(readFileSync('.github/workflows/e2e-sw.yml', 'utf8')).not.toMatch(
+            /PR_HEAD_SHA|pull_request\.head\.sha/,
+        );
+    });
 
     test('resolves the pull request head and its Preview through the GitHub API', async () => {
-        const vars = env({ EVENT_NAME: 'pull_request', PR_HEAD_SHA: SHA });
+        const vars = env({ EVENT_NAME: 'pull_request', GITHUB_EVENT_PATH: prEvent() });
         await expect(main({ env: vars, fetchImpl: deploymentsApi() })).resolves.toEqual({
             sha: SHA,
             url: PREVIEW,
@@ -504,7 +530,7 @@ describe('main', () => {
     test('ignores PREVIEW_URL on pull_request', async () => {
         const vars = env({
             EVENT_NAME: 'pull_request',
-            PR_HEAD_SHA: SHA,
+            GITHUB_EVENT_PATH: prEvent(),
             PREVIEW_URL: 'https://app.chipin.one',
         });
         await expect(main({ env: vars, fetchImpl: deploymentsApi() })).resolves.toEqual({
@@ -520,13 +546,6 @@ describe('e2e-sw workflow', () => {
     const { resolve, 'e2e-sw': e2e } = workflow.jobs;
     const allSteps = [...resolve.steps, ...e2e.steps];
     const minutes = job => job.steps.reduce((sum, step) => sum + step['timeout-minutes'], 0);
-
-    test('runs a manual run only for the owner and skips fork pull requests, in both jobs', () => {
-        const guard =
-            "(github.event_name == 'workflow_dispatch' && github.actor == 'syllik' && github.triggering_actor == 'syllik') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)";
-        expect(resolve.if).toBe(guard);
-        expect(e2e.if).toBe(guard);
-    });
 
     test('runs on pull requests into master for the service worker paths and by hand', () => {
         expect(Object.keys(workflow.on)).toEqual(['pull_request', 'workflow_dispatch']);

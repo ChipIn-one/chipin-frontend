@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { appendFile } from 'node:fs/promises';
+import { appendFile, readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -8,7 +8,8 @@ import { promisify } from 'node:util';
 // workflow's own ref (`github.sha`; on a pull request that is its merge commit), never from a
 // dispatched commit, and is the only place that holds the GitHub token. It picks the commit to test and finds the Vercel Preview built from it, then
 // writes both as the step outputs `sha` and `url`:
-// - `pull_request`: the pull request head.
+// - `pull_request`: the pull request head, read from the event payload (`GITHUB_EVENT_PATH`), not
+//   passed in through a workflow expression.
 // - `workflow_dispatch`: a pull request number (its head must be in this repository) or a full SHA
 //   (it must be reachable from a branch of this repository, so a fork's commit is refused, and have
 //   a Preview: every pull request branch and `master` commit gets one).
@@ -301,8 +302,24 @@ export const createBranchCheck =
             () => false,
         );
 
+const readEventFile = async path => JSON.parse(await readFile(path, 'utf8'));
+
+/** The pull request head SHA from the event payload of a `pull_request` run, else undefined. */
+export const readPrHeadSha = async (env, readEvent = readEventFile) => {
+    if (env.EVENT_NAME !== 'pull_request') {
+        return undefined;
+    }
+    if (!env.GITHUB_EVENT_PATH) {
+        throw new Error('GITHUB_EVENT_PATH is required on pull_request.');
+    }
+    const event = await readEvent(env.GITHUB_EVENT_PATH);
+    const sha = event?.pull_request?.head?.sha;
+    return typeof sha === 'string' ? sha : undefined;
+};
+
 export const main = async ({
     env = process.env,
+    readEvent = readEventFile,
     fetchImpl = fetch,
     sleep = delay,
     git = runGit,
@@ -318,7 +335,7 @@ export const main = async ({
     });
     const sha = await resolveTargetSha({
         eventName: env.EVENT_NAME,
-        prHeadSha: env.PR_HEAD_SHA,
+        prHeadSha: await readPrHeadSha(env, readEvent),
         target: env.INPUT_TARGET,
         repository: github.repository,
         readPull: number => retryTransient(() => github.readPull(number), { sleep, log }),
