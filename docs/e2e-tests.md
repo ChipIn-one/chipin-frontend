@@ -99,9 +99,12 @@ Five projects (`playwright.config.ts`): `chromium` (`Desktop Chrome`), `firefox`
 
 ## Failures caused by staging
 
-The suite runs against the shared staging API and deliberately has no retries, so a real flake stays visible. A staging outage therefore fails tests too. The `signIn` fixture records every `5xx` answer to `/api` in each user's context (method, path without the query string, status and time; `e2e/support/serverErrors.ts`); when such a test fails, it gets a `staging-5xx` annotation and a `staging-5xx.txt` attachment, and the log has a line `[e2e] staging API answered 5xx during this test …` naming the requests. A passing test reports nothing.
+The suite runs against the shared staging API and deliberately has no retries, so a real flake stays visible. A staging outage therefore fails tests too. The `signIn` fixture records, in each user's context, every `5xx` answer to the app origin's `/api` and every `/api` request that got no answer (`e2e/support/serverErrors.ts`): method, path, status or error text, and time. The path has no query string, and every segment that is not a short lowercase word is replaced with `{id}` (a UUID) or `{token}`, so invite tokens and ids never reach the log. When such a test fails, it gets an `api-errors` annotation and an `api-errors.txt` attachment, and the log has a line `[e2e] API answered 5xx or failed during this test: …` naming the requests. A passing test reports nothing.
 
-Such a failure is a staging outage window, not the test's assertion. Seen on 2026-11-18 (runs 44336094806 and 44397956408, attempt 1): Cloudflare answered `502` to the cold-start `POST /api/auth/refresh` of a freshly opened context, in both workers at once; the app then showed the backend-down dialog ("ChipIn will be back shortly") or the signed-out landing, and the test timed out waiting for the group page (#778). Rerun the workflow.
+Read the statuses before rerunning:
+
+- `502`, `503`, `504` or a request with no answer point to a staging outage window, not to the test's assertion. Seen on 2026-11-18 (runs 44336094806 and 44397956408, attempt 1): Cloudflare answered `502` to the cold-start `POST /api/auth/refresh` of a freshly opened context, in both workers at once; the app then showed the backend-down dialog ("ChipIn will be back shortly") or the signed-out landing, and the test timed out waiting for the group page (#778). Rerun the workflow.
+- A `500` on the test's own write (an expense, a settlement, a join) is a bug to investigate, not one to rerun away.
 
 The offline banner flake (#746) was a bug in the app, fixed by #749: a response to a request sent before going offline no longer marks the app online again.
 
