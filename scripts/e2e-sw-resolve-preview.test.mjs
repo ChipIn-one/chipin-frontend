@@ -521,6 +521,13 @@ describe('e2e-sw workflow', () => {
     const allSteps = [...resolve.steps, ...e2e.steps];
     const minutes = job => job.steps.reduce((sum, step) => sum + step['timeout-minutes'], 0);
 
+    test('runs a manual run only for the owner and skips fork pull requests, in both jobs', () => {
+        const guard =
+            "(github.event_name == 'workflow_dispatch' && github.actor == 'syllik' && github.triggering_actor == 'syllik') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)";
+        expect(resolve.if).toBe(guard);
+        expect(e2e.if).toBe(guard);
+    });
+
     test('runs on pull requests into master for the service worker paths and by hand', () => {
         expect(Object.keys(workflow.on)).toEqual(['pull_request', 'workflow_dispatch']);
         expect(workflow.on.pull_request.branches).toEqual(['master']);

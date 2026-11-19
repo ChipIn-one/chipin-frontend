@@ -52,8 +52,10 @@ jobs:
   # `contents: read`.
   resolve:
     name: resolve the Preview
-    # Vercel builds no Preview for a fork pull request, so there is nothing to test there.
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    # Vercel builds no Preview for a fork pull request, so there is nothing to test there. A manual
+    # run checks out a dispatched commit in the default-branch context, so only the owner may start
+    # one (the same guard as prepare-release-qa.yml).
+    if: (github.event_name == 'workflow_dispatch' && github.actor == 'syllik' && github.triggering_actor == 'syllik') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
@@ -102,6 +104,7 @@ jobs:
   e2e-sw:
     name: e2e-sw
     needs: resolve
+    if: (github.event_name == 'workflow_dispatch' && github.actor == 'syllik' && github.triggering_actor == 'syllik') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
