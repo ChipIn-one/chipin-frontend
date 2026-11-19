@@ -450,3 +450,45 @@ test('queuedGroupIds: the groups of pending and failed ops; not a personal op, n
     expect(result.current.unreadableCount).toBe(1);
     expect([...result.current.queuedGroupIds].sort()).toEqual(['group-failed', 'group-pending']);
 });
+
+test('03-16b conflict drafts: listed, counted with the ops (badge, limit), their group queued', async () => {
+    await set(
+        outboxStateKey('user-1'),
+        persistCodec.stringify({
+            nextSeq: 1,
+            ops: [],
+            versions: {},
+            cancelled: [],
+            retryRequested: [],
+            sending: null,
+            conflictDrafts: {
+                'entry-d': {
+                    entryId: 'entry-d',
+                    groupId: 'group-draft',
+                    parentActivityId: 'activity-d',
+                    fields: { description: 'Mine', category: 'food' },
+                    createdAt: 3,
+                },
+            },
+        }),
+    );
+    await startOutbox();
+    onlineManager.setOnline(false);
+    const { result } = renderHook(useOutboxOverlay);
+
+    await waitFor(() => {
+        expect(result.current.restore).toBe('ok');
+    });
+    expect(result.current.conflictDrafts).toEqual([
+        {
+            entryId: 'entry-d',
+            groupId: 'group-draft',
+            parentActivityId: 'activity-d',
+            description: 'Mine',
+            createdAt: 3,
+        },
+    ]);
+    expect([...result.current.conflictDraftEntryIds]).toEqual(['entry-d']);
+    expect(result.current.count).toBe(1);
+    expect([...result.current.queuedGroupIds]).toEqual(['group-draft']);
+});

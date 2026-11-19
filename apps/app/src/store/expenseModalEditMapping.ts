@@ -4,7 +4,7 @@ import type {
     ExpenseActivityEvent,
     ExpenseActivityShare,
 } from 'entities/activity';
-import type { ExpenseDraftSharingMode } from 'entities/ledger';
+import type { ExpenseDraftSharingMode, ExpensePatch } from 'entities/ledger';
 import { canonicalDecimal } from 'entities/ledger';
 import { getActivitySubeventsView } from 'helpers/activityEvent';
 import { type Money, moneyInputText } from 'shared/money';
@@ -358,5 +358,61 @@ export const mapActivityExpenseToModalState = ({
                 sharingMode,
             ),
         },
+    };
+};
+
+/**
+ * Spec 03 §2.6 (03-16b): the edit form of an expense with a conflict draft opens on the expense as
+ * it is now with the draft's changed fields applied on top. The original stays the expense as it
+ * is now, so Save sends the draft's fields (and anything changed since) as an ordinary edit.
+ */
+export const applyExpensePatchToEdit = (
+    initialization: ExpenseModalEditInitialization,
+    patch: ExpensePatch,
+): ExpenseModalEditInitialization => {
+    const next: ExpenseModalEditInitialization = {
+        ...initialization,
+        ...(patch.description !== undefined && { description: patch.description ?? '' }),
+        ...(patch.category !== undefined && { category: patch.category ?? '' }),
+        ...(patch.payerId !== undefined && { paidById: patch.payerId }),
+        ...(patch.currency !== undefined && { currency: patch.currency }),
+        ...(patch.amount !== undefined && {
+            amount: moneyInputText(patch.amount),
+            currency: patch.amount.currency,
+        }),
+    };
+    const participantIds = patch.participantIds && new Set(patch.participantIds);
+    const includedParticipantIds = participantIds
+        ? Object.fromEntries(
+              [...new Set([...Object.keys(next.includedParticipantIds), ...participantIds])].map(
+                  id => [id, participantIds.has(id)],
+              ),
+          )
+        : next.includedParticipantIds;
+
+    if (!patch.sharingMode) {
+        return { ...next, includedParticipantIds };
+    }
+    const splitMode = getSplitMode(patch.sharingMode);
+    const texts = getModeTexts(patch.sharingMode);
+
+    return {
+        ...next,
+        includedParticipantIds,
+        splitMode,
+        percentShares:
+            splitMode === EXPENSE_SPLIT_MODES.PERCENT
+                ? { ...next.percentShares, ...texts }
+                : next.percentShares,
+        amountShares:
+            splitMode === EXPENSE_SPLIT_MODES.AMOUNTS
+                ? { ...next.amountShares, ...texts }
+                : next.amountShares,
+        shareWeights:
+            splitMode === EXPENSE_SPLIT_MODES.SHARES
+                ? { ...next.shareWeights, ...texts }
+                : next.shareWeights,
+        isPercentManuallyEdited:
+            splitMode === EXPENSE_SPLIT_MODES.PERCENT || next.isPercentManuallyEdited,
     };
 };

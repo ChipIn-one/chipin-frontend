@@ -1,7 +1,10 @@
 // The outbox count of users for the sign-out confirm and the account-switch dialog (spec 03 §1.5,
 // 03-16a part C). The auth store is on the landing path: the reader (zod, the persist codec) is
 // loaded only when a count is asked for, which happens only with offline writes on.
-/** Pending, failed and unreadable records of `userId` in IndexedDB; rejects when unreadable. */
+/**
+ * Pending, failed and unreadable records and conflict drafts of `userId` in IndexedDB; rejects when
+ * unreadable.
+ */
 export const readOutboxCount = (userId: string): Promise<number> =>
     import('./outboxStore').then(({ readOutboxRecordCount }) => readOutboxRecordCount(userId));
 

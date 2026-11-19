@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react';
 import { create } from 'zustand';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
+import { clearUndeliveredConflictNotices } from 'entities/ledger';
 import {
     AuthSessionExpiredError,
     AuthSessionPersistenceError,
@@ -40,6 +41,7 @@ import {
     UNAUTH_REASON,
     type UnauthReason,
 } from './authConstants';
+import { useConflictDraftStore } from './conflictDraftStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { loadGroupsListForSession } from './groupsList';
 import { useOutboxSheetStore } from './outboxSheetStore';
@@ -91,11 +93,14 @@ const moveLocalUser = (nextUserId: string | null): void => {
     }
 };
 
-// Step (2a) of `clearUserData`: the legacy stores, the expense draft and the open `OutboxSheet`.
+// Step (2a) of `clearUserData`: the legacy stores, the expense draft, the open `OutboxSheet` and a
+// conflict draft's reopening (03-16b).
 const resetUserStores = () => {
     resetAuthScopedStores();
     useExpenseModalStore.getState().reset();
     useOutboxSheetStore.getState().setIsOpen(false);
+    useConflictDraftStore.getState().reset();
+    clearUndeliveredConflictNotices();
 };
 
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).

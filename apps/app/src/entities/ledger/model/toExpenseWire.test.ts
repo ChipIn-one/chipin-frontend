@@ -3,7 +3,12 @@ import { describe, expect, test } from 'vitest';
 import { stringifyWireJson } from 'shared/api/wireJson';
 import { currencyCode, fromUnits, MoneyWireError } from 'shared/money';
 
-import { canonicalDecimal, toCreateLedgerEntryWire, toExpensePatchWire } from './toExpenseWire';
+import {
+    canonicalDecimal,
+    fromExpensePatchWire,
+    toCreateLedgerEntryWire,
+    toExpensePatchWire,
+} from './toExpenseWire';
 import type { ExpenseDraft } from './types';
 
 const usd = (units: bigint) => fromUnits(units, currencyCode('USD'));
@@ -81,5 +86,30 @@ describe('toExpensePatchWire', () => {
             ),
         ).toBe('["description","category","amount","participantIds","sharingMode"]');
         expect(toExpensePatchWire({})).toEqual({});
+    });
+});
+
+describe('03-16b fromExpensePatchWire (a conflict draft read back)', () => {
+    test('round trip: amounts through the wire mappers only, in the patch currency or the fallback', () => {
+        const patch = {
+            description: 'Mine',
+            amount: usd(2_500n),
+            sharingMode: {
+                type: 'EXACT' as const,
+                customShares: { 'user-1': usd(1_250n), 'user-2': usd(1_250n) },
+            },
+        };
+        const wire = toExpensePatchWire(patch);
+
+        expect(fromExpensePatchWire(wire, 'USD')).toEqual(patch);
+        expect(fromExpensePatchWire(toExpensePatchWire({ currency: 'EUR' }), 'USD')).toEqual({
+            currency: 'EUR',
+        });
+    });
+
+    test('fields that are not a readable patch: null', () => {
+        expect(fromExpensePatchWire({ amount: 12 }, 'USD')).toBeNull();
+        expect(fromExpensePatchWire('not fields', 'USD')).toBeNull();
+        expect(fromExpensePatchWire({ description: 'x' }, 'not a currency')).toBeNull();
     });
 });

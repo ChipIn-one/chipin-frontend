@@ -4,6 +4,7 @@ import { matchPath, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
+import { discardConflictDraft, reportConflictDraftFailure } from 'entities/ledger';
 import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { useGroups } from 'hooks/useGroupsList';
 import { useKnownUsers } from 'hooks/useKnownUsers';
@@ -13,6 +14,7 @@ import {
     useUpdateExpense,
 } from 'hooks/useLedgerMutations';
 import { useSelfUser, useUserSetting } from 'hooks/useSelfUser';
+import { useConflictDraftStore } from 'store/conflictDraftStore';
 import { selectExpensePayload, selectIsSubmitDisabled } from 'store/expenseModalSelectors';
 import { type ExpenseModalSource, useExpenseModalStore } from 'store/expenseModalStore';
 import { buildExpenseUpdateParams } from 'store/expenseModalUpdate';
@@ -134,19 +136,38 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
         };
 
         if (state.mode === 'edit' && state.editContext) {
+            const { entryId } = state.editContext;
             const update = buildExpenseUpdateParams(state.editContext.original, params);
+            // §2.6: the form opened on a conflict draft. A queued edit replaces the draft in its
+            // own append write (`replacesConflictDraft`); an edit answered online (or nothing left
+            // to change) removes it after.
+            const isDraft = useConflictDraftStore.getState().openedEntryId === entryId;
+            const settleDraft = (queued: boolean): void => {
+                if (isDraft) {
+                    useConflictDraftStore.getState().setOpened(null);
+                }
+                if (isDraft && !queued) {
+                    void discardConflictDraft(entryId).catch(reportConflictDraftFailure);
+                }
+            };
 
             if (!update) {
+                if (isDraft) {
+                    settleDraft(false);
+                    onClose();
+                }
                 return;
             }
 
             updateExpense({
-                entryId: state.editContext.entryId,
+                entryId,
                 entry: update,
                 groupId: state.editContext.groupId,
                 parentActivityId: state.editContext.parentActivityId,
+                replacesConflictDraft: isDraft,
             })
                 .then(({ queued }) => {
+                    settleDraft(queued);
                     onClose();
                     // A queued edit is not saved on the server yet: its toast is the outbox's (L5).
                     if (!queued) {

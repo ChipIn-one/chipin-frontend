@@ -493,7 +493,7 @@ export const adoptIfDraining = (): void => {
 /** The drain tab tells the others that an op settled (`settled`, §2.2). */
 export const announceOutboxSettled = (
     op: OutboxOpBase,
-    result: 'sent' | 'failed',
+    result: 'sent' | 'failed' | 'conflicted',
     entry: unknown,
 ): void => {
     // The run's own tab announces it, also when the lock was released while it settled.

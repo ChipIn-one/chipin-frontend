@@ -3,9 +3,17 @@
 // decimal literal of scale 4, no double); percents and weights are `WireDecimal` text. The online
 // mutations use them today; the outbox ops (`ExpenseDraftWire`/`ExpensePatchWire`, 03-15a) reuse
 // them unchanged.
+import { z } from 'zod';
+
 import type { components } from 'shared/api/generated/schema';
-import type { WireDecimal } from 'shared/money';
-import { moneyToWire, MoneyWireError } from 'shared/money';
+import type { Money, WireAmount, WireDecimal } from 'shared/money';
+import {
+    currencyCode,
+    isWireAmount,
+    moneyFromWire,
+    moneyToWire,
+    MoneyWireError,
+} from 'shared/money';
 
 import type { ExpenseDraft, ExpenseDraftSharingMode, ExpensePatch } from './types';
 
@@ -119,3 +127,82 @@ export const toExpensePatchWire = ({
     ...(participantIds !== undefined && { participantIds: [...participantIds] }),
     ...(sharingMode !== undefined && { sharingMode: toSharingModeWire(sharingMode) }),
 });
+
+const WireAmountSchema = z.custom<WireAmount>(isWireAmount);
+
+// A conflict draft's fields as stored (§2.6): read with zod, they come from IndexedDB.
+const ExpensePatchWireSchema = z.object({
+    description: z.string().nullish(),
+    currency: z.string().optional(),
+    payerId: z.string().optional(),
+    category: z.string().nullish(),
+    amount: WireAmountSchema.optional(),
+    participantIds: z.array(z.string()).optional(),
+    sharingMode: z
+        .discriminatedUnion('type', [
+            z.object({ type: z.literal('AUTO') }),
+            z.object({
+                type: z.literal('EXACT'),
+                customShares: z.record(z.string(), WireAmountSchema),
+            }),
+            z.object({
+                type: z.literal('PERCENTAGE'),
+                percentageShares: z.record(z.string(), z.string()),
+            }),
+            z.object({ type: z.literal('SHARES'), shares: z.record(z.string(), z.string()) }),
+        ])
+        .optional(),
+});
+
+const fromSharingModeWire = (
+    mode: NonNullable<z.infer<typeof ExpensePatchWireSchema>['sharingMode']>,
+    toMoney: (amount: WireAmount) => Money,
+): ExpenseDraftSharingMode => {
+    switch (mode.type) {
+        case 'AUTO':
+            return { type: 'AUTO' };
+        case 'EXACT':
+            return { type: 'EXACT', customShares: mapValues(mode.customShares, toMoney) };
+        case 'PERCENTAGE':
+            return { type: 'PERCENTAGE', percentageShares: mode.percentageShares };
+        case 'SHARES':
+            return { type: 'SHARES', shares: mode.shares };
+    }
+};
+
+/**
+ * The domain patch of a stored wire patch (a conflict draft's fields, §2.6): amounts through
+ * `moneyFromWire` in the patch's currency, else `fallbackCurrency` (the edited expense's). Null when
+ * the fields are not a readable patch.
+ */
+export const fromExpensePatchWire = (
+    fields: unknown,
+    fallbackCurrency: string,
+): ExpensePatch | null => {
+    const parsed = ExpensePatchWireSchema.safeParse(fields);
+
+    if (!parsed.success) {
+        return null;
+    }
+    const { description, currency, payerId, category, amount, participantIds, sharingMode } =
+        parsed.data;
+
+    try {
+        const code = currencyCode(currency ?? fallbackCurrency);
+        const toMoney = (value: WireAmount): Money => moneyFromWire(value, code);
+
+        return {
+            ...(description !== undefined && { description }),
+            ...(currency !== undefined && { currency: code }),
+            ...(payerId !== undefined && { payerId }),
+            ...(category !== undefined && { category }),
+            ...(amount !== undefined && { amount: toMoney(amount) }),
+            ...(participantIds !== undefined && { participantIds }),
+            ...(sharingMode !== undefined && {
+                sharingMode: fromSharingModeWire(sharingMode, toMoney),
+            }),
+        };
+    } catch {
+        return null;
+    }
+};

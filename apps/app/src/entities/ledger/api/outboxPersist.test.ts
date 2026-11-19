@@ -414,7 +414,7 @@ describe('03-15b the restore guard (§1.6, C3-02)', () => {
         );
     });
 
-    test('N2: a failed record with the interim reason conflict stays readable and blocks its entry', async () => {
+    test('N2: a failed create with the interim reason conflict stays readable and blocks its entry', async () => {
         const created = serveLedger();
         const conflict = { op: storedOp(1, 'entry-x'), reason: 'conflict', failedAt: 5 };
 
@@ -890,6 +890,7 @@ describe('03-16a part A: ledger.entry(id)', () => {
                 id: op?.entryId,
                 type: 'EXPENSE',
                 version: '1',
+                updatedAt: null,
                 groupId: null,
                 expense: null,
             }),
@@ -1018,6 +1019,7 @@ describe('03-16a part A: ledger.entry(id)', () => {
                 id: 'entry-x',
                 type: 'EXPENSE',
                 version: 'v42',
+                updatedAt: null,
                 groupId: null,
                 expense: null,
             }),

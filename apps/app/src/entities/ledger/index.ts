@@ -2,7 +2,17 @@
 // settlement create, an entry delete), the expense outbox path and its start (03-15a/b, behind
 // its flag), the expense draft and patch and the settlement draft with their wire mappers, and the
 // backend capabilities query, the cached ledger entry (`ledger.entry(id)`, 03-16a) and the outbox
-// overlay with its Retry and Cancel (03-16a part B).
+// overlay with its Retry and Cancel (03-16a part B), the conflict drafts and their notices (03-16b).
+export type { LedgerConflictNotice } from './api/conflictDrafts';
+export {
+    clearUndeliveredConflictNotices,
+    conflictDraftPatch,
+    discardConflictDraft,
+    dropDeletedConflictDraft,
+    hasConflictDraft,
+    reportConflictDraftFailure,
+    useLedgerConflictNotices,
+} from './api/conflictDrafts';
 export type {
     CreateExpenseParams,
     CreateSettlementParams,
@@ -39,6 +49,7 @@ export {
     useIsOfflineWriteAvailable,
 } from './api/outbox';
 export type {
+    ConflictDraftItem,
     FailedOutboxItem,
     OutboxItemStatus,
     OutboxOverlay,

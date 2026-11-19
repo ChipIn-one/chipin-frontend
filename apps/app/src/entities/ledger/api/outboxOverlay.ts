@@ -24,6 +24,7 @@ import {
     isRetryRequested,
     onOutboxChange,
     outboxChangeRevision,
+    outboxConflictDrafts,
     type OutboxKind,
     type OutboxOpBase,
     outboxOwner,
@@ -85,6 +86,17 @@ export interface FailedOutboxItem extends OutboxItemBase {
     readonly canRetry: boolean;
 }
 
+/** A conflict draft (§2.6): the user's changes of an expense another member changed meanwhile. */
+export interface ConflictDraftItem {
+    readonly entryId: string;
+    readonly groupId: string | null;
+    /** The expense history the form reopens in ("Open my changes"); null: not reopenable there. */
+    readonly parentActivityId: string | null;
+    /** The changed description, when the draft has one. */
+    readonly description: string | null;
+    readonly createdAt: number;
+}
+
 export interface OutboxOverlay {
     /** This tab's `outboxRestore` (§1.6); `off` with the flag off or no outbox owner. */
     readonly restore: OutboxRestore | 'off';
@@ -93,7 +105,14 @@ export interface OutboxOverlay {
     readonly failed: readonly FailedOutboxItem[];
     /** Failed records this build cannot read (a newer app's): kept, never sent, no action. */
     readonly unreadableCount: number;
-    /** Pending, failed and unreadable records (what the limit counts): the badge and the counter. */
+    /** §2.6, by `createdAt`. */
+    readonly conflictDrafts: readonly ConflictDraftItem[];
+    /** The entries with a conflict draft: their Edit opens the form on the draft. */
+    readonly conflictDraftEntryIds: ReadonlySet<string>;
+    /**
+     * Pending, failed and unreadable records and the conflict drafts (what the limit counts): the
+     * badge and the counter.
+     */
     readonly count: number;
     readonly pendingCreates: ReadonlySet<string>;
     readonly pendingUpdatesByEntryId: ReadonlyMap<string, number>;
@@ -101,8 +120,8 @@ export interface OutboxOverlay {
     readonly pendingDeletes: ReadonlySet<string>;
     readonly statusByOpId: ReadonlyMap<string, OutboxItemStatus>;
     /**
-     * The groups with a pending or failed op: a group settle-up is refused while its expenses are
-     * queued (03-16a C). Unreadable records do not count (M2): they have no action, so they would
+     * The groups with a pending or failed op or a conflict draft (03-16b: unsent user intent too): a
+     * group settle-up is refused while its expenses are queued (03-16a C). Unreadable records do not count (M2): they have no action, so they would
      * refuse it until another build sends them; the balance caption still counts them.
      */
     readonly queuedGroupIds: ReadonlySet<string>;
@@ -115,6 +134,8 @@ const EMPTY_OVERLAY: OutboxOverlay = {
     pending: [],
     failed: [],
     unreadableCount: 0,
+    conflictDrafts: [],
+    conflictDraftEntryIds: new Set(),
     count: 0,
     pendingCreates: new Set(),
     pendingUpdatesByEntryId: new Map(),
@@ -212,6 +233,13 @@ const buildOverlay = (): OutboxOverlay => {
     }));
     const pendingUpdatesByEntryId = new Map<string, number>();
     const unreadableCount = unreadableOutboxCount();
+    const conflictDrafts = outboxConflictDrafts().map((draft): ConflictDraftItem => ({
+        entryId: draft.entryId,
+        groupId: draft.groupId,
+        parentActivityId: draft.parentActivityId,
+        description: typeof draft.fields.description === 'string' ? draft.fields.description : null,
+        createdAt: draft.createdAt,
+    }));
 
     pendingOps
         .filter(op => op.kind === 'updateExpense')
@@ -227,7 +255,9 @@ const buildOverlay = (): OutboxOverlay => {
         pending,
         failed,
         unreadableCount,
-        count: pending.length + failed.length + unreadableCount,
+        conflictDrafts,
+        conflictDraftEntryIds: new Set(conflictDrafts.map(({ entryId }) => entryId)),
+        count: pending.length + failed.length + unreadableCount + conflictDrafts.length,
         pendingCreates: new Set(
             pendingOps.filter(op => op.kind === 'createExpense').map(op => op.entryId),
         ),
@@ -236,7 +266,10 @@ const buildOverlay = (): OutboxOverlay => {
             pendingOps.filter(op => op.kind === 'deleteExpense').map(op => op.entryId),
         ),
         statusByOpId,
-        queuedGroupIds: new Set(allOps.flatMap(op => groupIdOf(op) ?? [])),
+        queuedGroupIds: new Set([
+            ...allOps.flatMap(op => groupIdOf(op) ?? []),
+            ...conflictDrafts.flatMap(({ groupId }) => groupId ?? []),
+        ]),
         isStorageNotPersisted: isStoragePersisted() === false,
     };
 };

@@ -436,7 +436,13 @@ describe('03 §2.5 error classes', () => {
             '409 VERSION_CONFLICT',
             apiError(409, 'LEDGER.VERSION_CONFLICT'),
             'updateExpense',
-            { kind: 'final', reason: 'conflict' },
+            { kind: 'conflict', current: undefined },
+        ],
+        [
+            '409 VERSION_CONFLICT on a create (no version to conflict with)',
+            apiError(409, 'LEDGER.VERSION_CONFLICT'),
+            'createExpense',
+            { kind: 'final', reason: 'rejected' },
         ],
         [
             'unknown version, GET 404',
