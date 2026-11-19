@@ -21,13 +21,14 @@ export const OutboxChannelMessageSchema = z.discriminatedUnion('type', [
     /** A tab that just opened: the drain tab answers with one `status` per pending op. */
     z.object({ type: z.literal('status-request') }),
     /**
-     * The drain tab: an op settled (`sent`, or `failed` for good); `entry` is the answer (none for a
-     * delete or a failure). Receivers run the write effects (§2.2).
+     * The drain tab: an op settled (`sent`, `failed` for good, or `conflicted`, §2.6); `entry` is
+     * the answer (a conflict's `current`; none for a delete or a failure). Receivers run the write
+     * effects (§2.2).
      */
     z.object({
         type: z.literal('settled'),
         op: z.unknown(),
-        result: z.enum(['sent', 'failed']),
+        result: z.enum(['sent', 'failed', 'conflicted']),
         entry: z.unknown().optional(),
     }),
 ]);

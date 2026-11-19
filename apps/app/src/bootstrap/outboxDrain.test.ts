@@ -1228,3 +1228,40 @@ describe('03-15c2 R1', () => {
         expect(ledger.requests).toEqual([]);
     });
 });
+
+describe('03-16b two tabs: a conflict draft (§2.6, D28)', () => {
+    test('an edit appended in B conflicts in drain tab A: one request, the draft in both tabs, B refreshed; a discard in B reaches A', async () => {
+        const ledger = serveLedger();
+
+        // The server is at v5, both tabs cached v1: the edit conflicts.
+        ledger.entries.set('entry-x', 5);
+        const tabA = await openTab();
+
+        await tabA.started;
+        const tabB = await openTab();
+
+        await tabB.started;
+        [tabA, tabB].forEach(tab =>
+            tab.client.setQueryData(tab.registry.ledgerEntryKey('entry-x'), {
+                type: 'EXPENSE',
+                version: 'v1',
+            }),
+        );
+        await queueUpdate(tabB, 'entry-x');
+
+        await vi.waitFor(() => expect(tabA.store.outboxConflictDraft('entry-x')).not.toBeNull());
+        await vi.waitFor(() => expect(tabB.store.outboxConflictDraft('entry-x')).not.toBeNull());
+        await vi.waitFor(() => expect(tabB.effects.onEntryWritten).toHaveBeenCalledTimes(1));
+        expect(ledger.requests).toEqual(['PATCH entry-x If-Match "v1"']);
+        expect(tabB.store.outboxConflictDraft('entry-x')).toMatchObject({
+            fields: { description: 'changed' },
+        });
+        expect((await readOutboxKey())?.ops).toEqual([]);
+        expect(await readFailedKey()).toEqual([]);
+
+        await expect(tabB.store.dropConflictDraft('entry-x')).resolves.toBe(true);
+        await vi.waitFor(() => expect(tabA.store.outboxConflictDraft('entry-x')).toBeNull());
+        await flush();
+        expect(ledger.requests).toHaveLength(1);
+    });
+});

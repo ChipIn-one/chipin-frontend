@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import { SS_KEY_EXPENSE_DRAFT } from 'constants/localstorage';
+import { clearUndeliveredConflictNotices } from 'entities/ledger';
 import {
     AuthSessionExpiredError,
     AuthSessionPersistenceError,
@@ -42,6 +43,7 @@ import {
     UNAUTH_REASON,
     type UnauthReason,
 } from './authConstants';
+import { useConflictDraftStore } from './conflictDraftStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { loadGroupsListForSession } from './groupsList';
 import { useOutboxSheetStore } from './outboxSheetStore';
@@ -94,12 +96,14 @@ const moveLocalUser = (nextUserId: string | null): void => {
 };
 
 // Step (2a) of `clearUserData`: the legacy stores, the expense draft (also the one saved for an app
-// reload, spec 04 §2.11 item 4) and the open `OutboxSheet`.
+// reload, spec 04 §2.11 item 4), the open `OutboxSheet` and a conflict draft's reopening (03-16b).
 const resetUserStores = () => {
     resetAuthScopedStores();
     useExpenseModalStore.getState().reset();
     SessionStorage.remove(SS_KEY_EXPENSE_DRAFT);
     useOutboxSheetStore.getState().setIsOpen(false);
+    useConflictDraftStore.getState().reset();
+    clearUndeliveredConflictNotices();
 };
 
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).

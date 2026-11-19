@@ -1,10 +1,11 @@
 // The expense editor opened from an expense history (ACT-004): its state is built from the latest
 // domain event of the history the page shows, without a ledger read.
 import type { ActivityEvent, ExpenseActivityEvent } from 'entities/activity';
+import { conflictDraftPatch } from 'entities/ledger';
 import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { getLocalUser } from 'helpers/localStorage';
 
-import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
+import { applyExpensePatchToEdit, mapActivityExpenseToModalState } from './expenseModalEditMapping';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from './expenseModalStore';
 import { getCachedGroups } from './groupsList';
 import { getCachedKnownUsers, getCachedSelfUser } from './sessionUser';
@@ -57,4 +58,19 @@ export const prepareExpenseEdit = ({
         source: getExpenseEditSource(),
         parentActivityId,
     });
+};
+
+/**
+ * Spec 03 §2.6 (03-16b): any edit of an expense with a conflict draft opens on the draft, its
+ * fields applied on top of the expense as it is now (`isDraft`). Without a readable draft (or with
+ * offline writes off) the initialization is returned as it is.
+ */
+export const withConflictDraft = (
+    initialization: ExpenseModalEditInitialization,
+): { initialization: ExpenseModalEditInitialization; isDraft: boolean } => {
+    const patch = conflictDraftPatch(initialization.editContext.entryId, initialization.currency);
+
+    return patch
+        ? { initialization: applyExpensePatchToEdit(initialization, patch), isDraft: true }
+        : { initialization, isDraft: false };
 };

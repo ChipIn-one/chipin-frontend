@@ -234,6 +234,11 @@
         "accountSwitchDescription_other": "This device has {{count}} unsent operations of another account. Delete them and sign in?",
         "accountSwitchDescriptionUnknown": "This device may have unsent operations of another account. Delete them and sign in?",
         "accountSwitchConfirm": "Delete and sign in",
-        "settleUpChecking": "Checking the unsent operations of this device…"
+        "settleUpChecking": "Checking the unsent operations of this device…",
+        "conflictDraftsTitle": "Changes not sent",
+        "conflictDraftState": "Changed by another member — your changes are kept",
+        "openDraft": "Open my changes",
+        "discardDraft": "Discard my changes",
+        "conflictDraftMarker": "Your unsaved changes are shown. Another member changed this expense meanwhile; saving replaces it with your version."
     }
 }

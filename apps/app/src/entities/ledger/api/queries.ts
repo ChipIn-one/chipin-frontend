@@ -4,10 +4,12 @@
 // `VITE_FEATURE_OFFLINE_WRITES` is on, and an online create never carries a client `id`.
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
-import { api, publicApi } from 'shared/api/client';
+import { api, ApiError, publicApi } from 'shared/api/client';
 import { ledgerEntryKey } from 'shared/offline/outboxRegistry';
 
 import { type LedgerEntry, toLedgerEntry } from '../model/toLedgerEntry';
+
+import { dropDeletedConflictDraft } from './conflictDrafts';
 
 const CAPABILITIES_STALE_TIME = 10 * 60_000;
 
@@ -45,7 +47,10 @@ export const ledgerKeys = {
     entry: (entryId: string) => ledgerEntryKey(entryId),
 };
 
-/** `GET /ledger/entries/{id}` as the domain entry: its type and version (§2.1, §2.2). */
+/**
+ * `GET /ledger/entries/{id}` as the domain entry: its type and version (§2.1, §2.2). A 404 drops the
+ * entry's conflict draft (§2.6; with offline writes on and a draft only).
+ */
 export const ledgerEntryQueryOptions = (entryId: string) =>
     queryOptions({
         queryKey: ledgerKeys.entry(entryId),
@@ -53,6 +58,12 @@ export const ledgerEntryQueryOptions = (entryId: string) =>
         queryFn: ({ signal }): Promise<LedgerEntry> =>
             api('get', '/ledger/entries/{id}', { params: { id: entryId }, signal }).then(
                 toLedgerEntry,
+                (error: unknown) => {
+                    if (error instanceof ApiError && error.status === 404) {
+                        void dropDeletedConflictDraft(entryId);
+                    }
+                    throw error;
+                },
             ),
     });
 

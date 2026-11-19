@@ -6,7 +6,11 @@ import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { activityKeys } from 'entities/activity';
-import { capabilitiesQueryOptions, type ExpenseDraftSharingMode } from 'entities/ledger';
+import {
+    capabilitiesQueryOptions,
+    type ExpenseDraftSharingMode,
+    ledgerKeys,
+} from 'entities/ledger';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import {
@@ -16,12 +20,18 @@ import {
 } from 'hooks/useLedgerMutations';
 import { currencyCode, fromUnits } from 'shared/money';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
+import { useConflictDraftStore } from 'store/conflictDraftStore';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
-import { pendingOutboxOps, resetOutbox } from 'test/outbox';
+import {
+    outboxConflictDraft,
+    pendingOutboxOps,
+    resetOutbox,
+    storeConflictDrafts,
+} from 'test/outbox';
 import { mountAsUserClient } from 'test/userClient';
 
 import { useExpenseModalOpenChange, useExpenseModalSubmit } from './hooks';
@@ -672,6 +682,128 @@ describe('03-16a with offline writes on', () => {
         // A new opening of the form makes a new id.
         openCreate(sourceFor('dashboard'));
         expect(useExpenseModalStore.getState().clientEntryId).not.toBe(clientEntryId);
+    });
+
+    describe('03-16b the form opened on a conflict draft (§2.6)', () => {
+        // entry-1 has a conflict draft; the form is open on it.
+        const openOnDraft = async (): Promise<QueryClient> => {
+            vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+            const client = signIn();
+
+            await clear();
+            await storeConflictDrafts(currentUser.id, {
+                'entry-1': {
+                    entryId: 'entry-1',
+                    groupId: null,
+                    parentActivityId: 'activity-1',
+                    fields: { description: 'Lunch' },
+                    createdAt: 5,
+                },
+            });
+            await startUserLedgerOutbox(client, currentUser.id);
+            client.setQueryData(capabilitiesQueryOptions().queryKey, [
+                'ledger.clientEntryId',
+                'ledger.entryVersion',
+                'client.minVersion',
+            ]);
+            useExpenseModalStore.getState().initializeEdit(editInitialization);
+            useExpenseModalStore.getState().setDescription('Lunch');
+            useConflictDraftStore.getState().setOpened('entry-1');
+            return client;
+        };
+
+        afterEach(() => {
+            useConflictDraftStore.getState().reset();
+        });
+
+        test('Save queued: one op based on the cached current version, the draft gone in the same write', async () => {
+            const client = await openOnDraft();
+            const sent = serveLedger();
+            const onClose = vi.fn();
+
+            client.setQueryData(ledgerKeys.entry('entry-1'), {
+                id: 'entry-1',
+                type: 'EXPENSE',
+                version: 'v50',
+                updatedAt: 100,
+                groupId: null,
+                expense: null,
+            });
+            onlineManager.setOnline(false);
+            submit(onClose);
+
+            await waitFor(() => {
+                expect(onClose).toHaveBeenCalledOnce();
+            });
+            expect(pendingOutboxOps()).toEqual([
+                expect.objectContaining({
+                    kind: 'updateExpense',
+                    entryId: 'entry-1',
+                    baseVersion: 'v50',
+                    patch: { description: 'Lunch' },
+                }),
+            ]);
+            expect(outboxConflictDraft('entry-1')).toBeNull();
+            expect(useConflictDraftStore.getState().openedEntryId).toBeNull();
+            expect(sent).toEqual([]);
+        });
+
+        test('R1 M1: a form not opened on the draft (opened before the conflict, or on an unreadable draft) keeps it when its edit is queued', async () => {
+            const client = await openOnDraft();
+
+            useConflictDraftStore.getState().setOpened(null);
+            client.setQueryData(ledgerKeys.entry('entry-1'), {
+                id: 'entry-1',
+                type: 'EXPENSE',
+                version: 'v50',
+                updatedAt: 100,
+                groupId: null,
+                expense: null,
+            });
+            onlineManager.setOnline(false);
+            const onClose = vi.fn();
+
+            submit(onClose);
+
+            await waitFor(() => {
+                expect(onClose).toHaveBeenCalledOnce();
+            });
+            expect(pendingOutboxOps()).toHaveLength(1);
+            expect(outboxConflictDraft('entry-1')).toMatchObject({
+                fields: { description: 'Lunch' },
+            });
+        });
+
+        test('Save answered online (the entry not cached): one PATCH, then the draft is removed', async () => {
+            await openOnDraft();
+            const sent = serveLedger();
+            const onClose = vi.fn();
+
+            submit(onClose);
+
+            await waitFor(() => {
+                expect(outboxConflictDraft('entry-1')).toBeNull();
+            });
+            expect(onClose).toHaveBeenCalledOnce();
+            expect(sent).toEqual([
+                expect.objectContaining({ method: 'PATCH', path: '/ledger/entries/entry-1' }),
+            ]);
+        });
+
+        test('nothing left to change: the draft is removed and the form closes, no request', async () => {
+            await openOnDraft();
+            const sent = serveLedger();
+            const onClose = vi.fn();
+
+            useExpenseModalStore.getState().setDescription('Dinner');
+            submit(onClose);
+
+            await waitFor(() => {
+                expect(outboxConflictDraft('entry-1')).toBeNull();
+            });
+            expect(onClose).toHaveBeenCalledOnce();
+            expect(sent).toEqual([]);
+        });
     });
 });
 

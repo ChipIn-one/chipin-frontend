@@ -8,6 +8,7 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import { BaseModal, MODAL_SIZES } from 'components/modals/base-modal';
 import { OverlayBody } from 'components/modals/components';
 
+import { ConflictDraftNotice } from './components/conflict-draft-notice/ConflictDraftNotice';
 import ExpenseButtons from './components/expense-buttons/ExpenseButtons';
 import ExpenseDetailsSection from './components/expense-details-section/ExpenseDetailsSection';
 import ExpenseSplitCard from './components/expense-split-card/ExpenseSplitCard';
@@ -66,6 +67,7 @@ const AddExpenseModal = () => {
         <>
             <OverlayBody>
                 <Flex direction="column" gap="4">
+                    <ConflictDraftNotice />
                     <ExpenseDetailsSection />
                     <ExpenseTargetSection />
                     <ExpenseSplitCard />

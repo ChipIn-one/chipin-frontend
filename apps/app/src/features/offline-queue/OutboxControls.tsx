@@ -2,26 +2,18 @@ import { Button, Callout, Flex, VisuallyHidden } from '@radix-ui/themes';
 import { CloudUploadIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { useOutboxOverlay } from 'entities/ledger';
+import { type OutboxOverlay, useOutboxOverlay } from 'entities/ledger';
 import { useOutboxSheetStore } from 'store/outboxSheetStore';
 
+import { ConflictNotices } from './ConflictNotices';
 import { OutboxSheet } from './OutboxSheet';
 
-/**
- * The outbox in the internal layout (spec 03 §1.6, §2.5): the badge with the number of unsent
- * operations (it opens `OutboxSheet`), and the non-blocking `outboxUnavailable` banner when this
- * tab could not read the outbox. Flag off, or nothing queued: nothing is rendered.
- */
-export const OutboxControls = () => {
+// The badge, the banner and the sheet, shown while anything is queued or the sheet is open.
+const OutboxView = ({ overlay }: { overlay: OutboxOverlay }) => {
     const { t } = useTranslation('common');
-    const overlay = useOutboxOverlay();
-    const isOpen = useOutboxSheetStore(state => state.isOpen);
     const setIsOpen = useOutboxSheetStore(state => state.setIsOpen);
     const { count, restore } = overlay;
 
-    if (count === 0 && restore !== 'failed' && !isOpen) {
-        return null;
-    }
     return (
         <>
             {restore === 'failed' && (
@@ -50,6 +42,26 @@ export const OutboxControls = () => {
                 </Flex>
             )}
             <OutboxSheet overlay={overlay} />
+        </>
+    );
+};
+
+/**
+ * The outbox in the internal layout (spec 03 §1.6, §2.5): the badge with the number of unsent
+ * operations and conflict drafts (it opens `OutboxSheet`), the non-blocking `outboxUnavailable`
+ * banner when this tab could not read the outbox, and the conflict toasts (§2.6). Flag off (not
+ * mounted), or nothing queued: nothing is rendered.
+ */
+export const OutboxControls = () => {
+    const overlay = useOutboxOverlay();
+    const isOpen = useOutboxSheetStore(state => state.isOpen);
+    const { count, restore } = overlay;
+    const isShown = count > 0 || restore === 'failed' || isOpen;
+
+    return (
+        <>
+            <ConflictNotices />
+            {isShown && <OutboxView overlay={overlay} />}
         </>
     );
 };

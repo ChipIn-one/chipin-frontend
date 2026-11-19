@@ -21,12 +21,18 @@ import {
     toastLedgerWriteError,
 } from 'hooks/useLedgerMutations';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
+import { useConflictDraftStore } from 'store/conflictDraftStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { domainExpenseEvent, domainSettlementEvent } from 'test/activityFixtures';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
-import { pendingOutboxOps, resetOutbox } from 'test/outbox';
+import {
+    outboxConflictDraft,
+    pendingOutboxOps,
+    resetOutbox,
+    storeConflictDrafts,
+} from 'test/outbox';
 import { mountAsUserClient } from 'test/userClient';
 
 import { ActivitySubeventsButtons } from './ActivitySubeventsButtons';
@@ -219,6 +225,7 @@ beforeEach(() => {
 afterEach(() => {
     onlineManager.setOnline(true);
     useExpenseModalStore.getState().reset();
+    useConflictDraftStore.getState().reset();
     clearLocalUserIdentity();
     useAuthStore.setState({ status: 'unknown' });
 });
@@ -244,6 +251,43 @@ test('ACT-004 opens the shared editor from the latest event of the loaded histor
         currency: 'USD',
         editContext: { entryId: 'expense-id', parentActivityId: parentEvent.id },
     });
+});
+
+test('03-16b flag off = master: Edit opens the editor as before, never on a draft', async () => {
+    const user = userEvent.setup();
+
+    useConflictDraftStore.getState().requestOpen('expense-id');
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[updatedEvent]}
+        />,
+    );
+    // The request is a no-op without a draft: it opens the ordinary editor.
+    useExpenseModalStore.getState().reset();
+    await user.click(screen.getByRole('button', { name: 'Update' }));
+
+    expect(useExpenseModalStore.getState()).toMatchObject({
+        mode: 'edit',
+        description: 'Updated dinner',
+    });
+    expect(useConflictDraftStore.getState().openedEntryId).toBeNull();
+});
+
+test('03-16b R2-N1 flag off = master: no query cache subscription', () => {
+    const client = signIn();
+    const subscribe = vi.spyOn(client.getQueryCache(), 'subscribe');
+
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[updatedEvent]}
+        />,
+    );
+
+    expect(subscribe).not.toHaveBeenCalled();
 });
 
 test('hides edit and delete actions when the latest event is reversed', () => {
@@ -649,6 +693,7 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
                 id: 'expense-id',
                 type: 'EXPENSE',
                 version: '7',
+                updatedAt: 1,
                 groupId: null,
                 expense: null,
             });
@@ -690,6 +735,272 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
         });
         expect(screen.getByRole('button', { name: 'Update' })).toHaveProperty('disabled', true);
         onlineManager.setOnline(true);
+    });
+
+    // The user's outbox holds a conflict draft of the expense (§2.6), then offline writes are on.
+    const withDraft = async (client: QueryClient): Promise<void> => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        await clear();
+        await storeConflictDrafts('user-id', {
+            'expense-id': {
+                entryId: 'expense-id',
+                groupId: null,
+                parentActivityId: parentEvent.id,
+                fields: { description: 'Mine', amount: { __wireDecimal: '55' } },
+                createdAt: 5,
+            },
+        });
+        await startUserLedgerOutbox(client, 'user-id');
+        client.setQueryData(capabilitiesQueryOptions().queryKey, [
+            'ledger.clientEntryId',
+            'ledger.entryVersion',
+            'client.minVersion',
+        ]);
+    };
+
+    test('03-16b Second conflict merges: an ordinary Edit of an expense with a draft opens the form on the draft', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[updatedEvent]}
+            />,
+        );
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Update' }));
+
+        // The expense as it is now (the history's latest event) with the draft's fields on top;
+        // the original stays the expense as it is now, so Save sends the draft's fields.
+        expect(useExpenseModalStore.getState()).toMatchObject({
+            mode: 'edit',
+            description: 'Mine',
+            amount: '55',
+            currency: 'USD',
+            editContext: { entryId: 'expense-id', original: { description: 'Updated dinner' } },
+        });
+        expect(useConflictDraftStore.getState().openedEntryId).toBe('expense-id');
+    });
+
+    test('03-16b "Open my changes" (a request) opens the form on the draft once', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(useExpenseModalStore.getState()).toMatchObject({
+                isOpened: true,
+                description: 'Mine',
+            });
+        });
+        expect(useConflictDraftStore.getState()).toMatchObject({
+            requestedEntryId: null,
+            openedEntryId: 'expense-id',
+        });
+    });
+
+    test('03-16b R1 L2: the request waits for a fresh history and is kept until an editor opened', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        // The conflict invalidated the history; its refetch has not answered yet.
+        await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+        expect(useConflictDraftStore.getState().requestedEntryId).toBe('expense-id');
+        act(() => {
+            client.setQueryData(historyKey, emptyHistory);
+        });
+
+        await waitFor(() => {
+            expect(useExpenseModalStore.getState()).toMatchObject({
+                isOpened: true,
+                description: 'Mine',
+            });
+        });
+        expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+    });
+
+    test('03-16b R2-L1: a request for an entry that cannot be edited is answered without an editor', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+                canChange={false}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+        });
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+    });
+
+    test('03-16b R2-L1: request → manual Edit → fresh history: no second open', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Update' }));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(true);
+        expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+        act(() => {
+            useExpenseModalStore.getState().reset();
+            client.setQueryData(historyKey, emptyHistory);
+        });
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+    });
+
+    test.each(['paused', 'error'] as const)(
+        '03-16b R2-L1: a history refetch that cannot answer (%s) opens on the cached history',
+        async kind => {
+            const client = signIn();
+
+            serveEntry();
+            await withDraft(client);
+            await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+            client
+                .getQueryCache()
+                .find({ queryKey: historyKey })
+                ?.setState(
+                    kind === 'paused'
+                        ? { fetchStatus: 'paused' }
+                        : { status: 'error', error: new Error('read failed'), fetchStatus: 'idle' },
+                );
+            useConflictDraftStore.getState().requestOpen('expense-id');
+            render(
+                <ActivitySubeventsButtons
+                    parentEvent={parentEvent}
+                    parentActivityId={parentEvent.id}
+                    childEvents={[]}
+                />,
+            );
+
+            await waitFor(() => {
+                expect(useExpenseModalStore.getState()).toMatchObject({
+                    isOpened: true,
+                    description: 'Mine',
+                });
+            });
+            expect(useConflictDraftStore.getState().requestedEntryId).toBeNull();
+        },
+    );
+
+    test('03-16b R3-N2: an errored history that is refetching waits for the refetch', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        await client.invalidateQueries({ queryKey: historyKey, refetchType: 'none' });
+        client
+            .getQueryCache()
+            .find({ queryKey: historyKey })
+            ?.setState({
+                status: 'error',
+                error: new Error('read failed'),
+                fetchStatus: 'fetching',
+            });
+        useConflictDraftStore.getState().requestOpen('expense-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+        );
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+
+        expect(useExpenseModalStore.getState().isOpened).toBe(false);
+        expect(useConflictDraftStore.getState().requestedEntryId).toBe('expense-id');
+    });
+
+    test('03-16b R1 M1: an unreadable draft opens the ordinary editor, not marked as opened on a draft', async () => {
+        const client = signIn();
+
+        serveEntry();
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        await clear();
+        await storeConflictDrafts('user-id', {
+            'expense-id': {
+                entryId: 'expense-id',
+                groupId: null,
+                parentActivityId: parentEvent.id,
+                fields: { amount: 12 },
+                createdAt: 5,
+            },
+        });
+        await startUserLedgerOutbox(client, 'user-id');
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[updatedEvent]}
+            />,
+        );
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Update' }));
+
+        expect(useExpenseModalStore.getState()).toMatchObject({ description: 'Updated dinner' });
+        expect(useConflictDraftStore.getState().openedEntryId).toBeNull();
+        expect(outboxConflictDraft('expense-id')).not.toBeNull();
+    });
+
+    test('03-16b a reversed expense drops its draft', async () => {
+        const client = signIn();
+
+        serveEntry();
+        await withDraft(client);
+        expect(outboxConflictDraft('expense-id')).not.toBeNull();
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                currentEvent={reversedEvent}
+                childEvents={[reversedEvent]}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(outboxConflictDraft('expense-id')).toBeNull();
+        });
     });
 
     test('flag on but offline writes unavailable (no backend capabilities): no ledger entry is read or cached', async () => {

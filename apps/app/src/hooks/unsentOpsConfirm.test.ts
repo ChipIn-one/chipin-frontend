@@ -39,7 +39,12 @@ const op = (seq: number) => ({
     draft: {},
 });
 
-const storeOutbox = (pending: unknown[], failed: unknown[], userId = USER): Promise<void> =>
+const storeOutbox = (
+    pending: unknown[],
+    failed: unknown[],
+    userId = USER,
+    conflictDrafts: Record<string, unknown> = {},
+): Promise<void> =>
     Promise.all([
         set(
             outboxStateKey(userId),
@@ -50,7 +55,7 @@ const storeOutbox = (pending: unknown[], failed: unknown[], userId = USER): Prom
                 cancelled: [],
                 retryRequested: [],
                 sending: null,
-                conflictDrafts: {},
+                conflictDrafts,
             }),
         ),
         set(outboxFailedKey(userId), persistCodec.stringify(failed)),
@@ -82,6 +87,20 @@ afterEach(() => {
 });
 
 describe('readSignOutOutboxCount', () => {
+    test('03-16b: the conflict drafts count too (unsent user intent, §1.5)', async () => {
+        await storeOutbox([op(1)], [], USER, {
+            'entry-d': {
+                entryId: 'entry-d',
+                groupId: null,
+                parentActivityId: null,
+                fields: { description: 'Mine' },
+                createdAt: 1,
+            },
+        });
+
+        await expect(readSignOutOutboxCount()).resolves.toEqual({ userId: USER, count: 2 });
+    });
+
     test('pending ops + failed records + unreadable records (an op of a newer build)', async () => {
         await storeOutbox(
             [op(1), op(2), { opId: 'op-new', kind: 'futureKind' }],
