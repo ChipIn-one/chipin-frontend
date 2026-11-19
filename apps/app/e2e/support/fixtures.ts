@@ -26,6 +26,7 @@ import {
     type ProvisioningClient,
     REFRESH_COOKIE_NAME,
 } from './provisioning';
+import { formatServerErrors, type ServerErrorRecord, toServerErrorRecord } from './serverErrors';
 
 type StorageState = Exclude<BrowserContextOptions['storageState'], string | undefined>;
 
@@ -82,6 +83,8 @@ export const test = base.extend<E2eFixtures>({
     },
     // `use.video` covers only Playwright's own `context` fixture, so these contexts record their
     // video themselves; it is kept, and attached to the report, only when the test fails.
+    // Each context also records the staging API's 5xx answers: a failed test then names a staging
+    // outage instead of timing out on a closed page with no cause (#778).
     signIn: async ({ browser, baseURL }, provide, testInfo) => {
         if (!baseURL) {
             throw new Error('baseURL is not configured');
@@ -92,6 +95,7 @@ export const test = base.extend<E2eFixtures>({
         const bypass = resolvePreviewBypass(environment, resolveE2eTarget(environment));
         const contexts: BrowserContext[] = [];
         const pages: Page[] = [];
+        const serverErrors: ServerErrorRecord[] = [];
 
         await provide(async user => {
             const context = await browser.newContext({
@@ -99,6 +103,20 @@ export const test = base.extend<E2eFixtures>({
                 recordVideo: { dir: videoDir },
             });
             contexts.push(context);
+            // The context's listener sees the responses of all its pages.
+            context.on('response', response => {
+                const record = toServerErrorRecord(
+                    {
+                        method: response.request().method(),
+                        url: response.url(),
+                        status: response.status(),
+                    },
+                    new Date(),
+                );
+                if (record) {
+                    serverErrors.push(record);
+                }
+            });
             if (bypass) {
                 // Only the Preview origin is routed; every other request is left untouched.
                 await context.route(
@@ -129,6 +147,16 @@ export const test = base.extend<E2eFixtures>({
             await rm(videoDir, { recursive: true, force: true });
 
             return;
+        }
+
+        const serverErrorMessage = formatServerErrors(serverErrors);
+        if (serverErrorMessage) {
+            testInfo.annotations.push({ type: 'staging-5xx', description: serverErrorMessage });
+            await testInfo.attach('staging-5xx.txt', {
+                body: serverErrorMessage,
+                contentType: 'text/plain',
+            });
+            console.warn(`[e2e] ${serverErrorMessage}`);
         }
 
         const videoPaths = await Promise.all(pages.map(page => page.video()?.path()));

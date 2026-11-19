@@ -97,6 +97,14 @@ Five projects (`playwright.config.ts`): `chromium` (`Desktop Chrome`), `firefox`
 - The workflow creates the `runId` itself and passes it as `CHIPIN_E2E_RUN_ID`. A final step runs always, also after a cancel, a timeout or a crash of the test step, calls `DELETE /auth/test-runs/{runId}` with curl (the Basic credentials go through curl's stdin config, never its arguments or the log) and logs the counts; after the teardown's purge it deletes nothing.
 - On failure, artifacts are considered only when the teardown's marker holds this run's id, i.e. after a verified purge. The report and test results are then scanned for the Basic password and Basic token, including zip files and the HTML report's embedded data, and uploaded with a retention of 3 days only when the scan is clean.
 
+## Failures caused by staging
+
+The suite runs against the shared staging API and deliberately has no retries, so a real flake stays visible. A staging outage therefore fails tests too. The `signIn` fixture records every `5xx` answer to `/api` in each user's context (method, path without the query string, status and time; `e2e/support/serverErrors.ts`); when such a test fails, it gets a `staging-5xx` annotation and a `staging-5xx.txt` attachment, and the log has a line `[e2e] staging API answered 5xx during this test …` naming the requests. A passing test reports nothing.
+
+Such a failure is a staging outage window, not the test's assertion. Seen on 2026-11-18 (runs 44336094806 and 44397956408, attempt 1): Cloudflare answered `502` to the cold-start `POST /api/auth/refresh` of a freshly opened context, in both workers at once; the app then showed the backend-down dialog ("ChipIn will be back shortly") or the signed-out landing, and the test timed out waiting for the group page (#778). Rerun the workflow.
+
+The offline banner flake (#746) was a bug in the app, fixed by #749: a response to a request sent before going offline no longer marks the app online again.
+
 ## Release browser matrix
 
 **Prepare frontend release QA** (`.github/workflows/prepare-release-qa.yml`, [`release-qa.md`](engineering/release-qa.md)) runs the whole suite against the immutable Preview URL of the release candidate on all five profiles before the QA Issue is created and the tester is pinged.
