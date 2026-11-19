@@ -61,7 +61,7 @@ jobs:
       deployments: read
       pull-requests: read
     outputs:
-      sha: ${{ steps.preview.outputs.sha }}
+      revision: ${{ steps.preview.outputs.revision }}
       url: ${{ steps.preview.outputs.url }}
     steps:
       # Every branch (history only), so a dispatched SHA can be checked against them; only the
@@ -111,12 +111,12 @@ jobs:
         timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ needs.resolve.outputs.sha }}
+          ref: ${{ needs.resolve.outputs.revision }}
           persist-credentials: false
       - name: Verify the checked-out commit
         timeout-minutes: 1
         env:
-          RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
+          RESOLVED_SHA: ${{ needs.resolve.outputs.revision }}
         shell: bash
         run: |
           set -euo pipefail

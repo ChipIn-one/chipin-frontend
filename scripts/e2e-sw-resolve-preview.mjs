@@ -7,7 +7,8 @@ import { promisify } from 'node:util';
 // The `resolve` job of e2e-sw.yml (docs/e2e-tests.md "Service worker suite"). It runs from the
 // workflow's own ref (`github.sha`; on a pull request that is its merge commit), never from a
 // dispatched commit, and is the only place that holds the GitHub token. It picks the commit to test and finds the Vercel Preview built from it, then
-// writes both as the step outputs `sha` and `url`:
+// writes both as the step outputs `revision` and `url` (not `sha`: CodeQL reads a checkout `ref` from an output
+// named like `*sha*`, `*head*` or `*commit*` as a pull request head checkout):
 // - `pull_request`: the pull request head, read from the event payload (`GITHUB_EVENT_PATH`), not
 //   passed in through a workflow expression.
 // - `workflow_dispatch`: a pull request number (its head must be in this repository) or a full SHA
@@ -354,7 +355,7 @@ export const main = async ({
     } else {
         url = await waitForPreview({ sha, readDeployments: github.readDeployments, sleep, log });
     }
-    await appendFile(env.GITHUB_OUTPUT, `sha=${sha}\nurl=${url}\n`);
+    await appendFile(env.GITHUB_OUTPUT, `revision=${sha}\nurl=${url}\n`);
     return { sha, url };
 };
 

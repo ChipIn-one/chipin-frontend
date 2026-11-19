@@ -475,7 +475,7 @@ describe('main', () => {
             sha: SHA,
             url: PREVIEW,
         });
-        expect(readFileSync(vars.GITHUB_OUTPUT, 'utf8')).toBe(`sha=${SHA}\nurl=${PREVIEW}\n`);
+        expect(readFileSync(vars.GITHUB_OUTPUT, 'utf8')).toBe(`revision=${SHA}\nurl=${PREVIEW}\n`);
     });
 
     test('a dispatch override is allowlisted, warned about and skips the deployment lookup', async () => {
@@ -487,7 +487,7 @@ describe('main', () => {
         const fetchImpl = vi.fn();
         const log = vi.fn();
         await main({ env: vars, fetchImpl, git: () => Promise.resolve('origin/master'), log });
-        expect(readFileSync(vars.GITHUB_OUTPUT, 'utf8')).toBe(`sha=${SHA}\nurl=${PREVIEW}\n`);
+        expect(readFileSync(vars.GITHUB_OUTPUT, 'utf8')).toBe(`revision=${SHA}\nurl=${PREVIEW}\n`);
         expect(fetchImpl).not.toHaveBeenCalled();
         expect(log).toHaveBeenCalledWith(expect.stringMatching(/^::warning .*not checked against/));
     });
@@ -599,10 +599,10 @@ describe('e2e-sw workflow', () => {
             'node scripts/e2e-sw-resolve-preview.mjs',
         ]);
         expect(e2e.needs).toBe('resolve');
-        expect(e2e.steps[0].with.ref).toBe('${{ needs.resolve.outputs.sha }}');
+        expect(e2e.steps[0].with.ref).toBe('${{ needs.resolve.outputs.revision }}');
         const verify = e2e.steps[1];
         expect(verify.name).toBe('Verify the checked-out commit');
-        expect(verify.env.RESOLVED_SHA).toBe('${{ needs.resolve.outputs.sha }}');
+        expect(verify.env.RESOLVED_SHA).toBe('${{ needs.resolve.outputs.revision }}');
         expect(verify.run).toContain('git rev-parse HEAD');
         const names = e2e.steps.map(step => step.name);
         expect(names.indexOf('Verify the checked-out commit')).toBeLessThan(
