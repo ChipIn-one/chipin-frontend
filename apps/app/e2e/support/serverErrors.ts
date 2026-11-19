@@ -87,12 +87,34 @@ export const toServerErrorRecord = (
           };
 };
 
-/** A record when a request to the app origin's API got no response, else `undefined`. */
+// The page cancelled the request itself (a navigation or reload): Chromium `net::ERR_ABORTED`,
+// Firefox `NS_BINDING_ABORTED`, WebKit "cancelled". Not an error of the API.
+const PAGE_CANCELLATION = /ERR_ABORTED|NS_BINDING_ABORTED|cancel/i;
+// The error text is browser free text: WebKit sentences may embed the URL with its token, so only
+// an error code is kept.
+const SAFE_ERROR_TEXT = /^[\w:.\- ]{1,80}$/;
+
+const describeFailure = (errorText: string | undefined): string => {
+    if (errorText === undefined) {
+        return 'unknown error';
+    }
+
+    return SAFE_ERROR_TEXT.test(errorText) && !errorText.includes('://') ? errorText : 'other';
+};
+
+/**
+ * A record when a request to the app origin's API got no response, else `undefined`. A
+ * cancellation by the page is not recorded.
+ */
 export const toFailedRequestRecord = (
     request: ObservedFailedRequest,
     appOrigin: string,
     now: Date,
 ): ApiErrorRecord | undefined => {
+    if (request.errorText !== undefined && PAGE_CANCELLATION.test(request.errorText)) {
+        return undefined;
+    }
+
     const pathname = readApiPath(request.url, appOrigin);
 
     return pathname === undefined
@@ -100,7 +122,7 @@ export const toFailedRequestRecord = (
         : {
               method: request.method,
               pathname,
-              result: `failed (${request.errorText ?? 'unknown error'})`,
+              result: `failed (${describeFailure(request.errorText)})`,
               at: formatTime(now),
           };
 };

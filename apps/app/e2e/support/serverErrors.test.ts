@@ -109,6 +109,51 @@ describe('toFailedRequestRecord', () => {
         ).toEqual(expect.objectContaining({ result: 'failed (unknown error)' }));
     });
 
+    it.each(['net::ERR_ABORTED', 'NS_BINDING_ABORTED', 'cancelled', 'Request Cancelled'])(
+        'ignores a cancellation by the page: %s',
+        errorText => {
+            expect(
+                toFailedRequestRecord(
+                    { method: 'GET', url: `${APP}/api/groups`, errorText },
+                    APP,
+                    NOW,
+                ),
+            ).toBeUndefined();
+        },
+    );
+
+    it.each(['net::ERR_INTERNET_DISCONNECTED', 'NS_ERROR_OFFLINE', 'net::ERR_CONNECTION_RESET'])(
+        'keeps the error code %s',
+        errorText => {
+            expect(
+                toFailedRequestRecord(
+                    { method: 'GET', url: `${APP}/api/groups`, errorText },
+                    APP,
+                    NOW,
+                ),
+            ).toEqual(expect.objectContaining({ result: `failed (${errorText})` }));
+        },
+    );
+
+    it.each([
+        `Could not connect to the server: ${APP}/api/groups/invite/${TOKEN}`,
+        'Load failed (proxy)',
+        'x'.repeat(81),
+    ])('replaces a free error text with "other": %s', errorText => {
+        expect(
+            toFailedRequestRecord(
+                { method: 'POST', url: `${APP}/api/groups/invite/${TOKEN}`, errorText },
+                APP,
+                NOW,
+            ),
+        ).toEqual(
+            expect.objectContaining({
+                pathname: '/api/groups/invite/{token}',
+                result: 'failed (other)',
+            }),
+        );
+    });
+
     it.each([`${APP}/src/x.ts`, 'https://other.example.com/api/x'])('ignores %s', url => {
         expect(
             toFailedRequestRecord({ method: 'GET', url, errorText: 'net::ERR_FAILED' }, APP, NOW),

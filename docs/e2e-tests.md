@@ -104,6 +104,7 @@ The suite runs against the shared staging API and deliberately has no retries, s
 Read the statuses before rerunning:
 
 - `502`, `503`, `504` or a request with no answer point to a staging outage window, not to the test's assertion. Seen on 2026-11-18 (runs 44336094806 and 44397956408, attempt 1): Cloudflare answered `502` to the cold-start `POST /api/auth/refresh` of a freshly opened context, in both workers at once; the app then showed the backend-down dialog ("ChipIn will be back shortly") or the signed-out landing, and the test timed out waiting for the group page (#778). Rerun the workflow.
+- `net::ERR_INTERNET_DISCONNECTED` or `NS_ERROR_OFFLINE` after the offline spec's `context.setOffline` are caused by the test itself, not by a staging outage. A request the page cancelled itself (a navigation or reload) is not recorded, and an error text that is not a plain error code is shown as `other`.
 - A `500` on the test's own write (an expense, a settlement, a join) is a bug to investigate, not one to rerun away.
 
 The offline banner flake (#746) was a bug in the app, fixed by #749: a response to a request sent before going offline no longer marks the app online again.
