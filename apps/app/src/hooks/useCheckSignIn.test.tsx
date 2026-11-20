@@ -25,7 +25,7 @@ import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { mountAsUserClient } from 'test/userClient';
 
-import { useCheckSignIn } from './useCheckSignIn';
+import { startSessionCheck, useCheckSignIn } from './useCheckSignIn';
 
 import 'fake-indexeddb/auto';
 
@@ -589,6 +589,54 @@ test('a connectivity flap during the reconnect refresh: one refresh, data loaded
                 expect(loadGroupsList).toHaveBeenCalledOnce();
             });
         });
+});
+
+// 04-2a2b: the guard loader starts the initial check before the hook mounts (`startSessionCheck`,
+// via `authReady`); the hook's effect re-runs on connectivity changes while that attempt runs.
+test('a connectivity flap during the loader-started boot refresh: one refresh, data loaded once', () => {
+    markRestorableAuthSession();
+    let finish: (token: string) => void = () => undefined;
+    const refreshAuthTokens = vi.fn(
+        () =>
+            new Promise<string>(resolve => {
+                finish = resolve;
+            }),
+    );
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+    const loadGroupsList = vi.mocked(loadGroupsListForSession);
+    const loadSelf = vi.mocked(loadSelfUserForSession);
+
+    // What the loader does on a cold load, before any component mounts.
+    startSessionCheck('/dashboard');
+    expect(refreshAuthTokens).toHaveBeenCalledOnce();
+
+    renderHook();
+    act(() => {
+        useConnectivityStore.setState({ mode: 'backend-down' });
+    });
+    act(() => {
+        useConnectivityStore.setState({ mode: 'online' });
+    });
+    act(() => {
+        onlineManager.setOnline(false);
+    });
+    act(() => {
+        onlineManager.setOnline(true);
+    });
+    expect(refreshAuthTokens).toHaveBeenCalledOnce();
+
+    act(() => {
+        finish('next-access-token');
+    });
+
+    return waitFor(() => {
+        expect(useAuthStore.getState().status).toBe('authenticated');
+        expect(loadGroupsList).toHaveBeenCalledOnce();
+    }).then(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+        expect(loadSelf).toHaveBeenCalledOnce();
+    });
 });
 
 test('a boot refresh that found another user applies that user default app mode', () => {

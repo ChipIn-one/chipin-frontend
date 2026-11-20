@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { Theme } from '@radix-ui/themes';
 import { render, screen, waitFor } from '@testing-library/react';
 import type { createBrowserRouter } from 'react-router-dom';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
@@ -17,6 +17,7 @@ import { fetchSelfUser } from 'entities/users';
 import { establishAuthSession } from 'helpers/authSession';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { i18n } from 'i18n';
+import { startCacheRestore } from 'shared/offline/restore';
 import { UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 import { resetSessionSelfLoad } from 'store/sessionUser';
@@ -144,6 +145,11 @@ const App = () => {
         </Theme>
     );
 };
+
+// What root.tsx does before the router renders: `restoreReady` resolves (no user cache to restore).
+beforeAll(() => {
+    startCacheRestore(undefined);
+});
 
 // The real i18n instance: the OAuth callback returns to `/`, whose `PublicLocaleRoute` switches the
 // language before `HomeRouteGuard` sends the signed-in user on.
