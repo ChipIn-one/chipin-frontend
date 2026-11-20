@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, useNavigate } from 'react-router-dom';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { render } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { expect, test, vi } from 'vitest';
 
-import GlobalHooks from './GlobalHooks';
+import { GlobalHooks } from './GlobalHooks';
 
 vi.mock('hooks/pwaHooks', () => ({
     useCheckPwa: vi.fn(),
@@ -28,68 +28,19 @@ vi.mock('hooks/useSyncUserSettings', () => ({
     useSyncUserSettings: vi.fn(),
 }));
 
-const NavigationControls = () => {
-    const navigate = useNavigate();
+test('GlobalHooks scrolls nothing itself: ScrollRestoration in RootLayout owns it (04-2a3)', () => {
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
 
-    return (
-        <>
-            <button
-                type="button"
-                aria-label="Activity"
-                onClick={() => void navigate('/activity')}
-            />
-            <button
-                type="button"
-                aria-label="Settings"
-                onClick={() => void navigate('/settings')}
-            />
-            <button type="button" aria-label="Back" onClick={() => void navigate(-1)} />
-            <button type="button" aria-label="Forward" onClick={() => void navigate(1)} />
-        </>
-    );
-};
+    try {
+        render(
+            <MemoryRouter initialEntries={['/activity']}>
+                <GlobalHooks />
+            </MemoryRouter>,
+        );
 
-const scrollToMock = vi.fn();
-
-beforeEach(() => {
-    vi.stubGlobal('scrollTo', scrollToMock);
-});
-
-afterEach(() => {
-    vi.unstubAllGlobals();
-    scrollToMock.mockClear();
-});
-
-test('scrolls to the page top when navigating to another route or the current route', () => {
-    render(
-        <MemoryRouter initialEntries={['/activity']}>
-            <GlobalHooks />
-            <NavigationControls />
-        </MemoryRouter>,
-    );
-    scrollToMock.mockClear();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Activity' }));
-    expect(scrollToMock).toHaveBeenLastCalledWith(0, 0);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
-    expect(scrollToMock).toHaveBeenCalledTimes(2);
-    expect(scrollToMock).toHaveBeenLastCalledWith(0, 0);
-});
-
-test('scrolls to the page top when navigating backward or forward', () => {
-    render(
-        <MemoryRouter initialEntries={['/activity', '/settings']} initialIndex={1}>
-            <GlobalHooks />
-            <NavigationControls />
-        </MemoryRouter>,
-    );
-    scrollToMock.mockClear();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-    expect(scrollToMock).toHaveBeenLastCalledWith(0, 0);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Forward' }));
-    expect(scrollToMock).toHaveBeenCalledTimes(2);
-    expect(scrollToMock).toHaveBeenLastCalledWith(0, 0);
+        expect(scrollTo).not.toHaveBeenCalled();
+    } finally {
+        vi.unstubAllGlobals();
+    }
 });

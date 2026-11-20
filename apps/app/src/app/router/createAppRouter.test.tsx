@@ -1,12 +1,15 @@
 import { Component, type ReactNode } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
-import type { RouteObject } from 'react-router-dom';
+import * as Sentry from '@sentry/react';
+import { onlineManager } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { LoaderFunction, RouteObject } from 'react-router-dom';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
+import { LS_KEY_AUTH_SESSION_HINT, SS_KEY_ROUTE_CHUNK_RELOAD } from 'constants/localstorage';
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRoutes';
+import { checkForServiceWorkerUpdate, reloadApp, updateServiceWorker } from 'helpers/appUpdate';
 import { LocalStorage } from 'helpers/localStorage';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { i18n } from 'i18n';
@@ -20,6 +23,9 @@ import { signInWithSelf } from 'test/selfUser';
 import { buildAppRoutes } from './createAppRouter';
 import { APP_ROUTES } from './routeManifest';
 
+const SIDEBAR = { name: 'Desktop navigation' } as const;
+const DEFAULT_ERROR_PAGE = /Unexpected Application Error/;
+const UUID = '3f2b8c1e-9a4d-4e6f-8b1a-2c3d4e5f6a7b';
 const { CHUNK_ERROR, RENDER_ERROR } = vi.hoisted(() => ({
     CHUNK_ERROR: 'Failed to fetch dynamically imported module',
     RENDER_ERROR: 'The page failed to render',
@@ -31,10 +37,27 @@ const gate = vi.hoisted(() => ({
     throwIn: null as string | null,
 }));
 
+vi.mock('@sentry/react', async importOriginal => ({
+    ...(await importOriginal<typeof import('@sentry/react')>()),
+    captureException: vi.fn(),
+}));
+vi.mock('helpers/appUpdate', async importOriginal => ({
+    ...(await importOriginal<typeof import('helpers/appUpdate')>()),
+    reloadApp: vi.fn(),
+    updateServiceWorker: vi.fn(() => Promise.resolve()),
+    checkForServiceWorkerUpdate: vi.fn(() => Promise.resolve(false)),
+}));
+
 // Each page is a `<main>` with its route id; the pages wait for `gate.pages`. With `failChunks` a
 // chunk load rejects; the page `throwIn` throws while it renders.
 vi.mock('./routeModules', async () => {
     const { APP_ROUTES } = await import('./routeManifest');
+    const { validateUuidParam } = await import('helpers/validateUuidParam');
+    // The loaders the real `route.ts` files export (their own tests pin that).
+    const loaders: Record<string, LoaderFunction | undefined> = {
+        group: validateUuidParam('groupId'),
+        activityDetails: validateUuidParam('parentActivityId'),
+    };
 
     return {
         ROUTE_MODULES: Object.fromEntries(
@@ -44,6 +67,7 @@ vi.mock('./routeModules', async () => {
                     gate.failChunks
                         ? Promise.reject(new Error(CHUNK_ERROR))
                         : gate.pages.then(() => ({
+                              loader: loaders[route.id],
                               Component: () => {
                                   if (gate.throwIn === route.id) {
                                       throw new Error(RENDER_ERROR);
@@ -338,48 +362,157 @@ describe('navigation', () => {
     });
 });
 
-// Until 04-2a3 (`RootErrorBoundary`), route errors go on to `GlobalErrorBoundary` as before the
-// data router, never to React Router's default error page.
-describe('errors reach the boundary outside the router', () => {
-    const DEFAULT_ERROR_PAGE = /Unexpected Application Error/;
-
+describe('route errors (04-2a3, spec 04 §2.5)', () => {
     beforeEach(() => {
         // React and React Router log the caught errors.
         vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        vi.mocked(Sentry.captureException).mockClear();
+        vi.mocked(reloadApp).mockClear();
+        sessionStorage.clear();
+        vi.mocked(updateServiceWorker).mockClear();
     });
 
-    test('a page chunk that fails on the first load', async () => {
-        gate.failChunks = true;
+    test('04-2a3: a page that throws while it renders shows the recovery card inside InternalLayout and is reported with its route id', async () => {
+        signIn();
+        gate.throwIn = 'dashboard';
         renderAt('/dashboard');
 
-        expect((await screen.findByRole('alert')).textContent).toBe(CHUNK_ERROR);
+        expect(await screen.findByText('The app ran into a problem')).toBeTruthy();
+        expect(screen.getByRole('complementary', SIDEBAR)).toBeTruthy();
+        expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+            tags: { routeId: 'dashboard' },
+        });
         expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
     });
 
-    test('a page chunk that fails on a later navigation', async () => {
+    test('04-2a3: a bare join route error replaces AuthLayout with the card, no navigation', async () => {
         signIn();
+        gate.throwIn = 'groupJoin';
+        renderAt('/group/join/x');
+
+        expect(await screen.findByText('The app ran into a problem')).toBeTruthy();
+        expect(screen.queryByRole('complementary', SIDEBAR)).toBeNull();
+    });
+
+    test('04-2a3: an error outside the layouts reaches the root boundary, not the default page', async () => {
+        gate.throwIn = 'notFound';
+        renderAt('/not-found');
+
+        expect(await screen.findByText('The app ran into a problem')).toBeTruthy();
+        expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
+    });
+
+    test('04-2a3: a page chunk that fails shows the new-version screen and reloads once per session', async () => {
+        gate.failChunks = true;
+        renderAt('/not-found');
+
+        expect(await screen.findByText('A new version is available')).toBeTruthy();
+        expect(reloadApp).toHaveBeenCalledTimes(1);
+        expect(Sentry.captureException).not.toHaveBeenCalled();
+    });
+
+    test('04-2a3: the second chunk failure in a session does not reload again; the button reloads when no update waits', async () => {
+        sessionStorage.setItem(SS_KEY_ROUTE_CHUNK_RELOAD, '1');
+        gate.failChunks = true;
+        renderAt('/not-found');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Update app' }));
+
+        await waitFor(() => expect(reloadApp).toHaveBeenCalledTimes(1));
+        expect(updateServiceWorker).not.toHaveBeenCalled();
+    });
+
+    test('04-2a3: the button applies a waiting worker, keeping the draft', async () => {
+        sessionStorage.setItem(SS_KEY_ROUTE_CHUNK_RELOAD, '1');
+        vi.mocked(checkForServiceWorkerUpdate).mockResolvedValueOnce(true);
+        gate.failChunks = true;
+        renderAt('/not-found');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Update app' }));
+
+        await waitFor(() => expect(updateServiceWorker).toHaveBeenCalledWith(true));
+        expect(reloadApp).not.toHaveBeenCalled();
+    });
+
+    test('04-2a3: with storage that does not keep the flag nothing reloads by itself', async () => {
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new Error('quota');
+        });
+        gate.failChunks = true;
+        renderAt('/not-found');
+
+        expect(await screen.findByText('A new version is available')).toBeTruthy();
+        expect(reloadApp).not.toHaveBeenCalled();
+    });
+
+    test('04-2a3: offline a failed chunk is not a new version: no auto reload, a retry instead', async () => {
+        onlineManager.setOnline(false);
+
+        try {
+            gate.failChunks = true;
+            renderAt('/not-found');
+
+            expect(await screen.findByText(/You are offline/)).toBeTruthy();
+            expect(reloadApp).not.toHaveBeenCalled();
+            expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+        } finally {
+            onlineManager.setOnline(true);
+        }
+    });
+
+    test('04-2a3: a chunk that fails on a later navigation keeps the layout', async () => {
+        signIn();
+        sessionStorage.setItem(SS_KEY_ROUTE_CHUNK_RELOAD, '1');
         const router = renderAt('/dashboard');
         await screen.findByText('dashboard');
 
         gate.failChunks = true;
         await act(() => router.navigate('/activity'));
 
-        expect((await screen.findByRole('alert')).textContent).toBe(CHUNK_ERROR);
-        expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
-    });
-
-    test('a page that throws while it renders', async () => {
-        gate.throwIn = 'notFound';
-        renderAt('/not-found');
-
-        expect((await screen.findByRole('alert')).textContent).toBe(RENDER_ERROR);
-        expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
+        expect(await screen.findByText('A new version is available')).toBeTruthy();
+        expect(screen.getByRole('complementary', SIDEBAR)).toBeTruthy();
     });
 });
 
-/** A concrete URL of a manifest path: every `:param` is `x`. */
-const urlOf = (path: string) => `/${path.replace(/:\w+/g, 'x')}`;
-const SIDEBAR = { name: 'Desktop navigation' } as const;
+describe('route parameter validation (04-2a3, spec 04 §2.4)', () => {
+    beforeEach(() => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        vi.mocked(Sentry.captureException).mockClear();
+        signIn();
+    });
+
+    test.each(['/group/123', '/activity/123'])(
+        '04-2a3: %s with an invalid UUID renders NotFound inside InternalLayout, unreported',
+        async path => {
+            renderAt(path);
+
+            expect(await screen.findByText('Page Not Found', { exact: false })).toBeTruthy();
+            expect(screen.getByRole('complementary', SIDEBAR)).toBeTruthy();
+            expect(screen.queryByText('group')).toBeNull();
+            expect(screen.queryByText('activityDetails')).toBeNull();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+        },
+    );
+
+    test.each([
+        ['/group/' + UUID, 'group'],
+        ['/activity/' + UUID, 'activityDetails'],
+    ])('04-2a3: %s with a UUID renders the page', async (path, id) => {
+        renderAt(path);
+
+        expect(await screen.findByText(id)).toBeTruthy();
+    });
+
+    test('04-2a3: an invalid inviteToken is not a 404: the join page renders', async () => {
+        renderAt('/group/join/not-a-valid-token');
+
+        expect(await screen.findByText('groupJoin')).toBeTruthy();
+    });
+});
+
+/** A concrete URL of a manifest path: a UUID for the validated ids, else `x`. */
+const urlOf = (path: string) =>
+    `/${path.replace(/:(\w+)/g, (_, name: string) => (name === 'groupId' || name === 'parentActivityId' ? UUID : 'x'))}`;
 // Solo is unreleased: its guard redirects every user (covered above).
 const regularRoutes = APP_ROUTES.filter(route => !route.transitional && route.guard !== 'solo');
 

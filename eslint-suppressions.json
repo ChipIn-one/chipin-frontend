@@ -863,11 +863,6 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/GlobalHooks.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/GroupJoinPage.test.tsx": {
     "boundaries/dependencies": {
       "count": 2

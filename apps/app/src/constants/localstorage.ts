@@ -15,3 +15,6 @@ export const LS_KEY_KEPT_OUTBOX_USERS = `${PROJECT_NAME}_keptOutboxUsers` as con
  * and restored once at startup. Versioned: another version is dropped on read.
  */
 export const SS_KEY_EXPENSE_DRAFT = `${PROJECT_NAME}_expenseDraft_v1` as const;
+
+/** Spec 04 §2.5: set once the route chunk error reloaded the app by itself (one auto-reload per session). */
+export const SS_KEY_ROUTE_CHUNK_RELOAD = `${PROJECT_NAME}_routeChunkReload_v1` as const;

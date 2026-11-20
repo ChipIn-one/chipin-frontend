@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { Box, Spinner } from '@radix-ui/themes';
 import { CircleCheckIcon, CircleXIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { Outlet } from 'react-router-dom';
+import { Outlet, ScrollRestoration } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
 import { RestoreGate } from 'app/providers/RestoreGate';
@@ -11,7 +11,7 @@ import { UpdateRequiredScreen } from 'app/pwa/UpdateRequiredScreen';
 import { AddExpenseModal } from 'features/add-expense';
 import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
-import GlobalHooks from 'pages/GlobalHooks';
+import { GlobalHooks } from 'pages/GlobalHooks';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PageLoader from 'basics/PageLoader';
@@ -19,6 +19,16 @@ import AddExpenseButton from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import { Header } from 'components/Header';
 import { EarlySupporterPromoModal } from 'components/modals/early-supporter-promo-modal';
+
+import { useDocumentTitle } from './useDocumentTitle';
+
+// Inside `RestoreGate`, so the group query of the title waits for the restored cache (spec 03 §1.6),
+// and in its own component so a title update does not re-render the whole shell.
+const DocumentTitle = () => {
+    useDocumentTitle();
+
+    return null;
+};
 
 const ToastSuccessIcon = () => <CircleCheckIcon size={20} />;
 const ToastInfoIcon = () => <InfoIcon size={20} />;
@@ -46,11 +56,13 @@ const RootLayout = () => {
                             <Outlet />
                         </Suspense>
                     </Box>
+                    <DocumentTitle />
                     <AddExpenseButton />
                     <AddExpenseModal />
                 </RestoreGate>
                 {/* The SW registration itself is in root.tsx: once per page, not per user. */}
                 <ServiceWorkerSafePoints />
+                <ScrollRestoration />
 
                 <Toaster
                     theme={isThemeDark(resolvedTheme) ? 'dark' : 'light'}
