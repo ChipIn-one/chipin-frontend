@@ -106,10 +106,18 @@ test('shows the expired-code message for an invalid OAuth exchange code', () => 
     });
 });
 
-test('falls back home instead of redirecting back into the OAuth callback', () => {
+test('04-2f login: falls back to the dashboard instead of redirecting back into the OAuth callback', () => {
     renderCallback('/oauth/callback?returnTo=%2Foauth%2Fcallback%3Fcode%3Dloop');
 
     return screen.findByTestId('destination').then(destination => {
-        expect(destination.textContent).toBe('/');
+        expect(destination.textContent).toBe('/dashboard');
+    });
+});
+
+test('04-2f login: falls back to the dashboard instead of an open redirect', () => {
+    renderCallback('/oauth/callback?returnTo=%2F%2Fevil.example');
+
+    return screen.findByTestId('destination').then(destination => {
+        expect(destination.textContent).toBe('/dashboard');
     });
 });

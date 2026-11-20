@@ -305,3 +305,41 @@ test('on an app host the landing sign-in opens the auth modal', () => {
             vi.unstubAllGlobals();
         });
 });
+
+test.each([
+    ['/login', '/'],
+    ['/not-found', '/'],
+    ['/ru/privacy', '/ru/'],
+])('04-2f site paths: signed out on %s the logo is a plain link to %s', (path, href) => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    render(
+        <MemoryRouter initialEntries={[path]}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    const logo = screen.getByRole('link', { name: PROJECT_NAME });
+    expect(logo.tagName).toBe('A');
+    expect(logo.getAttribute('href')).toBe(href);
+});
+
+test('04-2f login: the sign-in page has no header sign-in button', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    render(
+        <MemoryRouter initialEntries={['/login']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: i18n.t('header.signIn') })).toBeNull();
+});

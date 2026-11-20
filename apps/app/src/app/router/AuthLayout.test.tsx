@@ -120,7 +120,7 @@ const renderLayout = (path: string) => {
                 ),
                 children: [{ path: '*', element: <DraftPage /> }],
             },
-            ...['/', '/ru/'].map(landing => ({ path: landing, element: <CurrentRoute /> })),
+            { path: '/login', element: <CurrentRoute /> },
         ],
         { initialEntries: [path] },
     );
@@ -190,26 +190,30 @@ describe('the live session', () => {
         expect(screen.queryByRole('status')).toBeNull();
     });
 
-    test('never signed in: the auth modal alone, no page, the URL unchanged', async () => {
+    test('04-2f AuthLayout: never signed in goes to /login with the path and query, no modal', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
 
         renderLayout('/group/123?tab=members#balances');
 
-        expect((await screen.findByTestId('auth-modal')).dataset.opened).toBe('true');
+        await waitFor(() => {
+            expect(screen.getByLabelText('Current route').textContent).toBe(
+                `/login?returnTo=${encodeURIComponent('/group/123?tab=members')}`,
+            );
+        });
+        expect(screen.queryByTestId('auth-modal')).toBeNull();
         expect(screen.queryByLabelText('Draft')).toBeNull();
-        expect(screen.getByLabelText('Current route').textContent).toBe(
-            '/group/123?tab=members#balances',
-        );
     });
 
-    test('closes the auth gate back to the landing page', async () => {
+    test('04-2f AuthLayout: closing the auth modal goes to /login that returns to the page', async () => {
         const interaction = userEvent.setup();
-        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
-        renderLayout('/group/123');
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
+        renderLayout('/group/join/tok-1');
 
         await interaction.click(await screen.findByRole('button', { name: CLOSE_AUTH_LABEL }));
 
-        expect(screen.getByLabelText('Current route').textContent).toBe('/');
+        expect(screen.getByLabelText('Current route').textContent).toBe(
+            '/login?returnTo=%2Fgroup%2Fjoin%2Ftok-1',
+        );
     });
 
     test('an expiry keeps the page mounted, hidden and inert under the auth modal', async () => {
@@ -253,19 +257,21 @@ describe('the live session', () => {
         expect(screen.queryByLabelText('Draft')).toBeNull();
     });
 
-    test('redirects an explicit sign-out to the landing page instead of showing auth UI', async () => {
+    test('04-2f AuthLayout: an explicit sign-out goes to /login instead of showing auth UI', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
         renderLayout('/settings');
 
         await waitFor(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/');
+            expect(screen.getByLabelText('Current route').textContent).toBe(
+                '/login?returnTo=%2Fsettings',
+            );
         });
         expect(screen.queryByTestId('auth-modal')).toBeNull();
         expect(screen.queryByLabelText('Draft')).toBeNull();
     });
 
-    test('a remote logout of another tab mid-use leads to the landing', async () => {
+    test('04-2f AuthLayout: a remote logout of another tab mid-use leads to /login', async () => {
         renderLayout('/settings');
         await screen.findByLabelText('Draft');
 
@@ -274,7 +280,9 @@ describe('the live session', () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/');
+            expect(screen.getByLabelText('Current route').textContent).toBe(
+                '/login?returnTo=%2Fsettings',
+            );
         });
         expect(screen.queryByLabelText('Draft')).toBeNull();
         expect(screen.queryByTestId('auth-modal')).toBeNull();
@@ -296,42 +304,40 @@ describe('the live session', () => {
         expect(screen.getByTestId('auth-modal')).toBeTruthy();
     });
 
-    // A signed-out user inherits only the last account's local appearance/locale,
-    // never the auth session. The English public root stays unchanged.
-    test.each([
-        ['ru', '/ru/'],
-        ['es', '/'],
-        ['pt-BR', '/'],
-        ['pt-PT', '/'],
-        ['en', '/'],
-        ['unreleased-locale', '/'],
-    ])('explicit sign-out uses cached locale %s and navigates to %s', async (language, path) => {
-        LocalStorage.set(LS_KEY_USER, {
-            role: 'USER',
-            settings: {
-                defaultCurrency: 'USD',
-                defaultCategory: 'food',
-                timeFormat: '24h',
-                language,
-                theme: 'light',
-                simplifyDebts: true,
-                skipCategory: false,
-                soloModeByDefault: false,
-                saveGroupExpensesToSolo: false,
-                sex: 'male',
-            },
-        });
-        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
+    // A signed-out user keeps only the last account's local appearance/locale, never the auth
+    // session; whatever the cached locale, the sign-out leads to /login (04-2f, no landing).
+    test.each(['ru', 'es', 'pt-BR', 'pt-PT', 'en', 'unreleased-locale'])(
+        '04-2f AuthLayout: explicit sign-out with cached locale %s leads to /login, settings kept',
+        async language => {
+            LocalStorage.set(LS_KEY_USER, {
+                role: 'USER',
+                settings: {
+                    defaultCurrency: 'USD',
+                    defaultCategory: 'food',
+                    timeFormat: '24h',
+                    language,
+                    theme: 'light',
+                    simplifyDebts: true,
+                    skipCategory: false,
+                    soloModeByDefault: false,
+                    saveGroupExpensesToSolo: false,
+                    sex: 'male',
+                },
+            });
+            useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
-        renderLayout('/settings');
+            renderLayout('/settings');
 
-        await waitFor(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe(path);
-        });
-        expect(screen.queryByTestId('auth-modal')).toBeNull();
-        expect(getLocalUser()?.settings.language).toBe(language);
-        expect(getLocalUser()?.settings.theme).toBe('light');
-    });
+            await waitFor(() => {
+                expect(screen.getByLabelText('Current route').textContent).toBe(
+                    '/login?returnTo=%2Fsettings',
+                );
+            });
+            expect(screen.queryByTestId('auth-modal')).toBeNull();
+            expect(getLocalUser()?.settings.language).toBe(language);
+            expect(getLocalUser()?.settings.theme).toBe('light');
+        },
+    );
 });
 
 describe('with the loader (the whole tree)', () => {
@@ -367,14 +373,15 @@ describe('with the loader (the whole tree)', () => {
         expect(refreshAuthTokens).not.toHaveBeenCalled();
     });
 
-    test('an explicit sign-out is redirected by the loader before the page loads', async () => {
+    test('04-2f AuthLayout: an explicit sign-out is sent to /login by the loader before the page loads', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
         const router = renderApp('/group/x');
 
         await waitFor(() => {
-            expect(router.state.location.pathname).toBe('/');
+            expect(router.state.location.pathname).toBe('/login');
         });
+        expect(router.state.location.search).toBe('?returnTo=%2Fgroup%2Fx');
         expect(screen.queryByText('group')).toBeNull();
     });
 

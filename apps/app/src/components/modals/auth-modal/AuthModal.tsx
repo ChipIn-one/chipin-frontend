@@ -2,7 +2,7 @@ import { Flex, Heading, Text } from '@radix-ui/themes';
 import { ShieldLockIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import AuthButtons from 'components/AuthButtons';
+import { AuthButtons } from 'components/AuthButtons';
 
 import SharedExpensesIllustration from 'assets/auth-shared-expenses.webp';
 

@@ -97,6 +97,7 @@
     "no-restricted-syntax#money-parse-float": "b",
     "no-restricted-syntax#money-to-fixed": "b",
     "no-restricted-syntax#query-key-literal": "b",
+    "no-restricted-syntax#site-paths": "b",
     "no-restricted-syntax#store-object-without-shallow": "b",
     "no-restricted-syntax#store-without-selector": "b",
     "no-self-assign": "b",

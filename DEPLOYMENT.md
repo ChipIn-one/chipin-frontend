@@ -202,7 +202,7 @@ After 04-4a2 the existing app project serves both host groups from one build:
 | `chipin.one`, `dev.chipin.one` (legacy hosts) | today's landing (`/`, `/privacy`, `/terms`, `/ru/*`), the worker kill-switch at `/sw.js` (04-4a1), `302` of private paths to the app host, no manifest (#758) |
 
 On the legacy hosts `/dashboard*`, `/solo*`, `/activity*`, `/settings*`,
-`/group*`, `/friends*`, `/oauth*`, `/not-found` and `/app.html` answer `302` to
+`/group*`, `/friends*`, `/oauth*`, `/not-found`, `/login` and `/app.html` answer `302` to
 the app host of the same environment (`chipin.one` → `app.chipin.one`,
 `dev.chipin.one` → `app-dev.chipin.one`) with the same path and query. The
 status stays `302` for the whole life of these rules. `/index.html` and every

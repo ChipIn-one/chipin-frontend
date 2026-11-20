@@ -35,7 +35,6 @@ export const LAYER_ELEMENTS = [
             { pattern: 'pages/GlobalHooks.tsx', mode: 'file' },
             { pattern: 'app', mode: 'folder' },
             { pattern: 'bootstrap', mode: 'folder' },
-            { pattern: 'features/routing', mode: 'folder' },
             { pattern: 'public-routes', mode: 'folder' },
         ],
     },
