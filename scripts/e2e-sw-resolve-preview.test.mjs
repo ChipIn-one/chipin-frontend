@@ -581,6 +581,7 @@ describe('e2e-sw workflow', () => {
             'apps/app/playwright.sw.config.ts',
             'apps/app/e2e/support/config.ts',
             'scripts/e2e-sw-resolve-preview.mjs',
+            'scripts/deployment-environments.mjs',
             '.github/workflows/e2e-sw.yml',
         ]);
         expect(Object.keys(workflow.on.workflow_dispatch.inputs)).toEqual([
@@ -606,7 +607,22 @@ describe('e2e-sw workflow', () => {
         expect(trusted.uses).toMatch(/^actions\/checkout@/);
         expect(trusted.with.ref).toBe('${{ github.sha }}');
         expect(trusted.with['fetch-depth']).toBe(0);
-        expect(trusted.with['sparse-checkout']).toBe('scripts/e2e-sw-resolve-preview.mjs');
+        // The sparse checkout writes the resolver and every local module it imports, nothing else; a
+        // missing import fails the job with ERR_MODULE_NOT_FOUND (#801).
+        const localImports = [
+            ...readFileSync('scripts/e2e-sw-resolve-preview.mjs', 'utf8').matchAll(
+                /from '\.\/([^']+)'/gu,
+            ),
+        ].map(([, file]) => `scripts/${file}`);
+        expect(localImports).toEqual(['scripts/deployment-environments.mjs']);
+        expect(trusted.with['sparse-checkout'].trim().split('\n')).toEqual([
+            'scripts/e2e-sw-resolve-preview.mjs',
+            ...localImports,
+        ]);
+        expect(workflow.on.pull_request.paths).toEqual(expect.arrayContaining(localImports));
+        expect(
+            readFileSync('scripts/deployment-environments.mjs', 'utf8').match(/^import /mu),
+        ).toBeNull();
         expect(resolve.steps.map(step => step.run).filter(Boolean)).toEqual([
             'node scripts/e2e-sw-resolve-preview.mjs',
         ]);
