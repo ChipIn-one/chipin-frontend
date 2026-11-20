@@ -82,7 +82,7 @@ test('AUTH-016: asks to start sign-in again in this browser when the OAuth brows
 
     return screen.findByTestId('destination').then(() => {
         expect(toast.error).toHaveBeenCalledWith(
-            'Google sign-in could not be finished in this browser. Please start signing in again here.',
+            'Google sign-in could not be finished. Please sign in again in this browser.',
         );
     });
 });
