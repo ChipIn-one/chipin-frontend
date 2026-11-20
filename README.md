@@ -27,7 +27,7 @@ npm install
 | `npm run format:check`              | Check formatting with Prettier without writing; part of `verify` and `verify:full` (CI)                                |
 | `npm run typecheck`                 | Run the TypeScript compiler (`tsc -b`, then `typecheck:packages`)                                                      |
 | `npm run verify`                    | Fast check: format check, lint, then typecheck                                                                         |
-| `npm run verify:full`               | Full gate, also run by CI: format check, `lint:full`, `typecheck:packages`, full tests, build, ds-gallery build        |
+| `npm run verify:full`               | CI's full gate (agents: not locally): format check, `lint:full`, `typecheck:packages`, tests, build, ds-gallery        |
 | `npm run build`                     | Typecheck and production build                                                                                         |
 | `npm run vercel-build`              | Vercel deployment build: production build and public precache check, no tests                                          |
 | `npm run preview`                   | Preview the production build locally                                                                                   |
@@ -40,7 +40,7 @@ During implementation, pass the smallest set of test files that covers the chang
 npm run test:task -- src/store/groupsStore.test.ts src/pages/group-page/GroupPage.test.tsx
 ```
 
-Run `npm run verify:full` before handing work over. Husky `pre-commit` runs `lint-staged` in ESLint FAST mode: it only applies `eslint --fix` and then Prettier to staged files and prints the remaining errors; lint never blocks the commit (only a syntax error that Prettier cannot parse does); there is no `pre-push` hook, only CI blocks.
+Before handing work over, run `npm run verify` and the targeted `npm run test:task -- <paths>`. `npm run verify:full` (all tests, build, ds-gallery) is CI's full gate: AI agents never run it, `test:full`, builds or e2e locally; a red CI is fixed with a new commit. Husky `pre-commit` runs `lint-staged` in ESLint FAST mode: it only applies `eslint --fix` and then Prettier to staged files and prints the remaining errors; lint never blocks the commit (only a syntax error that Prettier cannot parse does); there is no `pre-push` hook, only CI blocks.
 
 ## License
 

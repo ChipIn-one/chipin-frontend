@@ -65,12 +65,16 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 
 ## Commands
 
+- Local runs (agents: sessions, tracks, subagents): only `npm run verify` and
+  `npm run test:task -- <paths>`. Never run `npm run verify:full`, `npm run test:full`, a full
+  `vitest run`, `npm run build`, the ds-gallery or site build, or e2e on a developer machine. CI is
+  the full gate; a red CI is fixed with a new commit.
 - During development: use `npm run test:task -- <explicit test paths>`; this command refuses to run
   without at least one test path.
 - Select tests by the changed behavior: pure helper/selector changes use their co-located tests,
   store/API changes use the owning store/API tests plus directly affected UI tests, and component
   changes use the component test plus the smallest affected integration test.
-- `npm run test:full` runs the complete Vitest suite once.
+- `npm run test:full` runs the complete Vitest suite once (CI, through `verify:full`; not run locally by agents).
 - `npm run typecheck` runs `tsc -b`, then `typecheck:packages` (`tsc -p` in each `packages/*`).
 - `npm run format` rewrites the repository with Prettier (`prettier.config.js`); never run it in a task.
   Run `npx prettier --write <files>` on the files you changed. `npm run format:check` checks without
@@ -84,7 +88,7 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - `npm run verify` is the fast local check: format check, lint, `check:file-layout`, and
   typecheck; it does not run
   Vitest or build.
-- `npm run verify:full` is the full gate and the same command CI runs: format check, `lint:full`,
+- `npm run verify:full` is the full gate, run by CI and not locally by agents: format check, `lint:full`,
   `check:file-layout`, the complete Vitest suite, the production build, and the ds-gallery build. CI also runs
   `scripts/check-baseline.mjs` on pull requests. Husky `pre-commit` runs `lint-staged` with `CHIPIN_ESLINT_FAST=1`
   (no type-aware rules): `eslint --fix`, then Prettier, on staged files; remaining errors are printed

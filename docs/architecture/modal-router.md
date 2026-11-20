@@ -27,6 +27,6 @@ Issue: ChipIn-one/chipin-frontend#314. Integration target: `dev`.
 
 ## Validation gate
 
-- Run co-located ModalRouter tests, SettleUpModal group and friend tests, BaseModal tests, then `npm run verify:full`.
+- Run co-located ModalRouter tests, SettleUpModal group and friend tests, BaseModal tests (`npm run test:task`), then `npm run verify`; CI runs `npm run verify:full`.
 - Visually verify DOM node identity, focus, Escape, overlay, scroll lock and mobile `100dvh` behavior in a real browser before merge.
 - Domain contracts such as `SET-003` remain unchanged; this is a frontend navigation and presentation refactor.
