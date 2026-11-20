@@ -192,6 +192,28 @@ describe('seoGuard scripts', () => {
         expect(inlineScripts(html)).toEqual(['a()', 'b()', 'c()']);
     });
 
+    test('end tags with whitespace still close a script', () => {
+        expect(inlineScripts(page(HEAD, '<script>a()</script ><script>b()</script\n>'))).toEqual([
+            'a()',
+            'b()',
+        ]);
+        expect(problemsOf('index.html', page(HEAD, '<script>var inviteToken;</script >'))).toEqual(
+            [],
+        );
+    });
+
+    test('removing a script or comment cannot assemble a new one from the pieces', () => {
+        const html = page(
+            HEAD,
+            '<scr<script></script>ipt>x</script><p <!-- --> onclick="go()">' +
+                '<!<!-- -->-- --><button onclick="go()">x</button>',
+        );
+
+        expect(problemsOf('index.html', html)).toEqual([
+            'index.html: inline event handler attribute',
+        ]);
+    });
+
     test('a "<!--" inside a script does not hide the following scripts', () => {
         const html = page(HEAD, '<script>var s="<!--"</script><script>evil()</script><p>--></p>');
 

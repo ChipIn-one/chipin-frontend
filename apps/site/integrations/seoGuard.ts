@@ -19,7 +19,20 @@ const FORBIDDEN_TEXT = /(?:refreshToken|accessToken|inviteToken|sessionStorage)/
 // A JWT: base64url header `{"…` and payload.
 const JWT = /eyJ[\w-]{10,}\.[\w-]{10,}/;
 
-const SCRIPT_ELEMENT = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+// End tags may carry whitespace or junk before `>` (`</script >`), as HTML parsers accept.
+const SCRIPT_ELEMENT = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
+const COMMENT = /<!--[\s\S]*?-->/g;
+
+/** Removes every match until none is left: a removal must not join fragments into a new match. */
+const removeAll = (text: string, pattern: RegExp): string => {
+    let current = text;
+
+    for (let previous = ''; previous !== current;) {
+        previous = current;
+        current = current.replace(pattern, '');
+    }
+    return current;
+};
 // `type` values a browser executes (compared lowercased and trimmed).
 const JS_TYPES = new Set([
     '',
@@ -68,9 +81,9 @@ const scriptElements = (html: string) =>
 
 /** The page markup without script bodies (or comments, when `comments` is false). */
 const markup = (html: string, { comments }: { comments: boolean }): string => {
-    const noScripts = html.replace(SCRIPT_ELEMENT, '');
+    const noScripts = removeAll(html, SCRIPT_ELEMENT);
 
-    return comments ? noScripts : noScripts.replace(/<!--[\s\S]*?-->/g, '');
+    return comments ? noScripts : removeAll(noScripts, COMMENT);
 };
 
 /** The text of every executable `<script>` without `src` (the CSP hash input). */

@@ -1,6 +1,7 @@
+// Not `astro:content`: its types exist only after `astro sync`, and lint runs without them.
+import { defineCollection } from 'astro/content/config';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { defineCollection } from 'astro:content';
 
 import { contentBase } from './lib/contentSchema';
 
