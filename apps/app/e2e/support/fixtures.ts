@@ -26,6 +26,12 @@ import {
     type ProvisioningClient,
     REFRESH_COOKIE_NAME,
 } from './provisioning';
+import {
+    type ApiErrorRecord,
+    formatApiErrors,
+    toFailedRequestRecord,
+    toServerErrorRecord,
+} from './serverErrors';
 
 type StorageState = Exclude<BrowserContextOptions['storageState'], string | undefined>;
 
@@ -82,6 +88,8 @@ export const test = base.extend<E2eFixtures>({
     },
     // `use.video` covers only Playwright's own `context` fixture, so these contexts record their
     // video themselves; it is kept, and attached to the report, only when the test fails.
+    // Each context also records the API's 5xx answers and requests that got no answer: a failed
+    // test then names them instead of timing out on a closed page with no cause (#778).
     signIn: async ({ browser, baseURL }, provide, testInfo) => {
         if (!baseURL) {
             throw new Error('baseURL is not configured');
@@ -92,6 +100,13 @@ export const test = base.extend<E2eFixtures>({
         const bypass = resolvePreviewBypass(environment, resolveE2eTarget(environment));
         const contexts: BrowserContext[] = [];
         const pages: Page[] = [];
+        const appOrigin = new URL(baseURL).origin;
+        const apiErrors: ApiErrorRecord[] = [];
+        const recordApiError = (record: ApiErrorRecord | undefined): void => {
+            if (record) {
+                apiErrors.push(record);
+            }
+        };
 
         await provide(async user => {
             const context = await browser.newContext({
@@ -99,6 +114,33 @@ export const test = base.extend<E2eFixtures>({
                 recordVideo: { dir: videoDir },
             });
             contexts.push(context);
+            // The context's listeners see the requests of all its pages.
+            context.on('response', response => {
+                recordApiError(
+                    toServerErrorRecord(
+                        {
+                            method: response.request().method(),
+                            url: response.url(),
+                            status: response.status(),
+                        },
+                        appOrigin,
+                        new Date(),
+                    ),
+                );
+            });
+            context.on('requestfailed', request => {
+                recordApiError(
+                    toFailedRequestRecord(
+                        {
+                            method: request.method(),
+                            url: request.url(),
+                            errorText: request.failure()?.errorText,
+                        },
+                        appOrigin,
+                        new Date(),
+                    ),
+                );
+            });
             if (bypass) {
                 // Only the Preview origin is routed; every other request is left untouched.
                 await context.route(
@@ -129,6 +171,16 @@ export const test = base.extend<E2eFixtures>({
             await rm(videoDir, { recursive: true, force: true });
 
             return;
+        }
+
+        const apiErrorMessage = formatApiErrors(apiErrors);
+        if (apiErrorMessage) {
+            testInfo.annotations.push({ type: 'api-errors', description: apiErrorMessage });
+            await testInfo.attach('api-errors.txt', {
+                body: apiErrorMessage,
+                contentType: 'text/plain',
+            });
+            console.warn(`[e2e] ${apiErrorMessage}`);
         }
 
         const videoPaths = await Promise.all(pages.map(page => page.video()?.path()));

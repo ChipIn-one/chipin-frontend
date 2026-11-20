@@ -97,6 +97,18 @@ Five projects (`playwright.config.ts`): `chromium` (`Desktop Chrome`), `firefox`
 - The workflow creates the `runId` itself and passes it as `CHIPIN_E2E_RUN_ID`. A final step runs always, also after a cancel, a timeout or a crash of the test step, calls `DELETE /auth/test-runs/{runId}` with curl (the Basic credentials go through curl's stdin config, never its arguments or the log) and logs the counts; after the teardown's purge it deletes nothing.
 - On failure, artifacts are considered only when the teardown's marker holds this run's id, i.e. after a verified purge. The report and test results are then scanned for the Basic password and Basic token, including zip files and the HTML report's embedded data, and uploaded with a retention of 3 days only when the scan is clean.
 
+## Failures caused by staging
+
+The suite runs against the shared staging API and deliberately has no retries, so a real flake stays visible. A staging outage therefore fails tests too. The `signIn` fixture records, in each user's context, every `5xx` answer to the app origin's `/api` and every `/api` request that got no answer (`e2e/support/serverErrors.ts`): method, path, status or error text, and time. The path has no query string, and every segment that is not a short lowercase word is replaced with `{id}` (a UUID) or `{token}`, so invite tokens and ids never reach the log. When such a test fails, it gets an `api-errors` annotation and an `api-errors.txt` attachment, and the log has a line `[e2e] API answered 5xx or failed during this test: …` naming the requests. A passing test reports nothing.
+
+Read the statuses before rerunning:
+
+- `502`, `503`, `504` or a request with no answer point to a staging outage window, not to the test's assertion. Seen on 2026-11-18 (runs 44336094806 and 44397956408, attempt 1): Cloudflare answered `502` to the cold-start `POST /api/auth/refresh` of a freshly opened context, in both workers at once; the app then showed the backend-down dialog ("ChipIn will be back shortly") or the signed-out landing, and the test timed out waiting for the group page (#778). Rerun the workflow.
+- `net::ERR_INTERNET_DISCONNECTED` or `NS_ERROR_OFFLINE` after the offline spec's `context.setOffline` are caused by the test itself, not by a staging outage. A request the page cancelled itself (a navigation or reload) is not recorded, and an error text that is not a plain error code is shown as `other`.
+- A `500` on the test's own write (an expense, a settlement, a join) is a bug to investigate, not one to rerun away.
+
+The offline banner flake (#746) was a bug in the app, fixed by #749: a response to a request sent before going offline no longer marks the app online again.
+
 ## Service worker suite
 
 `apps/app/e2e/sw.spec.ts` checks the app's service worker on one built app (spec 04 §2.11, criterion 5 scenario (a), and the parts of the 04-2d update policy that one deploy shows), in Chromium only (`apps/app/playwright.sw.config.ts`; Playwright sees and controls service worker traffic only in Chromium). It is a separate suite: its config allows service workers, has no global setup and needs no credential, because no user signs in. It never runs with `npm run test:e2e`, and Vitest excludes it like the other specs.

@@ -2,14 +2,18 @@ import { Component, type ReactNode } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import type { RouteObject } from 'react-router-dom';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
+import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRoutes';
+import { LocalStorage } from 'helpers/localStorage';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { i18n } from 'i18n';
+import { startCacheRestore } from 'shared/offline/restore';
 import { UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
+import { getOrThrow } from 'test/getOrThrow';
 import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { signInWithSelf } from 'test/selfUser';
 
@@ -63,6 +67,17 @@ vi.mock('./RootLayout', async () => {
         ),
     };
 });
+
+// The data of a session start (after a cold-load refresh) is not under test here.
+vi.mock('store/groupsList', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/groupsList')>()),
+    loadGroupsListForSession: vi.fn(() => Promise.resolve()),
+}));
+vi.mock('store/sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/sessionUser')>()),
+    loadKnownUsersForSession: vi.fn(() => Promise.resolve()),
+    loadSelfUserForSession: vi.fn(() => Promise.resolve(null)),
+}));
 
 vi.mock('basics/PageLoader', () => ({
     default: () => <div data-testid="page-loader" />,
@@ -152,6 +167,11 @@ const renderAt = (path: string) => {
     return router;
 };
 
+// What root.tsx does before the router renders; no user cache here (`restoreReady` resolves).
+beforeAll(() => {
+    startCacheRestore(undefined);
+});
+
 beforeEach(() => {
     gate.pages = Promise.resolve();
     gate.failChunks = false;
@@ -188,16 +208,25 @@ describe('the route tree', () => {
         );
     });
 
-    test('has no basename and no loaders (D31; the guard loaders come in 04-2a2b)', () => {
+    test('has no basename; the only loaders are the guards of 04-2a2b (D31)', () => {
         const withLoader = (routes: RouteObject[]): RouteObject[] =>
             routes.flatMap(route => [
                 ...(route.loader ? [route] : []),
                 ...withLoader(route.children ?? []),
             ]);
         const router = renderAt('/not-found');
+        const guarded = withLoader(buildAppRoutes(createTestQueryClient()));
 
         expect(router.basename).toBe('/');
-        expect(withLoader(buildAppRoutes(createTestQueryClient()))).toEqual([]);
+        expect(guarded.map(route => route.loader)).toHaveLength(2);
+        // `requireSession` on `AuthLayout` (every protected route), the Solo guard under it.
+        expect(getOrThrow(guarded, 0).id).toBe('auth');
+        expect(leafPaths(getOrThrow(guarded, 0).children ?? []).sort()).toEqual(
+            APP_ROUTES.filter(route => route.access === 'protected' && !route.transitional)
+                .map(route => `/${route.path}`)
+                .sort(),
+        );
+        expect(leafPaths(getOrThrow(guarded, 1).children ?? [])).toEqual(['/solo']);
     });
 });
 
@@ -220,6 +249,25 @@ describe('navigation', () => {
 
         act(() => openPages());
         expect(await screen.findByText('dashboard')).toBeTruthy();
+    });
+
+    // Risk of 04-2a2b: the shell here runs no `useCheckSignIn`, so the page shows only if the
+    // loader starts the session check itself; waiting for a component would take the 5 s timeout.
+    test('a cold load with a session hint: the loader checks the session, the page follows', async () => {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        const refreshAuthTokens = vi.fn(() => Promise.resolve('access-token'));
+        useAuthStore.setState({ status: 'unknown', refreshAuthTokens });
+
+        try {
+            renderAt('/settings');
+
+            expect(screen.getByTestId('page-loader')).toBeTruthy();
+            // `findByText` gives up after 1 s, far below `AUTH_READY_TIMEOUT_MS`.
+            expect(await screen.findByText('settings')).toBeTruthy();
+            expect(refreshAuthTokens).toHaveBeenCalledOnce();
+        } finally {
+            LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+        }
     });
 
     test('a signed-out deep link to an internal page shows the auth modal on the same URL', async () => {
@@ -253,7 +301,7 @@ describe('navigation', () => {
         expect(screen.queryByRole('complementary', { name: 'Desktop navigation' })).toBeNull();
     });
 
-    test('Solo goes through SoloRouteGuard: without Solo access it redirects to the dashboard', async () => {
+    test('Solo goes through SoloGuardLayout: without Solo access it redirects to the dashboard', async () => {
         signIn();
         const router = renderAt('/solo');
 
