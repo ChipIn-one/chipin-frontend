@@ -202,16 +202,49 @@ describe('seoGuard scripts', () => {
         );
     });
 
-    test('removing a script or comment cannot assemble a new one from the pieces', () => {
-        const html = page(
-            HEAD,
-            '<scr<script></script>ipt>x</script><p <!-- --> onclick="go()">' +
-                '<!<!-- -->-- --><button onclick="go()">x</button>',
-        );
+    const HANDLER = 'index.html: inline event handler attribute';
+    const JS_URL = 'index.html: javascript: URL';
+    const TOKEN = 'index.html: token-like or session content in the HTML';
 
-        expect(problemsOf('index.html', html)).toEqual([
-            'index.html: inline event handler attribute',
-        ]);
+    test.each([
+        // Removing pieces must not assemble a script that hides the following markup.
+        [
+            'a split script tag',
+            '<scr<script></script>ipt>x</script><button onclick="go()">x</button>',
+            HANDLER,
+        ],
+        // The browser ends this tag at the `>` of `-->`; the guard errs towards flagging it.
+        ['a comment inside a tag', '<p <!-- --> onclick="go()">x</p>', HANDLER],
+        // `<!<!-- -->` is a bogus comment that ends at the first `>`; the rest is live markup.
+        ['a split comment opener', '<!<!-- -->-- --><button onclick="go()">x</button>', HANDLER],
+        // Repeated removal would join the leftover pieces and delete the live markup between them.
+        [
+            'a handler after a split script tag',
+            '<scr<script></script>ipt><p onclick="go()"></script>',
+            HANDLER,
+        ],
+        ['a handler after a split comment opener', '<!<!-- -->-- <p onclick="go()"> -->', HANDLER],
+        [
+            'a javascript: URL after a split comment opener',
+            '<!<!-- -->-- <a href="javascript:go()">x</a> -->',
+            JS_URL,
+        ],
+        [
+            'token text after a split script tag',
+            '<scr<script></script>ipt><p>inviteToken</p></script>',
+            TOKEN,
+        ],
+        [
+            'a custom element named like a script',
+            '<script-x type="x"><p onclick="go()"></p></script-x>',
+            HANDLER,
+        ],
+    ])('removing scripts and comments keeps the live markup: %s', (_name, body, problem) => {
+        expect(problemsOf('index.html', page(HEAD, body))).toEqual([problem]);
+    });
+
+    test('a removed comment does not join the pieces of an attribute name', () => {
+        expect(problemsOf('index.html', page(HEAD, '<p on<!-- -->click="go()">x</p>'))).toEqual([]);
     });
 
     test('a "<!--" inside a script does not hide the following scripts', () => {
