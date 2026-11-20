@@ -1,48 +1,31 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { matchPath, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
-import { ROUTE_META, ROUTES } from 'constants/routes';
+import { getPublicRoute } from 'constants/publicRoutes';
 
 import { updateSeoMetadata } from './seoMetadata';
-import { useGroupDetail } from './useGroupDetail';
 
+/**
+ * Title, description and SEO tags of the transitional public routes only (until 04-5a). The title of
+ * the app routes is `useDocumentTitle` in `RootLayout` (spec 04 §2.6, from `handle.meta`); here an
+ * app route only gets the noindex tags and no description.
+ */
 export const useRoutesMeta = () => {
-    const location = useLocation();
-    const routeGroupId = matchPath(
-        { path: `${ROUTES.GROUP}/:groupId`, end: true },
-        location.pathname,
-    )?.params.groupId;
-    const selectedGroup = useGroupDetail(routeGroupId).group;
+    const { pathname } = useLocation();
     const { i18n, t } = useTranslation('meta');
 
     useEffect(() => {
-        const matchedRouteMeta = ROUTE_META.map(routeMeta => ({
-            routeMeta,
-            match: matchPath({ path: routeMeta.path, end: true }, location.pathname),
-        })).find(({ match }) => Boolean(match));
+        const publicRoute = getPublicRoute(pathname);
 
-        const routeMeta = matchedRouteMeta?.routeMeta;
-        const params = matchedRouteMeta?.match?.params;
-        let groupName: string | undefined;
-
-        if (routeMeta?.groupTitleKey && selectedGroup && selectedGroup.id === params?.groupId) {
-            groupName = selectedGroup.name;
+        if (!publicRoute) {
+            document.querySelector('meta[name="description"]')?.remove();
+            updateSeoMetadata(pathname, '', '');
+            return;
         }
 
-        const hasSelectedGroupMeta = groupName !== undefined;
-        const titleKey =
-            hasSelectedGroupMeta && routeMeta?.groupTitleKey
-                ? routeMeta.groupTitleKey
-                : routeMeta?.titleKey || 'notFound.title';
-        const descriptionKey =
-            hasSelectedGroupMeta && routeMeta?.groupDescriptionKey
-                ? routeMeta.groupDescriptionKey
-                : routeMeta?.descriptionKey || 'notFound.description';
-        const options = hasSelectedGroupMeta ? { groupName } : undefined;
-
-        const title = t(titleKey, options);
-        const description = t(descriptionKey, options);
+        const title = t(`${publicRoute.metaKey}.title`);
+        const description = t(`${publicRoute.metaKey}.description`);
         document.title = title;
 
         let element = document.querySelector<HTMLMetaElement>('meta[name="description"]');
@@ -55,6 +38,6 @@ export const useRoutesMeta = () => {
 
         element.setAttribute('content', description);
 
-        updateSeoMetadata(location.pathname, title, description);
-    }, [i18n.resolvedLanguage, location.pathname, selectedGroup, t]);
+        updateSeoMetadata(pathname, title, description);
+    }, [i18n.resolvedLanguage, pathname, t]);
 };

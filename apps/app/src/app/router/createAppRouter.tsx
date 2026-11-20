@@ -11,8 +11,8 @@ import PageLoader from 'basics/PageLoader';
 
 import { AuthLayout } from './AuthLayout';
 import { BareLayout, InternalLayout } from './InternalLayout';
-import { RethrowRouteError } from './RethrowRouteError';
 import { RootLayout } from './RootLayout';
+import { RootErrorBoundary, RouteErrorView } from './RouteErrorView';
 import { APP_ROUTES, type AppRouteDef, type AppRouteId } from './routeManifest';
 import { ROUTE_MODULES } from './routeModules';
 import { SoloGuardLayout, soloGuardLoader } from './SoloGuardLayout';
@@ -24,10 +24,16 @@ const TRANSITIONAL_ROUTE_IDS: Record<PublicPage, AppRouteId> = {
     terms: 'publicTerms',
 };
 
+/** The `handle` of a leaf route: what `useDocumentTitle` reads (spec 04 §2.6). */
+interface RouteHandle {
+    meta: AppRouteDef['meta'];
+}
+
 const leaf = (route: AppRouteDef): RouteObject => ({
     id: route.id,
     path: route.path,
     lazy: ROUTE_MODULES[route.id],
+    handle: { meta: route.meta } satisfies RouteHandle,
 });
 
 const byLayout = (access: AppRouteDef['access'], layout: AppRouteDef['layout']) =>
@@ -74,7 +80,7 @@ const buildAppRoutes = (queryClient: QueryClient): RouteObject[] => [
     {
         path: '/',
         element: <RootLayout />,
-        errorElement: <RethrowRouteError />,
+        errorElement: <RootErrorBoundary />,
         hydrateFallbackElement: <PageLoader />,
         children: [
             ...publicLocaleRoutes(),
@@ -86,8 +92,8 @@ const buildAppRoutes = (queryClient: QueryClient): RouteObject[] => [
                 // While the loader waits for the session (up to 5 s): offline the banner with its
                 // Retry above the loader, as `AuthLayout` shows after; online the same PageLoader.
                 hydrateFallbackElement: <GuardLoader />,
-                // Until 04-2a3 (`RouteErrorView`): on to the root boundary and Sentry, as before.
-                errorElement: <RethrowRouteError />,
+                // For the bare join routes and the `requireSession` loader (C2-32).
+                errorElement: <RouteErrorView />,
                 children: [
                     {
                         element: <BareLayout />,
@@ -95,15 +101,23 @@ const buildAppRoutes = (queryClient: QueryClient): RouteObject[] => [
                     },
                     {
                         element: <InternalLayout />,
-                        children: internalRoutes.map(route =>
-                            route.guard === 'solo'
-                                ? {
-                                      element: <SoloGuardLayout />,
-                                      loader: soloGuardLoader(queryClient),
-                                      children: [leaf(route)],
-                                  }
-                                : leaf(route),
-                        ),
+                        children: [
+                            {
+                                // A pathless child, so the boundary renders inside `InternalLayout`
+                                // (header and navigation stay): the `errorElement` of the layout
+                                // route itself would replace the layout.
+                                errorElement: <RouteErrorView />,
+                                children: internalRoutes.map(route =>
+                                    route.guard === 'solo'
+                                        ? {
+                                              element: <SoloGuardLayout />,
+                                              loader: soloGuardLoader(queryClient),
+                                              children: [leaf(route)],
+                                          }
+                                        : leaf(route),
+                                ),
+                            },
+                        ],
                     },
                 ],
             },

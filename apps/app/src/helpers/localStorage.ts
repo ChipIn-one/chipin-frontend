@@ -10,6 +10,7 @@ import {
     type LS_KEY_THEME,
     LS_KEY_USER,
     type SS_KEY_EXPENSE_DRAFT,
+    type SS_KEY_ROUTE_CHUNK_RELOAD,
 } from 'constants/localstorage';
 
 export interface LocalUser {
@@ -133,7 +134,7 @@ const LocalStorage = {
     },
 };
 
-type SessionStorageKey = typeof SS_KEY_EXPENSE_DRAFT;
+type SessionStorageKey = typeof SS_KEY_EXPENSE_DRAFT | typeof SS_KEY_ROUTE_CHUNK_RELOAD;
 
 // sessionStorage holds raw text only: its one reader (the expense draft restore) decodes and
 // validates it itself (bigint codec + zod). Blocked or full storage is ignored like above.

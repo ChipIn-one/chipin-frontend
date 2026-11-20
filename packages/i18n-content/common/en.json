@@ -139,7 +139,10 @@
         "goToDashboard": "Go to dashboard",
         "or": "or",
         "updateApp": "Update app",
-        "updatingApp": "Updating app…"
+        "updatingApp": "Updating app…",
+        "newVersionTitle": "A new version is available",
+        "newVersionDescription": "This page needs the latest version of ChipIn. Update the app to continue.",
+        "offlineChunk": "You are offline and this page has not been downloaded yet. Reconnect and try again."
     },
     "copy": {
         "copy": "Copy {{what}}",
