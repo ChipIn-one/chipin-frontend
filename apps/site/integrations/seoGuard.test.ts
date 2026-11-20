@@ -376,6 +376,26 @@ describe('seoGuard scripts', () => {
         expect(inlineScripts(html)).toEqual(['{}', '{}', 'b()', 'c()', 'd()']);
     });
 
+    test('a srcdoc inside <noscript> is checked, its scripts are not hashed', () => {
+        const html = page(
+            HEAD,
+            '<noscript><iframe srcdoc="&lt;script&gt;n()&lt;/script&gt;&lt;p onclick=go()&gt;"></iframe></noscript>',
+        );
+
+        expect(inlineScripts(html)).toEqual([]);
+        expect(problemsOf('index.html', html)).toEqual([HANDLER]);
+    });
+
+    test.each([
+        [
+            'token text in a srcdoc',
+            '<iframe srcdoc="&lt;p&gt;refreshTok&amp;#101;n&lt;/p&gt;"></iframe>',
+        ],
+        ['an entity-encoded JWT', '<p>eyJhbGciOiJIUzI1NiJ9&#46;eyJzdWIiOiIxMjM0NTY3ODkwIn0</p>'],
+    ])('finds token text the browser decodes: %s', (_name, body) => {
+        expect(problemsOf('index.html', page(HEAD, body))).toEqual([TOKEN]);
+    });
+
     test('a script in another language ships as text', () => {
         expect(
             problemsOf(

@@ -90,6 +90,9 @@ interface ParsedPage {
     text: string[];
     /** The documents of `<iframe srcdoc>`: they inherit the page's CSP. */
     frames: ParsedPage[];
+    /** `<iframe srcdoc>` documents only a scripting-off parse has (inside `<noscript>`): their
+     * markup is checked, their scripts never run. */
+    inertFrames: ParsedPage[];
 }
 
 const ASCII_WHITESPACE = /^[\t\n\f\r ]+|[\t\n\f\r ]+$/g;
@@ -140,6 +143,7 @@ const parsePage = (source: string): ParsedPage => {
         description: undefined,
         text: [],
         frames: [],
+        inertFrames: [],
     };
 
     const visit = (
@@ -208,23 +212,37 @@ const parsePage = (source: string): ParsedPage => {
     };
 
     visit(scripting.document.childNodes, { inScript: false, inTemplate: false });
-    // Both token passes see the same `srcdoc`: each document once.
-    const srcdocs = page.tags.flatMap(({ name, attributes }) => {
-        const srcdoc = attributes.get('srcdoc');
+    const srcdocs = (tags: readonly Tag[]) =>
+        new Set(
+            tags.flatMap(({ name, attributes }) => {
+                const srcdoc = attributes.get('srcdoc');
 
-        return name === 'iframe' && srcdoc !== undefined ? [srcdoc] : [];
-    });
+                return name === 'iframe' && srcdoc !== undefined ? [srcdoc] : [];
+            }),
+        );
+    // Each document once, though both token passes see most of them.
+    const live = srcdocs(scripting.tags);
 
-    page.frames = [...new Set(srcdocs)].map(parsePage);
+    page.frames = [...live].map(parsePage);
+    page.inertFrames = [...srcdocs(page.tags)].filter(srcdoc => !live.has(srcdoc)).map(parsePage);
     return page;
 };
 
 /** The page and the documents of its `<iframe srcdoc>`, recursively. */
-const documentsOf = (page: ParsedPage): ParsedPage[] => [page, ...page.frames.flatMap(documentsOf)];
+const documentsOf = (page: ParsedPage): ParsedPage[] => [
+    page,
+    ...[...page.frames, ...page.inertFrames].flatMap(documentsOf),
+];
+
+/** The page and the `<iframe srcdoc>` documents whose scripts can run, recursively. */
+const liveDocumentsOf = (page: ParsedPage): ParsedPage[] => [
+    page,
+    ...page.frames.flatMap(liveDocumentsOf),
+];
 
 /** The text of every inline script the CSP checks, `<iframe srcdoc>` included (the hash input). */
 const inlineScriptsOf = (page: ParsedPage): InlineScript[] =>
-    documentsOf(page).flatMap(({ inlineScripts: scripts }) => scripts);
+    liveDocumentsOf(page).flatMap(({ inlineScripts: scripts }) => scripts);
 
 /** The text of every inline script of a page that the CSP checks, as a browser parses it. */
 const inlineScripts = (source: string): string[] =>
@@ -237,7 +255,7 @@ const scriptHash = (text: string): string =>
 /** Same-origin scripts a page loads: `<script src>` and `<link rel="modulepreload">`. */
 const localScriptPaths = (page: ParsedPage): string[] => [
     ...new Set(
-        documentsOf(page)
+        liveDocumentsOf(page)
             .flatMap(({ scriptSources }) => scriptSources)
             .map(src => src?.replace(ASCII_WHITESPACE, ''))
             .filter((src): src is string => !!src && /^\/(?!\/)/.test(src)),
@@ -327,7 +345,12 @@ const checkPage = ({ file, html, script }: PageInput): string[] => {
         problems.push(`${file}: missing <meta name="description">`);
     }
     // Executable scripts may name such variables; data scripts and comments ship as text.
-    if (FORBIDDEN_TEXT.test(page.text.join('\n')) || JWT.test(html)) {
+    // `<iframe srcdoc>` documents included; the JWT also in decoded text (`&#46;` for `.`).
+    const text = documentsOf(page)
+        .flatMap(document => document.text)
+        .join('\n');
+
+    if (FORBIDDEN_TEXT.test(text) || JWT.test(text) || JWT.test(html)) {
         problems.push(`${file}: token-like or session content in the HTML`);
     }
     // The invite token must not reach analytics (A-15). The raw HTML is searched: any mention,
