@@ -38,3 +38,6 @@ blob-report/
 # Local Superpowers working artifacts
 /.superpowers/
 /docs/superpowers/plans/
+
+# Astro generated types and content cache (apps/site)
+.astro/

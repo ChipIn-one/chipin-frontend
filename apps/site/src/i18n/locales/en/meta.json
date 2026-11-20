@@ -1,0 +1,14 @@
+{
+    "ogLocale": "en_US",
+    "languageName": "English",
+    "home": {
+        "title": "ChipIn — Split shared expenses without the spreadsheet",
+        "description": "Create a group, add expenses, and keep a clear balance with the people you share costs with — from trips and roommates to everyday plans."
+    },
+    "notFound": {
+        "title": "ChipIn — Page Not Found",
+        "description": "The page you are looking for does not exist",
+        "heading": "Page not found",
+        "goHome": "Go home"
+    }
+}

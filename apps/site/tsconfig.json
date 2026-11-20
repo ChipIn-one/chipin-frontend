@@ -1,0 +1,15 @@
+{
+    // `astro check` type-checks the site (`astro build` does not); the strict flags of
+    // tsconfig.base.json are repeated on top of Astro's strict preset (spec 04 §1.3).
+    "extends": "astro/tsconfigs/strict",
+    "include": [".astro/types.d.ts", "**/*"],
+    "exclude": ["dist", "test/fixtures"],
+    "compilerOptions": {
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "erasableSyntaxOnly": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedSideEffectImports": true,
+        "noUncheckedIndexedAccess": true
+    }
+}

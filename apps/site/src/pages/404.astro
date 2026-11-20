@@ -1,0 +1,31 @@
+---
+import { DEFAULT_LOCALE, localizedPath, SUPPORTED_LOCALES } from '../i18n/locales';
+import { messages } from '../i18n/ui';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Served by the host with status 404 for any unknown path (spec 04 §3.6): English text and a
+// link to every locale home.
+const { notFound } = messages(DEFAULT_LOCALE).meta;
+---
+
+<BaseLayout
+    locale={DEFAULT_LOCALE}
+    slug={null}
+    title={notFound.title}
+    description={notFound.description}
+    noindex
+>
+    <h1>{notFound.heading}</h1>
+    <p>{notFound.description}</p>
+    <ul>
+        {
+            SUPPORTED_LOCALES.map(locale => (
+                <li>
+                    <a href={localizedPath(locale, '')} hreflang={locale} lang={locale}>
+                        {messages(locale).meta.notFound.goHome}
+                    </a>
+                </li>
+            ))
+        }
+    </ul>
+</BaseLayout>
