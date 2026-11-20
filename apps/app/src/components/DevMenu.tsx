@@ -11,7 +11,7 @@ import { AUTH_STATUS } from 'store/authConstants';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
-import Dropdown from './Dropdown';
+import { Dropdown } from 'basics/Dropdown';
 
 interface Props {
     isShowLabel?: boolean;

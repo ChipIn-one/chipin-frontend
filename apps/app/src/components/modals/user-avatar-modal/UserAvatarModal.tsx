@@ -14,7 +14,7 @@ import { useSelfUser } from 'hooks/useSelfUser';
 import { useUploadAvatar } from 'hooks/useUserMutations';
 
 import { UserAvatar } from 'basics';
-import { ProgressBar } from 'components/progress-bar';
+import { ProgressBar } from 'basics/progress-bar/ProgressBar';
 
 import { BaseModal } from '../base-modal';
 import { OverlayBody, OverlayFooter } from '../components';

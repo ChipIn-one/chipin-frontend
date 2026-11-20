@@ -27,4 +27,4 @@ const ProgressBar = ({
     );
 };
 
-export default ProgressBar;
+export { ProgressBar };

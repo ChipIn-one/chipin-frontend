@@ -23,7 +23,9 @@ closed by hand.
 ## Sweep trigger and latency
 
 - `.github/workflows/forward-production-deployment.yml` (#559) runs on
-  `deployment_status`; its job `if:` passes only environment `Production`, state
+  `deployment_status`; its job `if:` passes only the app's Production environment
+  (`Production` or `Production – chipin-frontend`, from
+  `scripts/deployment-environments.mjs`; never `Production – chipin-site`, #801), state
   `success` and creator `vercel[bot]`. The script
   `scripts/forward-production-deployment.mjs` checks the same again, validates the
   deployment id and SHA from the event file and sends one `repository_dispatch`
@@ -51,11 +53,14 @@ closed by hand.
    `master`. The Vercel Production Branch stays `main` (a placeholder
    that receives no pushes) and `apps/app/vercel.json` disables Git deployments for it, so no
    push creates a production build. Preview builds of `master` create only
-   GitHub Deployments `Preview`.
+   GitHub Deployments `Preview` (`Preview – chipin-frontend` since the second
+   Vercel project is connected, [Two projects](release-qa.md#two-projects)).
 3. The owner opens the chosen commit's deployment and runs **Promote to
    Production**; Vercel rebuilds that commit with production environment
    variables and assigns `chipin.one`. Vercel records that production
-   deployment as a GitHub Deployment, environment `Production`, creator
+   deployment as a GitHub Deployment, environment `Production` (most likely
+   `Production – chipin-frontend` since the second Vercel project is connected,
+   [Two projects](release-qa.md#two-projects)), creator
    `vercel[bot]`, with the exact commit SHA and a `success` status. Verified at
    cutover step 7 of #497: Deployment `Production` 7254813070 on `e6d2f2e`
    (2026-10-22T14:24:47Z).

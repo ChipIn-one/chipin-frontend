@@ -5,12 +5,13 @@ import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-r
 import { requireSession } from 'app/auth/requireSession';
 import { PUBLIC_ROUTE_ENTRIES, type PublicPage } from 'constants/publicRoutes';
 import { ROUTES } from 'constants/routes';
-import { GuardLoader, HomeRouteGuard, PublicLocaleRoute } from 'features/routing';
+import { GuardLoader, PublicLocaleRoute } from 'features/routing';
 
 import PageLoader from 'basics/PageLoader';
 
 import { AuthLayout } from './AuthLayout';
 import { BareLayout, InternalLayout } from './InternalLayout';
+import { PublicHomeGuard } from './PublicHomeGuard';
 import { RootLayout } from './RootLayout';
 import { RootErrorBoundary, RouteErrorView } from './RouteErrorView';
 import { APP_ROUTES, type AppRouteDef, type AppRouteId } from './routeManifest';
@@ -57,9 +58,9 @@ const publicLocaleRoutes = (): RouteObject[] =>
     PUBLIC_ROUTE_ENTRIES.map(entry => {
         const page: ReactNode =
             entry.page === 'home' ? (
-                <HomeRouteGuard>
+                <PublicHomeGuard>
                     <Outlet />
-                </HomeRouteGuard>
+                </PublicHomeGuard>
             ) : (
                 <Outlet />
             );

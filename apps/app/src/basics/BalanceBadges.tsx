@@ -4,9 +4,8 @@ import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { BalanceBadgesSkeleton } from 'components/skeletons';
-
 import { Amount } from './numbers';
+import { BalanceBadgesSkeleton } from './skeletons/BalanceBadgesSkeleton';
 
 export interface BadgeItem {
     tokenCode: string;
@@ -87,4 +86,4 @@ const BalanceBadges: React.FC<Props> = ({
     );
 };
 
-export default BalanceBadges;
+export { BalanceBadges };

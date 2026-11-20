@@ -11,6 +11,7 @@ import {
     main,
     readHint,
 } from './forward-production-deployment.mjs';
+import { appEnvironmentCondition } from './deployment-environments.mjs';
 
 const SHA = '6f21103aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const event = (overrides = {}) => ({
@@ -34,7 +35,7 @@ describe('forward-production-deployment workflow', () => {
     test('runs only on deployment_status, guarded to a successful vercel[bot] Production deployment', () => {
         expect(Object.keys(workflow.on)).toEqual(['deployment_status']);
         expect(Object.keys(workflow.jobs)).toEqual(['forward']);
-        expect(job.if).toContain("github.event.deployment.environment == 'Production'");
+        expect(job.if).toContain(appEnvironmentCondition('Production'));
         expect(job.if).toContain("github.event.deployment_status.state == 'success'");
         expect(job.if).toContain("github.event.deployment.creator.login == 'vercel[bot]'");
         expect(job.if.split('&&')).toHaveLength(3);
@@ -66,8 +67,25 @@ describe('readHint', () => {
         expect(readHint(event())).toEqual({ deployment_id: 7390928173, sha: SHA });
     });
 
+    // chipin-frontend#801: with chipin-site connected the app's Production is `Production – chipin-frontend`.
+    test('accepts the app Production under its per-project name', () => {
+        expect(
+            readHint(event({ deployment: { environment: 'Production \u2013 chipin-frontend' } })),
+        ).toEqual({ deployment_id: 7390928173, sha: SHA });
+    });
+
     test('ignores Preview, unsuccessful and foreign-creator deployments', () => {
         expect(readHint(event({ deployment: { environment: 'Preview' } }))).toBeNull();
+        for (const environment of [
+            'Preview \u2013 chipin-frontend',
+            'Production \u2013 chipin-site',
+            'Preview \u2013 chipin-site',
+            'production',
+            'Production - chipin-frontend',
+            undefined,
+        ]) {
+            expect(readHint(event({ deployment: { environment } })), environment).toBeNull();
+        }
         for (const state of ['failure', 'error', 'in_progress', 'pending', 'queued', 'inactive']) {
             expect(readHint(event({ deployment_status: { state } })), state).toBeNull();
         }

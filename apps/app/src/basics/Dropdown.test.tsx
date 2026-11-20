@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 
-import Dropdown from './Dropdown';
+import { Dropdown } from './Dropdown';
 
 test('exposes a selected radio item in a selectable section', () => {
     const interaction = userEvent.setup();

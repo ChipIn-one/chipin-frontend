@@ -3,14 +3,14 @@
 import { onlineManager } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { AuthLayout } from 'app/router/AuthLayout';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { ProtectedRoute } from 'features/routing/ProtectedRoute';
 import { invalidateAuthSession } from 'helpers/authSession';
 import { LocalStorage } from 'helpers/localStorage';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
@@ -193,17 +193,30 @@ describe('offline cold start through /auth/refresh', () => {
         return null;
     };
 
-    const renderColdStart = () =>
+    let router: ReturnType<typeof createMemoryRouter> | undefined;
+
+    // `AuthLayout` without its loader: the protected page follows the live session check.
+    const renderColdStart = () => {
+        router = createMemoryRouter(
+            [
+                {
+                    element: (
+                        <>
+                            <CheckSignIn />
+                            <AuthLayout />
+                        </>
+                    ),
+                    children: [{ path: '/dashboard', element: <p>{PAGE_CONTENT}</p> }],
+                },
+            ],
+            { initialEntries: ['/dashboard'] },
+        );
         render(
             <ThemeProvider theme={lightThemeStyled}>
-                <MemoryRouter initialEntries={['/dashboard']}>
-                    <CheckSignIn />
-                    <ProtectedRoute>
-                        <p>{PAGE_CONTENT}</p>
-                    </ProtectedRoute>
-                </MemoryRouter>
+                <RouterProvider router={router} />
             </ThemeProvider>,
         );
+    };
 
     let refreshRequests = 0;
 
@@ -229,6 +242,8 @@ describe('offline cold start through /auth/refresh', () => {
     afterEach(() => {
         // Unmount before the top-level afterEach goes online: it would rerun the session check.
         cleanup();
+        router?.dispose();
+        router = undefined;
         vi.restoreAllMocks();
         LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
     });

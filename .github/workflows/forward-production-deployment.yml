@@ -5,6 +5,8 @@
 # sweep re-reads the Production receipt itself. No completion logic and no Issue writes here.
 # Missing CHIPIN_COMPLETION_DISPATCH_TOKEN or a failed POST: warning, green run; the sweep schedule is the fallback.
 # Event fields reach the script only through the event file, never through `run:`.
+# The app's Production environment names (`Production`, `Production – chipin-frontend`, never `Production – chipin-site`)
+# come from scripts/deployment-environments.mjs; its test keeps the `if:` below equal to it (chipin-frontend#801).
 name: Forward Production deployment to completion
 
 on:
@@ -16,7 +18,7 @@ permissions:
 jobs:
   forward:
     if: >-
-      github.event.deployment.environment == 'Production' &&
+      contains(fromJSON('["Production","Production – chipin-frontend"]'), github.event.deployment.environment) &&
       github.event.deployment_status.state == 'success' &&
       github.event.deployment.creator.login == 'vercel[bot]'
     runs-on: ubuntu-24.04

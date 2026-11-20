@@ -16,7 +16,7 @@ import { useCreateSettlement } from 'hooks/useLedgerMutations';
 import { useRequiresOnline } from 'hooks/useRequiresOnline';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import Dropdown from 'components/Dropdown';
+import { Dropdown } from 'basics/Dropdown';
 import { RemoveFriendAlertDialog } from 'components/modals/remove-friend-alert-dialog';
 import { SettleUpModal } from 'components/modals/settle-up-modal';
 

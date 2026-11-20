@@ -4,11 +4,13 @@ import {
     Box,
     Button,
     Card,
+    Checkbox,
     Code,
     Flex,
     Grid,
     Heading,
     IconButton,
+    RadioGroup,
     Select as RSelect,
     Separator,
     Switch,
@@ -28,12 +30,12 @@ import { i18n, i18nReady } from 'i18n';
 
 import CopyButton from 'basics/buttons/CopyButton';
 import DebtAmount from 'basics/DebtAmount';
+import { Dropdown } from 'basics/Dropdown';
 import {
     Amount,
     AmountInput,
     BalanceBadges,
     BalanceSummaryText,
-    Checkbox,
     ChipInLoader,
     EmptyState,
     GroupRoleBadge,
@@ -43,22 +45,17 @@ import {
     NoGroupsEmptyState,
     OwedStatusText,
     RadioCards,
-    RadioGroup,
     TextArea,
     TextInput,
     UserAvatar,
 } from 'basics/index';
-import Dropdown from 'components/Dropdown';
+import { ProgressBar } from 'basics/progress-bar/ProgressBar';
+import { SegmentedControl } from 'basics/SegmentedControl';
+import { Select } from 'basics/Select';
+import { BalanceBadgesSkeleton } from 'basics/skeletons/BalanceBadgesSkeleton';
 import GroupAvatar from 'components/GroupAvatar';
 import { ModeLogotype } from 'components/mode-logotype';
-import { ProgressBar } from 'components/progress-bar';
-import SegmentedControl from 'components/SegmentedControl';
-import Select from 'components/Select';
-import {
-    ActivityFeedSkeleton,
-    BalanceBadgesSkeleton,
-    GroupsCardsSkeleton,
-} from 'components/skeletons';
+import { ActivityFeedSkeleton, GroupsCardsSkeleton } from 'components/skeletons';
 import { SummaryDebtCards, TotalBalanceCard } from 'components/summary-debt-cards';
 import UsersRow from 'components/UsersRow';
 
@@ -325,7 +322,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 {t('samples.copyCode')}
                             </CopyButton>
                         </Specimen>
-                        <Specimen name="components/Dropdown">
+                        <Specimen name="basics/Dropdown">
                             <Dropdown
                                 trigger={
                                     <Button variant="soft">{t('samples.groupActions')}</Button>
@@ -351,7 +348,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 ]}
                             />
                         </Specimen>
-                        <Specimen name="components/SegmentedControl" wide>
+                        <Specimen name="basics/SegmentedControl" wide>
                             <SegmentedControl
                                 value={segment}
                                 onValueChange={setSegment}
@@ -396,7 +393,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 {t('samples.value')} <Code>{amount || EMPTY_VALUE}</Code>
                             </Text>
                         </Specimen>
-                        <Specimen name="components/Select">
+                        <Specimen name="basics/Select">
                             <Select
                                 value={selectValue}
                                 onChange={setSelectValue}
@@ -406,7 +403,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 }))}
                             />
                         </Specimen>
-                        <Specimen name="basics/Checkbox · Switch">
+                        <Specimen name="Radix Checkbox · Switch">
                             <Flex asChild gap="2" align="center">
                                 <label>
                                     <Checkbox defaultChecked />{' '}
@@ -429,23 +426,18 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 </label>
                             </Flex>
                         </Specimen>
-                        <Specimen name="basics/RadioGroup">
-                            <RadioGroup
-                                value={radio}
-                                onValueChange={setRadio}
-                                items={[
-                                    { value: 'equal', label: t('samples.splitEqually') },
-                                    {
-                                        value: 'exact',
-                                        label: t('activity:subeventsSharingModes.exact'),
-                                    },
-                                    {
-                                        value: 'shares',
-                                        label: t('samples.byShares'),
-                                        isDisabled: true,
-                                    },
-                                ]}
-                            />
+                        <Specimen name="Radix RadioGroup">
+                            <RadioGroup.Root value={radio} onValueChange={setRadio}>
+                                <RadioGroup.Item value="equal">
+                                    {t('samples.splitEqually')}
+                                </RadioGroup.Item>
+                                <RadioGroup.Item value="exact">
+                                    {t('activity:subeventsSharingModes.exact')}
+                                </RadioGroup.Item>
+                                <RadioGroup.Item value="shares" disabled>
+                                    {t('samples.byShares')}
+                                </RadioGroup.Item>
+                            </RadioGroup.Root>
                         </Specimen>
                         <Specimen name="basics/RadioCards" wide>
                             <Box width="100%">
@@ -593,7 +585,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                             <ChipInLoader size={48} />
                             <ChipInLoader size={32} strokeWidth={3} />
                         </Specimen>
-                        <Specimen name="components/ProgressBar">
+                        <Specimen name="basics/ProgressBar">
                             <Flex direction="column" gap="2" width="100%">
                                 <ProgressBar value={progress} />
                                 <ProgressBar value={progress} size="3" color="violet" />
@@ -617,7 +609,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 </Flex>
                             </Flex>
                         </Specimen>
-                        <Specimen name="skeletons/BalanceBadgesSkeleton">
+                        <Specimen name="basics/skeletons/BalanceBadgesSkeleton">
                             <BalanceBadgesSkeleton />
                         </Specimen>
                         <Specimen name="skeletons/GroupsCardsSkeleton">

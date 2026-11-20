@@ -3,7 +3,9 @@ name: Frontend PR metadata
 on:
   pull_request:
     branches: [master]
-    types: [opened, reopened, edited, synchronize, ready_for_review]
+    # No ready_for_review: Frontend CI runs on it, and its completed workflow_run below reconciles the
+    # PR (chipin-frontend#792).
+    types: [opened, reopened, edited, synchronize]
   workflow_run:
     workflows: [Frontend CI]
     types: [completed]

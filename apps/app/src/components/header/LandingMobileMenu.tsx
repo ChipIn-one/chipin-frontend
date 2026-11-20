@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { matchLocale, SUPPORTED_LOCALES } from 'helpers/locale';
 
-import Dropdown from 'components/Dropdown';
+import { Dropdown } from 'basics/Dropdown';
 
 import { LANDING_NAV_LINKS } from './internal/constants';
 import type { LandingLanguageProps } from './internal/types';

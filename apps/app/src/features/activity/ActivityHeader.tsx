@@ -2,7 +2,7 @@ import { Avatar, Box, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { ChartBarIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import SegmentedControl from 'components/SegmentedControl';
+import { SegmentedControl } from 'basics/SegmentedControl';
 
 export type ActivityFilter = 'all' | 'expenses' | 'settlements';
 

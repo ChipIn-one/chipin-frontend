@@ -2,6 +2,8 @@ import { lstat, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+
+import { appEnvironmentNames, isAppEnvironment } from '../deployment-environments.mjs';
 import {
     RELEASE_OWNER,
     REPOSITORY,
@@ -171,7 +173,9 @@ export function assertRetrySafe(runs, currentRunId, sha, existingIssue) {
 
 export function chooseProductionBaseline(deployments, statusesFor) {
     const candidates = deployments.filter(
-        item => item.environment === 'Production' && item.creator?.login === 'vercel[bot]',
+        item =>
+            isAppEnvironment('Production', item.environment) &&
+            item.creator?.login === 'vercel[bot]',
     );
     const next = index => {
         if (index >= candidates.length)
@@ -527,13 +531,25 @@ function activeCiRule(api) {
     });
 }
 
+// The app's deployments of `kind` under every name it has (scripts/deployment-environments.mjs), newest first. GitHub
+// filters `environment` by exact name, so each name is one query.
+export function listAppDeployments(api, kind, sha = null) {
+    return Promise.all(
+        appEnvironmentNames(kind).map(name =>
+            api.list(
+                `${REPO_PATH}/deployments?environment=${encodeURIComponent(name)}${sha ? `&sha=${sha}` : ''}`,
+            ),
+        ),
+    ).then(lists => lists.flat().sort((left, right) => right.id - left.id));
+}
+
 function newestTrustedPreview(api, sha) {
-    return api.list(`${REPO_PATH}/deployments?environment=Preview&sha=${sha}`).then(deployments => {
+    return listAppDeployments(api, 'Preview', sha).then(deployments => {
         const trusted = deployments
             .filter(
                 item =>
                     item.sha === sha &&
-                    item.environment === 'Preview' &&
+                    isAppEnvironment('Preview', item.environment) &&
                     item.creator?.login === 'vercel[bot]',
             )
             .sort((a, b) => b.id - a.id);
@@ -1013,13 +1029,11 @@ export function prepareReleaseQa({
             return Promise.all([
                 readCandidate(readApi, deploymentId, sha, probeUrl),
                 readCi(readApi, sha),
-                readApi
-                    .list(`${REPO_PATH}/deployments?environment=Production`)
-                    .then(deployments =>
-                        chooseProductionBaseline(deployments, id =>
-                            readApi.list(`${REPO_PATH}/deployments/${id}/statuses`),
-                        ),
+                listAppDeployments(readApi, 'Production').then(deployments =>
+                    chooseProductionBaseline(deployments, id =>
+                        readApi.list(`${REPO_PATH}/deployments/${id}/statuses`),
                     ),
+                ),
                 compare(readApi, sha, 'master'),
             ]);
         })

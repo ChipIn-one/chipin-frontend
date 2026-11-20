@@ -8,19 +8,21 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+import { isAppEnvironment } from './deployment-environments.mjs';
+
 export const DISPATCH_URL = 'https://api.github.com/repos/ChipIn-one/.github/dispatches';
 export const EVENT_TYPE = 'frontend-production-deployed';
 export const TOKEN_ENV = 'CHIPIN_COMPLETION_DISPATCH_TOKEN';
-const ENVIRONMENT = 'Production';
 const CREATOR = 'vercel[bot]';
 const SHA = /^[0-9a-f]{40}$/;
 
-// Returns the hint to forward, `null` when the event is not a successful vercel[bot] Production deployment (the
-// workflow `if:` already filters these; this is the second check), or throws on a malformed id or SHA.
+// Returns the hint to forward, `null` when the event is not a successful vercel[bot] deployment to the app's Production
+// environment (scripts/deployment-environments.mjs; the workflow `if:` already filters these; this is the second
+// check), or throws on a malformed id or SHA.
 export function readHint(event) {
     const deployment = event?.deployment;
     if (
-        deployment?.environment !== ENVIRONMENT ||
+        !isAppEnvironment('Production', deployment?.environment) ||
         event?.deployment_status?.state !== 'success' ||
         deployment?.creator?.login !== CREATOR
     )
