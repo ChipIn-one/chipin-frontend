@@ -493,4 +493,4 @@ npx --no-install prettier --write --log-level warn \
 # Lockfile: the same resolved package set plus the workspace link entries (no upgrades).
 npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
-echo "Moved the app into $APP. Next: npm ci && npm run verify:full"
+echo "Moved the app into $APP. Next: npm ci && npm run verify (CI runs verify:full)"
