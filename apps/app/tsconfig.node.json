@@ -19,6 +19,7 @@
         "ds-gallery/vite.config.ts",
         "contract-tests/**/*.ts",
         "playwright.config.ts",
+        "playwright.sw.config.ts",
         "e2e/**/*.ts"
     ]
 }
