@@ -117,7 +117,7 @@ Ownership of overlapping topics: lazy-loading of locales (D16) — **this spec**
 **Release model of the two projects (A-08).** The site is released the same way as the app (`DEPLOYMENT.md:42-66`): manual Promote only.
 - In `chipin-site`: Production Branch = `main`, `git.deploymentEnabled.main: false` (in `apps/site/vercel.json`), the domain `site-dev.chipin.one` is bound to the branch `master`. A merge into `master` gives only dev/preview, the site prod changes only by Promote. Before step 2 (04-4b) the site's Production has no custom domain: dev rules are verified on `site-dev.chipin.one`, prod rules — right after the move of `chipin.one` (§4.5). The setup is done by the owner when creating the project (04-3a).
 - Promote order: first app, then site, both from the same `master` SHA. Reason: the site pages (`/join/*`, sign-in buttons) link to app routes, not the other way round.
-- Release-QA and completion: both projects create the GitHub Deployment `Production`; an Issue is closed only by the app project's deploy (environment `Production – <app project name>`). A section "Two projects" with these three rules is added to `docs/engineering/release-qa.md`. If the org sweep in `ChipIn-one/.github` filters only by `environment == 'Production'`, the filter needs fixing there (an owner issue in `.github`, created in 04-3a; without it a site deploy may close an Issue before the app).
+- Release-QA and completion: once the second project is connected, Vercel reports GitHub Deployments under per-project environment names (en dash U+2013): the app's `Production – chipin-frontend` (`Production` while the app was the only project) and the site's `Production – chipin-site`. An Issue is completed only by the app project's Production deployment, under either of the app's two names; the site's name never completes an Issue. In the repository this is the allowlist in `scripts/deployment-environments.mjs` (ChipIn-one/chipin-frontend#803). In the org sweep it is the explicit list of exact names `productionEvidence.environment: [Production, "Production – chipin-frontend"]` for this repository (ChipIn-one/.github#287 (the list form) and ChipIn-one/.github#288 (the per-project name)); matching is exact, with no prefix or case normalization. The actual name of the app's Production deployment is recorded in ChipIn-one/.github#288 after the first Promote of the app; until then `Production – chipin-frontend` is the expected name, not a confirmed one. A section "Two projects" with these rules is added to `docs/engineering/release-qa.md`.
 
 #### 1.5a Provider isolation (D18)
 
@@ -382,7 +382,7 @@ The SW navigation allowlist stays hand-written: `PRIVATE_SPA_NAVIGATION_ALLOWLIS
 
 ```
 astro.config.ts           output: 'static', trailingSlash: 'ignore', build.format: 'directory', i18n, sitemap
-vercel.json               hand-written: cleanUrls, headers (site CSP), rewrites /join/* and /api/stats, redirects of §4.2
+vercel.json               hand-written: headers (site CSP, `/sw.js` no-cache), rewrites /join/* and /api/stats, redirects of §4.2; no `cleanUrls` (reason below)
 src/
   i18n/                   ui.ts (t(locale, key)), locales/<locale>/{landing,meta,join}.json
   layouts/BaseLayout.astro  <head>: title, description, canonical, hreflang, OG, tokens.css
@@ -400,13 +400,15 @@ src/
 public/                   robots.txt, favicon.*, og/*.png, sw.js (kill-switch, §3.6), .well-known/assetlinks.json
 ```
 
+The site `vercel.json` has no `cleanUrls` (04-3d, ChipIn-one/chipin-frontend#814). Vercel puts the `cleanUrls` redirects first, as permanent `308`s: `/index.html` would get a cacheable permanent redirect, against the `302` rule of §4.2/§4.5, and `/app.html` would get a `308` to `/app`, which is a 404. It is not needed: Astro `build.format: 'directory'` makes every page `<dir>/index.html`, and Vercel serves `/<dir>` and `/<dir>/` without `cleanUrls`.
+
 #### 3.2 i18n
 
 - `@chipin/i18n-content/locales.ts` exports `SUPPORTED_LOCALES`, `DEFAULT_LOCALE`, and `LOCALE_PATH: { en: '', ru: 'ru' }`. The values match `LOCALE_PREFIX` (`publicRouteManifest.ts`).
 - `astro.config.ts`: `i18n: { defaultLocale: 'en', locales: ['en', 'ru'], routing: { prefixDefaultLocale: false, redirectToDefaultLocale: false } }`. The list is built from `LOCALE_PATH`, not written by hand.
 - URLs do not change: `/`, `/privacy`, `/terms`, `/ru/`, `/ru/privacy`, `/ru/terms` (6 URLs; locale home pages — with a trailing slash, the others — without, as in `publicRouteManifest.ts:14-19`). Duplicates by trailing slash (A-33): `trailingSlash: 'ignore'` serves both `/privacy` and `/privacy/` with 200, so `apps/site/vercel.json` gets hand-written 301 redirects for `LOCALE_PATH` × pages (checked by `apps/site/vercel.config.test.ts`, §2.9): `/<page>/` → `/<page>` for non-home pages and `/<locale>` → `/<locale>/` for locale home pages. One URL form = canonical.
 - hreflang in `BaseLayout`: for every page `<link rel="alternate" hreflang="<code>">` to all locales that have a translation (`getRelativeLocaleUrl`), plus `x-default` → en. Canonical is the absolute `https://chipin.one/...` (`site` in the config). The hosts `site-dev.chipin.one` and `dev.chipin.one` never end up in canonical.
-- `@astrojs/sitemap` with `i18n: { defaultLocale: 'en', locales: { en: 'en', ru: 'ru' } }` writes `sitemap-index.xml`. `robots.txt` points to `Sitemap: https://chipin.one/sitemap-index.xml`. `/sitemap.xml` gets a 301 to `/sitemap-index.xml`.
+- `@astrojs/sitemap` with `i18n: { defaultLocale: 'en', locales: { en: 'en', ru: 'ru' } }` writes `sitemap-index.xml`. `robots.txt` points to `Sitemap: https://chipin.one/sitemap-index.xml`. `/sitemap.xml` gets a 302 to `/sitemap-index.xml` (a row of the §4.2 step-2 table; the §4.2 rows stay 302 until 04-5a, so a step-2 rollback is not held back by cached redirects).
 - Build check (moved from `prerender-public.mjs:55-70`): every page has a title and description in all locales, and the HTML has no strings that look like tokens. Implemented by an `astro:build:done` integration in `apps/site/integrations/seoGuard.ts` that fails the build. Site key parity (A-32): the test `apps/site/src/i18n/parity.test.ts` compares the keys of all `apps/site/src/i18n/locales/<locale>/*.json`, including `join.json`, with `en`; it runs in the site step of CI.
 
 #### 3.3 Content collections
