@@ -120,6 +120,14 @@ Only the sole current QA assignee counts; that is `syllik` only when he is the s
 2. Read the current result comment and the latest validation run. Then decide whether to **Promote** that exact deployment in Vercel.
 3. After a fix, run a new round: a new SHA gets its own QA Issue. Never carry a PASS across SHAs.
 
+## Two projects
+
+From 04-3a the repository has two Vercel projects: the app (Root Directory `apps/app`) and `chipin-site` (Root Directory `apps/site`, spec 04 §1.5).
+
+- Release QA and this page cover the app project only. The site has no QA round; its Preview on `site-dev.chipin.one` is checked by the PR that changes it.
+- Promote both from the same `master` SHA, app first, then site: the site links into the app, not the other way round.
+- An Issue closes only on the app project's Production deployment. Completion (`ChipIn-one/.github` `automation/completion.mjs`), `release-on-production.yml`, `forward-production-deployment.yml` and the release-QA scripts match the GitHub Deployment environment exactly as `Production`. A site deployment named `Production – chipin-site` is ignored. After the site project is connected, check that the next app Production deployment is still named `Production`. If Vercel renamed it to `Production – <project>`, these matches stop working (Issues stay `Awaiting release`, no release tag), and the name must be updated in `.github` and in this repository.
+
 ## Retries and recovery
 
 - The hidden `chipin-release-qa:v1` marker (repository + SHA + deployment) is the retry key. Rerunning the same SHA reuses its Issue, checkboxes and comments; a conflicting deployment ID or URL for the same SHA stops the run.
