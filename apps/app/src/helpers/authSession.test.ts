@@ -181,6 +181,24 @@ describe('authSession', () => {
         });
     });
 
+    test('AUTH-009: a 5xx on refresh is rethrown and keeps the session hint', () => {
+        markRestorableAuthSession();
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
+            isAxiosError: true,
+            response: { status: 503 },
+        });
+
+        return validateAuthSession().then(
+            () => {
+                throw new Error('expected a rejection');
+            },
+            () => {
+                expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBeDefined();
+                expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(true);
+            },
+        );
+    });
+
     test('reports an expired session when logout-other-devices cannot restore the cookie session', () => {
         markRestorableAuthSession();
         vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({

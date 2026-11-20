@@ -25,7 +25,7 @@ import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { mountAsUserClient } from 'test/userClient';
 
-import { startSessionCheck, useCheckSignIn } from './useCheckSignIn';
+import { sessionCheckRetryDelayMs, startSessionCheck, useCheckSignIn } from './useCheckSignIn';
 
 import 'fake-indexeddb/auto';
 
@@ -511,18 +511,74 @@ test('a network error classified backend-down keeps waiting, then refreshes when
     });
 });
 
-test('a one-off request error while online is an error, not the offline cache', () => {
-    cacheSignedInUser();
-    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => Promise.reject(networkError)) });
+test('AUTH-009: a one-off request error while online keeps the session unknown and retries, no sign-out', async () => {
+    vi.useFakeTimers();
+    try {
+        cacheSignedInUser();
+        const refreshAuthTokens = vi
+            .fn<() => Promise<string>>()
+            .mockRejectedValueOnce(networkError)
+            .mockResolvedValueOnce('next-access-token');
+        useAuthStore.setState({ refreshAuthTokens });
+        mockAuthenticatedDataFetches();
 
-    renderHook();
+        renderHook();
+        await vi.advanceTimersByTimeAsync(0);
 
-    return waitFor(() => {
-        expect(useAuthStore.getState()).toMatchObject({
-            status: 'unauthenticated',
-            unauthReason: 'error',
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+        expect(useAuthStore.getState().status).toBe('unknown');
+
+        await vi.advanceTimersByTimeAsync(sessionCheckRetryDelayMs(0));
+
+        expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
+        expect(useAuthStore.getState()).toMatchObject({ status: 'authenticated' });
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('AUTH-009: a 5xx on the startup refresh never signs the user out and keeps retrying with a capped backoff', async () => {
+    vi.useFakeTimers();
+    try {
+        cacheSignedInUser();
+        const serverError = Object.assign(new Error('Server Error'), {
+            isAxiosError: true,
+            response: { status: 503 },
         });
-    });
+        const refreshAuthTokens = vi.fn(() => Promise.reject(serverError));
+        useAuthStore.setState({ refreshAuthTokens });
+
+        renderHook();
+        await vi.advanceTimersByTimeAsync(10 * 60_000);
+
+        // 1s, 2s, 4s, 8s, 16s, then 30s steps: still retrying after ten minutes, never signed out.
+        expect(refreshAuthTokens.mock.calls.length).toBeGreaterThan(15);
+        expect(useAuthStore.getState().status).toBe('unknown');
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('AUTH-009: a remote logout during the retry backoff cancels the pending retry', async () => {
+    vi.useFakeTimers();
+    try {
+        cacheSignedInUser();
+        const refreshAuthTokens = vi.fn(() => Promise.reject(networkError));
+        useAuthStore.setState({ refreshAuthTokens });
+
+        renderHook();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+
+        act(() => {
+            useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
+        });
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+    } finally {
+        vi.useRealTimers();
+    }
 });
 
 test('the hint turns false during the boot refresh: no offline-cached session', () => {
