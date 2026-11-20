@@ -2,6 +2,7 @@
 // checked by `pwa.config.test.ts` without a build. Checked against `vite-plugin-pwa@1.3.0`
 // (`swDest = outDir/filename`, `globDirectory = outDir`, the registration path and the
 // `<link rel="manifest">` are `buildBase` + `filename`/`manifestFilename`) and `workbox-build@7`.
+import { BRAND_COLORS } from '@chipin/tokens/theme';
 import type { VitePWAOptions } from 'vite-plugin-pwa';
 
 import {
@@ -12,9 +13,6 @@ import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigati
 
 /** The SW navigation fallback: the noindex SPA shell (04-5a → `index.html`). */
 export const APP_SHELL = 'app.html';
-
-/** Manifest colors: hand-written constants (spec 05, D31). */
-export const PWA_THEME_COLOR = '#3e9b4f';
 
 interface PwaOptionsInput {
     /** `ChipIn DEV` on the dev environment, `ChipIn` elsewhere. */
@@ -45,7 +43,9 @@ export const buildPwaOptions = ({ appName }: PwaOptionsInput): Partial<VitePWAOp
         name: appName,
         short_name: appName,
         description: 'Share expenses without stress',
-        theme_color: PWA_THEME_COLOR,
+        // `BRAND_COLORS` of @chipin/tokens (D23/D31); the interim PWA values (owner, 2026-11-20).
+        theme_color: BRAND_COLORS.pwaThemeColor,
+        background_color: BRAND_COLORS.pwaBackgroundColor,
         display: 'standalone',
         // DEEP LINKING PARAMS
         start_url: '/',

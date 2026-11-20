@@ -11,7 +11,7 @@
         "typecheck": "tsc -b",
         "vercel-build": "vite build && npm run verify:public-precache",
         "preview": "vite preview",
-        "icons:generate": "pwa-assets-generator",
+        "icons:generate": "node scripts/generate-pwa-icons.mjs",
         "test:contract": "vitest run --config vitest.contract.config.ts",
         "test:contract:smoke": "vitest run --config vitest.contract.config.ts contract-tests/auth-session.contract.ts",
         "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts",
@@ -27,6 +27,7 @@
     },
     "dependencies": {
         "@chipin/i18n-content": "*",
+        "@chipin/tokens": "*",
         "@radix-ui/themes": "^3.3.0",
         "@sentry/react": "^10.75.2",
         "@tanstack/query-async-storage-persister": "5.107.1",

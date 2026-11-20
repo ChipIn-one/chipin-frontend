@@ -3,7 +3,7 @@ import { expect, test, vi } from 'vitest';
 
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 
-import Footer from './Footer';
+import { Footer } from './Footer';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('assets/logo.svg?react', () => ({
+vi.mock('@chipin/tokens/assets/logo.svg?react', () => ({
     default: () => <svg aria-hidden="true" />,
 }));
 

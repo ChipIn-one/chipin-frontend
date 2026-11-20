@@ -6,7 +6,7 @@ import {
     ShowcaseSections,
 } from 'features/landing';
 
-import Footer from 'components/Footer';
+import { Footer } from 'components/Footer';
 
 const HomePage = () => {
     return (

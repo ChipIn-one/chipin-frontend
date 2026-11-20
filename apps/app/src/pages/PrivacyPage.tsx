@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
-import Footer from 'components/Footer';
+import { Footer } from 'components/Footer';
 import { MobileNavBar } from 'components/nav-bars';
 
 const PRIVACY_CONTACT_EMAIL = 'privacy@chipin.one';

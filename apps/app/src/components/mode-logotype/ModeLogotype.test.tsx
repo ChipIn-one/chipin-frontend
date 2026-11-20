@@ -10,7 +10,7 @@ import ModeLogotype from './ModeLogotype';
 
 import 'i18n/index';
 
-vi.mock('assets/logo.svg?react', () => ({
+vi.mock('@chipin/tokens/assets/logo.svg?react', () => ({
     default: () => <svg aria-hidden />,
 }));
 
