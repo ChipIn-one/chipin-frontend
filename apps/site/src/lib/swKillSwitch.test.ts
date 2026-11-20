@@ -200,11 +200,13 @@ describe('the site registers no worker', () => {
         expect(scripts).toEqual(['sw.js']);
     });
 
-    // Runs against a built `dist` only (`npm run build -w @chipin/site`).
-    test.runIf(existsSync(join(SITE_DIR, 'dist/index.html')))(
+    // Needs a built `dist` (`npm run build -w @chipin/site`); CI builds the site before its tests
+    // (frontend-ci.yml), so there a missing dist fails instead of skipping.
+    test.runIf(existsSync(join(SITE_DIR, 'dist/index.html')) || process.env.CI === 'true')(
         'no built page or script registers a service worker',
         () => {
             const dist = join(SITE_DIR, 'dist');
+            expect(existsSync(join(dist, 'index.html'))).toBe(true);
             const offenders = listFiles(dist)
                 .filter(file => /\.(?:html|m?js)$/.test(file) && file !== 'sw.js')
                 .filter(file => /serviceWorker/.test(readFileSync(join(dist, file), 'utf8')));

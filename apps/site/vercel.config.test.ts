@@ -407,9 +407,12 @@ describe('paths the site never redirects (§4.2)', () => {
     // file. HTML entries are excluded: `/index.html` and `/<page>/index.html` are intended (A-33).
     test.each(ALL_HOSTS)('on %s no redirect shadows a public or emitted file', host => {
         const dist = join(SITE_DIR, 'dist');
+        const built = existsSync(join(dist, 'index.html'));
+        // CI builds the site before its tests (frontend-ci.yml), so a missing dist there is a bug.
+        expect(built || process.env.CI !== 'true').toBe(true);
         const files = [
             ...listFiles(join(SITE_DIR, 'public')),
-            ...(existsSync(join(dist, 'index.html')) ? listFiles(dist) : []),
+            ...(built ? listFiles(dist) : []),
         ].filter(file => !file.endsWith('.html'));
 
         expect(files).toContain('/sw.js');
@@ -436,8 +439,8 @@ describe('paths the site never redirects (§4.2)', () => {
             '/sitemap.xml',
             '/index.html',
             '/app.html',
-            '/:path([^/].*?)/index.html',
-            '/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/].*?)}?{/}?',
+            '/:path([^/\\\\].*?)/index.html',
+            '/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/\\\\].*?)}?{/}?',
             ...NON_DEFAULT_LOCALES.map(locale => `/${locale}`),
         ]);
     });
@@ -455,6 +458,10 @@ describe('no open redirect', () => {
         '/es//evil.example',
         '/es/%2F%2Fevil.example',
         '/ru?x=//evil.example',
+        '/es/%5Cevil.example',
+        '/es/\\evil.example',
+        '/%5Cevil.example/index.html',
+        '/\\evil.example/index.html',
     ];
 
     test.each(ALL_HOSTS)('on %s every Location is a fixed origin or a same-site path', host => {
