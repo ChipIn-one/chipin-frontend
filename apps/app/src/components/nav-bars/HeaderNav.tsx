@@ -46,4 +46,4 @@ const HeaderNav = () => {
     );
 };
 
-export default HeaderNav;
+export { HeaderNav };

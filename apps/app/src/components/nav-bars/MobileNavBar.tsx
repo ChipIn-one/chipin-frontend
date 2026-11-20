@@ -74,4 +74,4 @@ const MobileNavBar = () => {
     );
 };
 
-export default MobileNavBar;
+export { MobileNavBar };

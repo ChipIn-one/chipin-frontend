@@ -13,7 +13,7 @@ import { seedGroupsList } from 'test/groupsList';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
 import { seedSelfUser } from 'test/selfUserSeed';
 
-import MobileNavBar from './MobileNavBar';
+import { MobileNavBar } from './MobileNavBar';
 
 import 'i18n/index';
 

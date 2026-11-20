@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef, MouseEvent } from 'react';
 import type { To } from 'react-router-dom';
 import styled from 'styled-components';
 
+import { themeColor } from 'helpers/colors';
 import { useAppNavigate } from 'hooks/useAppNavigate';
 
 const UnstyledButton = styled(Button)`
@@ -13,7 +14,7 @@ const UnstyledButton = styled(Button)`
     position: relative;
 
     &:focus-visible {
-        outline: 2px solid var(--cp-focus-ring);
+        outline: 2px solid var(--cp-focus-ring, ${themeColor('grassA8')});
         outline-offset: 2px;
     }
 `;

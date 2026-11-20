@@ -9,7 +9,7 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
-import HeaderNav from './HeaderNav';
+import { HeaderNav } from './HeaderNav';
 
 import 'i18n/index';
 

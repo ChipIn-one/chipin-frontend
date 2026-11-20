@@ -609,7 +609,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 </Flex>
                             </Flex>
                         </Specimen>
-                        <Specimen name="skeletons/BalanceBadgesSkeleton">
+                        <Specimen name="basics/skeletons/BalanceBadgesSkeleton">
                             <BalanceBadgesSkeleton />
                         </Specimen>
                         <Specimen name="skeletons/GroupsCardsSkeleton">

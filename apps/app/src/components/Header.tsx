@@ -27,7 +27,7 @@ import DevMenu from './DevMenu';
 import { LandingMobileMenu } from './header/LandingMobileMenu';
 import { LandingNav } from './header/LandingNav';
 import { SignInEntry } from './modals/auth-modal';
-import HeaderNav from './nav-bars/HeaderNav';
+import { HeaderNav } from './nav-bars/HeaderNav';
 
 const StickyBox = styled(Box)`
     position: sticky;

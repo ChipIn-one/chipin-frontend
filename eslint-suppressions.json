@@ -385,16 +385,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/nav-bars/HeaderNav.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/nav-bars/MobileNavBar.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/nav-bars/desktop-sidebar/DesktopSidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
