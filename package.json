@@ -53,7 +53,7 @@
         ]
     },
     "devDependencies": {
-        "@eslint/js": "^9.39.4",
+        "@eslint/js": "^10.0.1",
         "@tanstack/eslint-plugin-query": "5.107.1",
         "@types/node": "^24.19.2",
         "eslint-config-prettier": "^10.1.8",
