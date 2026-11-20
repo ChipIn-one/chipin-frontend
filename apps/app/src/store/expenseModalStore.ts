@@ -563,7 +563,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             return;
         }
 
-        let currentValue = 0;
+        let currentValue: number;
 
         if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
             currentValue = Number(state.percentShares[participantId]) || 0;
