@@ -13,6 +13,8 @@ const i18nMock = vi.hoisted(() => ({
 
 vi.mock('i18next', () => ({ default: i18nMock }));
 
+import enErrors from 'i18n/locales/en/errors.json';
+import ruErrors from 'i18n/locales/ru/errors.json';
 import { ApiError, ApiResponseFormatError } from 'shared/lib/apiError';
 
 import {
@@ -130,5 +132,32 @@ describe('an ApiError from api()', () => {
         expect(error.message).toContain('not valid JSON');
         expect(normalizeApiError(error)).toEqual({ message: 'toasts:common.requestFailed' });
         expect(getApiErrorStatus(error)).toBeUndefined();
+    });
+});
+
+describe('03-20 / API-002: the CLIENT.OUTDATED message with its minVersion detail', () => {
+    test.each([
+        [
+            'en',
+            enErrors.apiErrors.CLIENT.OUTDATED,
+            'This version of the app is older than the minimum supported one, 1.3.0',
+        ],
+        [
+            'ru',
+            ruErrors.apiErrors.CLIENT.OUTDATED,
+            'Эта версия приложения ниже минимальной поддерживаемой, 1.3.0',
+        ],
+    ])('%s reads naturally with the appended version', (_locale, message, expected) => {
+        i18nMock.exists.mockReturnValueOnce(true);
+        i18nMock.t.mockReturnValueOnce(message);
+        const error = {
+            isAxiosError: true,
+            response: {
+                status: 426,
+                data: { code: 'CLIENT.OUTDATED', details: { minVersion: '1.3.0' } },
+            },
+        };
+
+        expect(resolveApiErrorMessageFromError(error, 'fallback')).toBe(expected);
     });
 });

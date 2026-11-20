@@ -1,13 +1,17 @@
 // #719: `initializeApi` wires the restored self user to the cached language and theme.
 import { dehydrate, QueryClient } from '@tanstack/react-query';
+import { renderHook } from '@testing-library/react';
 import { get, set } from 'idb-keyval';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { publicApiInstance } from 'api/chipin.instance';
 import type { UserSettings } from 'api/chipin.types';
+import { resetUpdateRequiredForTests, useIsUpdateRequired } from 'app/pwa/updateRequired';
 import { reconcileRestoredSelf, type SelfUser, usersKeys } from 'entities/users';
 import { saveLocalUser } from 'helpers/localStorage';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { queryCacheKey } from 'shared/offline/constants';
+import { outboxGate } from 'shared/offline/outboxGate';
 import { persistCodec } from 'shared/offline/persistCodec';
 import { QUERY_CACHE_BUSTER } from 'shared/offline/queryPersister';
 import { bootstrapUserCache, clientFor, RESTORE_TIMEOUT_MS } from 'shared/offline/restore';
@@ -138,4 +142,47 @@ test('a restore whose user data was cleared meanwhile does not run the handler',
     await ready;
 
     expect(reconcileRestoredSelf).not.toHaveBeenCalled();
+});
+
+describe('03-20 / API-002: a 426 CLIENT.OUTDATED reaches the "Update required" state', () => {
+    const outdatedRequest = () =>
+        publicApiInstance.get('/public', {
+            adapter: config =>
+                Promise.reject({
+                    config,
+                    isAxiosError: true,
+                    response: {
+                        config,
+                        data: { code: 'CLIENT.OUTDATED' },
+                        headers: {},
+                        status: 426,
+                    },
+                }),
+        });
+
+    afterEach(() => {
+        outboxGate.reset();
+        resetUpdateRequiredForTests();
+    });
+
+    test('it closes the outbox gate outdated and shows the screen', async () => {
+        const { result } = renderHook(() => useIsUpdateRequired());
+
+        await expect(outdatedRequest()).rejects.toMatchObject({ response: { status: 426 } });
+
+        expect(outboxGate.isClosed('outdated')).toBe(true);
+        expect(result.current).toBe(true);
+    });
+
+    test('03-20 / API-005: with no backend minimum (no header, no 426) nothing is shown', async () => {
+        const { result } = renderHook(() => useIsUpdateRequired());
+
+        await publicApiInstance.get('/public', {
+            adapter: config =>
+                Promise.resolve({ config, data: {}, headers: {}, status: 200, statusText: 'OK' }),
+        });
+
+        expect(outboxGate.isClosed('outdated')).toBe(false);
+        expect(result.current).toBe(false);
+    });
 });

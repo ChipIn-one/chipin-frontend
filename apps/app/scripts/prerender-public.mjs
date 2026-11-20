@@ -58,6 +58,10 @@ const main = () =>
         optimizeDeps: { noDiscovery: true },
         server: { middlewareMode: true },
         appType: 'custom',
+        // 03-20: the API interceptors (loaded by the public entry) read `APP_VERSION` at import time.
+        // Rendering sends no requests, so a fixed value is enough; the browser bundle keeps the
+        // real version from vite.config.ts.
+        define: { __APP_VERSION__: JSON.stringify('0.0.0-prerender') },
         logLevel: 'warn',
     }).then(server => {
         return Promise.all([

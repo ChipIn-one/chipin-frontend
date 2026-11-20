@@ -100,7 +100,7 @@ const UpdateRequiredView = () => {
     );
 };
 
-/** Blocks the app while an update is required (`showUpdateRequired()`, behind its flag). */
+/** Blocks the app while an update is required (`showUpdateRequired()`, driven by the backend minimum version). */
 export const UpdateRequiredScreen = () => {
     const isRequired = useIsUpdateRequired();
 
