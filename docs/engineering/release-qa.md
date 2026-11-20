@@ -120,6 +120,14 @@ Only the sole current QA assignee counts; that is `syllik` only when he is the s
 2. Read the current result comment and the latest validation run. Then decide whether to **Promote** that exact deployment in Vercel.
 3. After a fix, run a new round: a new SHA gets its own QA Issue. Never carry a PASS across SHAs.
 
+## Two projects
+
+Two Vercel projects build this repository (spec 04 §1.5): the app (`chipin-frontend`, Root Directory `apps/app`) and the site (`chipin-site`, Root Directory `apps/site`, connected in 04-3a, #797). Three rules:
+
+1. **The site is released like the app: manual Promote only.** In `chipin-site` the Production Branch is `main` and Git deployments are disabled for it (`git.deploymentEnabled.main: false` in `apps/site/vercel.json`, 04-3a); a merge into `master` gives only dev and preview builds, and the site's production changes only by Promote.
+2. **Promote the app first, then the site, both from the same `master` SHA.** The site pages (`/join/*`, sign-in buttons) link to app routes, not the other way round.
+3. **Only the app project's deployment counts for release QA, the version tag and Issue completion.** Since a second project is connected, Vercel writes per-project GitHub Deployment environments: `Production – chipin-frontend` and `Preview – chipin-frontend` for the app, `Production – chipin-site` and `Preview – chipin-site` for the site (an EN DASH between spaces). The app's older deployments keep `Production` and `Preview`. Release automation in this repository (`release-on-production.yml`, `forward-production-deployment.yml`, the release-QA scripts and the service-worker suite's Preview resolver) matches the app's names in both forms from one list, [`scripts/deployment-environments.mjs`](../../scripts/deployment-environments.mjs), and never matches the site's (#801). A site deploy never creates a tag, starts a QA round or closes an Issue. The org completion sweep reads its environment from `productionEvidence` in `ChipIn-one/.github` `workflow-registry.yaml`; it must accept the same two app names (see #801 for the org Issue).
+
 ## Retries and recovery
 
 - The hidden `chipin-release-qa:v1` marker (repository + SHA + deployment) is the retry key. Rerunning the same SHA reuses its Issue, checkboxes and comments; a conflicting deployment ID or URL for the same SHA stops the run.

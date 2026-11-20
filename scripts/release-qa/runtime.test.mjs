@@ -1,12 +1,13 @@
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import {
     assertAncestry,
     assertRetrySafe,
     assignQa,
     chooseProductionBaseline,
+    listAppDeployments,
     fallbackFromEnv,
     formatResolveOutputs,
     GitHubApi,
@@ -59,6 +60,69 @@ test('production baseline is latest verified Vercel Production success and prece
         Promise.resolve(statuses.get(id) ?? []),
     ).then(value => {
         expect(value).toMatchObject({ sha: BASE, id: 7 });
+    });
+});
+
+// chipin-frontend#801: with chipin-site connected the app's Production is `Production – chipin-frontend`.
+test('production baseline takes the app project under either name and never the site project', () => {
+    const production = (id, environment) => ({
+        id,
+        sha: String(id).repeat(40).slice(0, 40),
+        ref: 'master',
+        environment,
+        creator: { login: 'vercel[bot]' },
+    });
+    const deployments = [
+        production(9, 'Production \u2013 chipin-site'),
+        production(8, 'Production \u2013 chipin-frontend'),
+        production(7, 'Production'),
+    ];
+    const success = [
+        {
+            state: 'success',
+            environment_url: 'https://chipin-frontend-prod8-sylliks-projects.vercel.app',
+        },
+    ];
+    const read = vi.fn(() => Promise.resolve(success));
+    return chooseProductionBaseline(deployments, read).then(value => {
+        expect(value).toMatchObject({ id: 8 });
+        expect(read).not.toHaveBeenCalledWith(9);
+    });
+});
+
+test('production baseline refuses a site-only Production history', () => {
+    const site = {
+        id: 9,
+        sha: BASE,
+        ref: 'master',
+        environment: 'Production \u2013 chipin-site',
+        creator: { login: 'vercel[bot]' },
+    };
+    expect(() =>
+        chooseProductionBaseline([site], () =>
+            Promise.resolve([{ state: 'success', environment_url: 'https://chipin.one' }]),
+        ),
+    ).toThrow('No verified previous Production deployment exists.');
+});
+
+test('listAppDeployments queries every app name and merges them newest first', () => {
+    const paths = [];
+    const api = {
+        list: path => {
+            paths.push(path);
+            return Promise.resolve(
+                path.includes('%E2%80%93')
+                    ? [{ id: 12, environment: 'Production \u2013 chipin-frontend' }]
+                    : [{ id: 10, environment: 'Production' }],
+            );
+        },
+    };
+    return listAppDeployments(api, 'Production').then(value => {
+        expect(paths).toEqual([
+            '/repos/ChipIn-one/chipin-frontend/deployments?environment=Production',
+            '/repos/ChipIn-one/chipin-frontend/deployments?environment=Production%20%E2%80%93%20chipin-frontend',
+        ]);
+        expect(value.map(item => item.id)).toEqual([12, 10]);
     });
 });
 
@@ -445,11 +509,11 @@ const greenRun = sha => ({
     event: 'push',
     path: '.github/workflows/frontend-ci.yml',
 });
-const previewFor = (id, sha) => ({
+const previewFor = (id, sha, environment = 'Preview') => ({
     id,
     sha,
     ref: 'master',
-    environment: 'Preview',
+    environment,
     creator: { login: 'vercel[bot]' },
 });
 const ok = url => [{ state: 'success', environment_url: url }];
@@ -470,8 +534,14 @@ function resolverApi({
             throw new Error(`Unexpected request ${path}`);
         },
         list: path => {
-            const preview = /\/deployments\?environment=Preview&sha=([0-9a-f]{40})$/.exec(path);
-            if (preview) return Promise.resolve(previews[preview[1]] ?? []);
+            // GitHub filters `environment` by exact name, like the real API.
+            const preview = /\/deployments\?environment=([^&]+)&sha=([0-9a-f]{40})$/.exec(path);
+            if (preview)
+                return Promise.resolve(
+                    (previews[preview[2]] ?? []).filter(
+                        item => item.environment === decodeURIComponent(preview[1]),
+                    ),
+                );
             const status = /\/deployments\/(\d+)\/statuses$/.exec(path);
             if (status) return Promise.resolve(statuses[status[1]] ?? []);
             throw new Error(`Unexpected list ${path}`);
@@ -498,6 +568,25 @@ test('zero-input resolver picks the newest successful vercel[bot] Preview of the
             fallback: false,
             skipped: [],
         });
+    });
+});
+
+test('zero-input resolver takes the app Preview under its per-project name and skips the site Preview', () => {
+    const api = resolverApi({
+        previews: {
+            [SHA]: [
+                previewFor(41, SHA, 'Preview \u2013 chipin-frontend'),
+                previewFor(42, SHA, 'Preview \u2013 chipin-site'),
+            ],
+        },
+        statuses: {
+            41: ok(PREVIEW_URL),
+            42: ok('https://chipin-frontend-site42-sylliks-projects.vercel.app'),
+        },
+        runs: { [SHA]: [greenRun(SHA)] },
+    });
+    return resolveCandidate({ api }).then(value => {
+        expect(value).toMatchObject({ sha: SHA, deploymentId: 41, url: PREVIEW_URL });
     });
 });
 
@@ -732,6 +821,12 @@ function evidenceApi({
                 return Promise.resolve([previewFor(42, SHA)]);
             if (head && path.endsWith(`/deployments?environment=Preview&sha=${head.sha}`))
                 return Promise.resolve(head.preview ? [previewFor(90, head.sha)] : []);
+            if (
+                /\/deployments\?environment=(Preview|Production)%20%E2%80%93%20chipin-frontend/.test(
+                    path,
+                )
+            )
+                return Promise.resolve([]);
             if (head && path.endsWith('/deployments/90/statuses'))
                 return Promise.resolve(
                     ok('https://chipin-frontend-head-sylliks-projects.vercel.app'),

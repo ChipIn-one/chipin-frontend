@@ -23,7 +23,9 @@ closed by hand.
 ## Sweep trigger and latency
 
 - `.github/workflows/forward-production-deployment.yml` (#559) runs on
-  `deployment_status`; its job `if:` passes only environment `Production`, state
+  `deployment_status`; its job `if:` passes only the app's Production environment
+  (`Production` or `Production – chipin-frontend`, from
+  `scripts/deployment-environments.mjs`; never `Production – chipin-site`, #801), state
   `success` and creator `vercel[bot]`. The script
   `scripts/forward-production-deployment.mjs` checks the same again, validates the
   deployment id and SHA from the event file and sends one `repository_dispatch`

@@ -106,8 +106,20 @@ describe('pickPreview', () => {
             entry({ id: 5, login: 'someone', states: ['success'] }),
             entry({ id: 6, environment: 'Production', states: ['success'] }),
             entry({ id: 7, sha: OTHER_SHA, states: ['success'] }),
+            entry({ id: 8, environment: 'Preview \u2013 chipin-site', states: ['success'] }),
+            entry({ id: 9, environment: 'Production \u2013 chipin-frontend', states: ['success'] }),
         ];
         expect(pickPreview(untrusted, SHA).status).toBe('waiting');
+    });
+
+    // chipin-frontend#801: a second Vercel project suffixes the environment with the project name.
+    test('takes the app Preview under its per-project name', () => {
+        expect(
+            pickPreview(
+                [entry({ environment: 'Preview \u2013 chipin-frontend', states: ['success'] })],
+                SHA,
+            ),
+        ).toEqual({ status: 'ready', url: PREVIEW });
     });
 
     test('counts only statuses posted by vercel[bot]', () => {
@@ -273,7 +285,7 @@ describe('createGitHubClient', () => {
         const fetchImpl = deploymentsApi();
         await expect(client(fetchImpl).readDeployments(SHA)).resolves.toHaveLength(1);
         expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
-            `https://api.github.com/repos/${REPO}/deployments?sha=${SHA}&environment=Preview&per_page=100`,
+            `https://api.github.com/repos/${REPO}/deployments?sha=${SHA}&per_page=100`,
             `https://api.github.com/repos/${REPO}/deployments/7913122560/statuses?per_page=100`,
         ]);
         const [, init] = fetchImpl.mock.calls[0];
@@ -311,7 +323,7 @@ describe('createGitHubClient', () => {
                 .catch(caught => caught);
             expect(error).not.toBeInstanceOf(TransientGitHubError);
             expect(error.message).toBe(
-                `GitHub GET /deployments?sha=${SHA}&environment=Preview&per_page=100 returned HTTP ${status}.`,
+                `GitHub GET /deployments?sha=${SHA}&per_page=100 returned HTTP ${status}.`,
             );
         },
     );

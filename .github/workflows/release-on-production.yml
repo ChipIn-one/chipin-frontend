@@ -4,6 +4,9 @@
 # a passed guard runs the reusable release workflow pinned to an org tag, which derives the version from
 # `## Version impact` of the PRs merged into master since the previous tag and creates the tag and the GitHub Release on
 # the promoted SHA. The trigger filter is the one of forward-production-deployment.yml, plus the status creator.
+# The app's Production environment is `Production` or `Production – chipin-frontend` (a second Vercel project, chipin-site,
+# suffixes the names; its `Production – chipin-site` never matches): the list lives in scripts/deployment-environments.mjs
+# and scripts/deployment-environments.test.mjs keeps this condition equal to it (chipin-frontend#801).
 # The guard job releases only a promoted SHA that is on master and is not older than the newest version tag:
 # - a SHA outside master (a promoted branch preview) gets no tag (the engine takes a deploy-tag SHA as is);
 # - a re-posted status or a rollback promote of an already tagged SHA reaches the engine and is a no-op
@@ -36,14 +39,14 @@ permissions: {}
 # re-posting success on an older deployment) cancels the pending run; re-run the cancelled run to tag its SHA. The
 # redeploy job's own Production status also joins this group, so it can cancel a pending Promote run the same way.
 concurrency:
-  group: ${{ (github.repository_owner == 'ChipIn-one' && github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
+  group: ${{ (github.repository_owner == 'ChipIn-one' && contains(fromJSON('["Production","Production – chipin-frontend"]'), github.event.deployment.environment) && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
   cancel-in-progress: false
 
 jobs:
   guard:
     if: >-
       github.repository_owner == 'ChipIn-one' &&
-      github.event.deployment.environment == 'Production' &&
+      contains(fromJSON('["Production","Production – chipin-frontend"]'), github.event.deployment.environment) &&
       github.event.deployment_status.state == 'success' &&
       github.event.deployment.creator.login == 'vercel[bot]' &&
       github.event.deployment_status.creator.login == 'vercel[bot]'

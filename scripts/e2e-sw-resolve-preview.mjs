@@ -4,6 +4,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
+import { isAppEnvironment } from './deployment-environments.mjs';
+
 // The `resolve` job of e2e-sw.yml (docs/e2e-tests.md "Service worker suite"). It runs from the
 // workflow's own ref (`github.sha`; on a pull request that is its merge commit), never from a
 // dispatched commit, and is the only place that holds the GitHub token. It picks the commit to test and finds the Vercel Preview built from it, then
@@ -14,8 +16,8 @@ import { promisify } from 'node:util';
 // - `workflow_dispatch`: a pull request number (its head must be in this repository) or a full SHA
 //   (it must be reachable from a branch of this repository, so a fork's commit is refused, and have
 //   a Preview: every pull request branch and `master` commit gets one).
-// Vercel's Git integration creates a GitHub Deployment for the commit (environment `Preview`,
-// creator `vercel[bot]`) whose `success` status, also posted by `vercel[bot]`, carries the
+// Vercel's Git integration creates a GitHub Deployment for the commit (environment `Preview` or
+// `Preview – chipin-frontend`, scripts/deployment-environments.mjs; creator `vercel[bot]`) whose `success` status, also posted by `vercel[bot]`, carries the
 // immutable Preview URL. The step waits while the build runs or GitHub answers with a transient
 // error, and fails on a failed, errored or cancelled build, on any other GitHub error, or when the
 // wait runs out.
@@ -114,7 +116,7 @@ export const pickPreview = (entries, sha) => {
     const trusted = entries
         .filter(
             ({ deployment }) =>
-                deployment?.environment === 'Preview' &&
+                isAppEnvironment('Preview', deployment?.environment) &&
                 deployment?.creator?.login === VERCEL_BOT &&
                 deployment?.sha === sha &&
                 Number.isInteger(deployment?.id),
@@ -192,15 +194,16 @@ export const createGitHubClient = ({ repository, token, fetchImpl = fetch }) => 
         repository,
         readPull: number => get(`/pulls/${number}`),
         readDeployments: sha =>
-            list(`/deployments?sha=${assertFullSha(sha)}&environment=Preview&per_page=100`).then(
-                deployments =>
-                    Promise.all(
-                        deployments.map(deployment =>
-                            list(
-                                `/deployments/${Number(deployment?.id)}/statuses?per_page=100`,
-                            ).then(statuses => ({ deployment, statuses })),
+            // No `environment` filter: GitHub matches it exactly and the app's Preview has two names
+            // (scripts/deployment-environments.mjs); pickPreview keeps only the app's.
+            list(`/deployments?sha=${assertFullSha(sha)}&per_page=100`).then(deployments =>
+                Promise.all(
+                    deployments.map(deployment =>
+                        list(`/deployments/${Number(deployment?.id)}/statuses?per_page=100`).then(
+                            statuses => ({ deployment, statuses }),
                         ),
                     ),
+                ),
             ),
     };
 };
