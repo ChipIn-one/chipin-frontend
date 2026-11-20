@@ -165,7 +165,8 @@ export default defineConfig(({ mode }) => {
                       }),
                   ]
                 : []),
-            // Last: the anti-FOUC theme script becomes the first element of `<head>` in app.html.
+            // The anti-FOUC theme script becomes the first element of `<head>` in app.html: its hook
+            // runs late (`order: 'post'`), and no hook after it prepends to `<head>`.
             themeInitPlugin(),
         ],
 

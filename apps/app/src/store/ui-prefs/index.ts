@@ -1,6 +1,7 @@
 export type { AppearancePreference, AppearanceStore, ResolvedAppearance } from './appearanceStore';
 export {
     applyAppearance,
+    initAppearance,
     resetAppearanceStore,
     selectResolvedAppearance,
     selectSetPreference,

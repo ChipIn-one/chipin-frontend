@@ -106,8 +106,8 @@ if (legacyHostAppUrl) {
 } else {
     // The user's query cache is restored from IndexedDB before the app (and its router) renders;
     // the public SSG branch above never touches IndexedDB. The first render waits for the initial
-    // language's lazy chunks (spec 04 §2.10), so it never shows raw keys. Importing `main` creates
-    // the appearance store, which applies the theme class to `<html>` before that render (spec 05 §2).
+    // language's lazy chunks (spec 04 §2.10), so it never shows raw keys. Importing `main` runs
+    // `initAppearance()`, which applies the theme class to `<html>` before that render (spec 05 §2).
     Promise.all([
         import('main'),
         import('shared/offline/restore'),

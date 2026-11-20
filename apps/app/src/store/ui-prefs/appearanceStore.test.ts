@@ -9,6 +9,7 @@ import { clearLocalUserIdentity, LocalStorage, saveLocalUser } from 'helpers/loc
 
 import {
     type AppearancePreference,
+    initAppearance,
     resetAppearanceStore,
     useAppearanceStore,
 } from './appearanceStore';
@@ -66,6 +67,12 @@ const saveRawTheme = (value: string) => {
     localStorage.setItem(LS_KEY_THEME, value);
 };
 
+/** The SPA start: the store as at import, then `initAppearance()` (main.tsx). */
+const startAppearance = () => {
+    resetAppearanceStore();
+    initAppearance();
+};
+
 const htmlThemes = (): string[] =>
     ['light', 'dark'].filter(theme => document.documentElement.classList.contains(theme));
 
@@ -100,14 +107,14 @@ describe('saved preference', () => {
     ])('the saved value %s resolves to %s and is applied to <html>', (saved, resolved) => {
         saveRawTheme(saved);
 
-        resetAppearanceStore();
+        startAppearance();
 
         expect(useAppearanceStore.getState().resolved).toBe(resolved);
         expectHtmlMatchesStore();
     });
 
     test('setPreference saves the raw string, the format saved before 05-3', () => {
-        resetAppearanceStore();
+        startAppearance();
 
         useAppearanceStore.getState().setPreference('dark');
 
@@ -117,7 +124,7 @@ describe('saved preference', () => {
 
     test('the html class equals resolved after every setPreference', () => {
         const scheme = installMatchMedia(true);
-        resetAppearanceStore();
+        startAppearance();
         const sequence: AppearancePreference[] = ['light', 'dark', 'system', 'light', 'system'];
 
         expectHtmlMatchesStore();
@@ -133,11 +140,11 @@ describe('saved preference', () => {
 
     test('a sign-out keeps the saved theme (invariant 12)', () => {
         saveLocalUser({ id: 'user-1', role: 'USER', settings });
-        resetAppearanceStore();
+        startAppearance();
         useAppearanceStore.getState().setPreference('light');
 
         clearLocalUserIdentity();
-        resetAppearanceStore();
+        startAppearance();
 
         expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('light');
         expect(useAppearanceStore.getState().preference).toBe('light');
@@ -148,7 +155,7 @@ describe('system preference', () => {
     test('without matchMedia (jsdom) system resolves to light', () => {
         LocalStorage.setRaw(LS_KEY_THEME, 'system');
 
-        resetAppearanceStore();
+        startAppearance();
 
         expect(useAppearanceStore.getState()).toMatchObject({
             preference: 'system',
@@ -161,7 +168,7 @@ describe('system preference', () => {
         const scheme = installMatchMedia(true);
         LocalStorage.setRaw(LS_KEY_THEME, 'system');
 
-        resetAppearanceStore();
+        startAppearance();
         expect(useAppearanceStore.getState().resolved).toBe('dark');
         expectHtmlMatchesStore();
 
@@ -177,7 +184,7 @@ describe('system preference', () => {
     test('unsubscribes when the preference leaves system, and subscribes once again on return', () => {
         const scheme = installMatchMedia(false);
         LocalStorage.setRaw(LS_KEY_THEME, 'system');
-        resetAppearanceStore();
+        startAppearance();
         expect(scheme.listenerCount()).toBe(1);
 
         useAppearanceStore.getState().setPreference('light');
@@ -196,7 +203,7 @@ describe('system preference', () => {
     test('no saved value and no cached user reads as system and writes nothing', () => {
         installMatchMedia(true);
 
-        resetAppearanceStore();
+        startAppearance();
 
         expect(useAppearanceStore.getState()).toMatchObject({
             preference: 'system',
@@ -210,7 +217,7 @@ describe('key migration (remove after 2 releases)', () => {
     test('without the key, the cached user theme is written to the key once', () => {
         saveLocalUser({ id: 'user-1', role: 'USER', settings: { ...settings, theme: 'dark' } });
 
-        resetAppearanceStore();
+        startAppearance();
 
         expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('dark');
         expect(useAppearanceStore.getState()).toMatchObject({
@@ -224,9 +231,102 @@ describe('key migration (remove after 2 releases)', () => {
         saveLocalUser({ id: 'user-1', role: 'USER', settings: { ...settings, theme: 'dark' } });
         LocalStorage.setRaw(LS_KEY_THEME, 'light');
 
-        resetAppearanceStore();
+        startAppearance();
 
         expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('light');
+        expect(useAppearanceStore.getState().preference).toBe('light');
+    });
+});
+
+describe('initAppearance', () => {
+    test('the store does not touch <html> until initAppearance runs, then applies once', () => {
+        installMatchMedia(true);
+        LocalStorage.setRaw(LS_KEY_THEME, 'dark');
+
+        resetAppearanceStore();
+
+        expect(useAppearanceStore.getState().resolved).toBe('dark');
+        expect(document.documentElement.className).toBe('');
+
+        initAppearance();
+        initAppearance();
+        expectHtmlMatchesStore();
+    });
+
+    test('the migration writes the key only in initAppearance', () => {
+        saveLocalUser({ id: 'user-1', role: 'USER', settings: { ...settings, theme: 'dark' } });
+
+        resetAppearanceStore();
+        expect(useAppearanceStore.getState().preference).toBe('dark');
+        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBeNull();
+
+        initAppearance();
+        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('dark');
+    });
+
+    test('an unreadable storage reads as light, as THEME_INIT_SCRIPT does', () => {
+        installMatchMedia(true);
+        const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+        Object.defineProperty(globalThis, 'localStorage', {
+            configurable: true,
+            get: () => {
+                throw new DOMException('blocked', 'SecurityError');
+            },
+        });
+        try {
+            startAppearance();
+            expect(useAppearanceStore.getState()).toMatchObject({
+                preference: 'light',
+                resolved: 'light',
+            });
+            expectHtmlMatchesStore();
+        } finally {
+            if (descriptor) {
+                Object.defineProperty(globalThis, 'localStorage', descriptor);
+            }
+        }
+    });
+});
+
+describe('another tab', () => {
+    const storageEvent = (key: string | null, newValue: string | null) =>
+        new StorageEvent('storage', { key, newValue });
+
+    test('follows a theme saved in another tab without writing it back', () => {
+        installMatchMedia(true);
+        LocalStorage.setRaw(LS_KEY_THEME, 'light');
+        startAppearance();
+
+        window.dispatchEvent(storageEvent(LS_KEY_THEME, 'dark'));
+        expect(useAppearanceStore.getState()).toMatchObject({
+            preference: 'dark',
+            resolved: 'dark',
+        });
+        expectHtmlMatchesStore();
+        // This tab's storage is not written by the event (the other tab wrote the shared one).
+        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('light');
+
+        window.dispatchEvent(storageEvent(LS_KEY_THEME, 'unexpected'));
+        expect(useAppearanceStore.getState().preference).toBe('light');
+        expectHtmlMatchesStore();
+
+        window.dispatchEvent(storageEvent(LS_KEY_THEME, null));
+        expect(useAppearanceStore.getState()).toMatchObject({
+            preference: 'system',
+            resolved: 'dark',
+        });
+        expectHtmlMatchesStore();
+    });
+
+    test('ignores other keys, and is not listened to before initAppearance', () => {
+        LocalStorage.setRaw(LS_KEY_THEME, 'light');
+        resetAppearanceStore();
+
+        window.dispatchEvent(storageEvent(LS_KEY_THEME, 'dark'));
+        expect(useAppearanceStore.getState().preference).toBe('light');
+
+        initAppearance();
+        window.dispatchEvent(storageEvent(LS_KEY_USER, 'dark'));
         expect(useAppearanceStore.getState().preference).toBe('light');
     });
 });

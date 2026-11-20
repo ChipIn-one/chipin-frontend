@@ -70,7 +70,8 @@ export const THEME_INIT_TAG: HtmlTagDescriptor = {
 export const themeInitPlugin = (): Plugin => ({
     name: 'chipin-theme-init',
     transformIndexHtml: {
-        // Last of all: a `head-prepend` tag of a later hook would otherwise go before this one.
+        // Late (`post`), after Vite's own processing: the tag stays first in `<head>` as long as no
+        // hook that runs after it uses `head-prepend` (none does: VitePWA, an `enforce: 'post'` plugin that runs later, does not).
         order: 'post',
         handler: (_html, { filename }) =>
             basename(filename) === THEME_INIT_ENTRY ? [THEME_INIT_TAG] : [],
