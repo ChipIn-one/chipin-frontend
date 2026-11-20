@@ -263,11 +263,10 @@ describe('seoGuard scripts', () => {
             '<!-- <script> --><p onclick="go()"></p><i></script>',
         ],
         ...['textarea', 'title', 'style', 'xmp', 'iframe', 'noembed', 'noframes', 'noscript'].map(
-            element =>
-                [
-                    `a script start tag inside <${element}>`,
-                    `<${element}><script></${element}><p onclick="go()"></p></script>`,
-                ] as const,
+            (element): [string, string] => [
+                `a script start tag inside <${element}>`,
+                `<${element}><script></${element}><p onclick="go()"></p></script>`,
+            ],
         ),
         ['an SVG element', '<svg><a onclick="go()"></a></svg>'],
         ['a handler inside <template>', '<template><p onclick="go()"></p></template>'],
@@ -310,6 +309,98 @@ describe('seoGuard scripts', () => {
         );
 
         expect(inlineScripts(html)).toEqual(['d()', 'e()', 'f()']);
+    });
+
+    // R1 of #820: markup the tree builder drops or the scripting-on parse hides is still live in a
+    // browser (customizable <select>, <noscript> with JS off, SVG href over xlink:href).
+    const STYLE = "index.html: inline style (build.inlineStylesheets must stay 'never')";
+    const ISLAND = 'index.html: island without client:visible or client:idle';
+
+    test.each([
+        [
+            'tags inside <select>',
+            '<select><style>p{}</style><div style="color:red">x</div>' +
+                '<astro-island client="load"></astro-island></select>',
+            [STYLE, ISLAND],
+        ],
+        [
+            'a handler inside <select>',
+            '<select><!--><p onclick="go()">x</p><!-- x --></select>',
+            [HANDLER],
+        ],
+        [
+            'an SVG <select> resetting the insertion mode',
+            '<svg><select><desc><table></table><style>p{}</style></desc></select></svg>',
+            [STYLE],
+        ],
+        [
+            'a handler after an SVG <select>',
+            '<!--><svg><select><desc><table></table><img src="/x" onerror="go()"><!-- x -->',
+            [HANDLER],
+        ],
+        ['a <style> inside <noscript>', '<noscript><style>p{}</style></noscript>', [STYLE]],
+        [
+            'a style attribute inside <noscript>',
+            '<noscript><p style="color:red">x</p></noscript>',
+            [STYLE],
+        ],
+        [
+            'an SVG href next to xlink:href',
+            '<!--><svg><a xlink:href="/x" href="javascript:go()"><text>x</text></a></svg><!-- x -->',
+            [JS_URL],
+        ],
+        [
+            'a handler inside <iframe srcdoc>',
+            '<iframe srcdoc="&lt;p onclick=&quot;go()&quot;&gt;x&lt;/p&gt;"></iframe>',
+            [HANDLER],
+        ],
+    ])('finds markup the browser runs: %s', (_name, body, problems) => {
+        expect(problemsOf('index.html', page(HEAD, body))).toEqual(problems);
+    });
+
+    test('<noscript> in the head is checked with scripting off', () => {
+        expect(
+            problemsOf('index.html', page(`${HEAD}<noscript><style>p{}</style></noscript>`)),
+        ).toEqual([STYLE]);
+    });
+
+    test('hashes import maps, speculation rules and srcdoc scripts; not other languages', () => {
+        const html = page(
+            HEAD,
+            '<script type="importmap">{}</script><script type="speculationrules">{}</script>' +
+                '<script language="vbscript">a</script><script language="javascript">b()</script>' +
+                '<script type="" language="vbscript">c()</script>' +
+                '<iframe srcdoc="&lt;script&gt;d()&lt;/script&gt;"></iframe>',
+        );
+
+        expect(inlineScripts(html)).toEqual(['{}', '{}', 'b()', 'c()', 'd()']);
+    });
+
+    test('a script in another language ships as text', () => {
+        expect(
+            problemsOf(
+                'index.html',
+                page(HEAD, '<script language="vbscript">refreshToken</script>'),
+            ),
+        ).toEqual([TOKEN]);
+    });
+
+    test('an SVG script with href loads a file, it is not inline', () => {
+        const html = page(HEAD, '<svg><script href="/_astro/a.js"></script></svg>');
+
+        expect(inlineScripts(html)).toEqual([]);
+        expect(problemsOf('index.html', html)).toEqual([
+            'index.html: script /_astro/a.js is not in the build',
+        ]);
+    });
+
+    test('a <title> or description inside <template> does not count', () => {
+        expect(
+            problemsOf(
+                'index.html',
+                page('<template><title>x</title><meta name="description" content="x"></template>'),
+            ),
+        ).toEqual(['index.html: missing <title>', 'index.html: missing <meta name="description">']);
     });
 
     test('a removed comment does not join the pieces of an attribute name', () => {
