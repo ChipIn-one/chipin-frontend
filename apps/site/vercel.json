@@ -4,7 +4,6 @@
     "installCommand": "cd ../.. && npm ci",
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
-    "cleanUrls": true,
     "git": {
         "deploymentEnabled": {
             "main": false
@@ -12,8 +11,77 @@
     },
     "redirects": [
         {
+            "source": "/group/join/:token",
+            "destination": "/join/group/:token",
+            "statusCode": 302
+        },
+        {
+            "source": "/friends/join/:token",
+            "destination": "/join/friend/:token",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app.chipin.one/:path",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app-dev.chipin.one/:path",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "site-dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app-dev.chipin.one/:path",
+            "statusCode": 302
+        },
+        {
             "source": "/sitemap.xml",
             "destination": "/sitemap-index.xml",
+            "statusCode": 302
+        },
+        {
+            "source": "/index.html",
+            "destination": "/",
+            "statusCode": 302
+        },
+        {
+            "source": "/app.html",
+            "destination": "/",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path([^/].*?)/index.html",
+            "destination": "/:path",
+            "statusCode": 302
+        },
+        {
+            "source": "/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/].*?)}?{/}?",
+            "destination": "/:path",
             "statusCode": 301
         },
         {
@@ -54,18 +122,63 @@
         },
         {
             "source": "/(.*)",
-            "has": [{ "type": "host", "value": { "eq": "site-dev.chipin.one" } }],
-            "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "site-dev.chipin.one"
+                    }
+                }
+            ],
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
         },
         {
             "source": "/(.*)",
-            "has": [{ "type": "host", "value": { "eq": "dev.chipin.one" } }],
-            "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
+                }
+            ],
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
         },
         {
             "source": "/(.*)",
-            "has": [{ "type": "host", "value": { "suf": ".vercel.app" } }],
-            "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "suf": ".vercel.app"
+                    }
+                }
+            ],
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/sw.js",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache"
+                }
+            ]
         }
     ]
 }
