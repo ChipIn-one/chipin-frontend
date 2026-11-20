@@ -611,6 +611,91 @@ describe('Vercel step-1 legacy redirects (04-4a2)', () => {
     });
 });
 
+// #821 (the app twin of the site fix in #814): a capture that starts the redirect path must not
+// start with `\`, tab, CR or LF. Browsers read `/\evil.example` as `//evil.example`, and the URL
+// parser drops tab, CR and LF anywhere, so `/<tab>/evil.example` is `//evil.example` too. Each
+// crafted URL is tried raw (in case Vercel decodes the path before matching) and percent-encoded
+// (in case it does not). The oracle is the WHATWG URL parser, as in a browser: a `Location` is
+// resolved against the request host and must stay on that host or go to a fixed app origin.
+const OPEN_REDIRECT_URLS = [
+    '/es/\\evil.example',
+    '/es/%5Cevil.example',
+    '/es/\\\\evil.example',
+    '/es/%5C%5Cevil.example',
+    '/es/\t/evil.example',
+    '/es/%09/evil.example',
+    '/es/\r/evil.example',
+    '/es/%0D/evil.example',
+    '/es/\n/evil.example',
+    '/es/%0A/evil.example',
+    '/es//evil.example',
+    '/es/%2F%2Fevil.example',
+    '/pt-BR/\\evil.example',
+    '/pt-pt/\t/evil.example',
+    '/\\evil.example/index.html',
+    '/%5Cevil.example/index.html',
+    '/\t/evil.example/index.html',
+    '/%09/evil.example/index.html',
+    '/\r/evil.example/index.html',
+    '/\n/evil.example/index.html',
+    '//evil.example/index.html',
+    '/%2F%2Fevil.example/index.html',
+];
+const OPEN_REDIRECT_HOSTS = [...LEGACY_HOSTS, ...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'];
+const FIXED_APP_ORIGINS = Object.values(LEGACY_HOST_APP_ORIGINS);
+
+// The crafted URLs whose redirect leaves the request host for anything but a fixed app origin.
+const offSiteRedirects = routes =>
+    OPEN_REDIRECT_HOSTS.flatMap(host =>
+        OPEN_REDIRECT_URLS.flatMap(url => {
+            const redirect = resolveRouteIn(routes, host, url)?.redirect;
+
+            if (redirect === undefined) {
+                return [];
+            }
+            const target = new URL(redirect, `https://${host}`);
+
+            return target.host === host || FIXED_APP_ORIGINS.includes(target.origin)
+                ? []
+                : [{ host, url, redirect }];
+        }),
+    );
+
+describe('Vercel redirects are not open redirects (#821)', () => {
+    test('no crafted URL redirects off the request host', () => {
+        expect(offSiteRedirects(allRoutes)).toEqual([]);
+    });
+
+    // Pins that the cases and the oracle above catch the capture class before #821 (`[^/]`).
+    test('the check fails on the old capture class', () => {
+        const oldConfig = {
+            ...config,
+            redirects: config.redirects.map(redirect => ({
+                ...redirect,
+                source: redirect.source.replaceAll('[^/\\\\\\t\\n\\r]', '[^/]'),
+            })),
+        };
+
+        expect(oldConfig.redirects).not.toEqual(config.redirects);
+        expect(offSiteRedirects(compileRoutes(oldConfig)).map(({ url }) => url)).toEqual(
+            expect.arrayContaining([
+                '/es/\\evil.example',
+                '/es/\t/evil.example',
+                '/\\evil.example/index.html',
+                '/\n/evil.example/index.html',
+            ]),
+        );
+    });
+
+    test.each([
+        ['chipin.one', '/es/privacy', '/privacy', 301],
+        ['app-dev.chipin.one', '/pt-BR/terms/', '/terms', 301],
+        ['dev.chipin.one', '/ru/privacy/index.html', '/ru/privacy', 302],
+    ])('on %s still redirects %s to %s', (host, url, redirect, statusCode) => {
+        expect(resolveRoute(host, url)).toEqual({ redirect, statusCode });
+    });
+});
+
 // 04-2b (spec 04 §2.9, D31): one host-scoped catch-all to the shell per app host group, at the end
 // of the rewrites. It skips `api/`, `assets/`, `_vercel/`, `.well-known/` and any path whose last
 // segment has a file extension, so a missing chunk or icon stays a 404 and never gets the shell.
