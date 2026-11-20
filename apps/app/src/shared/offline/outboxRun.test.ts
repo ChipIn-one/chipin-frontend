@@ -271,6 +271,22 @@ describe('03 §2.4 order and gate', () => {
         await expect(results).resolves.toMatchObject([{ kind: 'sent' }, { kind: 'sent' }]);
     });
 
+    test('03-20 / API-002: while the gate is closed outdated (Update required) the outbox sends nothing', async () => {
+        outboxGate.close('outdated');
+        const ops = [await queue('entry-x'), await queue('entry-y')];
+        const { deps, sent } = harness();
+        const results = Promise.all(runAll(ops, deps));
+
+        await tick(60_000);
+        expect(sent).toEqual([]);
+        expect(pendingOutboxOps()).toEqual(ops);
+
+        outboxGate.open('outdated');
+        await tick();
+        expect(sent).toEqual(['op-1', 'op-2']);
+        await expect(results).resolves.toMatchObject([{ kind: 'sent' }, { kind: 'sent' }]);
+    });
+
     test.each<[string, Error]>([
         ['401 after a failed refresh', apiError(401, 'AUTH.UNAUTHORIZED')],
         // H1: the interceptor found no token, another user's token, or a changed session.

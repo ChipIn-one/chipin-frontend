@@ -1,0 +1,8 @@
+---
+import LegalPage from '../components/LegalPage.astro';
+import { DEFAULT_LOCALE } from '../i18n/locales';
+
+// The default-locale privacy page; other locales are `[locale]/privacy.astro`.
+---
+
+<LegalPage locale={DEFAULT_LOCALE} slug="privacy" />

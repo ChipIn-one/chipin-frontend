@@ -46,6 +46,9 @@
         "SYSTEM": {
             "INTERNAL": "Something went wrong. Please try again later.",
             "SERVICE_UNAVAILABLE": "Service is temporarily unavailable. Please try again later."
+        },
+        "CLIENT": {
+            "OUTDATED": "This version of the app is older than the minimum supported one"
         }
     },
     "network": {

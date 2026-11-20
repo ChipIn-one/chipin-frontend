@@ -19,7 +19,7 @@ import { Header } from './Header';
 
 import 'i18n/index';
 
-vi.mock('assets/logo.svg?react', () => ({
+vi.mock('@chipin/tokens/assets/logo.svg?react', () => ({
     default: () => <svg aria-hidden />,
 }));
 vi.mock('assets/google-icon.svg?react', () => ({

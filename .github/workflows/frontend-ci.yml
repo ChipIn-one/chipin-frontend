@@ -165,8 +165,10 @@ jobs:
           npx --no-install prettier --check apps/site
           CHIPIN_ESLINT_FULL=1 npx --no-install eslint apps/site --max-warnings 0
           npm exec --no -w @chipin/site -- astro check
-          npm run test -w @chipin/site --if-present
+          # Build first: the site tests check the built dist (no SW registration, no redirect
+          # shadowing an emitted file) and fail in CI when it is missing.
           npm exec --no -w @chipin/site -- astro build
+          npm run test -w @chipin/site --if-present
       - name: Record verification mode
         env:
           MODE: ${{ steps.gate.outputs.mode }}

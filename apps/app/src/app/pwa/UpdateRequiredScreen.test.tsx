@@ -59,24 +59,16 @@ afterEach(() => {
     resetAppUpdateForTests();
 });
 
-describe('with the flag off (until BE-03-5)', () => {
-    test('showUpdateRequired() changes nothing: no screen, the outbox gate stays open', () => {
+describe('initial state', () => {
+    test('03-20: before showUpdateRequired() is called there is no screen and the outbox gate is open', () => {
         render(<UpdateRequiredScreen />);
-
-        act(() => {
-            showUpdateRequired();
-        });
 
         expect(screen.queryByRole('alertdialog')).toBeNull();
         expect(outboxGate.isClosed('outdated')).toBe(false);
     });
 });
 
-describe('with VITE_FEATURE_UPDATE_REQUIRED=true', () => {
-    beforeEach(() => {
-        vi.stubEnv('VITE_FEATURE_UPDATE_REQUIRED', 'true');
-    });
-
+describe('showUpdateRequired()', () => {
     test('shows the blocking screen and closes the outbox gate with the reason outdated', () => {
         render(<UpdateRequiredScreen />);
         expect(screen.queryByRole('alertdialog')).toBeNull();

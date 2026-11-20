@@ -45,14 +45,20 @@ first). Off, the outbox modules are loaded but inert: nothing of the outbox is
 started, read or written, and no lock, channel or page listener is created
 (only `clearUserData` deletes its keys, as before).
 
-`VITE_FEATURE_UPDATE_REQUIRED` turns on the blocking "App update required"
-screen (spec 04 §2.11 item 4) only when it is exactly `true`; it is unset (off)
-in every environment until 03-20 enables it together with BE-03-5. On,
-`showUpdateRequired()` closes the outbox gate with the reason `outdated` (the
-outbox is kept and sent by the updated version) and shows the screen, whose
-button activates a waiting service worker or says the update is not published
-yet. Off, `showUpdateRequired()` does nothing; only the update policy (toast,
-forced update after 24 h at a safe point) is active.
+The blocking "App update required" screen (spec 04 §2.11 item 4) has no build
+flag: the backend `MIN_CLIENT_VERSION` drives it (KB API-002, API-004,
+API-006). Every request sends `X-Client-Version`; a 426 `CLIENT.OUTDATED` or an
+`X-Min-Client-Version` above the build closes the outbox gate with the reason
+`outdated` (the outbox is kept and sent by the updated version) and shows the
+screen, whose button activates a waiting service worker or says the update is
+not published yet. With `MIN_CLIENT_VERSION` unset nothing changes; only the
+update policy (toast, forced update after 24 h at a safe point) is active.
+
+Owner step before setting `MIN_CLIENT_VERSION` on the backend, and after every
+production deploy while it is set: open the production app, Settings, "App
+version", and confirm it is a real release `x.y.z`, not `0.0.0-dev-…` (the
+fallback of `scripts/version-resolver.mjs` when the release tag lookup fails). A
+`0.0.0` build is below any minimum and is blocked; redeploy it at once.
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.

@@ -1,4 +1,5 @@
 import { initChipInApiInterceptors } from 'api/chipin.interceptors';
+import { showUpdateRequired } from 'app/pwa/updateRequired';
 import { reconcileRestoredSelf } from 'entities/users';
 import { setAccessTokenRefreshListener } from 'helpers/authSession';
 import { getLocalUser } from 'helpers/localStorage';
@@ -35,6 +36,10 @@ const initializeApi = () => {
             }),
         onResponseSuccess,
         recheckOutboxOwnerOnToken,
+        // 03-20: a 426 `CLIENT.OUTDATED` or a higher `X-Min-Client-Version` closes the outbox gate
+        // `outdated` and shows the "Update required" screen (never called while the backend has no
+        // `MIN_CLIENT_VERSION`, API-005).
+        showUpdateRequired,
     );
 };
 

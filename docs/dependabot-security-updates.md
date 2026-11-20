@@ -26,8 +26,8 @@ integration branch to route it through.
 2. Required `frontend-ci` must pass on the current head. Trusted Dependabot PRs into `master` are
    exempt from canonical Issue admission, exactly like version updates; every other check runs.
 3. If the update needs manual changes, apply only the reviewed dependency fix on a normal Issue-backed
-   task branch from current `master`, run `npm ci` and `npm run verify:full`, and publish it as a
-   task PR into `master`; close the Dependabot PR as superseded with a link to that PR.
+   task branch from current `master`, run `npm ci`, `npm run verify` and the affected tests with
+   `npm run test:task`, and publish it as a task PR into `master`; close the Dependabot PR as superseded with a link to that PR.
 4. A human merges into `master`. The fix reaches production when the owner promotes a `master`
    deployment that contains it in Vercel.
 
