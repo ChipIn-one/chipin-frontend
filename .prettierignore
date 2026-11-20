@@ -1,6 +1,7 @@
 # Build output and dependencies
 dist
 dev-dist
+.astro
 coverage
 node_modules
 package-lock.json

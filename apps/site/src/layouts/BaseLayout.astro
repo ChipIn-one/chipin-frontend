@@ -1,0 +1,89 @@
+---
+import '@chipin/tokens/radix-colors.css';
+import '@chipin/tokens/tokens.css';
+
+import LanguageLinks from '../components/LanguageLinks.astro';
+import {
+    DEFAULT_LOCALE,
+    localizedPath,
+    SUPPORTED_LOCALES,
+    type SupportedLocale,
+} from '../i18n/locales';
+
+interface Props {
+    locale: SupportedLocale;
+    title: string;
+    description: string;
+    /**
+     * The page slug without the locale (`''` = home). `null` for pages without a canonical URL
+     * (404): no canonical, no hreflang, no og:url.
+     */
+    slug: string | null;
+    /** Locales that have a translation of this page; a missing one gets no hreflang (§3.3). */
+    translations?: readonly SupportedLocale[];
+    noindex?: boolean;
+}
+
+const {
+    locale,
+    title,
+    description,
+    slug,
+    translations = SUPPORTED_LOCALES,
+    noindex = false,
+} = Astro.props;
+
+// `site` is always https://chipin.one: dev hosts never reach canonical or hreflang (§3.2).
+const site = Astro.site ?? new URL('https://chipin.one');
+const absolute = (target: SupportedLocale, page: string): string =>
+    new URL(localizedPath(target, page), site).href;
+const canonical = slug === null ? null : absolute(locale, slug);
+const alternates =
+    slug === null
+        ? []
+        : translations.map(target => ({ hreflang: target, href: absolute(target, slug) }));
+const xDefault =
+    slug !== null && translations.includes(DEFAULT_LOCALE) ? absolute(DEFAULT_LOCALE, slug) : null;
+---
+
+<!doctype html>
+<html lang={locale}>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        {noindex && <meta name="robots" content="noindex" />}
+        {canonical && <link rel="canonical" href={canonical} />}
+        {alternates.map(link => <link rel="alternate" hreflang={link.hreflang} href={link.href} />)}
+        {xDefault && <link rel="alternate" hreflang="x-default" href={xDefault} />}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="ChipIn" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:locale" content={locale} />
+        {canonical && <meta property="og:url" content={canonical} />}
+    </head>
+    <body>
+        <header class="site-header">
+            <LanguageLinks current={locale} slug={slug ?? ''} locales={translations} />
+        </header>
+        <main>
+            <slot />
+        </main>
+    </body>
+</html>
+
+<style>
+    .site-header {
+        display: flex;
+        justify-content: flex-end;
+        padding: 1rem;
+    }
+
+    main {
+        max-width: 48rem;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+</style>

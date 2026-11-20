@@ -1,0 +1,26 @@
+---
+import type { GetStaticPaths } from 'astro';
+
+import { NON_DEFAULT_LOCALES, type SupportedLocale } from '../../i18n/locales';
+import { messages } from '../../i18n/ui';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// Locale homes (`/ru/`); the default locale is `index.astro`. Locale path = code (locales.ts).
+export const getStaticPaths = (() =>
+    NON_DEFAULT_LOCALES.map(locale => ({
+        params: { locale },
+        props: { locale },
+    }))) satisfies GetStaticPaths;
+
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+const { home } = messages(locale).meta;
+---
+
+<BaseLayout locale={locale} slug="" title={home.title} description={home.description}>
+    <h1>{home.title}</h1>
+    <p>{home.description}</p>
+</BaseLayout>

@@ -1,0 +1,22 @@
+{
+    "name": "@chipin/site",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "astro dev",
+        "build": "astro build",
+        "check": "astro check",
+        "preview": "astro preview",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@astrojs/sitemap": "3.7.6",
+        "@chipin/i18n-content": "*",
+        "@chipin/tokens": "*",
+        "astro": "7.4.13"
+    },
+    "devDependencies": {
+        "@astrojs/check": "0.9.12",
+        "@vercel/routing-utils": "6.6.1"
+    }
+}

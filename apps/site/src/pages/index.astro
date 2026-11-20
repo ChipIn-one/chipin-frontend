@@ -1,0 +1,13 @@
+---
+import { DEFAULT_LOCALE } from '../i18n/locales';
+import { messages } from '../i18n/ui';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Placeholder home; the landing moves here in 04-3b1.
+const { home } = messages(DEFAULT_LOCALE).meta;
+---
+
+<BaseLayout locale={DEFAULT_LOCALE} slug="" title={home.title} description={home.description}>
+    <h1>{home.title}</h1>
+    <p>{home.description}</p>
+</BaseLayout>
