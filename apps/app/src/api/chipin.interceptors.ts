@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 
 import { API_ERROR_CODE } from 'constants/errors';
+import { APP_VERSION } from 'constants/version';
 import {
     getAccessTokenSubject,
     getAuthSessionVersion,
@@ -15,6 +16,11 @@ import { getApiErrorPayload } from 'helpers/errors';
 
 import { AUTH_API_PATH } from './auth.constants';
 import { apiInstance, publicApiInstance } from './chipin.instance';
+import {
+    CLIENT_VERSION_HEADER,
+    isVersionBelowMinimum,
+    MIN_CLIENT_VERSION_HEADER,
+} from './clientVersion';
 
 const AUTHORIZATION_BEARER_PREFIX = 'Bearer ';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
@@ -31,6 +37,7 @@ let onUnauthorizedSession: (() => void) | undefined;
 let onRequestFailure: ((error: unknown, requestStartedAt?: number) => Promise<void>) | undefined;
 let onResponseSuccess: ((requestStartedAt?: number) => void) | undefined;
 let onAccessTokenChanged: ((token: string) => void) | undefined;
+let onClientOutdated: (() => void) | undefined;
 // The last access token a request carried: a new one is announced once.
 let lastAttachedAccessToken: string | null = null;
 const requestAuthSessionVersions = new WeakMap<object, number>();
@@ -60,6 +67,51 @@ const getRequestPathname = (url?: string): string => {
     } catch {
         return url;
     }
+};
+
+// 03-20 (API-001): every request of both instances names the build, the refresh included.
+const setClientVersion = (config: InternalAxiosRequestConfig): void => {
+    config.headers.set(CLIENT_VERSION_HEADER, APP_VERSION);
+};
+
+const readMinClientVersion = (headers: unknown): string | undefined => {
+    let value: unknown;
+
+    if (headers instanceof AxiosHeaders) {
+        value = headers.get(MIN_CLIENT_VERSION_HEADER);
+    } else if (isRecord(headers)) {
+        const name = MIN_CLIENT_VERSION_HEADER.toLowerCase();
+        const key = Object.keys(headers).find(headerName => headerName.toLowerCase() === name);
+        value = key === undefined ? undefined : headers[key];
+    }
+
+    return typeof value === 'string' ? value : undefined;
+};
+
+// 03-20 (API-004): a minimum above this build's semver core blocks the app; an unparseable value
+// is ignored. Without the header (no minimum configured, API-005) nothing happens.
+const checkMinClientVersion = (headers: unknown): void => {
+    const minVersion = readMinClientVersion(headers);
+
+    if (minVersion !== undefined && isVersionBelowMinimum(APP_VERSION, minVersion)) {
+        onClientOutdated?.();
+    }
+};
+
+// 03-20 (API-002): a 426 `CLIENT.OUTDATED` blocks the app; the error still reaches its caller (the
+// outbox maps it to its `outdated` gate itself).
+const checkClientOutdatedError = (error: unknown): void => {
+    if (!axios.isAxiosError(error) || !error.response) {
+        return;
+    }
+    if (
+        error.response.status === 426 &&
+        getApiErrorPayload(error)?.code === API_ERROR_CODE.CLIENT_OUTDATED
+    ) {
+        onClientOutdated?.();
+        return;
+    }
+    checkMinClientVersion(error.response.headers);
 };
 
 const isUnauthorizedError = (error: unknown): boolean => {
@@ -104,6 +156,8 @@ const processConnectivityError = (error: unknown): Promise<never> => {
 };
 
 const processApiResponseError = (error: unknown) => {
+    checkClientOutdatedError(error);
+
     if (error instanceof AuthRequestCancelledError) {
         if (!error.isStaleSession && !isAuthSessionSignedOut()) {
             onUnauthorizedSession?.();
@@ -170,6 +224,8 @@ const processApiResponseError = (error: unknown) => {
 };
 
 const processPublicApiResponseError = (error: unknown): Promise<never> => {
+    checkClientOutdatedError(error);
+
     if (axios.isAxiosError(error) && getRequestPathname(error.config?.url) === HEALTH_PATH) {
         return Promise.reject(error);
     }
@@ -193,17 +249,22 @@ const announceAccessToken = (token: string): void => {
  * was usable then (the store ignores a request sent before the app last went offline, #746).
  * `onAccessTokenChangedCallback` gets every new access token before a request carries it (a sign-in,
  * a refresh, another tab's account switch): the outbox re-checks its owner (spec 03 §2.3).
+ * `onClientOutdatedCallback` is called when the backend says this build is below its minimum
+ * client version (a 426 `CLIENT.OUTDATED` or a higher `X-Min-Client-Version`, 03-20); the bootstrap
+ * wires it to the blocking "Update required" state.
  */
 export const initChipInApiInterceptors = (
     onUnauthorizedSessionCallback?: () => void,
     onRequestFailureCallback?: (error: unknown, requestStartedAt?: number) => Promise<void>,
     onResponseSuccessCallback?: (requestStartedAt?: number) => void,
     onAccessTokenChangedCallback?: (token: string) => void,
+    onClientOutdatedCallback?: () => void,
 ): void => {
     onUnauthorizedSession = onUnauthorizedSessionCallback;
     onRequestFailure = onRequestFailureCallback;
     onResponseSuccess = onResponseSuccessCallback;
     onAccessTokenChanged = onAccessTokenChangedCallback;
+    onClientOutdated = onClientOutdatedCallback;
 
     if (areChipInApiInterceptorsConfigured) {
         return;
@@ -212,6 +273,7 @@ export const initChipInApiInterceptors = (
     areChipInApiInterceptorsConfigured = true;
 
     apiInstance.interceptors.request.use(config => {
+        setClientVersion(config);
         const authSessionVersion = getAuthSessionVersion();
 
         return prepareAuthRequest(config.url).then(currentAccessToken => {
@@ -247,6 +309,7 @@ export const initChipInApiInterceptors = (
     });
 
     apiInstance.interceptors.response.use(response => {
+        checkMinClientVersion(response.headers);
         onResponseSuccess?.(requestStartTimes.get(response.config));
         const requestVersion = requestAuthSessionVersions.get(response.config);
         if (requestVersion !== undefined && !isAuthSessionCurrent(requestVersion)) {
@@ -255,10 +318,12 @@ export const initChipInApiInterceptors = (
         return response;
     }, processApiResponseError);
     publicApiInstance.interceptors.request.use(config => {
+        setClientVersion(config);
         requestStartTimes.set(config, performance.now());
         return config;
     });
     publicApiInstance.interceptors.response.use(response => {
+        checkMinClientVersion(response.headers);
         onResponseSuccess?.(requestStartTimes.get(response.config));
         return response;
     }, processPublicApiResponseError);

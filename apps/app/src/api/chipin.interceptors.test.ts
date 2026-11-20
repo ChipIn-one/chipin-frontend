@@ -1,13 +1,18 @@
 import { toast } from 'sonner';
-import { beforeAll, beforeEach, expect, test, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { APP_VERSION } from 'constants/version';
+
+import { AUTH_API_PATH } from './auth.constants';
 import { apiInstance, publicApiInstance } from './chipin.instance';
 import { initChipInApiInterceptors } from './chipin.interceptors';
+import { parseVersionCore } from './clientVersion';
 
 const onUnauthorizedSession = vi.fn();
 const onRequestFailure = vi.fn<(error: unknown, requestStartedAt?: number) => Promise<void>>();
 const onResponseSuccess = vi.fn<(requestStartedAt?: number) => void>();
 const onAccessTokenChanged = vi.fn<(token: string) => void>();
+const onClientOutdated = vi.fn<() => void>();
 
 const authSessionMocks = vi.hoisted(() => ({
     accessToken: 'current-access-token',
@@ -43,6 +48,7 @@ beforeAll(() => {
         onRequestFailure,
         onResponseSuccess,
         onAccessTokenChanged,
+        onClientOutdated,
     );
 });
 
@@ -493,4 +499,141 @@ test('does not send or expire the new session when an old request resumes', () =
             expect(adapter).not.toHaveBeenCalled();
             expect(onUnauthorizedSession).not.toHaveBeenCalled();
         });
+});
+
+describe('03-20 client version gate', () => {
+    type RequestConfig = Parameters<
+        NonNullable<Parameters<typeof apiInstance.interceptors.request.use>[0]>
+    >[0];
+
+    const appCore = parseVersionCore(APP_VERSION) ?? [0, 0, 0];
+    const equalMinimum = appCore.join('.');
+    const higherMinimum = `${appCore[0]}.${appCore[1]}.${appCore[2] + 1}`;
+    const lowerMinimum = '0.0.0';
+
+    const clientVersionOf = (config: RequestConfig): unknown =>
+        config.headers.get('X-Client-Version');
+
+    const respond =
+        (headers: Record<string, string> = {}, status = 200) =>
+        (config: RequestConfig) =>
+            Promise.resolve({ config, data: { ok: true }, headers, status, statusText: 'OK' });
+
+    const failWith =
+        (status: number, code?: string, headers: Record<string, string> = {}) =>
+        (config: RequestConfig) =>
+            Promise.reject({
+                config,
+                isAxiosError: true,
+                response: { config, data: code ? { code } : {}, headers, status },
+            });
+
+    test('03-20 / API-001: sends X-Client-Version on every request of both instances, the refresh included', async () => {
+        const seen: unknown[] = [];
+        const record = (config: RequestConfig) => {
+            seen.push(clientVersionOf(config));
+            return respond()(config);
+        };
+
+        await apiInstance.get('/dashboard', { adapter: record });
+        await apiInstance.post(AUTH_API_PATH.REFRESH, undefined, { adapter: record });
+        await publicApiInstance.get('/health', { adapter: record });
+
+        expect(APP_VERSION).not.toBe('');
+        expect(seen).toEqual([APP_VERSION, APP_VERSION, APP_VERSION]);
+    });
+
+    test('03-20 / API-001: the request retried after a refresh carries X-Client-Version too', async () => {
+        const seen: unknown[] = [];
+        let attempts = 0;
+
+        await apiInstance.get('/dashboard', {
+            adapter: config => {
+                attempts += 1;
+                seen.push(clientVersionOf(config));
+                return attempts === 1
+                    ? Promise.reject(unauthorizedResponse(config))
+                    : respond()(config);
+            },
+        });
+
+        expect(seen).toEqual([APP_VERSION, APP_VERSION]);
+    });
+
+    test('03-20 / API-002: a 426 CLIENT.OUTDATED calls the outdated handler and still rejects to its caller', async () => {
+        await expect(
+            apiInstance.get('/dashboard', { adapter: failWith(426, 'CLIENT.OUTDATED') }),
+        ).rejects.toMatchObject({ response: { status: 426 } });
+        await expect(
+            publicApiInstance.get('/public', { adapter: failWith(426, 'CLIENT.OUTDATED') }),
+        ).rejects.toMatchObject({ response: { status: 426 } });
+
+        expect(onClientOutdated).toHaveBeenCalledTimes(2);
+        expect(onRequestFailure).toHaveBeenCalledTimes(2);
+        expect(onUnauthorizedSession).not.toHaveBeenCalled();
+    });
+
+    test('03-20 / API-002: a 426 without CLIENT.OUTDATED does not call the handler', async () => {
+        await expect(
+            apiInstance.get('/dashboard', { adapter: failWith(426, 'SYSTEM.INTERNAL') }),
+        ).rejects.toMatchObject({ response: { status: 426 } });
+
+        expect(onClientOutdated).not.toHaveBeenCalled();
+    });
+
+    test('03-20 / API-004: an X-Min-Client-Version above APP_VERSION calls the handler on success and on error', async () => {
+        const response = await apiInstance.get('/dashboard', {
+            adapter: respond({ 'x-min-client-version': higherMinimum }),
+        });
+        await publicApiInstance.get('/public', {
+            adapter: respond({ 'X-Min-Client-Version': `${higherMinimum}-dev-abc1234` }),
+        });
+        await expect(
+            apiInstance.get('/dashboard', {
+                adapter: failWith(404, 'GROUP.NOT_FOUND', {
+                    'x-min-client-version': higherMinimum,
+                }),
+            }),
+        ).rejects.toMatchObject({ response: { status: 404 } });
+
+        expect(response.data).toEqual({ ok: true });
+        expect(onClientOutdated).toHaveBeenCalledTimes(3);
+    });
+
+    test.each([
+        ['equal', () => equalMinimum],
+        ['equal with a suffix', () => `${equalMinimum}-dev-abc1234`],
+        ['lower', () => lowerMinimum],
+        ['malformed', () => 'not-a-version'],
+    ])(
+        '03-20 / API-004: an X-Min-Client-Version that is %s does not call the handler',
+        async (_name, minimum) => {
+            await apiInstance.get('/dashboard', {
+                adapter: respond({ 'x-min-client-version': minimum() }),
+            });
+            await publicApiInstance.get('/public', {
+                adapter: respond({ 'x-min-client-version': minimum() }),
+            });
+
+            expect(onClientOutdated).not.toHaveBeenCalled();
+        },
+    );
+
+    test('03-20 / API-005: without a minimum (no header, no 426) nothing changes', async () => {
+        const response = await apiInstance.get('/dashboard', { adapter: respond() });
+        const publicResponse = await publicApiInstance.get('/public', { adapter: respond() });
+        await expect(
+            apiInstance.get('/dashboard', { adapter: failWith(500, 'SYSTEM.INTERNAL') }),
+        ).rejects.toMatchObject({ response: { status: 500 } });
+        await expect(rejectPublicRequest('/public', 503)).rejects.toMatchObject({
+            response: { status: 503 },
+        });
+
+        expect(response.data).toEqual({ ok: true });
+        expect(publicResponse.data).toEqual({ ok: true });
+        expect(onClientOutdated).not.toHaveBeenCalled();
+        expect(onResponseSuccess).toHaveBeenCalledTimes(2);
+        expect(onRequestFailure).toHaveBeenCalledTimes(2);
+        expect(onUnauthorizedSession).not.toHaveBeenCalled();
+    });
 });
