@@ -27,6 +27,7 @@ on:
       - apps/app/playwright.sw.config.ts
       - apps/app/e2e/support/config.ts
       - scripts/e2e-sw-resolve-preview.mjs
+      - scripts/deployment-environments.mjs
       - .github/workflows/e2e-sw.yml
   workflow_dispatch:
     inputs:
@@ -65,7 +66,7 @@ jobs:
       url: ${{ steps.preview.outputs.url }}
     steps:
       # Every branch (history only), so a dispatched SHA can be checked against them; only the
-      # resolver file is written to disk.
+      # resolver and the modules it imports are written to disk.
       - name: Checkout the resolver
         timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -73,7 +74,9 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           filter: blob:none
-          sparse-checkout: scripts/e2e-sw-resolve-preview.mjs
+          sparse-checkout: |
+            scripts/e2e-sw-resolve-preview.mjs
+            scripts/deployment-environments.mjs
           sparse-checkout-cone-mode: false
           persist-credentials: false
       # No npm cache: every workflow of this repository sets package-manager-cache: false.

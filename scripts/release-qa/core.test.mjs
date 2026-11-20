@@ -118,6 +118,43 @@ describe('release evidence', () => {
         ).toThrow(/alias/);
     });
 
+    test('accepts the app deployments under their per-project names and refuses the site project', () => {
+        const production = { state: 'success', environment_url: 'https://chipin.one' };
+        expect(
+            validateDeployment(
+                { ...preview, environment: 'Production \u2013 chipin-frontend' },
+                production,
+                'Production',
+            ).sha,
+        ).toBe(SHA);
+        expect(
+            validateDeployment(
+                { ...preview, environment: 'Preview \u2013 chipin-frontend' },
+                status,
+                'Preview',
+                SHA,
+            ).sha,
+        ).toBe(SHA);
+        expect(() =>
+            validateDeployment(
+                { ...preview, environment: 'Production \u2013 chipin-site' },
+                production,
+                'Production',
+            ),
+        ).toThrow('A trusted vercel[bot] Production deployment is required.');
+        expect(() =>
+            validateDeployment(
+                { ...preview, environment: 'Preview \u2013 chipin-site' },
+                status,
+                'Preview',
+                SHA,
+            ),
+        ).toThrow('A trusted vercel[bot] Preview deployment is required.');
+        expect(() =>
+            validateDeployment({ ...preview, environment: 'Preview' }, status, 'Production', SHA),
+        ).toThrow('A trusted vercel[bot] Production deployment is required.');
+    });
+
     test('accepts verified Production deployment at the production domain as baseline evidence', () => {
         expect(
             validateDeployment(

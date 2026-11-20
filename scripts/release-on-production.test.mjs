@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { parse } from 'yaml';
 import { afterAll, describe, expect, test } from 'vitest';
 
+import { appEnvironmentCondition } from './deployment-environments.mjs';
+
 const text = readFileSync('.github/workflows/release-on-production.yml', 'utf8');
 const workflow = parse(text);
 const { guard, release } = workflow.jobs;
@@ -15,7 +17,7 @@ describe('release-on-production workflow', () => {
         expect(Object.keys(workflow.on)).toEqual(['deployment_status']);
         expect(Object.keys(workflow.jobs)).toEqual(['guard', 'release', 'redeploy']);
         expect(guard.if).toContain("github.repository_owner == 'ChipIn-one'");
-        expect(guard.if).toContain("github.event.deployment.environment == 'Production'");
+        expect(guard.if).toContain(appEnvironmentCondition('Production'));
         expect(guard.if).toContain("github.event.deployment_status.state == 'success'");
         expect(guard.if).toContain("github.event.deployment.creator.login == 'vercel[bot]'");
         expect(guard.if).toContain("github.event.deployment_status.creator.login == 'vercel[bot]'");
@@ -48,7 +50,7 @@ describe('release-on-production workflow', () => {
 
     test('serializes guard and release of Production successes in one workflow-level group, never cancelled', () => {
         expect(workflow.concurrency).toEqual({
-            group: "${{ (github.repository_owner == 'ChipIn-one' && github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}",
+            group: `\${{ (github.repository_owner == 'ChipIn-one' && ${appEnvironmentCondition('Production')} && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}`,
             'cancel-in-progress': false,
         });
         expect(guard.concurrency).toBeUndefined();

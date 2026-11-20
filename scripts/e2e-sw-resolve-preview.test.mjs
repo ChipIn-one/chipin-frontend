@@ -106,8 +106,20 @@ describe('pickPreview', () => {
             entry({ id: 5, login: 'someone', states: ['success'] }),
             entry({ id: 6, environment: 'Production', states: ['success'] }),
             entry({ id: 7, sha: OTHER_SHA, states: ['success'] }),
+            entry({ id: 8, environment: 'Preview \u2013 chipin-site', states: ['success'] }),
+            entry({ id: 9, environment: 'Production \u2013 chipin-frontend', states: ['success'] }),
         ];
         expect(pickPreview(untrusted, SHA).status).toBe('waiting');
+    });
+
+    // chipin-frontend#801: a second Vercel project suffixes the environment with the project name.
+    test('takes the app Preview under its per-project name', () => {
+        expect(
+            pickPreview(
+                [entry({ environment: 'Preview \u2013 chipin-frontend', states: ['success'] })],
+                SHA,
+            ),
+        ).toEqual({ status: 'ready', url: PREVIEW });
     });
 
     test('counts only statuses posted by vercel[bot]', () => {
@@ -273,7 +285,7 @@ describe('createGitHubClient', () => {
         const fetchImpl = deploymentsApi();
         await expect(client(fetchImpl).readDeployments(SHA)).resolves.toHaveLength(1);
         expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
-            `https://api.github.com/repos/${REPO}/deployments?sha=${SHA}&environment=Preview&per_page=100`,
+            `https://api.github.com/repos/${REPO}/deployments?sha=${SHA}&per_page=100`,
             `https://api.github.com/repos/${REPO}/deployments/7913122560/statuses?per_page=100`,
         ]);
         const [, init] = fetchImpl.mock.calls[0];
@@ -311,7 +323,7 @@ describe('createGitHubClient', () => {
                 .catch(caught => caught);
             expect(error).not.toBeInstanceOf(TransientGitHubError);
             expect(error.message).toBe(
-                `GitHub GET /deployments?sha=${SHA}&environment=Preview&per_page=100 returned HTTP ${status}.`,
+                `GitHub GET /deployments?sha=${SHA}&per_page=100 returned HTTP ${status}.`,
             );
         },
     );
@@ -569,6 +581,7 @@ describe('e2e-sw workflow', () => {
             'apps/app/playwright.sw.config.ts',
             'apps/app/e2e/support/config.ts',
             'scripts/e2e-sw-resolve-preview.mjs',
+            'scripts/deployment-environments.mjs',
             '.github/workflows/e2e-sw.yml',
         ]);
         expect(Object.keys(workflow.on.workflow_dispatch.inputs)).toEqual([
@@ -594,7 +607,22 @@ describe('e2e-sw workflow', () => {
         expect(trusted.uses).toMatch(/^actions\/checkout@/);
         expect(trusted.with.ref).toBe('${{ github.sha }}');
         expect(trusted.with['fetch-depth']).toBe(0);
-        expect(trusted.with['sparse-checkout']).toBe('scripts/e2e-sw-resolve-preview.mjs');
+        // The sparse checkout writes the resolver and every local module it imports, nothing else; a
+        // missing import fails the job with ERR_MODULE_NOT_FOUND (#801).
+        const localImports = [
+            ...readFileSync('scripts/e2e-sw-resolve-preview.mjs', 'utf8').matchAll(
+                /from '\.\/([^']+)'/gu,
+            ),
+        ].map(([, file]) => `scripts/${file}`);
+        expect(localImports).toEqual(['scripts/deployment-environments.mjs']);
+        expect(trusted.with['sparse-checkout'].trim().split('\n')).toEqual([
+            'scripts/e2e-sw-resolve-preview.mjs',
+            ...localImports,
+        ]);
+        expect(workflow.on.pull_request.paths).toEqual(expect.arrayContaining(localImports));
+        expect(
+            readFileSync('scripts/deployment-environments.mjs', 'utf8').match(/^import /mu),
+        ).toBeNull();
         expect(resolve.steps.map(step => step.run).filter(Boolean)).toEqual([
             'node scripts/e2e-sw-resolve-preview.mjs',
         ]);

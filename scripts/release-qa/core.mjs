@@ -1,3 +1,4 @@
+import { isAppEnvironment } from '../deployment-environments.mjs';
 import { impactChecks, smokeChecks, touchesSmokePath } from './impact-rules.mjs';
 import { buildAffectingFiles, isUiAffecting, uiAffectingFiles } from './ui-paths.mjs';
 
@@ -243,14 +244,16 @@ export function assertConfiguration(env, qaLogin) {
     return { slackId };
 }
 
-export function validateDeployment(deployment, status, environment, expectedSha = null) {
+// `kind` is `Production` or `Preview`; the deployment's environment must be one of the app's names for it
+// (scripts/deployment-environments.mjs), never the site project's.
+export function validateDeployment(deployment, status, kind, expectedSha = null) {
     if (
         !Number.isInteger(deployment?.id) ||
         deployment.id <= 0 ||
-        deployment.environment !== environment ||
+        !isAppEnvironment(kind, deployment.environment) ||
         deployment.creator?.login !== 'vercel[bot]'
     ) {
-        throw new Error(`A trusted vercel[bot] ${environment} deployment is required.`);
+        throw new Error(`A trusted vercel[bot] ${kind} deployment is required.`);
     }
     const sha = assertFullSha(deployment.sha, 'Deployment SHA');
     if (expectedSha && sha !== assertFullSha(expectedSha))
@@ -258,7 +261,7 @@ export function validateDeployment(deployment, status, environment, expectedSha 
     if (deployment.ref !== sha && deployment.ref !== 'master')
         throw new Error('Deployment ref is not master or the exact SHA.');
     if (status?.state !== 'success')
-        throw new Error(`${environment} deployment latest status must be success.`);
+        throw new Error(`${kind} deployment latest status must be success.`);
     const rawUrl = status.environment_url;
     let url;
     try {
@@ -277,8 +280,8 @@ export function validateDeployment(deployment, status, environment, expectedSha 
         url.pathname !== '/' ||
         url.search ||
         url.hash ||
-        (environment === 'Preview' && !isPreviewBuild) ||
-        (environment === 'Production' && url.hostname !== 'chipin.one' && !isPreviewBuild)
+        (kind === 'Preview' && !isPreviewBuild) ||
+        (kind === 'Production' && url.hostname !== 'chipin.one' && !isPreviewBuild)
     ) {
         throw new Error(
             'Deployment URL must be an immutable Vercel build URL, not a moving alias.',

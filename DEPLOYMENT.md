@@ -89,7 +89,10 @@ Hook or Vercel token secrets
 - Vercel records that production deployment as a GitHub Deployment,
   environment `Production`, creator `vercel[bot]`, with the commit SHA and a
   `success` status, written at Promote. Preview builds of `master` create only
-  GitHub Deployments `Preview`. Verified at cutover step 7 of #497: Promote
+  GitHub Deployments `Preview`. Since the second Vercel project `chipin-site` is
+  connected (#797) the app's environments are `Production – chipin-frontend` and
+  `Preview – chipin-frontend`; automation accepts both forms and never the
+  site's ([release QA: Two projects](docs/engineering/release-qa.md#two-projects), #801). Verified at cutover step 7 of #497: Promote
   created Deployment `Production` 7254813070 by `vercel[bot]` on `e6d2f2e`
   (2026-10-22T14:24:47Z). That record is the production evidence for Issue
   completion (strategy `deployment-receipt`).
