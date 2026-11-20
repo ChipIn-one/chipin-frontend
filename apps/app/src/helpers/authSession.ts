@@ -279,6 +279,8 @@ const refreshAccessToken = (): Promise<string | null> => {
             });
         })
             .catch((error: unknown) => {
+                // Only a rejected refresh token (401, AUTH-009) ends the session; a 5xx or a
+                // network error is transient and is rethrown (#788).
                 if (getApiErrorStatus(error) === 401) {
                     assertCurrentAuthSession(version);
                     invalidateAuthSession();

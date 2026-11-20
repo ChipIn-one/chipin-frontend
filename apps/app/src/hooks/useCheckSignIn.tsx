@@ -39,8 +39,21 @@ const loadSessionData = ({ since, hadCachedUser, switchedUser }: SessionStart): 
 // once). Any change of the auth store ends the dedupe: a later start may then try again, as the
 // effect did on its dependency changes before.
 let attemptInFlight: symbol | null = null;
+// A transient refresh failure (5xx, a one-off request error) retries with a capped exponential
+// backoff while online and never signs the user out (#788); an auth change cancels the retry.
+const SESSION_CHECK_RETRY_BASE_MS = 1000;
+const SESSION_CHECK_RETRY_MAX_MS = 30_000;
+export const sessionCheckRetryDelayMs = (retry: number): number =>
+    Math.min(SESSION_CHECK_RETRY_BASE_MS * 2 ** retry, SESSION_CHECK_RETRY_MAX_MS);
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryCount = 0;
 useAuthStore.subscribe(() => {
     attemptInFlight = null;
+    if (retryTimer !== null) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+    }
+    retryCount = 0;
 });
 
 /**
@@ -109,10 +122,22 @@ const startSessionCheck = (pathname: string): void => {
                 return;
             }
             if (useConnectivityStore.getState().mode !== 'online') {
+                // Connectivity recovery restarts the check (the effect), with a fresh backoff.
+                retryCount = 0;
                 return;
             }
 
-            setUnauthenticated(UNAUTH_REASON.ERROR);
+            // A transient failure (5xx, a one-off network error with a healthy backend): the
+            // session is not proven invalid, so it stays `unknown` and the check retries. Only a
+            // 401/403 of the refresh ends the session, inside `refreshAuthTokens` (AUTH-009).
+            if (retryTimer === null) {
+                const delay = sessionCheckRetryDelayMs(retryCount);
+                retryCount += 1;
+                retryTimer = setTimeout(() => {
+                    retryTimer = null;
+                    startSessionCheck(pathname);
+                }, delay);
+            }
         })
         .finally(() => {
             if (attemptInFlight === attempt) {
