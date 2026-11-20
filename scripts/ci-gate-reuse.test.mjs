@@ -105,6 +105,7 @@ describe('gateVerdict', () => {
     test('a gate that never started says nothing', () => {
         expect(gateVerdict(admissionFailed(1, 't'))).toBe('none');
         expect(gateVerdict(job({ runId: 1, conclusion: 'cancelled', steps: [] }))).toBe('none');
+        expect(gateVerdict(job({ runId: 1, conclusion: 'failure', steps: [] }))).toBe('fail');
     });
 
     test('a stopped step this file does not know is a failed gate, never "none"', () => {

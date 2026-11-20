@@ -40,7 +40,7 @@ const STOPPED = new Set(['failure', 'cancelled', 'timed_out', 'action_required',
 /**
  * Gate verdict of one frontend-ci job attempt.
  * - `pass`: the pass marker succeeded and the whole job succeeded.
- * - `none`: the gate never started: no step ran, or the first stopped step is a pre-gate step
+ * - `none`: the gate never started: the job was cancelled or skipped before any step ran, or the first stopped step is a pre-gate step
  *   (for example Issue admission rejected the PR body). Says nothing about the gate.
  * - `fail`: anything else, including an unfinished job or a stopped step this file does not know.
  */
@@ -55,7 +55,8 @@ export function gateVerdict(job) {
         return 'pass';
     }
     if (steps.length === 0) {
-        return 'none';
+        // Cancelled or skipped before a runner took it: nothing ran. Any other empty job fails closed.
+        return job.conclusion === 'cancelled' || job.conclusion === 'skipped' ? 'none' : 'fail';
     }
     const firstStopped = steps.find(step => STOPPED.has(step.conclusion));
 

@@ -6,7 +6,7 @@ import { describe, expect, test } from 'vitest';
 import { parse } from 'yaml';
 
 import { isDocsOnlyChange, resolveCiGateMode } from './ci-gate-policy.mjs';
-import { GATE_JOB_NAME, GATE_PASSED_STEP, GATE_STEPS } from './ci-gate-reuse.mjs';
+import { GATE_JOB_NAME, GATE_PASSED_STEP, GATE_STEPS, PRE_GATE_STEPS } from './ci-gate-reuse.mjs';
 
 describe('CI gate policy', () => {
     test('treats ordinary Markdown documentation as docs-only', () => {
@@ -272,6 +272,8 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         );
 
         expect(names.slice(admission + 1)).toEqual(GATE_STEPS);
+        // The jobs API adds 'Set up job' before the workflow steps.
+        expect(['Set up job', ...names.slice(0, admission + 1)]).toEqual(PRE_GATE_STEPS);
         // The pass marker runs only after every earlier step succeeded.
         expect(step(GATE_PASSED_STEP)).not.toHaveProperty('if');
         expect(names.at(-1)).toBe(GATE_PASSED_STEP);
