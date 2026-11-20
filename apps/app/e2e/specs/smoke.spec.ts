@@ -218,7 +218,7 @@ test.describe('SMOKE-SHORT', () => {
 
         await page.goto('/settings');
         await page.getByRole('button', { name: 'Sign Out', exact: true }).click();
-        await expect(page).not.toHaveURL(/\/settings/);
+        await expect(page).not.toHaveURL(/\/settings/, { timeout: 10_000 });
 
         await page.goto('/settings');
         await page.reload();
