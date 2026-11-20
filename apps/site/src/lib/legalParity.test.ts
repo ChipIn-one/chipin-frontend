@@ -18,6 +18,11 @@ import {
 // collection word for word. The expected text is read from the old sources (the app pages and the
 // i18n JSON they render), the actual text from a real `astro build` of the site: CI runs the site
 // tests before the site build, so this suite builds into its own temp directory.
+//
+// It reads app files: apps/app/src/pages/PrivacyPage.tsx, TermsPage.tsx and
+// apps/app/src/i18n/locales/<locale>/meta.json. An app-only change does not trigger the site CI
+// step, so a change there is caught on the next site run. 04-5a removes these app pages and must
+// remove or rework this test with them.
 const SITE_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const REPO_ROOT = join(SITE_ROOT, '../..');
 const SLUGS = ['privacy', 'terms'] as const;
@@ -54,6 +59,15 @@ type Token =
     | { kind: 'template'; key: string }
     | { kind: 'const'; name: string };
 
+/** Every `const NAME = '…';` of a source file. */
+const stringConstants = (source: string): Map<string, string> =>
+    new Map(
+        [...source.matchAll(/const ([A-Z_]+) = '([^']+)';/g)].map(match => [
+            match[1] ?? '',
+            match[2] ?? '',
+        ]),
+    );
+
 /**
  * The texts an old page renders, in order: every `t('…')`, every `` t(`…${section}…`) `` expanded
  * over `PRIVACY_SECTIONS` (consecutive template calls form one `.map` item), and every JSX
@@ -61,12 +75,7 @@ type Token =
  */
 const oldTexts = (source: string, dictionary: unknown): string[] => {
     const sections = constArray(source, 'PRIVACY_SECTIONS');
-    const constants = new Map(
-        [...source.matchAll(/const ([A-Z_]+) = '([^']+)';/g)].map(match => [
-            match[1] ?? '',
-            match[2] ?? '',
-        ]),
-    );
+    const constants = stringConstants(source);
     const tokens: Token[] = [
         ...source.matchAll(/\bt\('([^']+)'\)|\bt\(`([^`]+)`\)|(?<![$\w])\{([A-Z_]+)\}/g),
     ].map(match =>
@@ -169,6 +178,9 @@ const headTags = (html: string, name: string): string[] =>
 
 let dist = '';
 
+/** Longest `astro build` the suite waits for; the hook timeout is a little longer. */
+const BUILD_TIMEOUT_MS = 110_000;
+
 beforeAll(() => {
     dist = mkdtempSync(join(tmpdir(), 'chipin-site-legal-'));
     const astroBin = join(
@@ -178,13 +190,21 @@ beforeAll(() => {
     const result = spawnSync(
         process.execPath,
         [astroBin, 'build', '--root', SITE_ROOT, '--outDir', dist],
-        { encoding: 'utf8', env: { ...process.env, ASTRO_TELEMETRY_DISABLED: '1' } },
+        {
+            encoding: 'utf8',
+            env: { ...process.env, ASTRO_TELEMETRY_DISABLED: '1' },
+            timeout: BUILD_TIMEOUT_MS,
+        },
     );
 
-    if (result.status !== 0) {
-        throw new Error(`astro build failed\n${result.stdout}\n${result.stderr}`);
+    if (result.error !== undefined || result.signal !== null || result.status !== 0) {
+        throw new Error(
+            `astro build failed (status ${result.status}, signal ${result.signal}, ` +
+                `${result.error?.message ?? 'no spawn error'}; timeout ${BUILD_TIMEOUT_MS} ms)\n` +
+                `${result.stdout}\n${result.stderr}`,
+        );
     }
-});
+}, 120_000);
 
 afterAll(() => {
     if (dist !== '') {
@@ -218,7 +238,27 @@ describe('legal text parity with the old app pages (C2-35)', () => {
         // Whole texts in the old order, and nothing else in <main>.
         expect(actual).toBe(normalize(expected.join(' ')));
     });
+
+    test.each(SUPPORTED_LOCALES)('%s privacy: the contact email is a mailto link', locale => {
+        const email = stringConstants(readFileSync(PAGES.privacy, 'utf8')).get(
+            'PRIVACY_CONTACT_EMAIL',
+        );
+
+        expect(email).toMatch(/@/);
+        expect(builtPage(locale, 'privacy')).toContain(`href="mailto:${email}"`);
+    });
 });
+
+/** The `description` of a legal entry's frontmatter (a JSON string in the .md files). */
+const frontmatterDescription = (locale: SupportedLocale, slug: LegalSlug): unknown => {
+    const markdown = readFileSync(
+        join(SITE_ROOT, `src/content/legal/${locale}/${slug}.md`),
+        'utf8',
+    );
+    const value = /^description: (".*")$/m.exec(markdown)?.[1];
+
+    return value === undefined ? undefined : JSON.parse(value);
+};
 
 describe('legal page metadata', () => {
     test.each(CASES)('%s %s: title, description, lang and hreflang', (locale, slug) => {
@@ -237,9 +277,17 @@ describe('legal page metadata', () => {
 
         expect(attribute(headTags(html, 'html')[0] ?? '', 'lang')).toBe(locale);
         expect(/<title>([^<]*)<\/title>/.exec(html)?.[1]).toBe(lookup(oldMeta, `${slug}.title`));
-        expect(
-            decodeEntities(attribute(description ?? '', 'content') ?? '').length,
-        ).toBeGreaterThanOrEqual(50);
+        const builtDescription = decodeEntities(attribute(description ?? '', 'content') ?? '');
+
+        // Deliberate deviation: the old en terms description ("Read the interim terms for using
+        // ChipIn", 39 characters) is below the schema minimum of 50, so en/terms.md has a longer
+        // one. Every other page keeps the old app description.
+        expect(builtDescription).toBe(
+            locale === 'en' && slug === 'terms'
+                ? frontmatterDescription(locale, slug)
+                : lookup(oldMeta, `${slug}.description`),
+        );
+        expect(builtDescription.length).toBeGreaterThanOrEqual(50);
         expect(alternates).toEqual({
             ...Object.fromEntries(SUPPORTED_LOCALES.map(target => [target, absolute(target)])),
             'x-default': absolute(DEFAULT_LOCALE),

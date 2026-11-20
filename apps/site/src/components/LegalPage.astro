@@ -18,6 +18,10 @@ const entry = pages.find(page => page.id === `${locale}/${slug}`);
 if (entry?.data.locale !== locale) {
     throw new Error(`legal/${locale}/${slug}.md is missing, a draft, or not in locale ${locale}`);
 }
+// hreflang links pages by `translationKey`, routes by file name: they must be the same.
+if (entry.data.translationKey !== slug) {
+    throw new Error(`legal/${locale}/${slug}.md must have translationKey: ${slug}`);
+}
 
 const translations = SUPPORTED_LOCALES.filter(target =>
     pages.some(
