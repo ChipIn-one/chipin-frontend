@@ -20,7 +20,17 @@ const FORBIDDEN_TEXT = /(?:refreshToken|accessToken|inviteToken|sessionStorage)/
 const JWT = /eyJ[\w-]{10,}\.[\w-]{10,}/;
 
 const SCRIPT_ELEMENT = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-const JS_TYPES = new Set(['', 'module', 'text/javascript', 'application/javascript']);
+// `type` values a browser executes (compared lowercased and trimmed).
+const JS_TYPES = new Set([
+    '',
+    'module',
+    'text/javascript',
+    'application/javascript',
+    'text/ecmascript',
+    'application/ecmascript',
+    'text/x-javascript',
+    'application/x-javascript',
+]);
 
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
 
@@ -46,17 +56,28 @@ const tags = (html: string, name: string): Attributes[] =>
         parseAttributes(match[1] ?? ''),
     );
 
-const withoutComments = (html: string): string => html.replace(/<!--[\s\S]*?-->/g, '');
+const isExecutable = (attributes: Attributes): boolean =>
+    JS_TYPES.has((attributes.get('type') ?? '').trim().toLowerCase());
+
+/** Every `<script>` element: attributes and body. Script bodies are cut out before markup checks. */
+const scriptElements = (html: string) =>
+    [...html.matchAll(SCRIPT_ELEMENT)].map(match => ({
+        attributes: parseAttributes(match[1] ?? ''),
+        body: match[2] ?? '',
+    }));
+
+/** The page markup without script bodies (or comments, when `comments` is false). */
+const markup = (html: string, { comments }: { comments: boolean }): string => {
+    const noScripts = html.replace(SCRIPT_ELEMENT, '');
+
+    return comments ? noScripts : noScripts.replace(/<!--[\s\S]*?-->/g, '');
+};
 
 /** The text of every executable `<script>` without `src` (the CSP hash input). */
 const inlineScripts = (html: string): string[] =>
-    [...withoutComments(html).matchAll(SCRIPT_ELEMENT)]
-        .filter(match => {
-            const attributes = parseAttributes(match[1] ?? '');
-
-            return !attributes.has('src') && JS_TYPES.has(attributes.get('type') ?? '');
-        })
-        .map(match => match[2] ?? '');
+    scriptElements(html)
+        .filter(({ attributes }) => !attributes.has('src') && isExecutable(attributes))
+        .map(({ body }) => body);
 
 /** The CSP source of an inline script: `'sha256-…'`. */
 const scriptHash = (text: string): string =>
@@ -113,7 +134,15 @@ const checkPage = ({ file, html, script }: PageInput): string[] => {
     if (!description) {
         problems.push(`${file}: missing <meta name="description">`);
     }
-    if (FORBIDDEN_TEXT.test(withoutComments(html).replace(SCRIPT_ELEMENT, '')) || JWT.test(html)) {
+    // Executable scripts may name such variables; data scripts and comments ship as text.
+    const text = [
+        markup(html, { comments: true }),
+        ...scriptElements(html)
+            .filter(({ attributes }) => !isExecutable(attributes))
+            .map(({ body }) => body),
+    ].join('\n');
+
+    if (FORBIDDEN_TEXT.test(text) || JWT.test(html)) {
         problems.push(`${file}: token-like or session content in the HTML`);
     }
     // The invite token must not reach analytics (A-15).
@@ -125,9 +154,9 @@ const checkPage = ({ file, html, script }: PageInput): string[] => {
         problems.push(`${file}: inline style (build.inlineStylesheets must stay 'never')`);
     }
     // The CSP blocks inline handlers and `javascript:` URLs: they would silently not work.
-    const elements = [...withoutComments(html).matchAll(/<[a-z][\w-]*\b([^>]*)>/gi)].map(match =>
-        parseAttributes(match[1] ?? ''),
-    );
+    const elements = [
+        ...markup(html, { comments: false }).matchAll(/<[a-z][\w-]*\b([^>]*)>/gi),
+    ].map(match => parseAttributes(match[1] ?? ''));
 
     if (elements.some(attributes => [...attributes.keys()].some(name => /^on[a-z]+$/.test(name)))) {
         problems.push(`${file}: inline event handler attribute`);
@@ -140,8 +169,12 @@ const checkPage = ({ file, html, script }: PageInput): string[] => {
         problems.push(`${file}: javascript: URL`);
     }
     // §3.6: islands hydrate only with client:visible or client:idle.
-    if (tags(html, 'astro-island').some(attributes => attributes.get('client') === 'load')) {
-        problems.push(`${file}: island with client:load`);
+    if (
+        tags(html, 'astro-island').some(
+            attributes => !['visible', 'idle'].includes(attributes.get('client') ?? ''),
+        )
+    ) {
+        problems.push(`${file}: island without client:visible or client:idle`);
     }
 
     // The page's scripts and everything they import statically, plus its inline scripts.
@@ -184,12 +217,13 @@ const cspScriptHashes = (vercelJson: unknown): string[] => {
         typeof vercelJson === 'object' && vercelJson !== null && 'headers' in vercelJson
             ? (vercelJson.headers as HeaderRule[])
             : [];
-    const cspRules = rules.filter(rule =>
-        (rule.headers ?? []).some(header => header.key === 'Content-Security-Policy'),
-    );
+    // Header names are case-insensitive.
+    const isCsp = (header: { key?: unknown }): boolean =>
+        typeof header.key === 'string' && header.key.toLowerCase() === 'content-security-policy';
+    const cspRules = rules.filter(rule => (rule.headers ?? []).some(isCsp));
     // One CSP for every path: a per-path CSP (e.g. `/join/(.*)`) needs a per-path hash check here.
     const [rule, ...others] = cspRules;
-    const csp = rule?.headers?.find(header => header.key === 'Content-Security-Policy')?.value;
+    const csp = rule?.headers?.find(isCsp)?.value;
 
     if (others.length > 0 || rule?.source !== '/(.*)' || rule.has !== undefined) {
         throw new Error('vercel.json: expected exactly one Content-Security-Policy, on /(.*)');

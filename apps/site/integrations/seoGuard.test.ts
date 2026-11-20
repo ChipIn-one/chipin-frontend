@@ -141,14 +141,35 @@ describe('seoGuard checkPage', () => {
     test.each([
         ['<button onclick="go()">x</button>', 'inline event handler attribute'],
         ['<a href="javascript:go()">x</a>', 'javascript: URL'],
-        ['<astro-island client="load"></astro-island>', 'island with client:load'],
+        [
+            '<astro-island client="load"></astro-island>',
+            'island without client:visible or client:idle',
+        ],
+        [
+            '<astro-island client="only"></astro-island>',
+            'island without client:visible or client:idle',
+        ],
+        ['<!-- accessToken -->', 'token-like or session content in the HTML'],
+        [
+            '<script type="application/ld+json">{"accessToken":1}</script>',
+            'token-like or session content in the HTML',
+        ],
     ])('fails on %s', (html, problem) => {
         expect(problemsOf('index.html', page(HEAD, html))).toEqual([`index.html: ${problem}`]);
     });
 
-    test('allows islands with client:visible', () => {
+    test('allows islands with client:visible and client:idle', () => {
+        const html = page(
+            HEAD,
+            '<astro-island client="visible"></astro-island><astro-island client="idle"></astro-island>',
+        );
+
+        expect(problemsOf('index.html', html)).toEqual([]);
+    });
+
+    test('reads handlers in markup only, not inside script bodies', () => {
         expect(
-            problemsOf('index.html', page(HEAD, '<astro-island client="visible"></astro-island>')),
+            problemsOf('index.html', page(HEAD, '<script>if (i <n onload=1) {}</script>')),
         ).toEqual([]);
     });
 
@@ -160,15 +181,21 @@ describe('seoGuard checkPage', () => {
 });
 
 describe('seoGuard scripts', () => {
-    test('hashes only executable inline scripts outside comments', () => {
+    test('hashes every executable inline script, whatever the case of its type', () => {
         const html = page(
             HEAD,
-            '<script>a()</script><script type="module">b()</script>' +
-                '<script type="application/ld+json">{}</script><!-- <script>c()</script> -->' +
-                '<script src="/x.js"></script>',
+            '<script>a()</script><script type=" Module ">b()</script>' +
+                '<script type="text/ecmascript">c()</script>' +
+                '<script type="application/ld+json">{}</script><script src="/x.js"></script>',
         );
 
-        expect(inlineScripts(html)).toEqual(['a()', 'b()']);
+        expect(inlineScripts(html)).toEqual(['a()', 'b()', 'c()']);
+    });
+
+    test('a "<!--" inside a script does not hide the following scripts', () => {
+        const html = page(HEAD, '<script>var s="<!--"</script><script>evil()</script><p>--></p>');
+
+        expect(inlineScripts(html)).toEqual(['var s="<!--"', 'evil()']);
     });
 
     test('resolves static imports of a built module to URL paths', () => {
@@ -201,6 +228,14 @@ describe('seoGuard CSP hashes', () => {
                 headers: [
                     { source: '/(.*)', headers: [csp] },
                     { source: '/join/(.*)', headers: [csp] },
+                ],
+            }),
+        ).toThrow('exactly one');
+        expect(() =>
+            cspScriptHashes({
+                headers: [
+                    { source: '/(.*)', headers: [csp] },
+                    { source: '/join/(.*)', headers: [{ ...csp, key: 'content-security-policy' }] },
                 ],
             }),
         ).toThrow('exactly one');
