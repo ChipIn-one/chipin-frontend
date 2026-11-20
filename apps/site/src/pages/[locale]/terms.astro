@@ -1,0 +1,24 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+
+import LegalPage from '../../components/LegalPage.astro';
+import { NON_DEFAULT_LOCALES, type SupportedLocale } from '../../i18n/locales';
+
+// `/ru/terms`: only locales with a non-draft `legal/<locale>/terms.md` get a page (§3.3).
+export const getStaticPaths = (async () => {
+    const pages = await getCollection('legal', entry => !entry.data.draft);
+
+    return NON_DEFAULT_LOCALES.filter(locale =>
+        pages.some(entry => entry.id === `${locale}/terms`),
+    ).map(locale => ({ params: { locale }, props: { locale } }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+---
+
+<LegalPage locale={locale} slug="terms" />
