@@ -4,9 +4,13 @@ import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import type { BalanceEntry } from 'api/chipin.raw.types';
-
 import { Amount } from './numbers';
+
+/** One currency's net balance, structurally the API `BalanceEntry` (basics may not import `api`). */
+interface BalanceSummaryEntry {
+    readonly currency: string;
+    readonly netBalance: number;
+}
 
 const AmountChunk = styled.span`
     white-space: nowrap;
@@ -15,8 +19,8 @@ const AmountChunk = styled.span`
 interface Props {
     /** Balances split by sign (entities/balance `legacyPartitionEntries`); zero ones are dropped. */
     balances: {
-        readonly owed: readonly BalanceEntry[];
-        readonly owe: readonly BalanceEntry[];
+        readonly owed: readonly BalanceSummaryEntry[];
+        readonly owe: readonly BalanceSummaryEntry[];
     };
     size: ComponentProps<typeof Text>['size'];
     align?: ComponentProps<typeof Text>['align'];
@@ -78,4 +82,4 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
     );
 };
 
-export default BalanceSummaryText;
+export { BalanceSummaryText };

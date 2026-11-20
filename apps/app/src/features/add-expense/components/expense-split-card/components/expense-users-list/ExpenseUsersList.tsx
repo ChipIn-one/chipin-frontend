@@ -1,5 +1,5 @@
 import { memo, useId } from 'react';
-import { Flex } from '@radix-ui/themes';
+import { Checkbox, Flex } from '@radix-ui/themes';
 import { Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -15,7 +15,7 @@ import {
 } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import { Amount, Checkbox, UserAvatar } from 'basics';
+import { Amount, UserAvatar } from 'basics';
 
 import { ExpenseInputActions } from '../expense-input-actions/ExpenseInputActions';
 

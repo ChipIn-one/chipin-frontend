@@ -7,7 +7,7 @@ import { buildGroupInviteLink } from 'helpers/url';
 import { useSelfUser } from 'hooks/useSelfUser';
 import { selectMemberBalancePartition } from 'store/groupsSelectors';
 
-import BalanceSummaryText from 'basics/BalanceSummaryText';
+import { BalanceSummaryText } from 'basics/BalanceSummaryText';
 import { NoGroupMembersEmptyState } from 'basics/empty-states';
 import GroupRoleBadge from 'basics/GroupRoleBadge';
 import { SettleUpModal } from 'components/modals/settle-up-modal';

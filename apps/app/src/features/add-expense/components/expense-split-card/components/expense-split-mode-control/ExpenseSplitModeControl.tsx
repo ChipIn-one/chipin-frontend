@@ -8,8 +8,8 @@ import { selectAmountPrecision, selectSplitSummary } from 'store/expenseModalSel
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { Amount } from 'basics';
-import { ProgressBar } from 'components/progress-bar';
-import SegmentedControl from 'components/SegmentedControl';
+import { ProgressBar } from 'basics/progress-bar/ProgressBar';
+import { SegmentedControl } from 'basics/SegmentedControl';
 
 import { EXPENSE_SPLIT_MODE_ITEMS, SPLIT_SUMMARY_SEPARATOR } from './constants';
 import { getStatusColor } from './helpers';

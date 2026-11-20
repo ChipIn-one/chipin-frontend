@@ -11,8 +11,8 @@ import { useUserSetting } from 'hooks/useSelfUser';
 import { useUpdateSelf } from 'hooks/useUserMutations';
 import { usePwaStore } from 'store/pwaStore';
 
+import { SegmentedControl } from 'basics/SegmentedControl';
 import { OnlineOnlyGroup } from 'components/online-only';
-import SegmentedControl from 'components/SegmentedControl';
 
 interface Props {
     isLoading: boolean;

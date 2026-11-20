@@ -6,7 +6,7 @@ import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
 import { useCanAccessSolo } from 'hooks/useSelfUser';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
-import { NavButton } from 'basics/buttons';
+import { NavButton } from 'components/NavButton';
 
 import { getNavElements } from './constants';
 
@@ -29,6 +29,7 @@ const HeaderNav = () => {
                         <NavButton
                             key={href}
                             to={href}
+                            aria-current={isActive ? 'page' : undefined}
                             variant="ghost"
                             size="3"
                             color={isActive ? activeColor : 'gray'}
@@ -45,4 +46,4 @@ const HeaderNav = () => {
     );
 };
 
-export default HeaderNav;
+export { HeaderNav };

@@ -19,15 +19,15 @@ import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
-import { NavButton } from 'basics/buttons';
 import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
+import { NavButton } from 'components/NavButton';
 
 import DevMenu from './DevMenu';
 import { LandingMobileMenu } from './header/LandingMobileMenu';
 import { LandingNav } from './header/LandingNav';
 import { SignInEntry } from './modals/auth-modal';
-import HeaderNav from './nav-bars/HeaderNav';
+import { HeaderNav } from './nav-bars/HeaderNav';
 
 const StickyBox = styled(Box)`
     position: sticky;

@@ -9,7 +9,7 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
-import HeaderNav from './HeaderNav';
+import { HeaderNav } from './HeaderNav';
 
 import 'i18n/index';
 
@@ -55,4 +55,21 @@ test.each([
     return interaction.click(screen.getByRole('link', { name: 'Dashboard' })).then(() => {
         expect(screen.getByLabelText('Current route').textContent).toBe(expectedRoute);
     });
+});
+
+test('marks the active link with aria-current, not by color alone', () => {
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+
+    render(
+        <MemoryRouter initialEntries={['/activity']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <HeaderNav />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBe(
+        'page',
+    );
+    expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBeNull();
 });

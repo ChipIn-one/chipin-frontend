@@ -2,8 +2,8 @@ import { Box, Button } from '@radix-ui/themes';
 import { ChevronDownIcon, FilterIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { DropdownMenuSection } from 'components/Dropdown';
-import Dropdown from 'components/Dropdown';
+import type { DropdownMenuSection } from 'basics/Dropdown';
+import { Dropdown } from 'basics/Dropdown';
 
 interface Props {
     currencies: string[];

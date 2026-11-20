@@ -22,4 +22,4 @@ const SegmentedControl = ({ items, ...rootProps }: Props) => {
     );
 };
 
-export default SegmentedControl;
+export { SegmentedControl };

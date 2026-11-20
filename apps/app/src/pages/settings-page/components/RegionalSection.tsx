@@ -8,8 +8,8 @@ import { detectDeviceTimezone, formatUtcOffset, getAmPm24Time } from 'helpers/ti
 import { useUserSetting } from 'hooks/useSelfUser';
 import { useUpdateSelf } from 'hooks/useUserMutations';
 
+import { SegmentedControl } from 'basics/SegmentedControl';
 import LanguageSelector from 'components/LanguageSelector';
-import SegmentedControl from 'components/SegmentedControl';
 
 interface Props {
     isLoading: boolean;

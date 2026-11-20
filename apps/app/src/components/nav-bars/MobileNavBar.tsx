@@ -33,6 +33,7 @@ const MobileNavBar = () => {
             <Box key={href} flexGrow="1">
                 <MobileNavItemButton
                     to={href}
+                    aria-current={isActive ? 'page' : undefined}
                     color={isActive ? activeColor : 'gray'}
                     radius="none"
                     variant={isActive ? 'solid' : 'surface'}
@@ -73,4 +74,4 @@ const MobileNavBar = () => {
     );
 };
 
-export default MobileNavBar;
+export { MobileNavBar };

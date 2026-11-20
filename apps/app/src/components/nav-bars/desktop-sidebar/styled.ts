@@ -3,7 +3,7 @@ import styled, { css } from 'styled-components';
 
 import { themeColor } from 'helpers/colors';
 
-import { NavButton } from 'basics/buttons';
+import { NavButton } from 'components/NavButton';
 
 const getSidebarNavHighlightStyles = (isSoloMode: boolean) => css`
     background: linear-gradient(

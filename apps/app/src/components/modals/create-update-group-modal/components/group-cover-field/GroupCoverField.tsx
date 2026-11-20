@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { ImageFileValidationError } from 'helpers/imageFile';
 
-import { ProgressBar } from 'components/progress-bar';
+import { ProgressBar } from 'basics/progress-bar/ProgressBar';
 
 import { CoverPreview, CoverPreviewImage } from './styled';
 

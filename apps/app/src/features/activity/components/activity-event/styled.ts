@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 import { interactiveCardLinkStyles } from 'helpers/interactiveCardStyles';
 
-import { NavButton } from 'basics/buttons';
+import { NavButton } from 'components/NavButton';
 
 const ActivityEventLink = styled(NavButton)`
     ${interactiveCardLinkStyles({
