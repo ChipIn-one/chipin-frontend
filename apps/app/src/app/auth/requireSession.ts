@@ -1,34 +1,33 @@
 import { redirect } from 'react-router-dom';
 
-import { ROUTES } from 'constants/routes';
 import { hasAuthSessionHint } from 'helpers/localStorage';
+import { loginPathFor } from 'helpers/url';
 import { isNetworkUsable } from 'shared/offline/network';
 import { restoreReady } from 'shared/offline/restore';
 import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
+import { useAuthStore } from 'store/authStore';
 
 import { authReady, readSession, type Session, UNKNOWN_OFFLINE } from './session';
 
 /**
  * What a protected route shows for a session (spec 04 §2.3, the `requireSession` table):
  * - `pass`: the page;
- * - `login`: a redirect to `/login?returnTo=<the path>` (signed out, or never signed in, 04-2f);
+ * - `login`: a redirect to `/login?returnTo=<the path>` (signed out earlier or in another tab, or
+ *   never signed in, 04-2f);
+ * - `leaving`: an explicit sign-out in this tab is leaving for the landing with a full navigation
+ *   (`authStore.signOut`, spec 04 §2.3): the loader only, no redirect, no page;
  * - `modal`: `AuthModal` alone;
  * - `modalOverPage`: `AuthModal` over the page, which stays mounted but hidden (an expired session).
  */
-export type SessionAccess = 'pass' | 'login' | 'modal' | 'modalOverPage';
-
-/**
- * `/login` that returns to `returnTo` (`pathname + search` of the protected URL, the invite token of
- * a join route included). `/login` validates it again (`resolveOAuthReturnTo`); never log it.
- */
-export const loginPathFor = (returnTo: string): string =>
-    `${ROUTES.LOGIN}?returnTo=${encodeURIComponent(returnTo)}`;
+export type SessionAccess = 'pass' | 'login' | 'leaving' | 'modal' | 'modalOverPage';
 
 export interface SessionEnvironment {
     /** The session hint of `helpers/localStorage`: the last session on this device was alive. */
     hasSessionHint: boolean;
     /** `isNetworkUsable()` (spec 03 §1.7), never `navigator.onLine`. */
     isNetworkUsable: boolean;
+    /** `authStore.isLeavingAfterSignOut`: this tab signed out and is leaving for the landing. */
+    isLeavingAfterSignOut: boolean;
 }
 
 export const sessionAccess = (session: Session, env: SessionEnvironment): SessionAccess => {
@@ -43,6 +42,7 @@ export const sessionAccess = (session: Session, env: SessionEnvironment): Sessio
     }
     switch (session.reason) {
         case UNAUTH_REASON.SIGNED_OUT:
+            return env.isLeavingAfterSignOut ? 'leaving' : 'login';
         case UNAUTH_REASON.MISSING:
             return 'login';
         case UNAUTH_REASON.EXPIRED:
@@ -61,6 +61,7 @@ export const sessionAccess = (session: Session, env: SessionEnvironment): Sessio
 export const readSessionEnvironment = (): SessionEnvironment => ({
     hasSessionHint: hasAuthSessionHint(),
     isNetworkUsable: isNetworkUsable(),
+    isLeavingAfterSignOut: useAuthStore.getState().isLeavingAfterSignOut,
 });
 
 /**

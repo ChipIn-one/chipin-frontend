@@ -230,11 +230,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/modals/auth-modal/AuthModal.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/modals/base-alert-dialog/BaseAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1

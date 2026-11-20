@@ -81,6 +81,13 @@ describe('returnTo is a same-origin app path', () => {
         );
     });
 
+    test('AUTH-072 caps the length of returnTo at 2048 characters', () => {
+        const longest = `/group/${'a'.repeat(2048 - '/group/'.length)}`;
+
+        expect(resolveOAuthReturnTo(longest, APP_ORIGIN)).toBe(longest);
+        expect(resolveOAuthReturnTo(`${longest}a`, APP_ORIGIN)).toBe(DEFAULT_RETURN_TO);
+    });
+
     test.each([
         ['an absolute URL', 'https://evil.example/group/1'],
         ['a same-origin absolute URL', `${APP_ORIGIN}/group/1`],
@@ -111,6 +118,10 @@ describe('returnTo is a same-origin app path', () => {
         ['the login page in another case', '/LOGIN'],
         ['the login page encoded', '/%6Cogin'],
         ['the OAuth callback in another case', '/OAuth/Callback?code=x'],
+        ['a dot segment that normalizes to //host', '/.//evil.com'],
+        ['a parent segment that normalizes to //host', '/a/..//evil.com'],
+        ['encoded parent segments that normalize to //host', '/%2e%2e/%2e%2e//evil.com'],
+        ['a returnTo longer than 2048 characters', `/group/${'a'.repeat(2048)}`],
     ])('AUTH-072 rejects %s', (_name, returnTo) => {
         expect(resolveOAuthReturnTo(returnTo, APP_ORIGIN)).toBe(DEFAULT_RETURN_TO);
     });

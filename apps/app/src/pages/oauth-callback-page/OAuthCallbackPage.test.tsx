@@ -49,23 +49,27 @@ beforeEach(() => {
     });
 });
 
-test('returns a missing-code callback to the sanitized return route', () => {
+test('AUTH-074 a callback without a code (consent cancelled) goes back to /login with the sanitized returnTo', () => {
     renderCallback('/oauth/callback?returnTo=%2Fgroup%2F123%3Ftab%3Dmembers%23balances');
 
     return screen.findByTestId('destination').then(destination => {
-        expect(destination.textContent).toBe('/group/123?tab=members#balances');
+        expect(destination.textContent).toBe(
+            `/login?returnTo=${encodeURIComponent('/group/123?tab=members#balances')}`,
+        );
         expect(useAuthStore.getState().unauthReason).toBe('error');
     });
 });
 
-test('returns a failed OAuth exchange to the sanitized return route', () => {
+test('AUTH-074 a failed OAuth exchange goes back to /login with the sanitized returnTo', () => {
     const exchangeGoogleOAuthCode = vi.fn().mockRejectedValue(new Error('exchange failed'));
     useAuthStore.setState({ exchangeGoogleOAuthCode });
 
     renderCallback('/oauth/callback?code=bad-code&returnTo=%2Factivity%3Ffilter%3Dmine%23latest');
 
     return screen.findByTestId('destination').then(destination => {
-        expect(destination.textContent).toBe('/activity?filter=mine#latest');
+        expect(destination.textContent).toBe(
+            `/login?returnTo=${encodeURIComponent('/activity?filter=mine#latest')}`,
+        );
         expect(exchangeGoogleOAuthCode).toHaveBeenCalledWith('bad-code');
     });
 });
@@ -106,18 +110,18 @@ test('shows the expired-code message for an invalid OAuth exchange code', () => 
     });
 });
 
-test('AUTH-072 falls back to the dashboard instead of redirecting back into the OAuth callback', () => {
+test('AUTH-072 a callback returnTo falls back to the dashboard (via /login without a code)', () => {
     renderCallback('/oauth/callback?returnTo=%2Foauth%2Fcallback%3Fcode%3Dloop');
 
     return screen.findByTestId('destination').then(destination => {
-        expect(destination.textContent).toBe('/dashboard');
+        expect(destination.textContent).toBe('/login?returnTo=%2Fdashboard');
     });
 });
 
-test('AUTH-072 falls back to the dashboard instead of an open redirect', () => {
+test('AUTH-072 an open-redirect returnTo falls back to the dashboard (via /login without a code)', () => {
     renderCallback('/oauth/callback?returnTo=%2F%2Fevil.example');
 
     return screen.findByTestId('destination').then(destination => {
-        expect(destination.textContent).toBe('/dashboard');
+        expect(destination.textContent).toBe('/login?returnTo=%2Fdashboard');
     });
 });

@@ -82,4 +82,4 @@ const AuthModal = ({ children, isOpened, onOpenChange }: Props) => {
     );
 };
 
-export default AuthModal;
+export { AuthModal };

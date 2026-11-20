@@ -4,12 +4,13 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vi
 
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { LocalStorage } from 'helpers/localStorage';
+import { loginPathFor } from 'helpers/url';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { startCacheRestore } from 'shared/offline/restore';
 import { UNAUTH_REASON, type UnauthReason } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 
-import { loginPathFor, requireSession, type SessionAccess, sessionAccess } from './requireSession';
+import { requireSession, type SessionAccess, sessionAccess } from './requireSession';
 import { type Session, UNKNOWN_OFFLINE } from './session';
 
 vi.mock('shared/offline/clearUserData', async importOriginal => ({
@@ -21,10 +22,10 @@ const loaderArgs = (path: string) => ({ request: new Request(`http://localhost${
 
 const unauth = (reason: UnauthReason): Session => ({ status: 'unauthenticated', reason });
 const ENVIRONMENTS = [
-    { hasSessionHint: true, isNetworkUsable: true },
-    { hasSessionHint: true, isNetworkUsable: false },
-    { hasSessionHint: false, isNetworkUsable: true },
-    { hasSessionHint: false, isNetworkUsable: false },
+    { hasSessionHint: true, isNetworkUsable: true, isLeavingAfterSignOut: false },
+    { hasSessionHint: true, isNetworkUsable: false, isLeavingAfterSignOut: false },
+    { hasSessionHint: false, isNetworkUsable: true, isLeavingAfterSignOut: false },
+    { hasSessionHint: false, isNetworkUsable: false, isLeavingAfterSignOut: false },
 ] as const;
 
 // Every row of the table, in every environment: [session, online access, hint+offline access].
@@ -40,14 +41,27 @@ const ROWS: [string, Session, SessionAccess, SessionAccess][] = [
 ];
 
 describe('sessionAccess', () => {
-    test.each(ROWS)('%s', (_name, session, otherwise, hintOffline) => {
-        ENVIRONMENTS.forEach(env => {
-            const expected = env.hasSessionHint && !env.isNetworkUsable ? hintOffline : otherwise;
+    test.each(ROWS)(
+        'AUTH-071 %s: redirect, sign-in over the page, or the cached page offline with a hint',
+        (_name, session, otherwise, hintOffline) => {
+            ENVIRONMENTS.forEach(env => {
+                const expected =
+                    env.hasSessionHint && !env.isNetworkUsable ? hintOffline : otherwise;
 
-            expect({ env, access: sessionAccess(session, env) }).toEqual({
-                env,
-                access: expected,
+                expect({ env, access: sessionAccess(session, env) }).toEqual({
+                    env,
+                    access: expected,
+                });
             });
+        },
+    );
+
+    test('AUTH-071 an explicit sign-out in this tab is leaving, not a /login redirect; only it', () => {
+        ENVIRONMENTS.forEach(env => {
+            const leaving = { ...env, isLeavingAfterSignOut: true };
+
+            expect(sessionAccess(unauth(UNAUTH_REASON.SIGNED_OUT), leaving)).toBe('leaving');
+            expect(sessionAccess(unauth(UNAUTH_REASON.MISSING), leaving)).toBe('login');
         });
     });
 });
@@ -96,6 +110,20 @@ describe('requireSession', () => {
         expect(loginPathFor('/friends/join/a&b?c=d#e')).toBe(
             '/login?returnTo=%2Ffriends%2Fjoin%2Fa%26b%3Fc%3Dd%23e',
         );
+    });
+
+    test('AUTH-071 the loader does not redirect an explicit sign-out leaving for the landing', async () => {
+        useAuthStore.setState({
+            status: 'unauthenticated',
+            unauthReason: 'signed_out',
+            isLeavingAfterSignOut: true,
+        });
+
+        try {
+            await expect(requireSession(loaderArgs('/group/1'))).resolves.toBeNull();
+        } finally {
+            useAuthStore.setState({ isLeavingAfterSignOut: false });
+        }
     });
 
     test.each([

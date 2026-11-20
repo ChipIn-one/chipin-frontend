@@ -27,6 +27,7 @@ import {
     saveLocalUser,
     SessionStorage,
 } from 'helpers/localStorage';
+import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { clearUserData, deleteUserKeys, detachUserData } from 'shared/offline/clearUserData';
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
 import { readOutboxCount, readOutboxCountsOrUnknown } from 'shared/offline/outboxCount';
@@ -61,6 +62,13 @@ export interface AuthStore {
     isNewUser: boolean | null;
     /** Meaningful while authenticated (spec 03 §1.6); `online` otherwise. */
     sessionMode: SessionMode;
+    /**
+     * Set together with `signed_out` by an explicit sign-out in this tab, which leaves for the
+     * landing with a full navigation (spec 04 §2.3): until the page unloads, `AuthLayout` and
+     * `requireSession` do not redirect to `/login?returnTo=` (no protected path in the URL or the
+     * history of a shared device). Any other session change clears it.
+     */
+    isLeavingAfterSignOut: boolean;
 
     setAuthenticated: () => void;
     /** An offline cold start with a cached user and a session hint: authenticated on the cache. */
@@ -223,12 +231,14 @@ export const useAuthStore = create<AuthStore>(set => ({
     unauthReason: undefined,
     isNewUser: null,
     sessionMode: SESSION_MODE.ONLINE,
+    isLeavingAfterSignOut: false,
 
     setAuthenticated: () => {
         set({
             status: AUTH_STATUS.AUTHENTICATED,
             unauthReason: undefined,
             sessionMode: SESSION_MODE.ONLINE,
+            isLeavingAfterSignOut: false,
         });
     },
 
@@ -237,6 +247,7 @@ export const useAuthStore = create<AuthStore>(set => ({
             status: AUTH_STATUS.AUTHENTICATED,
             unauthReason: undefined,
             sessionMode: SESSION_MODE.OFFLINE_CACHED,
+            isLeavingAfterSignOut: false,
         });
     },
 
@@ -258,6 +269,7 @@ export const useAuthStore = create<AuthStore>(set => ({
             unauthReason: reason,
             isNewUser: null,
             sessionMode: SESSION_MODE.ONLINE,
+            isLeavingAfterSignOut: false,
         });
     },
 
@@ -299,6 +311,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                         unauthReason: undefined,
                         isNewUser,
                         sessionMode: SESSION_MODE.ONLINE,
+                        isLeavingAfterSignOut: false,
                     });
 
                     return loadSignedInData();
@@ -354,6 +367,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                                 : UNAUTH_REASON.ERROR,
                         isNewUser: null,
                         sessionMode: SESSION_MODE.ONLINE,
+                        isLeavingAfterSignOut: false,
                     });
                     return Promise.reject(error);
                 });
@@ -381,6 +395,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                 status: AUTH_STATUS.AUTHENTICATED,
                 unauthReason: undefined,
                 sessionMode: SESSION_MODE.ONLINE,
+                isLeavingAfterSignOut: false,
             });
             return nextAccessToken;
         });
@@ -404,7 +419,11 @@ export const useAuthStore = create<AuthStore>(set => ({
             return signOutPromise;
         }
 
-        // Start the best-effort server logout, but leave protected UI immediately.
+        // Start the best-effort server logout, but leave protected UI immediately: a full
+        // navigation to the landing in the last account's language (spec 04 §2.3), read before the
+        // user data goes. `isLeavingAfterSignOut` is set in the same update as `signed_out`, so no
+        // render sees the sign-out without it and nothing redirects to `/login?returnTo=`.
+        const landingPath = getLastAccountLandingPath();
         const logoutRequest = startAuthLogout();
         dropSignedOutUser();
         set({
@@ -412,7 +431,9 @@ export const useAuthStore = create<AuthStore>(set => ({
             unauthReason: UNAUTH_REASON.SIGNED_OUT,
             isNewUser: null,
             sessionMode: SESSION_MODE.ONLINE,
+            isLeavingAfterSignOut: true,
         });
+        window.location.assign(landingPath);
 
         signOutPromise = logoutRequest.finally(() => {
             signOutPromise = null;

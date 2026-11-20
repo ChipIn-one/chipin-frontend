@@ -87,3 +87,15 @@ test('sanitizes every string value of a telemetry record and keeps other values'
         ok: false,
     });
 });
+
+test.each([
+    'https://app.chipin.one/login?returnTo=%2Fgroup%2Fjoin%2FAbCdEfGhIjKlMnOpQrStUvWxYz012345',
+    '/login?returnTo=%2Ffriends%2Fjoin%2FAbCdEfGhIjKlMnOpQrStUvWxYz012345&locale=ru',
+    'https://app.chipin.one/oauth/callback?code=c&returnTo=%2Fgroup%2Fjoin%2FAbCdEfGhIjKlMnOpQrStUvWxYz012345',
+])('AUTH-075 telemetry reports the sign-in URL %s without the invite token', url => {
+    const sanitized = sanitizeTelemetryUrl(url);
+
+    expect(sanitized).not.toContain('AbCdEfGhIjKlMnOpQrStUvWxYz012345');
+    expect(sanitized).not.toContain('returnTo');
+    expect(sanitized).toMatch(/\/(?:login|oauth\/callback)$/);
+});

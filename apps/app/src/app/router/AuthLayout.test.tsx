@@ -28,6 +28,11 @@ vi.mock('store/groupsList', async importOriginal => ({
     loadGroupsListForSession: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('helpers/authSession', async importOriginal => ({
+    ...(await importOriginal<typeof import('helpers/authSession')>()),
+    startAuthLogout: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('store/sessionUser', async importOriginal => ({
     ...(await importOriginal<typeof import('store/sessionUser')>()),
     loadKnownUsersForSession: vi.fn(() => Promise.resolve()),
@@ -91,6 +96,25 @@ const CurrentRoute = () => {
 };
 
 const DRAFT_LABEL = 'Draft';
+
+/** The last account's cached settings (no session) with `language`. */
+const cacheUserWithLanguage = (language: string) => {
+    LocalStorage.set(LS_KEY_USER, {
+        role: 'USER',
+        settings: {
+            defaultCurrency: 'USD',
+            defaultCategory: 'food',
+            timeFormat: '24h',
+            language,
+            theme: 'light',
+            simplifyDebts: true,
+            skipCategory: false,
+            soloModeByDefault: false,
+            saveGroupExpensesToSolo: false,
+            sex: 'male',
+        },
+    });
+};
 
 /** A page with state of its own: a draft typed into it must survive an expiry. */
 const DraftPage = () => {
@@ -204,7 +228,7 @@ describe('the live session', () => {
         expect(screen.queryByLabelText('Draft')).toBeNull();
     });
 
-    test('AUTH-075 closing the auth modal goes to /login that returns to the page', async () => {
+    test('AUTH-071 closing the auth modal goes to /login that returns to the page', async () => {
         const interaction = userEvent.setup();
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
         renderLayout('/group/join/tok-1');
@@ -304,26 +328,12 @@ describe('the live session', () => {
         expect(screen.getByTestId('auth-modal')).toBeTruthy();
     });
 
-    // A signed-out user keeps only the last account's local appearance/locale, never the auth
-    // session; whatever the cached locale, the sign-out leads to /login (04-2f, no landing).
+    // Signed out earlier (or in another tab): whatever the cached locale, a protected page leads to
+    // /login; the last account's local appearance/locale stays, never the auth session.
     test.each(['ru', 'es', 'pt-BR', 'pt-PT', 'en', 'unreleased-locale'])(
-        'AUTH-071 explicit sign-out with cached locale %s leads to /login, settings kept',
+        'AUTH-071 signed out earlier with cached locale %s goes to /login, settings kept',
         async language => {
-            LocalStorage.set(LS_KEY_USER, {
-                role: 'USER',
-                settings: {
-                    defaultCurrency: 'USD',
-                    defaultCategory: 'food',
-                    timeFormat: '24h',
-                    language,
-                    theme: 'light',
-                    simplifyDebts: true,
-                    skipCategory: false,
-                    soloModeByDefault: false,
-                    saveGroupExpensesToSolo: false,
-                    sex: 'male',
-                },
-            });
+            cacheUserWithLanguage(language);
             useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
             renderLayout('/settings');
@@ -336,6 +346,45 @@ describe('the live session', () => {
             expect(screen.queryByTestId('auth-modal')).toBeNull();
             expect(getLocalUser()?.settings.language).toBe(language);
             expect(getLocalUser()?.settings.theme).toBe('light');
+        },
+    );
+});
+
+// Spec 04 §2.3: the explicit sign-out of this tab is a full navigation to the landing of the last
+// account's language; the protected path never reaches /login?returnTo= (shared device).
+describe('the explicit sign-out of this tab', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        useAuthStore.setState({ isLeavingAfterSignOut: false });
+    });
+
+    test.each([
+        ['ru', '/ru/'],
+        ['es', '/'],
+        ['pt-BR', '/'],
+        ['pt-PT', '/'],
+        ['en', '/'],
+        ['unreleased-locale', '/'],
+    ])(
+        'AUTH-071 explicit sign-out with cached locale %s leaves for the landing %s, not /login',
+        async (language, landing) => {
+            const assign = vi.fn();
+            vi.stubGlobal('location', { ...window.location, assign });
+            cacheUserWithLanguage(language);
+            renderLayout('/group/123?tab=members');
+            await screen.findByLabelText('Draft');
+
+            act(() => {
+                void useAuthStore.getState().signOut();
+            });
+
+            expect(assign).toHaveBeenCalledExactlyOnceWith(landing);
+            expect(screen.getByLabelText('Current route').textContent).toBe(
+                '/group/123?tab=members',
+            );
+            expect(screen.queryByLabelText('Draft')).toBeNull();
+            expect(screen.queryByTestId('auth-modal')).toBeNull();
+            expect(getLocalUser()?.settings.language).toBe(language);
         },
     );
 });

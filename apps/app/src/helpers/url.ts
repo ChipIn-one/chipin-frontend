@@ -15,6 +15,9 @@ const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 // The pages a sign-in never returns to: the OAuth callback and `/login` itself (no loop).
 const NO_RETURN_PATHS: readonly string[] = [ROUTES.OAUTH_CALLBACK, ROUTES.LOGIN];
 
+/** A longer `returnTo` is rejected: no app path comes close, and it bounds the work below. */
+const MAX_RETURN_TO_LENGTH = 2048;
+
 /** `value` percent-decoded until it stops changing (at most 3 times), or null if malformed. */
 const decodeRepeatedly = (value: string): string | null => {
     let current = value;
@@ -38,30 +41,41 @@ const decodeRepeatedly = (value: string): string | null => {
 const isLocalPath = (value: string): boolean =>
     value.startsWith('/') && !/^\/[/\\]/.test(value) && !value.includes('\\');
 
+/** `value` and its percent-decoded form are local paths without control characters. */
+const isSafeLocalPath = (value: string): boolean => {
+    const decoded = decodeRepeatedly(value);
+
+    return (
+        decoded !== null &&
+        !CONTROL_CHARACTERS.test(value) &&
+        !CONTROL_CHARACTERS.test(decoded) &&
+        isLocalPath(value) &&
+        isLocalPath(decoded)
+    );
+};
+
 /**
  * The one `returnTo` validator of the sign-in flows (`/login` and `/oauth/callback`, spec 04 §2.3):
  * `returnTo` must be a same-origin app path. Rejected (→ `DEFAULT_RETURN_TO`): empty, absolute
  * URLs and any scheme (`https:`, `javascript:`), protocol-relative `//host` and backslash forms
  * (`/\host`, `\\host`), the same hidden by percent-encoding (`/%2F%2Fhost`, `/%5Chost`), whitespace
- * or control characters anywhere, and the OAuth callback or `/login` itself (any case, any trailing
- * slash). The result is the normalized `pathname + search + hash`. Never log the value: it may
- * carry an invite token (AGENTS.md item 13).
+ * or control characters anywhere, longer than `MAX_RETURN_TO_LENGTH`, and the OAuth callback or
+ * `/login` itself (any case, any trailing slash). The result is the normalized
+ * `pathname + search + hash`, checked again: dot segments can normalize to `//host`
+ * (`/a/..//host`, `/%2e%2e//host`). Never log the value: it may carry an invite token (AGENTS.md
+ * item 13).
  */
 export const resolveOAuthReturnTo = (returnTo: string | null, origin: string): string => {
     // Raw: no whitespace at all; decoded: no control characters (a decoded space is fine).
-    if (!returnTo || /\s/.test(returnTo) || CONTROL_CHARACTERS.test(returnTo)) {
-        return DEFAULT_RETURN_TO;
-    }
-    const decoded = decodeRepeatedly(returnTo);
-
     if (
-        decoded === null ||
-        CONTROL_CHARACTERS.test(decoded) ||
-        !isLocalPath(returnTo) ||
-        !isLocalPath(decoded)
+        !returnTo ||
+        returnTo.length > MAX_RETURN_TO_LENGTH ||
+        /\s/.test(returnTo) ||
+        !isSafeLocalPath(returnTo)
     ) {
         return DEFAULT_RETURN_TO;
     }
+    const decoded = decodeRepeatedly(returnTo) ?? '';
 
     try {
         const url = new URL(returnTo, origin);
@@ -74,11 +88,20 @@ export const resolveOAuthReturnTo = (returnTo: string | null, origin: string): s
             return DEFAULT_RETURN_TO;
         }
 
-        return `${url.pathname}${url.search}${url.hash}`;
+        const resolved = `${url.pathname}${url.search}${url.hash}`;
+
+        return isSafeLocalPath(resolved) ? resolved : DEFAULT_RETURN_TO;
     } catch {
         return DEFAULT_RETURN_TO;
     }
 };
+
+/**
+ * `/login` that returns to `returnTo` (`pathname + search` of the protected URL, the invite token of
+ * a join route included). `/login` validates it again (`resolveOAuthReturnTo`); never log it.
+ */
+export const loginPathFor = (returnTo: string): string =>
+    `${ROUTES.LOGIN}?returnTo=${encodeURIComponent(returnTo)}`;
 
 /** Options of a sign-in started from `/login`: its validated `returnTo` and `?locale`. */
 export interface SocialAuthOptions {

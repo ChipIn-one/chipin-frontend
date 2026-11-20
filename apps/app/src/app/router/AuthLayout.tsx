@@ -4,9 +4,10 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
-import { loginPathFor, readSessionEnvironment, sessionAccess } from 'app/auth/requireSession';
+import { readSessionEnvironment, sessionAccess } from 'app/auth/requireSession';
 import { readSession } from 'app/auth/session';
 import { GuardLoader } from 'features/routing';
+import { loginPathFor } from 'helpers/url';
 import { isNetworkUsable } from 'shared/offline/network';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
@@ -121,6 +122,10 @@ const AuthLayout = () => {
     }
     if (access === 'login') {
         return <Navigate to={loginPath} replace />;
+    }
+    // This tab signed out and is leaving for the landing (full navigation): show nothing of the page.
+    if (access === 'leaving') {
+        return <GuardLoader />;
     }
 
     const authModal = (
