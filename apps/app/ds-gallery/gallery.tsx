@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
+import { RADIX_THEME } from '@chipin/tokens/theme';
 import {
     Badge,
     Box,
@@ -706,14 +707,7 @@ const App = () => {
 
     return (
         <ThemeProvider theme={isDark ? darkThemeStyled : lightThemeStyled}>
-            <Theme
-                appearance={isDark ? 'dark' : 'light'}
-                accentColor="grass"
-                grayColor="olive"
-                radius="large"
-                panelBackground="solid"
-                hasBackground
-            >
+            <Theme {...RADIX_THEME} appearance={isDark ? 'dark' : 'light'} hasBackground>
                 <MemoryRouter>
                     <Gallery isDark={isDark} onToggleDark={() => setIsDark(d => !d)} />
                 </MemoryRouter>

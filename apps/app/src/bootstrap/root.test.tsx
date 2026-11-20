@@ -19,7 +19,7 @@ vi.mock('react-dom/client', () => ({
     createRoot: boot.createRoot,
     hydrateRoot: boot.hydrateRoot,
 }));
-vi.mock('main', () => ({ default: () => null }));
+vi.mock('main', () => ({ Main: () => null }));
 vi.mock('shared/offline/restore', () => ({ startCacheRestore: boot.startCacheRestore }));
 vi.mock('public-routes', () => ({ PublicApp: () => null }));
 vi.mock('bootstrap/initializeApi', () => ({ initializeApi: vi.fn() }));

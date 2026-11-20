@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { THEME_INIT_SCRIPT_SHA256 } from '@chipin/tokens/theme-init';
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 
@@ -149,7 +150,8 @@ describe('Vercel production security headers', () => {
                 }),
         );
 
-        expect(directives['script-src']).toBe("'self'");
+        // The one inline script allowed: the anti-FOUC theme script of app.html (spec 05 §2).
+        expect(directives['script-src']).toBe(`'self' '${THEME_INIT_SCRIPT_SHA256}'`);
         expect(directives['script-src']).not.toContain("'unsafe-inline'");
         expect(directives['connect-src']).toBe("'self' https://*.sentry.io");
         expect(directives['object-src']).toBe("'none'");

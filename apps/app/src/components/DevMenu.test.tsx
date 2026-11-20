@@ -6,17 +6,14 @@ import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { saveLocalUser } from 'helpers/localStorage';
+import { LS_KEY_THEME } from 'constants/localstorage';
+import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
+import { resetAppearanceStore, useAppearanceStore } from 'store/ui-prefs';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
-import DevMenu from './DevMenu';
-
-const theme = vi.hoisted(() => ({
-    resolvedTheme: 'light',
-    setTheme: vi.fn(),
-}));
+import { DevMenu } from './DevMenu';
 
 const settings = {
     defaultCurrency: 'USD',
@@ -31,10 +28,6 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
-vi.mock('next-themes', () => ({
-    useTheme: () => theme,
-}));
-
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
     Trans: ({ children }: { children: ReactNode }) => children,
@@ -44,8 +37,8 @@ const server = setupMswServer();
 let patches: unknown[] = [];
 
 beforeEach(() => {
-    vi.clearAllMocks();
-    theme.resolvedTheme = 'light';
+    LocalStorage.setRaw(LS_KEY_THEME, 'light');
+    resetAppearanceStore();
     useAuthStore.setState({ status: 'unauthenticated' });
     saveLocalUser({ id: 'user-1', role: 'ADMIN', settings });
     patches = [];
@@ -70,7 +63,8 @@ test('switches the local theme without saving user settings on the landing page'
         .click(screen.getByRole('button', { name: 'header.devMenu' }))
         .then(() => user.click(screen.getByRole('menuitem', { name: 'header.switchTheme' })))
         .then(() => {
-            expect(theme.setTheme).toHaveBeenCalledWith('dark');
+            expect(useAppearanceStore.getState().preference).toBe('dark');
+            expect(document.documentElement.classList.contains('dark')).toBe(true);
             expect(patches).toEqual([]);
         });
 });
@@ -92,7 +86,7 @@ test('persists the theme while an authenticated user is still loading', () => {
         .then(() =>
             waitFor(() => {
                 expect(patches).toEqual([{ settings: { theme: 'dark' } }]);
-                expect(theme.setTheme).not.toHaveBeenCalled();
+                expect(useAppearanceStore.getState().preference).toBe('light');
             }),
         );
 });

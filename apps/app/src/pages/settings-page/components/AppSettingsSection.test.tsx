@@ -8,16 +8,17 @@ import { dehydrate, hydrate, type QueryClient } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { ThemeProvider } from 'next-themes';
 import type { ReactNode } from 'react';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
+import { LS_KEY_THEME } from 'constants/localstorage';
 import { type SelfUser, usersKeys } from 'entities/users';
-import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
+import { getLocalUser, LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { useSyncUserSettings } from 'hooks/useSyncUserSettings';
 import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { loadSelfUserForSession } from 'store/sessionUser';
+import { resetAppearanceStore } from 'store/ui-prefs';
 import { runCacheRestoredHandler } from 'test/cacheRestored';
 import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -25,18 +26,6 @@ import { mountAsUserClient } from 'test/userClient';
 
 import AppSettingsSection from './AppSettingsSection';
 import RegionalSection from './RegionalSection';
-
-// next-themes reads the system preference; jsdom has no `matchMedia`.
-vi.hoisted(() => {
-    Object.defineProperty(window, 'matchMedia', {
-        configurable: true,
-        value: () => ({
-            matches: false,
-            addListener: () => undefined,
-            removeListener: () => undefined,
-        }),
-    });
-});
 
 type ThemeName = SelfUser['settings']['theme'];
 
@@ -130,12 +119,10 @@ const SyncUserSettings = () => {
 };
 
 const App = ({ children }: { children: ReactNode }) => (
-    <ThemeProvider attribute="class" enableSystem>
-        <Theme>
-            <SyncUserSettings />
-            {children}
-        </Theme>
-    </ThemeProvider>
+    <Theme>
+        <SyncUserSettings />
+        {children}
+    </Theme>
 );
 
 const settle = () =>
@@ -174,6 +161,8 @@ const browserLanguages = navigator.languages;
 beforeEach(() => {
     document.documentElement.className = '';
     saveLocalUser({ id: 'user-1', role: 'USER', settings });
+    LocalStorage.setRaw(LS_KEY_THEME, 'system');
+    resetAppearanceStore();
 });
 
 afterEach(async () => {

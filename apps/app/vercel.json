@@ -347,7 +347,7 @@
             "headers": [
                 {
                     "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; manifest-src 'self'; worker-src 'self' blob:; connect-src 'self' https://*.sentry.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+                    "value": "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'sha256-csvYgt4QHyi37935f6OISh43lFcujwqd2YA+fdnDPOc='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; manifest-src 'self'; worker-src 'self' blob:; connect-src 'self' https://*.sentry.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
                 },
                 {
                     "key": "X-Frame-Options",

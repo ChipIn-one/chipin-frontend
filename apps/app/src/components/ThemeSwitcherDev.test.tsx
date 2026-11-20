@@ -1,25 +1,21 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import ThemeSwitcherDev from './ThemeSwitcherDev';
+import { LS_KEY_THEME } from 'constants/localstorage';
+import { LocalStorage } from 'helpers/localStorage';
+import { resetAppearanceStore, useAppearanceStore } from 'store/ui-prefs';
 
-const theme = vi.hoisted(() => ({
-    resolvedTheme: 'light',
-    setTheme: vi.fn(),
-}));
-
-vi.mock('next-themes', () => ({
-    useTheme: () => theme,
-}));
+import { ThemeSwitcherDev } from './ThemeSwitcherDev';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 beforeEach(() => {
-    vi.clearAllMocks();
-    theme.resolvedTheme = 'light';
+    LocalStorage.setRaw(LS_KEY_THEME, 'light');
+    resetAppearanceStore();
 });
 
 test.each([
@@ -28,7 +24,7 @@ test.each([
 ] as const)(
     'describes the theme switch action when the resolved theme is %s',
     (resolvedTheme, accessibleName) => {
-        theme.resolvedTheme = resolvedTheme;
+        useAppearanceStore.getState().setPreference(resolvedTheme);
 
         render(
             <Theme>
@@ -39,3 +35,17 @@ test.each([
         expect(screen.getByRole('button', { name: accessibleName })).toBeTruthy();
     },
 );
+
+test('switches the preference to the other theme', async () => {
+    const user = userEvent.setup();
+
+    render(
+        <Theme>
+            <ThemeSwitcherDev />
+        </Theme>,
+    );
+    await user.click(screen.getByRole('button', { name: 'header.switchToDarkTheme' }));
+
+    expect(useAppearanceStore.getState().preference).toBe('dark');
+    expect(screen.getByRole('button', { name: 'header.switchToLightTheme' })).toBeTruthy();
+});

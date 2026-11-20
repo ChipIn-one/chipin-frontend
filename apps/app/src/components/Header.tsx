@@ -23,7 +23,7 @@ import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
 import { NavButton } from 'components/NavButton';
 
-import DevMenu from './DevMenu';
+import { DevMenu } from './DevMenu';
 import { LandingMobileMenu } from './header/LandingMobileMenu';
 import { LandingNav } from './header/LandingNav';
 import { SignInEntry } from './modals/auth-modal';

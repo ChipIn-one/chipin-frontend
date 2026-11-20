@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/react';
-import { useTheme } from 'next-themes';
 
 import type { SelfUserSettings } from 'entities/users';
 import { matchLocale, saveLocalePreference } from 'helpers/locale';
@@ -9,6 +8,7 @@ import { i18n } from 'i18n';
 import { AUTH_STATUS } from 'store/authConstants';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { selectSetPreference, useAppearanceStore } from 'store/ui-prefs';
 
 import { useUserSetting } from './useSelfUser';
 
@@ -21,13 +21,13 @@ export const useSyncUserSettings = () => {
     const isAuthenticated = useAuthStore(selectAuthStatus) === AUTH_STATUS.AUTHENTICATED;
     const theme = useUserSetting(pickTheme);
     const language = useUserSetting(pickLanguage);
-    const { setTheme } = useTheme();
+    const setPreference = useAppearanceStore(selectSetPreference);
 
     useEffect(() => {
         if (theme !== null && isAuthenticated) {
-            setTheme(theme);
+            setPreference(theme);
         }
-    }, [isAuthenticated, theme, setTheme]);
+    }, [isAuthenticated, theme, setPreference]);
 
     useEffect(() => {
         if (language === null || !isAuthenticated) {

@@ -8,7 +8,7 @@ import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
 import AddExpenseButton from 'components/AddExpenseButton';
-import DevMenu from 'components/DevMenu';
+import { DevMenu } from 'components/DevMenu';
 import { ModeLogotype } from 'components/mode-logotype';
 import { NavButton } from 'components/NavButton';
 import ViewModeSwitch from 'components/ViewModeSwitch';

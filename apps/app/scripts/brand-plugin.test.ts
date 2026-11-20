@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { BRAND_COLORS } from '@chipin/tokens/theme';
+import { THEME_INIT_SCRIPT } from '@chipin/tokens/theme-init';
+import { createServer } from 'vite';
 import { expect, test, vi } from 'vitest';
 
 import {
@@ -11,6 +13,9 @@ import {
     FAVICON_SOURCE,
     THEME_COLOR_ENTRY,
     THEME_COLOR_META,
+    THEME_INIT_ENTRY,
+    THEME_INIT_TAG,
+    themeInitPlugin,
 } from './brand-plugin';
 
 const callHook = (hook: unknown, context: unknown, ...args: unknown[]): unknown => {
@@ -84,4 +89,49 @@ test('the dev server serves /favicon.svg and passes other requests on', () => {
 
     middleware?.({ url: '/other.svg' }, response, next);
     expect(next).toHaveBeenCalledOnce();
+});
+
+// 05-3 (spec 05 §2): the anti-FOUC script is the first element of `<head>` in app.html only, and
+// its text is THEME_INIT_SCRIPT byte for byte (the CSP hash input).
+/** Runs the HTML through Vite's own transform pipeline (a dev server, no build). */
+const transform = async (file: string): Promise<string> => {
+    const server = await createServer({
+        configFile: false,
+        root: APP_DIR,
+        logLevel: 'silent',
+        server: { middlewareMode: true, hmr: false, ws: false },
+        appType: 'custom',
+        plugins: [themeInitPlugin()],
+    });
+    try {
+        return await server.transformIndexHtml(
+            `/${file}`,
+            readFileSync(path.join(APP_DIR, file), 'utf8'),
+        );
+    } finally {
+        await server.close();
+    }
+};
+
+test('the tag is an inline classic script prepended to <head>', () => {
+    expect(THEME_INIT_ENTRY).toBe('app.html');
+    expect(THEME_INIT_TAG).toEqual({
+        tag: 'script',
+        children: THEME_INIT_SCRIPT,
+        injectTo: 'head-prepend',
+    });
+});
+
+test('app.html gets the script as the first element of <head>, byte for byte', async () => {
+    const html = await transform('app.html');
+    const head = /<head>\s*([\s\S]*?)<\/head>/.exec(html)?.[1] ?? '';
+
+    expect(head.startsWith(`<script>${THEME_INIT_SCRIPT}</script>`)).toBe(true);
+    expect(html.split(THEME_INIT_SCRIPT)).toHaveLength(2);
+});
+
+test('the public index.html does not get the script', async () => {
+    const html = await transform('index.html');
+
+    expect(html).not.toContain('Chipin_theme');
 });

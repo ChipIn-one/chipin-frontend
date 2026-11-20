@@ -32,6 +32,7 @@
             "components/*": ["./src/components/*"],
             "basics": ["./src/basics"],
             "basics/*": ["./src/basics/*"],
+            "design-system/*": ["./src/design-system/*"],
             "assets/*": ["./src/assets/*"],
             "styles/*": ["./src/styles/*"]
         }
