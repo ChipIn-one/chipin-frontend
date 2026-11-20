@@ -37,7 +37,7 @@ Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00
 
 ## Commands
 
-- Local runs: agents (sessions, tracks, subagents) run only fast, light checks on a developer machine, at most about 2 minutes per check pass: `npm run verify` and `npm run test:task -- <paths>` with the smallest set of test files. Never run `npm run verify:full`, `npm run test:full`, a full `vitest run`, `npm run build`, the ds-gallery or site build, or e2e locally. If `verify` alone grows past ~2 minutes, run instead `npx prettier --check` and `npx eslint` on the changed files, `test:task`, and `npm run typecheck` only if it fits. CI is the full gate: push, read CI, and fix a red CI with a new commit.
+- Local runs: agents (sessions, tracks, subagents) run only fast, light checks on a developer machine, at most about 2 minutes per check pass: `npm run verify` and `npm run test:task -- <paths>` with the smallest set of test files. Never run `npm run verify:full`, `npm run test:full`, a full `vitest run`, `npm run build`, the ds-gallery or site build, or e2e locally. If `verify` alone grows past ~2 minutes, run instead `npx prettier --check` and `npx eslint` on the changed files, `npm run check:file-layout`, `test:task`, and `npm run typecheck` only if it fits. CI is the full gate: push, read CI, and fix a red CI with a new commit.
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.

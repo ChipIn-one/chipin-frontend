@@ -69,8 +69,8 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   per check pass: `npm run verify` and `npm run test:task -- <paths>` with the smallest set of test
   files. Never run `npm run verify:full`, `npm run test:full`, a full `vitest run`, `npm run build`,
   the ds-gallery or site build, or e2e on a developer machine. If `verify` alone grows past ~2
-  minutes, run instead `npx prettier --check` and `npx eslint` on the changed files, `test:task`,
-  and `npm run typecheck` only if it fits. CI is the full gate; a red CI is fixed with a new commit.
+  minutes, run instead `npx prettier --check` and `npx eslint` on the changed files,
+  `npm run check:file-layout`, `test:task`, and `npm run typecheck` only if it fits. CI is the full gate; a red CI is fixed with a new commit.
 - During development: use `npm run test:task -- <explicit test paths>`; this command refuses to run
   without at least one test path.
 - Select tests by the changed behavior: pure helper/selector changes use their co-located tests,
