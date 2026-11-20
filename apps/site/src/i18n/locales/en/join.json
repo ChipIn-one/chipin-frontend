@@ -1,0 +1,14 @@
+{
+    "title": "ChipIn — Invitation",
+    "description": "Open your ChipIn invitation to join a group or add a friend.",
+    "group": {
+        "heading": "You are invited to a group on ChipIn"
+    },
+    "friend": {
+        "heading": "You are invited to connect on ChipIn"
+    },
+    "open": "Open invitation",
+    "broken": "The link is broken. Ask for a new invitation link.",
+    "goHome": "Go to the ChipIn home page",
+    "noscript": "Turn on JavaScript to open the invitation."
+}

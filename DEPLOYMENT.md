@@ -146,6 +146,12 @@ The Vercel project remains connected to `ChipIn-one/chipin-frontend`.
   `VITE_CHIPIN_ENV=prod`.
 - Existing Sentry/runtime variables remain scoped to the environments where they
   are required.
+- The site project `chipin-site` (`apps/site`, spec 04 §4.4) needs
+  `PUBLIC_APP_ORIGIN`, the app origin of its buttons and invite landing:
+  Preview `https://app-dev.chipin.one`, Production `https://app.chipin.one`. A
+  Vercel build of the site fails while it is unset or not a bare `https` origin,
+  so set both before the first site build that needs it (04-3c) and before
+  Promote.
 
 No paid custom Vercel environment is required.
 

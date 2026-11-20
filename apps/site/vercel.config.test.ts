@@ -498,3 +498,82 @@ describe('kill-switch and assetlinks (§3.6, §4.6)', () => {
         expect(site.equals(app)).toBe(true);
     });
 });
+
+// ---- 04-3c: the invite landing (spec 04 §3.5, §4.3; KB USR-080, USR-085) ----
+
+describe('invite landing (§3.5)', () => {
+    /** Where the rewrites send a path that no file and no redirect serves. */
+    const rewrite = (path: string): string | undefined => {
+        const afterFilesystem = routes.slice(routes.findIndex(route => 'handle' in route) + 1);
+
+        for (const route of afterFilesystem as (EvaluatedRoute & { dest?: string })[]) {
+            const match = route.src === undefined ? null : new RegExp(route.src).exec(path);
+
+            if (match !== null && route.dest !== undefined) {
+                return route.dest.replace(
+                    /\$(\d+)/g,
+                    (_, index: string) => match[Number(index)] ?? '',
+                );
+            }
+        }
+        return undefined;
+    };
+
+    test.each([
+        [`/join/group/${TOKEN}`, '/join/group'],
+        [`/join/group/${TOKEN}/`, '/join/group'],
+        [`/join/friend/${TOKEN}`, '/join/friend'],
+        ['/join/group/short', '/join/group'],
+    ])('USR-080 rewrites %s to the page %s', (path, page) => {
+        expect(rewrite(path)).toBe(page);
+    });
+
+    test.each(['/join/other/x', '/join/group', '/join/group/a/b', '/x/join/group/a'])(
+        'USR-080 does not rewrite %s',
+        path => {
+            expect(rewrite(path)).toBeUndefined();
+        },
+    );
+
+    test('USR-080 every rewrite is the invite landing', () => {
+        expect((config as { rewrites?: unknown[] }).rewrites).toEqual([
+            { source: '/join/:kind(group|friend)/:token{/}?', destination: '/join/:kind' },
+        ]);
+    });
+
+    test.each(ALL_HOSTS)('USR-085 on %s the landing sends no referrer', host => {
+        for (const path of [`/join/group/${TOKEN}`, `/join/friend/${TOKEN}`, '/join/group']) {
+            expect(request(path, host)).toMatchObject({
+                status: 200,
+                headers: { 'Referrer-Policy': 'no-referrer' },
+            });
+        }
+        expect(request('/', host).headers['Referrer-Policy']).toBe(
+            'strict-origin-when-cross-origin',
+        );
+        expect(request('/joiner', host).headers['Referrer-Policy']).toBe(
+            'strict-origin-when-cross-origin',
+        );
+    });
+
+    test.each([`/join/group/${TOKEN}`, '/join/group'])(
+        'USR-085 %s keeps the site CSP and the other security headers',
+        path => {
+            const { headers } = request(path, PROD);
+
+            expect(headers['Content-Security-Policy']).toBe(
+                request('/', PROD).headers['Content-Security-Policy'],
+            );
+            expect(headers['X-Frame-Options']).toBe('DENY');
+            expect(headers['X-Content-Type-Options']).toBe('nosniff');
+        },
+    );
+
+    test('USR-085 robots.txt disallows /join/ and /api/', () => {
+        const robots = readFileSync(join(SITE_DIR, 'public/robots.txt'), 'utf8');
+        const disallowed = [...robots.matchAll(/^Disallow:\s*(\S+)\s*$/gm)].map(match => match[1]);
+
+        expect(disallowed).toEqual(expect.arrayContaining(['/join/', '/api/']));
+        expect(robots).toMatch(/^User-agent: \*$/m);
+    });
+});

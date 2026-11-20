@@ -37,6 +37,7 @@ const JS_TYPES = new Set([
 ]);
 
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
+const VERCEL_SCRIPT = /^\/_vercel\//;
 
 type Attributes = Map<string, string>;
 
@@ -98,7 +99,14 @@ const localScriptPaths = (html: string): string[] => {
             .map(attributes => attributes.get('href')),
     ];
 
-    return [...new Set(sources.filter((src): src is string => !!src && /^\/(?!\/)/.test(src)))];
+    // `/_vercel/*` (Web Analytics, Speed Insights) is served by the platform, not by the build.
+    return [
+        ...new Set(
+            sources.filter(
+                (src): src is string => !!src && /^\/(?!\/)/.test(src) && !VERCEL_SCRIPT.test(src),
+            ),
+        ),
+    ];
 };
 
 interface ScriptInfo {

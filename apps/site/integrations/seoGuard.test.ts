@@ -93,6 +93,17 @@ describe('seoGuard checkPage', () => {
         },
     );
 
+    // USR-084: other pages load analytics; `/_vercel/*` is served by Vercel, not by the build.
+    test('USR-084 analytics scripts of other pages need no file in the build', () => {
+        const html = page(
+            HEAD,
+            '<script defer src="/_vercel/insights/script.js"></script>' +
+                '<script defer src="/_vercel/speed-insights/script.js"></script>',
+        );
+
+        expect(problemsOf('index.html', html)).toEqual([]);
+    });
+
     test.each(['<style>p{}</style>', '<p style="color:red">x</p>'])(
         'fails on inline style %s',
         html => {
