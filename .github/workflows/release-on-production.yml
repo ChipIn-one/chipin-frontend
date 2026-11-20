@@ -1,5 +1,6 @@
 # Release caller for the frontend (chipin-frontend#586; registry `release: deploy-tag / production-deploy`,
-# ChipIn-one/.github docs/workflow/release.md). Vercel writes a `Production` deployment at Promote to Production and can
+# ChipIn-one/.github docs/workflow/release.md). Vercel writes an app Production deployment (`Production` or
+# `Production – chipin-frontend`) at Promote to Production and can
 # re-post a success status on an older Production deployment; every successful vercel[bot] status runs the guard, and
 # a passed guard runs the reusable release workflow pinned to an org tag, which derives the version from
 # `## Version impact` of the PRs merged into master since the previous tag and creates the tag and the GitHub Release on

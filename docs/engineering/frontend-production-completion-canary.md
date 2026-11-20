@@ -53,11 +53,14 @@ closed by hand.
    `master`. The Vercel Production Branch stays `main` (a placeholder
    that receives no pushes) and `apps/app/vercel.json` disables Git deployments for it, so no
    push creates a production build. Preview builds of `master` create only
-   GitHub Deployments `Preview`.
+   GitHub Deployments `Preview` (`Preview – chipin-frontend` since the second
+   Vercel project is connected, [Two projects](release-qa.md#two-projects)).
 3. The owner opens the chosen commit's deployment and runs **Promote to
    Production**; Vercel rebuilds that commit with production environment
    variables and assigns `chipin.one`. Vercel records that production
-   deployment as a GitHub Deployment, environment `Production`, creator
+   deployment as a GitHub Deployment, environment `Production` (most likely
+   `Production – chipin-frontend` since the second Vercel project is connected,
+   [Two projects](release-qa.md#two-projects)), creator
    `vercel[bot]`, with the exact commit SHA and a `success` status. Verified at
    cutover step 7 of #497: Deployment `Production` 7254813070 on `e6d2f2e`
    (2026-10-22T14:24:47Z).

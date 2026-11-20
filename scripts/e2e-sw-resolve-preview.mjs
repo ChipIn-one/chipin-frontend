@@ -195,7 +195,8 @@ export const createGitHubClient = ({ repository, token, fetchImpl = fetch }) => 
         readPull: number => get(`/pulls/${number}`),
         readDeployments: sha =>
             // No `environment` filter: GitHub matches it exactly and the app's Preview has two names
-            // (scripts/deployment-environments.mjs); pickPreview keeps only the app's.
+            // (scripts/deployment-environments.mjs); pickPreview keeps only the app's. One page of 100
+            // covers a commit: its app and site Previews plus at most a few Production deployments.
             list(`/deployments?sha=${assertFullSha(sha)}&per_page=100`).then(deployments =>
                 Promise.all(
                     deployments.map(deployment =>

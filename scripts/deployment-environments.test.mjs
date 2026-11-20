@@ -89,8 +89,12 @@ describe('app environment names', () => {
 describe('workflows filter the deployment environment only through the shared list', () => {
     test.each(workflowFiles)('%s has no hand-written environment comparison', name => {
         const text = readWorkflow(name);
-        expect(text).not.toMatch(/deployment(_status)?\.environment\s*[!=]=/u);
-        for (const [, array] of text.matchAll(CONDITION)) {
+        // Every reference to the environment is the shared condition: no `==`, `contains(<env>, …)`,
+        // `startsWith(…)` or other hand-written test, and no `deployment_status.environment`.
+        const references = text.match(/deployment(_status)?\.environment\b/gu) ?? [];
+        const conditions = [...text.matchAll(CONDITION)];
+        expect(references).toHaveLength(conditions.length);
+        for (const [, array] of conditions) {
             const names = JSON.parse(array);
             expect([APP_ENVIRONMENTS.Production, APP_ENVIRONMENTS.Preview]).toContainEqual(names);
         }
