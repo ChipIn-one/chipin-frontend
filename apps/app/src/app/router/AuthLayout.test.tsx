@@ -378,7 +378,11 @@ describe('the explicit sign-out of this tab', () => {
                 void useAuthStore.getState().signOut();
             });
 
-            expect(assign).toHaveBeenCalledExactlyOnceWith(landing);
+            // Protected UI is gone at once; the page is left once the logout and deletes settle.
+            expect(screen.queryByLabelText('Draft')).toBeNull();
+            await waitFor(() => {
+                expect(assign).toHaveBeenCalledExactlyOnceWith(landing);
+            });
             expect(screen.getByLabelText('Current route').textContent).toBe(
                 '/group/123?tab=members',
             );

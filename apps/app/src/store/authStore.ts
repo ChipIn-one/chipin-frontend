@@ -116,41 +116,61 @@ const resetUserStores = () => {
 
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).
 // Synchronous: `LS_KEY_USER` is set first (it moves this tab's user, and the app-mode reset reads
-// its settings), then `clearUserData`, whose IDB deletes are not awaited (writes are blocked
-// already, a failure is reported). Without a cached id there is no user cache to delete; the
-// stores and the draft are reset all the same.
-const dropUserData = (userId: string | undefined, nextUserId: string | null = null): void => {
+// its settings), then `clearUserData`. Returns its IDB deletes (never rejects, a failure is
+// reported): a sign-in does not wait for them (writes are blocked already), a sign-out in this tab
+// does before it leaves the page. Without a cached id there is no user cache to delete; the stores
+// and the draft are reset all the same.
+const dropUserData = (
+    userId: string | undefined,
+    nextUserId: string | null = null,
+): Promise<void> => {
     moveLocalUser(nextUserId);
     if (userId === undefined) {
         resetUserStores();
-        return;
+        return Promise.resolve();
     }
-    void clearUserData(userId, resetUserStores);
+    return clearUserData(userId, resetUserStores);
 };
 
 // §1.5 kept users (03-16a part C, offline writes on): the data of the users a refresh switch kept
 // on this device goes with the next sign-out or account switch, which counted their operations
 // (the confirm of this tab or of the initiating one). `exceptUserId` (the user signing in) stays.
-const dropKeptUsers = (exceptUserId: string | null = null): void => {
+const dropKeptUsers = (exceptUserId: string | null = null): Promise<void> => {
     if (!isOfflineWritesFlagOn()) {
-        return;
+        return Promise.resolve();
     }
     const kept = getKeptOutboxUsers().filter(userId => userId !== exceptUserId);
+    const deletes = kept.map(userId => clearUserData(userId, () => undefined));
 
-    kept.forEach(userId => {
-        void clearUserData(userId, () => undefined);
-    });
     removeKeptOutboxUsers(kept);
+    return Promise.all(deletes).then(() => undefined);
 };
 
-// A sign-out in this tab or a remote one (`signed_out`).
-const dropSignedOutUser = (): void => {
+// A sign-out in this tab or a remote one (`signed_out`). Returns the IDB deletes (never rejects).
+const dropSignedOutUser = (): Promise<void> => {
     // A later sign-in with the same code must reach the server, not this session's result.
     lastOAuthExchange = null;
     dismissAccountSwitchConfirm();
-    dropUserData(cachedUserId());
-    dropKeptUsers();
+    const deletes = [dropUserData(cachedUserId()), dropKeptUsers()];
+
+    return Promise.all(deletes).then(() => undefined);
 };
+
+/** The sign-out of this tab leaves the page at the latest this long after it starts. */
+export const SIGN_OUT_LEAVE_TIMEOUT_MS = 3000;
+/** Still on the page this long after leaving (navigation cancelled): `/login` applies again. */
+export const SIGN_OUT_LEAVING_MAX_MS = 5000;
+
+/** Resolves when `work` settles or after `ms`, whichever is first; never rejects. */
+const settledWithin = (work: Promise<unknown>, ms: number): Promise<void> =>
+    new Promise<void>(resolve => {
+        const timer = setTimeout(resolve, ms);
+
+        void Promise.allSettled([work]).then(() => {
+            clearTimeout(timer);
+            resolve();
+        });
+    });
 
 // The session now belongs to `nextUserId` (null: the token has no readable `sub`, treated as
 // another user). After a sign-in it runs right after the new session is established, so the
@@ -168,7 +188,7 @@ const dropOtherUserData = (
     const switched = previousUserId !== undefined && previousUserId !== nextUserId;
 
     if (switched) {
-        dropUserData(previousUserId, nextUserId);
+        void dropUserData(previousUserId, nextUserId);
     }
     const draft = useExpenseModalStore.getState();
 
@@ -252,9 +272,14 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 
     setUnauthenticated: reason => {
+        // This tab signed out and is leaving for the landing: an expiry or an error of a request
+        // still in flight must not turn the sign-out into `AuthModal` (the data is gone already).
+        if (reason !== UNAUTH_REASON.SIGNED_OUT && isLeavingAfterOwnSignOut()) {
+            return;
+        }
         if (reason === UNAUTH_REASON.SIGNED_OUT) {
             // A remote logout: the initiating tab confirmed it, this tab deletes the same data.
-            dropSignedOutUser();
+            void dropSignedOutUser();
         } else {
             // Any session change answers an open account-switch question with Cancel (M1).
             dismissAccountSwitchConfirm();
@@ -275,6 +300,9 @@ export const useAuthStore = create<AuthStore>(set => ({
 
     // Expiry ≠ logout (§1.5): the cache, the outbox and the draft stay, only the role goes.
     expireSession: () => {
+        if (isLeavingAfterOwnSignOut()) {
+            return;
+        }
         dismissAccountSwitchConfirm();
         invalidateAuthSession();
         clearLocalUserRole();
@@ -302,7 +330,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                     establishAuthSession(token);
                     dropOtherUserData(nextUserId, previousUserId);
                     // 03-16a part C: the kept users were counted with X; a kept Y goes on.
-                    dropKeptUsers(nextUserId);
+                    void dropKeptUsers(nextUserId);
                     if (nextUserId !== null && isOfflineWritesFlagOn()) {
                         removeKeptOutboxUsers([nextUserId]);
                     }
@@ -419,13 +447,15 @@ export const useAuthStore = create<AuthStore>(set => ({
             return signOutPromise;
         }
 
-        // Start the best-effort server logout, but leave protected UI immediately: a full
-        // navigation to the landing in the last account's language (spec 04 §2.3), read before the
-        // user data goes. `isLeavingAfterSignOut` is set in the same update as `signed_out`, so no
-        // render sees the sign-out without it and nothing redirects to `/login?returnTo=`.
+        // Leave protected UI immediately; leave the page (a full navigation to the landing in the
+        // last account's language, spec 04 §2.3, read before the user data goes) only once the
+        // server logout (refresh cookie) and the IDB deletes settle, at most
+        // SIGN_OUT_LEAVE_TIMEOUT_MS: an unload aborts both (invariant 12). `isLeavingAfterSignOut`
+        // is set in the same update as `signed_out`, so no render sees the sign-out without it and
+        // nothing redirects to `/login?returnTo=`; it is bounded (`leaveForLanding`).
         const landingPath = getLastAccountLandingPath();
         const logoutRequest = startAuthLogout();
-        dropSignedOutUser();
+        const deletes = dropSignedOutUser();
         set({
             status: AUTH_STATUS.UNAUTHENTICATED,
             unauthReason: UNAUTH_REASON.SIGNED_OUT,
@@ -433,7 +463,11 @@ export const useAuthStore = create<AuthStore>(set => ({
             sessionMode: SESSION_MODE.ONLINE,
             isLeavingAfterSignOut: true,
         });
-        window.location.assign(landingPath);
+        void settledWithin(Promise.all([logoutRequest, deletes]), SIGN_OUT_LEAVE_TIMEOUT_MS).then(
+            () => {
+                leaveForLanding(landingPath);
+            },
+        );
 
         signOutPromise = logoutRequest.finally(() => {
             signOutPromise = null;
@@ -441,6 +475,24 @@ export const useAuthStore = create<AuthStore>(set => ({
         return signOutPromise;
     },
 }));
+
+// The sign-out of this tab set `signed_out` with `isLeavingAfterSignOut` and has not left yet.
+function isLeavingAfterOwnSignOut(): boolean {
+    const { unauthReason, isLeavingAfterSignOut } = useAuthStore.getState();
+
+    return isLeavingAfterSignOut && unauthReason === UNAUTH_REASON.SIGNED_OUT;
+}
+
+// The full navigation of a sign-out. If the page is still here SIGN_OUT_LEAVING_MAX_MS later (the
+// navigation failed or was cancelled), the leaving state ends: protected routes go to `/login`.
+function leaveForLanding(landingPath: string): void {
+    window.location.assign(landingPath);
+    setTimeout(() => {
+        if (isLeavingAfterOwnSignOut()) {
+            useAuthStore.setState({ isLeavingAfterSignOut: false });
+        }
+    }, SIGN_OUT_LEAVING_MAX_MS);
+}
 
 const reloadOnlineSession = (): void => {
     const { status, sessionMode } = useAuthStore.getState();
