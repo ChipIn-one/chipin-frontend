@@ -2,24 +2,33 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import axios, { type AxiosAdapter } from 'axios';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ThemeProvider } from 'styled-components';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 
 import { InvalidPathSegmentError } from 'api/apiPath';
 import { apiInstance } from 'api/chipin.instance';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { i18n } from 'i18n';
 import { api } from 'shared/api/client';
+import { startCacheRestore } from 'shared/offline/restore';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { createTestQueryClient } from 'test/renderWithQueryClient';
 
-import AppRouter from './AppRouter';
+import { buildAppRoutes } from './createAppRouter';
 
 vi.mock('assets/logo.svg?react', () => ({
     default: () => <svg aria-hidden />,
 }));
+
+// The route tree with its guards and the real join page; the shell is not under test here.
+vi.mock('./RootLayout', async () => {
+    const { Outlet } = await import('react-router-dom');
+
+    return { RootLayout: () => <Outlet /> };
+});
 
 vi.mock('sonner', () => ({
     toast: {
@@ -46,6 +55,13 @@ const recordingAdapter = vi.fn<AxiosAdapter>(config => {
     });
 });
 
+let routers: ReturnType<typeof createMemoryRouter>[] = [];
+
+// What root.tsx does before the router renders: `restoreReady` resolves (no user cache to restore).
+beforeAll(() => {
+    startCacheRestore(undefined);
+});
+
 beforeEach(() => {
     recordedPathnames.length = 0;
     apiInstance.defaults.adapter = recordingAdapter;
@@ -57,17 +73,22 @@ beforeEach(() => {
 
 afterEach(() => {
     apiInstance.defaults.adapter = defaultAdapter;
+    routers.forEach(router => router.dispose());
+    routers = [];
 });
 
 test('a crafted group invite link never reaches the API and never hits /kick', () => {
+    const router = createMemoryRouter(buildAppRoutes(createTestQueryClient()), {
+        initialEntries: [TRAVERSAL_ROUTE],
+    });
+
+    routers.push(router);
     render(
-        <MemoryRouter initialEntries={[TRAVERSAL_ROUTE]}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <AppRouter />
-                </Theme>
-            </ThemeProvider>
-        </MemoryRouter>,
+        <ThemeProvider theme={lightThemeStyled}>
+            <Theme>
+                <RouterProvider router={router} />
+            </Theme>
+        </ThemeProvider>,
     );
 
     return screen.findByRole('heading', { name: i18n.t('group:join.invalidTitle') }).then(() => {

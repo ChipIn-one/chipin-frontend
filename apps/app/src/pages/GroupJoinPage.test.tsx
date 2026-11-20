@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
-import { ProtectedRoute } from 'features/routing/ProtectedRoute';
 import { clearLocalUserIdentity } from 'helpers/localStorage';
 import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
@@ -74,23 +73,12 @@ const LeavePage = () => {
     );
 };
 
-const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) =>
+const renderPage = (inviteToken = TEST_INVITE_TOKEN) =>
     render(
         <MemoryRouter initialEntries={[`${ROUTES.GROUP_JOIN}/${inviteToken}`]}>
             <Theme>
                 <Routes>
-                    <Route
-                        path={`${ROUTES.GROUP_JOIN}/:inviteToken`}
-                        element={
-                            isProtected ? (
-                                <ProtectedRoute>
-                                    <GroupJoinPage />
-                                </ProtectedRoute>
-                            ) : (
-                                <GroupJoinPage />
-                            )
-                        }
-                    />
+                    <Route path={`${ROUTES.GROUP_JOIN}/:inviteToken`} element={<GroupJoinPage />} />
                     <Route path="*" element={null} />
                 </Routes>
                 <CurrentRoute />
@@ -387,30 +375,7 @@ test('ignores a join response after the page unmounts', async () => {
     expect(toast.success).not.toHaveBeenCalled();
 });
 
-// Known hotfix behaviour, changed deliberately by PR 04-2f (`/login?returnTo`).
-test('a signed-out user is sent to the landing page and the invite is not joined', () => {
-    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
-
-    renderPage(TEST_INVITE_TOKEN, true);
-
-    expect(currentRoute()).toBe('/');
-    expect(mocks.joinGroup).not.toHaveBeenCalled();
-});
-
-test('an expired session shows the auth modal, then the confirmation screen without joining', () => {
-    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
-
-    renderPage(TEST_INVITE_TOKEN, true);
-
-    expect(screen.getByTestId('auth-modal')).toBeTruthy();
-
-    act(() => {
-        useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
-    });
-
-    expect(joinButton()).toBeTruthy();
-    expect(mocks.joinGroup).not.toHaveBeenCalled();
-});
+// The signed-out and expired-session cases under the auth guard: `app/router/joinPagesAuth.test.tsx`.
 
 // Issue #730: before `/users/self` answers the page still runs on the anonymous client, where a
 // join is refused. The page is rendered on `pageClient`; a new `key` remounts it, as the app does

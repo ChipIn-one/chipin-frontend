@@ -1,3 +1,4 @@
+// Spec 04 §2.2: `PublicHomeGuard` replaces `HomeRouteGuard` until 04-5a; its assertions moved here.
 import { onlineManager } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -13,7 +14,7 @@ import { setupMswServer } from 'test/mswServer';
 import { signInWithSelf } from 'test/selfUser';
 import { mountAsUserClient } from 'test/userClient';
 
-import HomeRouteGuard from './HomeRouteGuard';
+import { PublicHomeGuard } from './PublicHomeGuard';
 
 const LocationPath = () => {
     const location = useLocation();
@@ -41,9 +42,9 @@ const renderGuard = () => {
                 <Route
                     path="/"
                     element={
-                        <HomeRouteGuard>
+                        <PublicHomeGuard>
                             <div />
-                        </HomeRouteGuard>
+                        </PublicHomeGuard>
                     }
                 />
                 <Route path="/dashboard" element={<LocationPath />} />
