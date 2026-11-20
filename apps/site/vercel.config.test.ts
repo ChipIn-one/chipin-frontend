@@ -4,6 +4,7 @@ import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 
 import { cspScriptHashes } from './integrations/seoGuard';
+import { NON_DEFAULT_LOCALES } from './src/i18n/locales';
 
 // Reads the committed, hand-written apps/site/vercel.json and evaluates it with Vercel's own
 // route transformer (spec 04 §1.5a, §2.9). 04-3d extends this file with the §4.2 redirects.
@@ -122,7 +123,7 @@ describe('apps/site/vercel.json', () => {
 
     // §3.2: one URL form per page; the sitemap has one name.
     test.each([
-        ['/ru', '/ru/'],
+        ...NON_DEFAULT_LOCALES.map(locale => [`/${locale}`, `/${locale}/`]),
         ['/sitemap.xml', '/sitemap-index.xml'],
     ])('%s is a 301 to %s', (path, location) => {
         expect(request(path, PROD)).toMatchObject({ status: 301, location });

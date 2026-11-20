@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
-import { join, relative, sep } from 'node:path';
+import { join, posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
@@ -12,12 +12,15 @@ import type { AstroIntegration } from 'astro';
 /** JS budget per page, gzipped (§3.6). */
 const JS_BUDGET_GZ_BYTES = 30 * 1024;
 
-// Session data or tokens must never be rendered into public HTML (prerender-public.mjs).
-const FORBIDDEN_CONTENT = [
-    /(?:refreshToken|accessToken|inviteToken|sessionStorage)/i,
-    // A JWT: base64url header `{"…` and payload.
-    /eyJ[\w-]{10,}\.[\w-]{10,}/,
-];
+// Session data or tokens must never be rendered into public HTML (prerender-public.mjs). The
+// names are checked outside `<script>` (the 04-3c invite script may name its variables), a JWT
+// everywhere.
+const FORBIDDEN_TEXT = /(?:refreshToken|accessToken|inviteToken|sessionStorage)/i;
+// A JWT: base64url header `{"…` and payload.
+const JWT = /eyJ[\w-]{10,}\.[\w-]{10,}/;
+
+const SCRIPT_ELEMENT = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+const JS_TYPES = new Set(['', 'module', 'text/javascript', 'application/javascript']);
 
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
 
@@ -43,10 +46,16 @@ const tags = (html: string, name: string): Attributes[] =>
         parseAttributes(match[1] ?? ''),
     );
 
-/** The text of every `<script>` without `src` (the CSP hash input). */
+const withoutComments = (html: string): string => html.replace(/<!--[\s\S]*?-->/g, '');
+
+/** The text of every executable `<script>` without `src` (the CSP hash input). */
 const inlineScripts = (html: string): string[] =>
-    [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
-        .filter(match => !parseAttributes(match[1] ?? '').has('src'))
+    [...withoutComments(html).matchAll(SCRIPT_ELEMENT)]
+        .filter(match => {
+            const attributes = parseAttributes(match[1] ?? '');
+
+            return !attributes.has('src') && JS_TYPES.has(attributes.get('type') ?? '');
+        })
         .map(match => match[2] ?? '');
 
 /** The CSP source of an inline script: `'sha256-…'`. */
@@ -65,16 +74,32 @@ const localScriptPaths = (html: string): string[] => {
     return [...new Set(sources.filter((src): src is string => !!src && /^\/(?!\/)/.test(src)))];
 };
 
+interface ScriptInfo {
+    /** Gzipped size in bytes. */
+    size: number;
+    /** URL paths of the scripts it imports statically (they load with the page). */
+    imports: string[];
+}
+
 interface PageInput {
     /** Path inside `dist`, `/`-separated (`ru/index.html`). */
     file: string;
     html: string;
-    /** The gzipped size of a same-origin script by its URL path; `undefined` if it is missing. */
-    scriptSize: (path: string) => number | undefined;
+    /** A same-origin script of the build by its URL path; `undefined` if it is missing. */
+    script: (path: string) => ScriptInfo | undefined;
 }
 
+/** Static `import`/`export … from` specifiers of a built ES module, as URL paths. */
+const staticImports = (path: string, code: string): string[] =>
+    [...code.matchAll(/(?:\bimport|\bexport)\s*(?:[\w$*{}\s,]+?\s*from\s*)?["']([^"']+)["']/g)]
+        .map(match => match[1] ?? '')
+        .filter(specifier => specifier.startsWith('/') || specifier.startsWith('.'))
+        .map(specifier =>
+            specifier.startsWith('/') ? specifier : posix.join(posix.dirname(path), specifier),
+        );
+
 /** The rule violations of one built page. */
-const checkPage = ({ file, html, scriptSize }: PageInput): string[] => {
+const checkPage = ({ file, html, script }: PageInput): string[] => {
     const problems: string[] = [];
     const title = /<title>([^<]*)<\/title>/i.exec(html)?.[1]?.trim();
     const description = tags(html, 'meta')
@@ -88,7 +113,7 @@ const checkPage = ({ file, html, scriptSize }: PageInput): string[] => {
     if (!description) {
         problems.push(`${file}: missing <meta name="description">`);
     }
-    if (FORBIDDEN_CONTENT.some(pattern => pattern.test(html))) {
+    if (FORBIDDEN_TEXT.test(withoutComments(html).replace(SCRIPT_ELEMENT, '')) || JWT.test(html)) {
         problems.push(`${file}: token-like or session content in the HTML`);
     }
     // The invite token must not reach analytics (A-15).
@@ -99,16 +124,46 @@ const checkPage = ({ file, html, scriptSize }: PageInput): string[] => {
     if (/<style\b/i.test(html) || /\sstyle\s*=/i.test(html)) {
         problems.push(`${file}: inline style (build.inlineStylesheets must stay 'never')`);
     }
+    // The CSP blocks inline handlers and `javascript:` URLs: they would silently not work.
+    const elements = [...withoutComments(html).matchAll(/<[a-z][\w-]*\b([^>]*)>/gi)].map(match =>
+        parseAttributes(match[1] ?? ''),
+    );
 
-    let jsBytes = 0;
+    if (elements.some(attributes => [...attributes.keys()].some(name => /^on[a-z]+$/.test(name)))) {
+        problems.push(`${file}: inline event handler attribute`);
+    }
+    if (
+        elements.some(attributes =>
+            [...attributes.values()].some(value => /^\s*javascript:/i.test(value)),
+        )
+    ) {
+        problems.push(`${file}: javascript: URL`);
+    }
+    // §3.6: islands hydrate only with client:visible or client:idle.
+    if (tags(html, 'astro-island').some(attributes => attributes.get('client') === 'load')) {
+        problems.push(`${file}: island with client:load`);
+    }
 
-    for (const path of localScriptPaths(html)) {
-        const size = scriptSize(path);
+    // The page's scripts and everything they import statically, plus its inline scripts.
+    let jsBytes = inlineScripts(html).reduce(
+        (sum, text) => sum + gzipSync(Buffer.from(text, 'utf8')).length,
+        0,
+    );
+    const seen = new Set<string>();
+    const queue = localScriptPaths(html);
 
-        if (size === undefined) {
+    for (let path = queue.shift(); path !== undefined; path = queue.shift()) {
+        if (seen.has(path)) {
+            continue;
+        }
+        seen.add(path);
+        const info = script(path);
+
+        if (info === undefined) {
             problems.push(`${file}: script ${path} is not in the build`);
         } else {
-            jsBytes += size;
+            jsBytes += info.size;
+            queue.push(...info.imports);
         }
     }
     if (jsBytes > JS_BUDGET_GZ_BYTES) {
@@ -129,11 +184,16 @@ const cspScriptHashes = (vercelJson: unknown): string[] => {
         typeof vercelJson === 'object' && vercelJson !== null && 'headers' in vercelJson
             ? (vercelJson.headers as HeaderRule[])
             : [];
-    const csp = rules
-        .filter(rule => rule.source === '/(.*)' && rule.has === undefined)
-        .flatMap(rule => rule.headers ?? [])
-        .find(header => header.key === 'Content-Security-Policy')?.value;
+    const cspRules = rules.filter(rule =>
+        (rule.headers ?? []).some(header => header.key === 'Content-Security-Policy'),
+    );
+    // One CSP for every path: a per-path CSP (e.g. `/join/(.*)`) needs a per-path hash check here.
+    const [rule, ...others] = cspRules;
+    const csp = rule?.headers?.find(header => header.key === 'Content-Security-Policy')?.value;
 
+    if (others.length > 0 || rule?.source !== '/(.*)' || rule.has !== undefined) {
+        throw new Error('vercel.json: expected exactly one Content-Security-Policy, on /(.*)');
+    }
     if (typeof csp !== 'string') {
         throw new Error('vercel.json: no Content-Security-Policy on /(.*)');
     }
@@ -171,13 +231,19 @@ const listFiles = async (dir: string): Promise<string[]> => {
 /** Checks the whole `dist`; returns every violation. */
 const checkBuild = async (distDir: string, vercelJson: unknown): Promise<string[]> => {
     const files = await listFiles(distDir);
-    const gzSizes = new Map<string, number>();
+    const scripts = new Map<string, ScriptInfo>();
 
     await Promise.all(
         files
             .filter(file => /\.m?js$/.test(file))
             .map(async file => {
-                gzSizes.set(`/${file}`, gzipSync(await readFile(join(distDir, file))).length);
+                const code = await readFile(join(distDir, file));
+                const path = `/${file}`;
+
+                scripts.set(path, {
+                    size: gzipSync(code).length,
+                    imports: staticImports(path, code.toString('utf8')),
+                });
             }),
     );
 
@@ -187,7 +253,7 @@ const checkBuild = async (distDir: string, vercelJson: unknown): Promise<string[
     for (const file of files.filter(name => name.endsWith('.html')).sort()) {
         const html = await readFile(join(distDir, file), 'utf8');
 
-        problems.push(...checkPage({ file, html, scriptSize: path => gzSizes.get(path) }));
+        problems.push(...checkPage({ file, html, script: path => scripts.get(path) }));
         inline.push(...inlineScripts(html));
     }
     problems.push(...checkCspHashes(inline, cspScriptHashes(vercelJson)));
@@ -218,4 +284,5 @@ export {
     inlineScripts,
     scriptHash,
     seoGuard,
+    staticImports,
 };

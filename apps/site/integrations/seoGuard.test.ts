@@ -4,7 +4,15 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, test } from 'vitest';
 
-import { checkBuild, checkCspHashes, checkPage, cspScriptHashes, scriptHash } from './seoGuard';
+import {
+    checkBuild,
+    checkCspHashes,
+    checkPage,
+    cspScriptHashes,
+    inlineScripts,
+    scriptHash,
+    staticImports,
+} from './seoGuard';
 
 const page = (head: string, body = '') =>
     `<!DOCTYPE html><html lang="en"><head>${head}</head><body>${body}</body></html>`;
@@ -14,8 +22,15 @@ const noScripts = () => undefined;
 const problemsOf = (
     file: string,
     html: string,
-    scriptSize: (path: string) => number | undefined = noScripts,
-) => checkPage({ file, html, scriptSize });
+    script: (path: string) => { size: number; imports: string[] } | undefined = noScripts,
+) => checkPage({ file, html, script });
+
+/** Scripts by path: `[gzipped size, imports]`. */
+const graph = (scripts: Record<string, [number, string[]?]>) => (path: string) => {
+    const entry = scripts[path];
+
+    return entry && { size: entry[0], imports: entry[1] ?? [] };
+};
 
 const vercelJson = (scriptSrc: string) => ({
     headers: [
@@ -69,7 +84,7 @@ describe('seoGuard checkPage', () => {
         'fails on %s under join/ only',
         src => {
             const html = page(HEAD, `<script defer src="${src}"></script>`);
-            const size = () => 100;
+            const size = () => ({ size: 100, imports: [] });
 
             expect(problemsOf('join/group/index.html', html, size)).toEqual([
                 'join/group/index.html: analytics script on an invite page',
@@ -87,28 +102,85 @@ describe('seoGuard checkPage', () => {
         },
     );
 
-    test('counts every same-origin script once against the 30 KB gzip budget', () => {
+    test('counts every same-origin script and its static imports once against 30 KB gzip', () => {
         const html = page(
             `${HEAD}<link rel="modulepreload" href="/_astro/a.js">`,
             '<script type="module" src="/_astro/a.js"></script><script src="/_astro/b.js"></script>' +
                 '<script src="https://cdn.example/x.js"></script>',
         );
-        const sizes: Record<string, number> = {
-            '/_astro/a.js': 20 * 1024,
-            '/_astro/b.js': 10 * 1024,
+        const scripts: Record<string, [number, string[]?]> = {
+            '/_astro/a.js': [10 * 1024, ['/_astro/shared.js']],
+            '/_astro/b.js': [10 * 1024, ['/_astro/shared.js']],
+            '/_astro/shared.js': [10 * 1024, ['/_astro/a.js']],
         };
 
-        expect(problemsOf('index.html', html, path => sizes[path])).toEqual([]);
-        sizes['/_astro/b.js'] = 10 * 1024 + 1;
-        expect(problemsOf('index.html', html, path => sizes[path])).toEqual([
+        expect(problemsOf('index.html', html, graph(scripts))).toEqual([]);
+        scripts['/_astro/shared.js'] = [10 * 1024 + 1];
+        expect(problemsOf('index.html', html, graph(scripts))).toEqual([
             'index.html: 30721 B of JS gzipped, budget 30720 B',
         ]);
+    });
+
+    test('counts inline scripts against the budget', () => {
+        const big = Array.from({ length: 9000 }, (_, i) => `v${i * 7919}`).join(';');
+
+        expect(problemsOf('index.html', page(HEAD, `<script>${big}</script>`))).toEqual([
+            expect.stringMatching(/^index\.html: \d+ B of JS gzipped, budget 30720 B$/),
+        ]);
+    });
+
+    test('names like inviteToken are allowed inside a script, not in the page text', () => {
+        expect(problemsOf('index.html', page(HEAD, '<script>var inviteToken;</script>'))).toEqual(
+            [],
+        );
+        expect(problemsOf('index.html', page(HEAD, '<p>inviteToken</p>'))).toEqual([
+            'index.html: token-like or session content in the HTML',
+        ]);
+    });
+
+    test.each([
+        ['<button onclick="go()">x</button>', 'inline event handler attribute'],
+        ['<a href="javascript:go()">x</a>', 'javascript: URL'],
+        ['<astro-island client="load"></astro-island>', 'island with client:load'],
+    ])('fails on %s', (html, problem) => {
+        expect(problemsOf('index.html', page(HEAD, html))).toEqual([`index.html: ${problem}`]);
+    });
+
+    test('allows islands with client:visible', () => {
+        expect(
+            problemsOf('index.html', page(HEAD, '<astro-island client="visible"></astro-island>')),
+        ).toEqual([]);
     });
 
     test('fails on a script that is not in the build', () => {
         expect(
             problemsOf('index.html', page(HEAD, '<script src="/_astro/gone.js"></script>')),
         ).toEqual(['index.html: script /_astro/gone.js is not in the build']);
+    });
+});
+
+describe('seoGuard scripts', () => {
+    test('hashes only executable inline scripts outside comments', () => {
+        const html = page(
+            HEAD,
+            '<script>a()</script><script type="module">b()</script>' +
+                '<script type="application/ld+json">{}</script><!-- <script>c()</script> -->' +
+                '<script src="/x.js"></script>',
+        );
+
+        expect(inlineScripts(html)).toEqual(['a()', 'b()']);
+    });
+
+    test('resolves static imports of a built module to URL paths', () => {
+        const code =
+            'import{a as b}from"./chunk.js";import "/_astro/side.js";export*from"../x/y.js";' +
+            'import("./lazy.js");import x from "https://cdn.example/z.js";';
+
+        expect(staticImports('/_astro/page.js', code)).toEqual([
+            '/_astro/chunk.js',
+            '/_astro/side.js',
+            '/x/y.js',
+        ]);
     });
 });
 
@@ -120,8 +192,18 @@ describe('seoGuard CSP hashes', () => {
         expect(cspScriptHashes(vercelJson("'self'"))).toEqual([]);
     });
 
-    test('fails without a CSP', () => {
-        expect(() => cspScriptHashes({ headers: [] })).toThrow('no Content-Security-Policy');
+    test('fails without a CSP, or with more than one CSP rule', () => {
+        const csp = { key: 'Content-Security-Policy', value: "script-src 'self'" };
+
+        expect(() => cspScriptHashes({ headers: [] })).toThrow('exactly one');
+        expect(() =>
+            cspScriptHashes({
+                headers: [
+                    { source: '/(.*)', headers: [csp] },
+                    { source: '/join/(.*)', headers: [csp] },
+                ],
+            }),
+        ).toThrow('exactly one');
     });
 
     test('matches the sha256 of an inline script against the CSP both ways', () => {

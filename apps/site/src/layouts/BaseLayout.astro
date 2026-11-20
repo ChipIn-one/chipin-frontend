@@ -9,6 +9,7 @@ import {
     SUPPORTED_LOCALES,
     type SupportedLocale,
 } from '../i18n/locales';
+import { messages } from '../i18n/ui';
 
 interface Props {
     locale: SupportedLocale;
@@ -61,7 +62,7 @@ const xDefault =
         <meta property="og:site_name" content="ChipIn" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        <meta property="og:locale" content={locale} />
+        <meta property="og:locale" content={messages(locale).meta.ogLocale} />
         {canonical && <meta property="og:url" content={canonical} />}
     </head>
     <body>
