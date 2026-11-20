@@ -38,4 +38,19 @@ describe('route modules', () => {
         },
         PAGE_IMPORT_TIMEOUT,
     );
+
+    // The transitional public ids render the real public pages: a swapped module fails here.
+    it.each([
+        ['publicHome', () => import('pages/HomePage')],
+        ['publicPrivacy', () => import('pages/PrivacyPage')],
+        ['publicTerms', () => import('pages/TermsPage')],
+    ] as const)(
+        '%s renders its public page component',
+        async (id, page) => {
+            const [module, pageModule] = await Promise.all([ROUTE_MODULES[id](), page()]);
+
+            expect(module.Component).toBe(pageModule.default);
+        },
+        PAGE_IMPORT_TIMEOUT,
+    );
 });

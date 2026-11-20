@@ -22,6 +22,7 @@ import {
     validateDeployment,
     verifyCi,
 } from './core.mjs';
+import { impactChecks } from './impact-rules.mjs';
 
 const SHA = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
@@ -557,9 +558,23 @@ describe('scope and canonical QA identity', () => {
         expect(auth[0].expected).not.toMatch(/access.token.*revok/i);
     });
 
+    test('the protected-route gate (AuthLayout, requireSession) triggers AUTH-041', () => {
+        for (const file of [
+            'apps/app/src/app/router/AuthLayout.tsx',
+            'apps/app/src/app/auth/requireSession.ts',
+        ]) {
+            expect(
+                impactChecks([file], 12).map(check => check.source),
+                file,
+            ).toEqual(['AUTH-041']);
+        }
+    });
+
     test('routing, bootstrap, service worker, theme and vercel.json trigger SMOKE-SHORT; tests and plain UI do not', () => {
         for (const file of [
-            'apps/app/src/features/routing/AppRouter.tsx',
+            'apps/app/src/app/router/createAppRouter.tsx',
+            'apps/app/src/app/auth/requireSession.ts',
+            'apps/app/src/features/routing/PublicLocaleRoute.tsx',
             'apps/app/src/root.tsx',
             'apps/app/src/bootstrap/initializeApi.ts',
             'apps/app/src/app/pwa/ServiceWorkerManager.tsx',
