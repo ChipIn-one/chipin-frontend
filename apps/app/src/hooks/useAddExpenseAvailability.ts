@@ -32,7 +32,7 @@ const useAddExpenseAvailability = (pathname: string) => {
     const hasResolvedFriendTarget = (friends?.length ?? 0) > 0;
     const hasResolvedGroupTarget = isGroupListResolved && hasGroupExpenseTarget(groups);
 
-    let isTargetAvailable = false;
+    let isTargetAvailable: boolean;
 
     if (isFriendsPage) {
         isTargetAvailable = hasResolvedFriendTarget;
