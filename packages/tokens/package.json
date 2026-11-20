@@ -6,7 +6,8 @@
         "./tokens.css": "./tokens.css",
         "./radix-colors.css": "./src/radix-colors.css",
         "./theme": "./src/theme.ts",
-        "./theme-init": "./src/theme-init.ts"
+        "./theme-init": "./src/theme-init.ts",
+        "./assets/*": "./assets/*"
     },
     "scripts": {
         "typecheck": "tsc -p tsconfig.json"

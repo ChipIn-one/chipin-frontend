@@ -147,9 +147,6 @@
   "apps/app/src/components/Footer.tsx": {
     "boundaries/dependencies": {
       "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
     }
   },
   "apps/app/src/components/GroupAvatar.tsx": {

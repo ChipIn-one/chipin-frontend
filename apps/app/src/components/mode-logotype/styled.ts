@@ -1,8 +1,7 @@
+import Logotype from '@chipin/tokens/assets/logo.svg?react';
 import styled, { css } from 'styled-components';
 
 import { themeColor } from 'helpers/colors';
-
-import Logotype from 'assets/logo.svg?react';
 
 const StyledModeLogotype = styled(Logotype)<{ $isSoloMode: boolean }>`
     width: 40px;

@@ -11,7 +11,7 @@ vi.mock('features/landing', () => ({
     ShowcaseSections: () => <section aria-label="Showcase" />,
 }));
 
-vi.mock('components/Footer', () => ({ default: () => <footer aria-label="Footer" /> }));
+vi.mock('components/Footer', () => ({ Footer: () => <footer aria-label="Footer" /> }));
 
 test('keeps every landing section and footer in the intended order', () => {
     render(<HomePage />);

@@ -59,8 +59,15 @@ export type RadixPalette = (typeof RADIX_PALETTES)[number];
  * The only brand hex outside tokens.css (D23): the PWA manifest, `<meta name="theme-color">`
  * and the site read it. `themeColor` is the light value of `--cp-brand-primary` (grass-9),
  * `backgroundColor` the light value of `--cp-surface-base` (olive-1).
+ *
+ * `pwaThemeColor`/`pwaBackgroundColor` are interim: by the owner decision of 2026-11-20 the PWA
+ * manifest `theme_color`/`background_color` and `<meta name="theme-color">` keep the values the
+ * app shipped before 05-2b (grass-10 `#3e9b4f`; `#ffffff`, the vite-plugin-pwa default) until the
+ * design system sets the PWA colours; then they are replaced by `themeColor`/`backgroundColor`.
  */
 export const BRAND_COLORS = {
     themeColor: '#46a758',
     backgroundColor: '#fcfdfc',
+    pwaThemeColor: '#3e9b4f',
+    pwaBackgroundColor: '#ffffff',
 } as const;

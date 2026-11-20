@@ -1,4 +1,5 @@
 import { useContext } from 'react';
+import Logotype from '@chipin/tokens/assets/logo.svg?react';
 import { Avatar, Box, Container, Flex, Link, Separator, Text } from '@radix-ui/themes';
 import { SendIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,8 +10,6 @@ import { DEFAULT_LOCALE } from 'constants/locales';
 import { matchLocale } from 'helpers/locale';
 import { getPublicPath } from 'helpers/publicRoutes';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
-
-import Logotype from 'assets/logo.svg?react';
 
 const StyledLogotype = styled(Logotype)`
     width: 28px;
@@ -130,4 +129,4 @@ const Footer = () => {
     );
 };
 
-export default Footer;
+export { Footer };

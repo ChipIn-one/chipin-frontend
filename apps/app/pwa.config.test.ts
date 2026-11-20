@@ -1,4 +1,5 @@
 // Spec 04 §2.11 (04-2d): the table of the VitePWA options and the common options.
+import { BRAND_COLORS } from '@chipin/tokens/theme';
 import { describe, expect, test } from 'vitest';
 
 import { APP_SHELL, buildPwaOptions } from './pwa.config.ts';
@@ -23,12 +24,24 @@ describe('buildPwaOptions: the table of spec 04 §2.11', () => {
         expect(manifest).toMatchObject({ start_url: '/', scope: '/', id: '/' });
     });
 
-    test('the manifest keeps its name, colors and icons', () => {
+    test('the manifest colors are BRAND_COLORS of @chipin/tokens (D23/D31)', () => {
+        expect(manifest).toMatchObject({
+            theme_color: BRAND_COLORS.pwaThemeColor,
+            background_color: BRAND_COLORS.pwaBackgroundColor,
+        });
+    });
+
+    test('the manifest colors keep the values shipped before 05-2b (owner decision 2026-11-20)', () => {
+        // A token edit must be deliberate: the design system sets the PWA colours later.
+        expect(BRAND_COLORS.pwaThemeColor).toBe('#3e9b4f');
+        expect(BRAND_COLORS.pwaBackgroundColor).toBe('#ffffff');
+    });
+
+    test('the manifest keeps its name and icons', () => {
         expect(manifest).toMatchObject({
             name: 'ChipIn',
             short_name: 'ChipIn',
             description: 'Share expenses without stress',
-            theme_color: '#3e9b4f',
             display: 'standalone',
         });
         expect(buildPwaOptions({ appName: 'ChipIn DEV' }).manifest).toMatchObject({
