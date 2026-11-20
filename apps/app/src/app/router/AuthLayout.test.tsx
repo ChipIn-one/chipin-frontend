@@ -190,7 +190,7 @@ describe('the live session', () => {
         expect(screen.queryByRole('status')).toBeNull();
     });
 
-    test('04-2f AuthLayout: never signed in goes to /login with the path and query, no modal', async () => {
+    test('AUTH-071 never signed in goes to /login with the path and query, no modal', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
 
         renderLayout('/group/123?tab=members#balances');
@@ -204,7 +204,7 @@ describe('the live session', () => {
         expect(screen.queryByLabelText('Draft')).toBeNull();
     });
 
-    test('04-2f AuthLayout: closing the auth modal goes to /login that returns to the page', async () => {
+    test('AUTH-075 closing the auth modal goes to /login that returns to the page', async () => {
         const interaction = userEvent.setup();
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
         renderLayout('/group/join/tok-1');
@@ -257,7 +257,7 @@ describe('the live session', () => {
         expect(screen.queryByLabelText('Draft')).toBeNull();
     });
 
-    test('04-2f AuthLayout: an explicit sign-out goes to /login instead of showing auth UI', async () => {
+    test('AUTH-071 an explicit sign-out goes to /login instead of showing auth UI', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
         renderLayout('/settings');
@@ -271,7 +271,7 @@ describe('the live session', () => {
         expect(screen.queryByLabelText('Draft')).toBeNull();
     });
 
-    test('04-2f AuthLayout: a remote logout of another tab mid-use leads to /login', async () => {
+    test('AUTH-071 a remote logout of another tab mid-use leads to /login', async () => {
         renderLayout('/settings');
         await screen.findByLabelText('Draft');
 
@@ -307,7 +307,7 @@ describe('the live session', () => {
     // A signed-out user keeps only the last account's local appearance/locale, never the auth
     // session; whatever the cached locale, the sign-out leads to /login (04-2f, no landing).
     test.each(['ru', 'es', 'pt-BR', 'pt-PT', 'en', 'unreleased-locale'])(
-        '04-2f AuthLayout: explicit sign-out with cached locale %s leads to /login, settings kept',
+        'AUTH-071 explicit sign-out with cached locale %s leads to /login, settings kept',
         async language => {
             LocalStorage.set(LS_KEY_USER, {
                 role: 'USER',
@@ -373,7 +373,7 @@ describe('with the loader (the whole tree)', () => {
         expect(refreshAuthTokens).not.toHaveBeenCalled();
     });
 
-    test('04-2f AuthLayout: an explicit sign-out is sent to /login by the loader before the page loads', async () => {
+    test('AUTH-071 an explicit sign-out is sent to /login by the loader before the page loads', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
         const router = renderApp('/group/x');

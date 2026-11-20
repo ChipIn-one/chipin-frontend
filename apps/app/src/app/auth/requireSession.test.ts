@@ -70,7 +70,7 @@ describe('requireSession', () => {
     });
 
     test.each(['signed_out', 'missing'] as const)(
-        '04-2f requireSession: %s on /dashboard redirects to /login?returnTo=%%2Fdashboard',
+        'AUTH-071 %s on /dashboard redirects to /login?returnTo=%%2Fdashboard',
         async reason => {
             useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
 
@@ -82,7 +82,7 @@ describe('requireSession', () => {
         },
     );
 
-    test('04-2f requireSession: returnTo keeps the path and the query of a join link', async () => {
+    test('AUTH-075 returnTo keeps the path and the query of a join link', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
         const response = await requireSession(loaderArgs('/group/join/tok-1?ref=x'));
@@ -92,7 +92,7 @@ describe('requireSession', () => {
         );
     });
 
-    test('04-2f requireSession: loginPathFor encodes the whole returnTo', () => {
+    test('AUTH-071 loginPathFor encodes the whole returnTo', () => {
         expect(loginPathFor('/friends/join/a&b?c=d#e')).toBe(
             '/login?returnTo=%2Ffriends%2Fjoin%2Fa%26b%3Fc%3Dd%23e',
         );

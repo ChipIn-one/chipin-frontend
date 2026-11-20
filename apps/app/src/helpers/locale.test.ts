@@ -143,7 +143,7 @@ test('a removed explicit guest locale preference resolves to English', () => {
     expect(resolveLocale()).toBe('en');
 });
 
-describe('04-2f login: ?locale on /login is the initial UI language (spec 04 §2.10)', () => {
+describe('?locale on /login and the initial UI language (spec 04 §2.10)', () => {
     beforeEach(() => {
         vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
     });
@@ -153,13 +153,13 @@ describe('04-2f login: ?locale on /login is the initial UI language (spec 04 §2
         window.history.replaceState({}, '', '/');
     });
 
-    test('04-2f login: a supported ?locale wins over the browser languages', () => {
+    test('AUTH-076 a supported ?locale wins over the browser languages', () => {
         window.history.replaceState({}, '', '/login?locale=ru');
 
         expect(resolveLocale()).toBe('ru');
     });
 
-    test('04-2f login: a saved locale wins over ?locale', () => {
+    test('AUTH-076 a saved locale wins over ?locale', () => {
         saveLocalePreference('en');
         window.history.replaceState({}, '', '/login?locale=ru');
 
@@ -167,7 +167,7 @@ describe('04-2f login: ?locale on /login is the initial UI language (spec 04 §2
     });
 
     test.each([['/login?locale=ru-RU'], ['/login?locale=xx'], ['/dashboard?locale=ru']])(
-        '04-2f login: %s is ignored',
+        'AUTH-076 %s is ignored',
         url => {
             window.history.replaceState({}, '', url);
 

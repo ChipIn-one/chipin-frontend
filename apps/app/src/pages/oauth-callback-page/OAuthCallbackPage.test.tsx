@@ -106,7 +106,7 @@ test('shows the expired-code message for an invalid OAuth exchange code', () => 
     });
 });
 
-test('04-2f login: falls back to the dashboard instead of redirecting back into the OAuth callback', () => {
+test('AUTH-072 falls back to the dashboard instead of redirecting back into the OAuth callback', () => {
     renderCallback('/oauth/callback?returnTo=%2Foauth%2Fcallback%3Fcode%3Dloop');
 
     return screen.findByTestId('destination').then(destination => {
@@ -114,7 +114,7 @@ test('04-2f login: falls back to the dashboard instead of redirecting back into 
     });
 });
 
-test('04-2f login: falls back to the dashboard instead of an open redirect', () => {
+test('AUTH-072 falls back to the dashboard instead of an open redirect', () => {
     renderCallback('/oauth/callback?returnTo=%2F%2Fevil.example');
 
     return screen.findByTestId('destination').then(destination => {

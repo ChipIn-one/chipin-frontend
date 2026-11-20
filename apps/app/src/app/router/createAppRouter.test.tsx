@@ -295,7 +295,7 @@ describe('navigation', () => {
         }
     });
 
-    test('04-2f router: unauthenticated on /dashboard goes to /login?returnTo=%2Fdashboard', async () => {
+    test('AUTH-071 unauthenticated on /dashboard goes to /login?returnTo=%2Fdashboard', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
         const router = renderAt('/dashboard');
 
@@ -307,7 +307,7 @@ describe('navigation', () => {
         expect(screen.queryByTestId('auth-modal')).toBeNull();
     });
 
-    test('04-2f router: a never-signed-in deep link goes to /login with its path and query', async () => {
+    test('AUTH-071 a never-signed-in deep link goes to /login with its path and query', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
         const router = renderAt('/group/123?tab=members');
 
@@ -318,7 +318,7 @@ describe('navigation', () => {
         );
     });
 
-    test('04-2f router: an explicit sign-out on an internal page goes to /login', async () => {
+    test('AUTH-071 an explicit sign-out on an internal page goes to /login', async () => {
         useAuthStore.setState({
             status: 'unauthenticated',
             unauthReason: UNAUTH_REASON.SIGNED_OUT,
@@ -332,7 +332,7 @@ describe('navigation', () => {
         expect(screen.queryByText('settings')).toBeNull();
     });
 
-    test('04-2f router: a join page is protected and keeps its token in returnTo', async () => {
+    test('AUTH-075 a join page is protected and keeps its token in returnTo', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
         const router = renderAt('/friends/join/invite-token');
 

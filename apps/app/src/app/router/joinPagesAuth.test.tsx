@@ -108,7 +108,7 @@ beforeEach(() => {
 
 describe.each(PAGES)('$name under AuthLayout', page => {
     // C3-16: the hotfix sent a signed-out user to the landing and lost the token; 04-2f keeps it.
-    test('04-2f join: a signed-out user goes to /login with the invite token in returnTo, no join', async () => {
+    test('AUTH-075 a signed-out user goes to /login with the invite token in returnTo, no join', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
         renderPage(page);
@@ -120,7 +120,7 @@ describe.each(PAGES)('$name under AuthLayout', page => {
         expect(joins.count).toBe(0);
     });
 
-    test('04-2f join: after sign-out a join link returns through /login and OAuth to the confirmation screen with its token (C3-16)', async () => {
+    test('AUTH-075 after sign-out a join link returns through /login and OAuth to the confirmation screen with its token (C3-16)', async () => {
         const interaction = userEvent.setup();
         const joinPath = `${page.path}/${TEST_INVITE_TOKEN}`;
         const assign = vi.fn();

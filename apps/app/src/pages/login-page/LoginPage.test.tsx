@@ -91,7 +91,7 @@ describe('signed out', () => {
         ['javascript%3Aalert(1)', '/dashboard'],
         ['%2Flogin%3FreturnTo%3D%252Fdashboard', '/dashboard'],
     ])(
-        '04-2f login: the Google sign-in for returnTo=%j returns to %s through the callback',
+        'AUTH-074 the Google sign-in for returnTo=%j returns to %s through the callback',
         async (encoded, expected) => {
             const assign = vi.fn();
             vi.stubGlobal('location', { ...window.location, assign });
@@ -112,7 +112,7 @@ describe('signed out', () => {
         ['en', 'en'],
         ['de', 'en'],
         ['ru-RU', 'en'],
-    ])('04-2f login: ?locale=%s gives the registration locale %s', async (locale, expected) => {
+    ])('AUTH-076 ?locale=%s gives the registration locale %s', async (locale, expected) => {
         const assign = vi.fn();
         vi.stubGlobal('location', { ...window.location, assign });
         const interaction = userEvent.setup();
@@ -137,7 +137,7 @@ describe('signed in', () => {
         ['/login?returnTo=%2F%5C%5Cevil.example', '/dashboard'],
         ['/login?returnTo=%2Flogin', '/dashboard'],
         ['/login?returnTo=%2Foauth%2Fcallback%3Fcode%3Dx', '/dashboard'],
-    ])('04-2f login: %s sends a signed-in user straight to %s', async (url, expected) => {
+    ])('AUTH-073 %s sends a signed-in user straight to %s', async (url, expected) => {
         const router = renderLogin(url);
 
         expect(await screen.findByRole('main')).toBeTruthy();

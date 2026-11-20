@@ -65,14 +65,14 @@ test.each([
     expect(resolveOAuthReturnTo(returnTo, APP_ORIGIN)).toBe(DEFAULT_RETURN_TO);
 });
 
-describe('04-2f login: returnTo is a same-origin app path', () => {
-    test('04-2f login: the default returnTo is the dashboard', () => {
+describe('returnTo is a same-origin app path', () => {
+    test('AUTH-072 the default returnTo is the dashboard', () => {
         expect(DEFAULT_RETURN_TO).toBe('/dashboard');
         expect(resolveOAuthReturnTo(null, APP_ORIGIN)).toBe('/dashboard');
         expect(resolveOAuthReturnTo('', APP_ORIGIN)).toBe('/dashboard');
     });
 
-    test('04-2f login: keeps a join path with its invite token', () => {
+    test('AUTH-072 keeps a join path with its invite token', () => {
         expect(resolveOAuthReturnTo('/group/join/tok-123_AZ', APP_ORIGIN)).toBe(
             '/group/join/tok-123_AZ',
         );
@@ -111,13 +111,13 @@ describe('04-2f login: returnTo is a same-origin app path', () => {
         ['the login page in another case', '/LOGIN'],
         ['the login page encoded', '/%6Cogin'],
         ['the OAuth callback in another case', '/OAuth/Callback?code=x'],
-    ])('04-2f login: rejects %s', (_name, returnTo) => {
+    ])('AUTH-072 rejects %s', (_name, returnTo) => {
         expect(resolveOAuthReturnTo(returnTo, APP_ORIGIN)).toBe(DEFAULT_RETURN_TO);
     });
 });
 
-describe('04-2f login: the sign-in started from /login', () => {
-    test('04-2f login: the callback returns to the given returnTo, not to /login', () => {
+describe('the sign-in started from /login', () => {
+    test('AUTH-074 the callback returns to the given returnTo, not to /login', () => {
         window.history.replaceState({}, '', '/login?returnTo=%2Fgroup%2Fjoin%2Ftok');
         const authUrl = new URL(getSocialAuthUrl('google', { returnTo: '/group/join/tok' }));
         const callbackUrl = new URL(authUrl.searchParams.get('redirect_to') ?? '');
@@ -126,7 +126,7 @@ describe('04-2f login: the sign-in started from /login', () => {
         expect(callbackUrl.searchParams.get('returnTo')).toBe('/group/join/tok');
     });
 
-    test('04-2f login: a supported ?locale is the registration locale', () => {
+    test('AUTH-076 a supported ?locale is the registration locale', () => {
         vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
         window.history.replaceState({}, '', '/login?locale=ru');
 
@@ -136,7 +136,7 @@ describe('04-2f login: the sign-in started from /login', () => {
     });
 
     test.each(['ru-RU', 'RU', 'xx', '../ru', ''])(
-        '04-2f login: an unsupported ?locale %j falls back to the browser language',
+        'AUTH-076 an unsupported ?locale %j falls back to the browser language',
         locale => {
             vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
             window.history.replaceState({}, '', '/login');
