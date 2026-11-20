@@ -37,13 +37,13 @@ Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00
 
 ## Commands
 
-- Local runs: agents (sessions, tracks, subagents) run only `npm run verify` and `npm run test:task -- <paths>` on a developer machine. Never run `npm run verify:full`, `npm run test:full`, a full `vitest run`, `npm run build`, the ds-gallery or site build, or e2e locally. CI is the full gate: push, read CI, and fix a red CI with a new commit.
+- Local runs: agents (sessions, tracks, subagents) run only fast, light checks on a developer machine, at most about 2 minutes per check pass: `npm run verify` and `npm run test:task -- <paths>` with the smallest set of test files. Never run `npm run verify:full`, `npm run test:full`, a full `vitest run`, `npm run build`, the ds-gallery or site build, or e2e locally. If `verify` alone grows past ~2 minutes, run instead `npx prettier --check` and `npx eslint` on the changed files, `test:task`, and `npm run typecheck` only if it fits. CI is the full gate: push, read CI, and fix a red CI with a new commit.
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.
 - `npm run verify` — format check, lint (`--max-warnings 0`: every rule is error or off), `check:file-layout`, typecheck.
 - `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks. Prune only through this script (it sets `CHIPIN_ESLINT_FULL=1`): a plain `eslint . --prune-suppressions` drops the `import-x/no-cycle` entries and CI `lint:full` goes red.
-- `npm run verify:full` — CI's full gate: format check, `lint:full`, `check:file-layout`, `typecheck:packages`, all tests, build, ds-gallery. CI runs it on every PR; agents do not run it locally. Before `IMPLEMENTATION_COMPLETE` run `npm run verify` and the targeted `test:task`.
+- `npm run verify:full` — CI's full gate: format check, `lint:full`, `check:file-layout`, `typecheck:packages`, all tests, build, ds-gallery. CI runs it on every PR that touches the app (modes `app`/`full`); agents do not run it locally. Before `IMPLEMENTATION_COMPLETE` run `npm run verify` and the targeted `test:task`.
 - `npm run typecheck` — `tsc -b`, then `typecheck:packages` (`tsc -p` in each `packages/*`).
 - `npm run fix` — `eslint --fix`, then Prettier, over the whole repository (not in a task).
 - Husky `pre-commit` only auto-fixes staged files (`lint-staged`, FAST mode) and does not block on lint (only a syntax error, which Prettier cannot parse, blocks it); there is no `pre-push`, only CI blocks.
