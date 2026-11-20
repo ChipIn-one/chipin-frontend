@@ -11,13 +11,18 @@ on:
 
 permissions:
   contents: read
+  # Read earlier runs of this workflow on the PR head SHA (scripts/ci-gate-reuse.mjs).
+  actions: read
 
 concurrency:
-  # PRs share a group per PR number and cancel superseded runs. Each master push gets its own group
-  # (keyed by SHA), so a push run is never cancelled nor replaced while pending: each one is
-  # release-QA evidence for its exact SHA and covers the diff from the previous push.
+  # PRs share a group per PR number. A new commit (opened, reopened, synchronize) cancels the running
+  # run; `edited` and `ready_for_review` keep the head SHA, so they wait behind a running gate instead
+  # of cancelling it, then reuse its result (chipin-frontend#792, docs/engineering/pr-metadata.md).
+  # Each master push gets its own group (keyed by SHA), so a push run is never cancelled nor replaced
+  # while pending: each one is release-QA evidence for its exact SHA and covers the diff from the
+  # previous push.
   group: frontend-ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' && github.event.action != 'ready_for_review' }}
 
 jobs:
   frontend-ci:
@@ -45,9 +50,20 @@ jobs:
           pull-request-number: ${{ github.event.pull_request.number }}
           expected-head-sha: ${{ github.event.pull_request.head.sha }}
           token: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
+      # `edited` and `ready_for_review` do not change the head SHA: admission above runs again (it
+      # reads the PR and Issue bodies), the gate below is skipped when the newest earlier gate on this
+      # SHA passed. A failed, cancelled or running gate is never reused; a base change runs the gate.
+      - name: Resolve gate reuse
+        id: reuse
+        if: github.event_name == 'pull_request' && (github.event.action == 'ready_for_review' || (github.event.action == 'edited' && !github.event.changes.base))
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci-gate-reuse.mjs
       - name: Resolve verification mode
         id: gate
         env:
+          REUSE: ${{ steps.reuse.outputs.reuse }}
           CHIPIN_CI_WORKFLOW: frontend-ci
           CHIPIN_TARGET_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
@@ -56,7 +72,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! "$BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
+          if [[ "$REUSE" == true ]]; then
+            mode="reused"
+          elif [[ ! "$BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
             mode="full"
           else
             git fetch --no-tags --depth=1 origin "$BASE_SHA"
@@ -64,7 +82,7 @@ jobs:
           fi
 
           case "$mode" in
-            docs-only | app | site | full) ;;
+            docs-only | app | site | full | reused) ;;
             *)
               echo "::error::unknown verification mode: $mode"
               exit 1
@@ -76,8 +94,9 @@ jobs:
       # Modes (scripts/ci-gate-policy.mjs, spec 04 §1.4): docs-only runs nothing below; app runs the
       # app gate; site runs the site gate; full runs both. The app gate is the root verify:full
       # (root ESLint, Prettier, packages typecheck, tests, build), so app and full run it unchanged.
+      # reused (scripts/ci-gate-reuse.mjs) runs nothing below either: the same SHA already passed.
       - name: Install dependencies
-        if: steps.gate.outputs.mode != 'docs-only'
+        if: steps.gate.outputs.mode != 'docs-only' && steps.gate.outputs.mode != 'reused'
         run: npm ci
       - name: Check lint baseline does not grow
         if: github.event_name == 'pull_request' && (steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full')
@@ -148,6 +167,8 @@ jobs:
         run: |
           if [ "$MODE" = "docs-only" ]; then
             echo "frontend-ci completed via docs-only path; verify:full was not required for this event."
+          elif [ "$MODE" = "reused" ]; then
+            echo "frontend-ci reused the passed gate of this head SHA; only Issue admission ran again."
           else
             echo "frontend-ci completed via $MODE path."
           fi

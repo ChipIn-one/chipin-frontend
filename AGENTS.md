@@ -52,6 +52,7 @@ Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00
 - Roles, gates, and reading order: [org canon FLOW.md](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md).
 - A task needs a fresh `INTAKE_COMPLETE` before execution: [org issue-intake contract](https://github.com/ChipIn-one/.github/blob/master/automation/issue-intake.md).
 - Task branch is `<type>/issue-<n>-<slug>` from `master`; PR into `master`, squash; only a human merges.
+- A task PR opens non-draft in one step after `verify:full` and the independent review pass, with a complete body (Task identity, `## Version impact`, `## Dependencies`); no draft-to-ready step; only a human merges ([event matrix](docs/engineering/pr-metadata.md#ci-event-matrix)).
 - A FE Issue is never closed by hand; after the merge into `master` it waits in `Awaiting release`: [completion canary](docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-master).
 - QA before release: [`docs/engineering/release-qa.md`](docs/engineering/release-qa.md); PR metadata: [`docs/engineering/pr-metadata.md`](docs/engineering/pr-metadata.md).
 
