@@ -1,0 +1,217 @@
+name: E2E service worker
+
+# The service worker suite (apps/app/e2e/sw.spec.ts, docs/e2e-tests.md "Service worker suite") in
+# Chromium against the pull request's own Vercel Preview: spec 04 criterion 5 (a) and the 04-2d
+# update policy. No repository secret: Previews are public (DEPLOYMENT.md) and the suite signs no
+# user in. A non-required check.
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - apps/app/src/app/pwa/**
+      - apps/app/pwa.config.ts
+      - apps/app/public/sw-kill.js
+      - apps/app/vercel.json
+      - apps/site/public/sw.js
+      - apps/app/vite.config.ts
+      - apps/app/scripts/sw-app-plugin.ts
+      - apps/app/scripts/private-spa-navigation.ts
+      - apps/app/scripts/prerender-before-workbox.mjs
+      - apps/app/src/helpers/appUpdate.ts
+      - apps/app/src/helpers/serviceWorkerHost.ts
+      - apps/app/src/shared/offline/network.ts
+      - apps/app/package.json
+      - package-lock.json
+      - apps/app/e2e/sw.spec.ts
+      - apps/app/playwright.sw.config.ts
+      - apps/app/e2e/support/config.ts
+      - scripts/e2e-sw-resolve-preview.mjs
+      - .github/workflows/e2e-sw.yml
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Pull request number (its head must be in this repository) or full SHA of a commit on a branch of this repository that has a Vercel Preview (every pull request and master commit gets one); tested with that commit's tests
+        required: true
+        type: string
+      preview_url:
+        description: Optional Preview origin instead of the resolved one (https://chipin-frontend-*-sylliks-projects.vercel.app); not checked against the commit
+        required: false
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: e2e-sw-${{ github.event.pull_request.number || github.run_id }}
+  # A newer push to a pull request replaces its run; manual runs are never cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The resolver comes from the workflow's own ref (`github.sha`; on a pull request that is its merge
+  # commit), never from a dispatched commit, and this is the only job with a token beyond
+  # `contents: read`.
+  resolve:
+    name: resolve the Preview
+    # Vercel builds no Preview for a fork pull request, so there is nothing to test there.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      deployments: read
+      pull-requests: read
+    outputs:
+      revision: ${{ steps.preview.outputs.revision }}
+      url: ${{ steps.preview.outputs.url }}
+    steps:
+      # Every branch (history only), so a dispatched SHA can be checked against them; only the
+      # resolver file is written to disk.
+      - name: Checkout the resolver
+        timeout-minutes: 3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: scripts/e2e-sw-resolve-preview.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      # No npm cache: every workflow of this repository sets package-manager-cache: false.
+      - name: Setup Node
+        timeout-minutes: 3
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      # Plain Node, no install. Picks the commit (a dispatched pull request must come from this
+      # repository, a dispatched SHA must be on one of its branches), waits while Vercel builds and
+      # validates the URL against the e2e allowlist.
+      - name: Resolve the commit and its Preview
+        id: preview
+        timeout-minutes: 17
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGET: ${{ inputs.target }}
+          PREVIEW_URL: ${{ inputs.preview_url }}
+        run: node scripts/e2e-sw-resolve-preview.mjs
+
+  # The tested commit's code (its npm ci install scripts, config and tests) runs here, without any
+  # token beyond the checkout's `contents: read`.
+  e2e-sw:
+    name: e2e-sw
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      # The tests come from the commit the Preview was built from.
+      - name: Checkout the tested commit
+        timeout-minutes: 3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+          persist-credentials: false
+      - name: Verify the checked-out commit
+        timeout-minutes: 1
+        env:
+          RESOLVED_SHA: ${{ needs.resolve.outputs.revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$RESOLVED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::The resolved commit is not a full SHA"
+            exit 1
+          fi
+          head="$(git rev-parse HEAD)"
+          if [[ "$head" != "$RESOLVED_SHA" ]]; then
+            echo "::error::Checked out $head, expected $RESOLVED_SHA"
+            exit 1
+          fi
+      - name: Setup Node
+        timeout-minutes: 3
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Install dependencies
+        timeout-minutes: 5
+        run: npm ci
+      - name: Resolve Playwright version
+        id: playwright
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./apps/app/package.json').devDependencies['@playwright/test']")"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::@playwright/test must be pinned to an exact version, got '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # The browsers come in the official Playwright image of the pinned version, as in e2e-smoke.yml.
+      - name: Pull the Playwright image
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          docker pull "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
+      # Only this command runs in the image, on the host's npm ci tree and under the runner's Node,
+      # mounted read-only, as the runner user, with the workspace at its own path and only the
+      # variables named here. playwright.sw.config.ts checks the target against the allowlist again.
+      - name: Run the service worker suite
+        id: suite
+        timeout-minutes: 12
+        env:
+          CHIPIN_E2E_BASE_URL: ${{ needs.resolve.outputs.url }}
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          if [[ ! "$CHIPIN_E2E_BASE_URL" =~ ^https://chipin-frontend-[a-z0-9]+(-[a-z0-9]+)*-sylliks-projects\.vercel\.app$ ]]; then
+            echo "::error::The resolved Preview URL is missing or not allowlisted"
+            exit 1
+          fi
+          echo "Preview: $CHIPIN_E2E_BASE_URL"
+          node_home="$(dirname "$(dirname "$(command -v node)")")"
+          docker run --rm --ipc=host --init \
+            --name "e2e-sw-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --user "$(id -u):$(id -g)" \
+            -v "$node_home:/opt/host-node:ro" \
+            -e PATH=/opt/host-node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -e HOME=/tmp \
+            -e CI \
+            -e CHIPIN_E2E_BASE_URL \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+            -w "$PWD" \
+            "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble" \
+            bash -c 'node --version && exec npm run test:e2e:sw'
+      # A cancel or timeout can kill the docker client and leave the container running.
+      - name: Stop the test container
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: docker rm -f "e2e-sw-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >/dev/null 2>&1 || true
+      # No user is signed in and no secret is used, so the report and traces hold no credentials.
+      - name: Upload Playwright report and traces
+        if: failure() && steps.suite.outcome == 'failure'
+        timeout-minutes: 3
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-sw-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/app/playwright-report/sw
+            apps/app/test-results/sw
+          retention-days: 3
+          if-no-files-found: ignore
