@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 
 import { seoGuard } from './integrations/seoGuard';
 import { astroLocales, DEFAULT_LOCALE } from './src/i18n/locales';
+import { canonicalSitemapUrl } from './src/lib/sitemapUrl';
 
 const locales = astroLocales();
 
@@ -17,6 +18,8 @@ export default defineConfig({
         // The site CSP has `style-src 'self'`; seoGuard fails on inline styles.
         inlineStylesheets: 'never',
     },
+    // The legal texts must render word for word (C2-35): no curly quotes or dashes from `'`/`--`.
+    markdown: { smartypants: false },
     i18n: {
         defaultLocale: DEFAULT_LOCALE,
         locales,
@@ -30,6 +33,12 @@ export default defineConfig({
             },
             // Invite pages are noindex (§3.5); 404 is not a page of the site.
             filter: page => !/^https:\/\/chipin\.one\/(?:404\/?$|join\/)/.test(page),
+            // Sitemap URLs are the canonical ones: `/privacy`, not `/privacy/`.
+            serialize: item => ({
+                ...item,
+                url: canonicalSitemapUrl(item.url),
+                links: item.links?.map(link => ({ ...link, url: canonicalSitemapUrl(link.url) })),
+            }),
         }),
         seoGuard({ vercelJson: new URL('./vercel.json', import.meta.url) }),
     ],

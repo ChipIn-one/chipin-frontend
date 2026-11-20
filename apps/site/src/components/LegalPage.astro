@@ -1,0 +1,40 @@
+---
+import { getCollection, render } from 'astro:content';
+
+import { SUPPORTED_LOCALES, type SupportedLocale } from '../i18n/locales';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// A page of the `legal` collection (spec 04 §3.3–§3.4): `legal/<locale>/<slug>.md` at
+// `localizedPath(locale, slug)`. hreflang links only the locales that have this page.
+interface Props {
+    locale: SupportedLocale;
+    slug: string;
+}
+
+const { locale, slug } = Astro.props;
+const pages = (await getCollection('legal')).filter(entry => !entry.data.draft);
+const entry = pages.find(page => page.id === `${locale}/${slug}`);
+
+if (entry?.data.locale !== locale) {
+    throw new Error(`legal/${locale}/${slug}.md is missing, a draft, or not in locale ${locale}`);
+}
+
+const translations = SUPPORTED_LOCALES.filter(target =>
+    pages.some(
+        page =>
+            page.data.locale === target &&
+            page.data.translationKey === entry.data.translationKey,
+    ),
+);
+const { Content } = await render(entry);
+---
+
+<BaseLayout
+    locale={locale}
+    slug={slug}
+    title={entry.data.title}
+    description={entry.data.description}
+    translations={translations}
+>
+    <Content />
+</BaseLayout>
