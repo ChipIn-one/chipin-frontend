@@ -6,6 +6,7 @@ import { describe, expect, test } from 'vitest';
 import { parse } from 'yaml';
 
 import { isDocsOnlyChange, resolveCiGateMode } from './ci-gate-policy.mjs';
+import { GATE_JOB_NAME, GATE_PASSED_STEP, GATE_STEPS, PRE_GATE_STEPS } from './ci-gate-reuse.mjs';
 
 describe('CI gate policy', () => {
     test('treats ordinary Markdown documentation as docs-only', () => {
@@ -242,11 +243,62 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         ]);
     });
 
-    test('master pushes never share a concurrency group; PR runs cancel superseded ones', () => {
+    test('master pushes never share a concurrency group; only a new PR head or base cancels a run', () => {
         expect(workflow.concurrency).toEqual({
             group: 'frontend-ci-${{ github.event.pull_request.number || github.sha }}',
-            'cancel-in-progress': "${{ github.event_name == 'pull_request' }}",
+            'cancel-in-progress':
+                "${{ github.event_name == 'pull_request' && ((github.event.action != 'edited' && github.event.action != 'ready_for_review') || github.event.changes.base != null) }}",
         });
+    });
+
+    test('runs on every PR event that can change the head, the base or the bodies', () => {
+        expect(workflow.on.pull_request.types).toEqual([
+            'opened',
+            'reopened',
+            'synchronize',
+            'ready_for_review',
+            'edited',
+        ]);
+        expect(workflow.permissions).toEqual({ contents: 'read', actions: 'read' });
+    });
+
+    test('the gate steps known to ci-gate-reuse.mjs follow admission in workflow order', () => {
+        expect(job.name).toBe(GATE_JOB_NAME);
+        const names = job.steps.map(candidate => candidate.name);
+        const admission = job.steps.findIndex(candidate =>
+            String(candidate.uses).startsWith(
+                'ChipIn-one/.github/automation/issue-admission-action@',
+            ),
+        );
+
+        expect(names.slice(admission + 1)).toEqual(GATE_STEPS);
+        // The jobs API adds 'Set up job' before the workflow steps.
+        expect(['Set up job', ...names.slice(0, admission + 1)]).toEqual(PRE_GATE_STEPS);
+        // The pass marker runs only after every earlier step succeeded.
+        expect(step(GATE_PASSED_STEP)).not.toHaveProperty('if');
+        expect(names.at(-1)).toBe(GATE_PASSED_STEP);
+    });
+
+    test('only edited and ready_for_review without a base change may reuse a passed gate', () => {
+        const reuse = step('Resolve gate reuse');
+
+        expect(reuse.id).toBe('reuse');
+        expect(reuse.if).toBe(
+            "github.event_name == 'pull_request' && (github.event.action == 'ready_for_review' || (github.event.action == 'edited' && !github.event.changes.base))",
+        );
+        expect(reuse.run).toContain('node scripts/ci-gate-reuse.mjs');
+        // Without the script (a head from before #792) the gate runs in full.
+        expect(reuse.run).toMatch(/else\s+echo "reuse=false" >> "\$GITHUB_OUTPUT"/u);
+        expect(reuse.env).toEqual({
+            GH_TOKEN: '${{ github.token }}',
+            HEAD_SHA: '${{ github.event.pull_request.head.sha }}',
+        });
+        expect(step('Resolve verification mode').env.REUSE).toBe(
+            '${{ steps.reuse.outputs.reuse }}',
+        );
+        expect(step('Resolve verification mode').run).toMatch(
+            /if \[\[ "\$REUSE" == true \]\]; then\s+mode="reused"/u,
+        );
     });
 
     test('no gate can fail open through continue-on-error', () => {
@@ -274,13 +326,15 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         // A skipped mode step leaves the mode empty, and every gate step would skip with it.
         expect(step('Resolve verification mode')).not.toHaveProperty('if');
         expect(step('Resolve verification mode').run).toMatch(
-            /case "\$mode" in\s+docs-only \| app \| site \| full\) ;;\s+\*\)[\s\S]*?exit 1/u,
+            /case "\$mode" in\s+docs-only \| app \| site \| full \| reused\) ;;\s+\*\)[\s\S]*?exit 1/u,
         );
     });
 
-    test('npm ci runs once, for every mode but docs-only', () => {
+    test('npm ci runs once, for every mode but docs-only and reused', () => {
         expect(job.steps.filter(candidate => candidate.run === 'npm ci')).toHaveLength(1);
-        expect(step('Install dependencies').if).toBe("steps.gate.outputs.mode != 'docs-only'");
+        expect(step('Install dependencies').if).toBe(
+            "steps.gate.outputs.mode != 'docs-only' && steps.gate.outputs.mode != 'reused'",
+        );
     });
 
     test('app gates run in exactly app and full mode', () => {
@@ -311,5 +365,24 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         expect(site.run).toContain('CHIPIN_ESLINT_FULL=1 npx --no-install eslint apps/site');
         expect(site.run).not.toContain('--pass-on-unpruned-suppressions');
         expect(site.run).toContain('npm run test -w @chipin/site --if-present');
+    });
+});
+
+describe('pr-metadata.yml', () => {
+    const workflow = parse(
+        readFileSync(resolve(import.meta.dirname, '../.github/workflows/pr-metadata.yml'), 'utf8'),
+    );
+
+    test('leaves ready_for_review to the Frontend CI workflow_run', () => {
+        expect(workflow.on.pull_request.types).toEqual([
+            'opened',
+            'reopened',
+            'edited',
+            'synchronize',
+        ]);
+        expect(workflow.on.workflow_run).toEqual({
+            workflows: ['Frontend CI'],
+            types: ['completed'],
+        });
     });
 });
