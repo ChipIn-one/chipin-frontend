@@ -667,21 +667,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/routing/AppRouter.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/routing/HomeRouteGuard.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/routing/SoloRouteGuard.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/helpers/activityEvent.test.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -789,7 +774,7 @@
   },
   "apps/app/src/pages/FriendJoinPage.test.tsx": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "apps/app/src/pages/FriendJoinPage.tsx": {
@@ -804,7 +789,7 @@
   },
   "apps/app/src/pages/GroupJoinPage.test.tsx": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "apps/app/src/pages/GroupJoinPage.tsx": {

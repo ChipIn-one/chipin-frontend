@@ -13,6 +13,7 @@ import { checkForServiceWorkerUpdate, reloadApp, updateServiceWorker } from 'hel
 import { LocalStorage } from 'helpers/localStorage';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { i18n } from 'i18n';
+import { syncHtmlLang } from 'i18n/htmlLang';
 import { startCacheRestore } from 'shared/offline/restore';
 import { UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
@@ -333,7 +334,7 @@ describe('navigation', () => {
         expect(router.state.location.pathname).toBe('/dashboard');
     });
 
-    test('a signed-in user at / goes to the preferred mode through HomeRouteGuard', async () => {
+    test('a signed-in user at / goes to the preferred mode through PublicHomeGuard', async () => {
         signIn();
         const router = renderAt('/');
 
@@ -359,6 +360,61 @@ describe('navigation', () => {
 
         expect(await screen.findByText('activity')).toBeTruthy();
         expect(screen.getByRole('complementary', { name: 'Desktop navigation' })).toBe(sidebar);
+    });
+});
+
+// The public pages and the UI language, through the route tree (moved from the former
+// `features/routing/AppRouter.test.tsx`). `<html lang>` is written only by the i18next listener
+// (`syncHtmlLang`, wired at boot), so after a public page it is the UI language (#708).
+describe('public pages and the UI language', () => {
+    let stopHtmlLang: () => void = () => undefined;
+
+    beforeEach(() => {
+        stopHtmlLang = syncHtmlLang(i18n);
+        document.documentElement.lang = 'en';
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
+    });
+
+    afterEach(() => {
+        stopHtmlLang();
+    });
+
+    test('an English public URL corrects a stale Russian SPA language before rendering', async () => {
+        await i18n.changeLanguage('ru');
+        renderAt('/privacy');
+
+        expect(await screen.findByText('publicPrivacy')).toBeTruthy();
+        expect(i18n.resolvedLanguage).toBe('en');
+    });
+
+    test('a public URL updates html lang, and after leaving it is the UI language', async () => {
+        const router = renderAt('/ru/privacy');
+
+        await waitFor(() => {
+            expect(i18n.resolvedLanguage).toBe('ru');
+            expect(document.documentElement.lang).toBe('ru');
+        });
+
+        await act(() => router.navigate('/not-found'));
+
+        expect(await screen.findByText('notFound')).toBeTruthy();
+        expect(document.documentElement.lang).toBe(i18n.resolvedLanguage);
+    });
+
+    // Signed out with the Russian UI, the logo leads to an English public page and back.
+    test('a round trip through an English public page leaves html lang equal to the UI language', async () => {
+        await i18n.changeLanguage('ru');
+        expect(document.documentElement.lang).toBe('ru');
+        const router = renderAt('/privacy');
+
+        expect(await screen.findByText('publicPrivacy')).toBeTruthy();
+        expect(document.documentElement.lang).toBe('en');
+
+        await act(() => router.navigate('/not-found'));
+
+        expect(await screen.findByText('notFound')).toBeTruthy();
+        expect(i18n.resolvedLanguage).toBe('en');
+        expect(document.documentElement.lang).toBe('en');
     });
 });
 
@@ -559,7 +615,7 @@ describe('the guard and layout chain of every manifest route', () => {
     });
 
     test.each(['/privacy', '/terms', '/ru/privacy', '/ru/terms'])(
-        'signed in, %s stays: HomeRouteGuard is only on the home pages',
+        'signed in, %s stays: PublicHomeGuard is only on the home pages',
         async path => {
             signIn();
             const router = renderAt(path);

@@ -12,7 +12,8 @@ export const IMPACT_RULES = [
         paths: new Set([
             'apps/app/src/store/authStore.ts',
             'apps/app/src/helpers/authSession.ts',
-            'apps/app/src/features/routing/ProtectedRoute.tsx',
+            'apps/app/src/app/router/AuthLayout.tsx',
+            'apps/app/src/app/auth/requireSession.ts',
         ]),
         sourceUrl: AUTH_041_URL,
         step: AUTH_041_STEP,
@@ -30,7 +31,9 @@ export const SMOKE_SHORT = {
     id: 'SMOKE-SHORT',
     sourceUrl: 'https://github.com/ChipIn-one/chipin-frontend/issues/543',
     prefixes: [
-        'apps/app/src/features/routing/', // routing and protected routes
+        'apps/app/src/features/routing/', // public locale route and guard loader
+        'apps/app/src/app/router/', // route tree, protected routes and their layouts
+        'apps/app/src/app/auth/', // session gate: requireSession, sessionAccess
         'apps/app/src/public-routes/', // public route tree and prerendered entry
         'apps/app/src/api/', // API client, interceptors and resources
         'apps/app/src/bootstrap/', // API and Sentry bootstrap
