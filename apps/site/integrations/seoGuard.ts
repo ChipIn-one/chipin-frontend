@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 import type { AstroIntegration } from 'astro';
+import { type DefaultTreeAdapterTypes, html, parse } from 'parse5';
 
 // Build gate of the site (spec 04 §3.2, §3.6), moved from the app's prerender-public.mjs: it runs
 // on `astro:build:done` and fails the build on the first page that breaks a rule.
@@ -19,28 +20,171 @@ const FORBIDDEN_TEXT = /(?:refreshToken|accessToken|inviteToken|sessionStorage)/
 // A JWT: base64url header `{"…` and payload.
 const JWT = /eyJ[\w-]{10,}\.[\w-]{10,}/;
 
-// End tags may carry whitespace or junk before `>` (`</script >`), as HTML parsers accept. The
-// name ends at whitespace, `/` or `>`: `<script-x>` is a custom element, not a script.
-const SCRIPT_ELEMENT = /<script(?=[\s/>])([^>]*)>([\s\S]*?)<\/script(?=[\s/>])[^>]*>/gi;
-const COMMENT = /<!--[\s\S]*?-->/g;
-
-// `type` values a browser executes (compared lowercased and trimmed).
+// `type` values a browser executes: the JavaScript MIME type essences, `module` and the empty
+// string (compared lowercased and trimmed of ASCII whitespace, as the HTML spec does).
 const JS_TYPES = new Set([
     '',
     'module',
-    'text/javascript',
-    'application/javascript',
-    'text/ecmascript',
     'application/ecmascript',
-    'text/x-javascript',
+    'application/javascript',
+    'application/x-ecmascript',
     'application/x-javascript',
+    'text/ecmascript',
+    'text/javascript',
+    'text/javascript1.0',
+    'text/javascript1.1',
+    'text/javascript1.2',
+    'text/javascript1.3',
+    'text/javascript1.4',
+    'text/javascript1.5',
+    'text/jscript',
+    'text/livescript',
+    'text/x-ecmascript',
+    'text/x-javascript',
 ]);
 
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
 
 type Attributes = Map<string, string>;
 
-const parseAttributes = (source: string): Attributes => {
+interface PageElement {
+    /** Lowercased tag name, in any namespace (an SVG `<script>` runs too). */
+    name: string;
+    namespace: string;
+    /** Attribute names (lowercased by the parser) and decoded values; the first of duplicates. */
+    attributes: Attributes;
+}
+
+interface ScriptElement {
+    attributes: Attributes;
+    /** The script text as the browser parses it: the CSP hash input. */
+    body: string;
+}
+
+/** A built page as a browser parses it (parse5 implements the HTML parsing algorithm). */
+interface ParsedPage {
+    /** Every element in document order, `<template>` contents included. */
+    elements: PageElement[];
+    scripts: ScriptElement[];
+    /** The text of the first HTML `<title>`. */
+    title: string | undefined;
+    /** Markup a reader can see in the HTML: tag and attribute names, attribute values, text and
+     * comments, without the bodies of executable scripts. */
+    text: string[];
+}
+
+const ASCII_WHITESPACE = /^[\t\n\f\r ]+|[\t\n\f\r ]+$/g;
+
+const isExecutable = (attributes: Attributes): boolean =>
+    JS_TYPES.has((attributes.get('type') ?? '').replace(ASCII_WHITESPACE, '').toLowerCase());
+
+const isTemplate = (
+    node: DefaultTreeAdapterTypes.Element,
+): node is DefaultTreeAdapterTypes.Template => 'content' in node;
+
+const parsePage = (source: string): ParsedPage => {
+    const page: ParsedPage = { elements: [], scripts: [], text: [], title: undefined };
+
+    const visit = (nodes: readonly DefaultTreeAdapterTypes.ChildNode[], inScript: boolean) => {
+        for (const node of nodes) {
+            if (node.nodeName === '#text' && 'value' in node) {
+                if (!inScript) {
+                    page.text.push(node.value);
+                }
+            } else if (node.nodeName === '#comment' && 'data' in node) {
+                page.text.push(node.data);
+            } else if ('tagName' in node) {
+                const attributes: Attributes = new Map();
+
+                for (const { name, value } of node.attrs) {
+                    if (!attributes.has(name)) {
+                        attributes.set(name, value);
+                    }
+                    page.text.push(name, value);
+                }
+                page.text.push(node.tagName);
+                page.elements.push({
+                    name: node.tagName,
+                    namespace: node.namespaceURI,
+                    attributes,
+                });
+
+                const childText = () =>
+                    node.childNodes.map(child => ('value' in child ? child.value : '')).join('');
+                let script = false;
+
+                if (
+                    node.tagName === 'title' &&
+                    node.namespaceURI === html.NS.HTML &&
+                    page.title === undefined
+                ) {
+                    page.title = childText();
+                }
+
+                if (node.tagName === 'script') {
+                    script = isExecutable(attributes);
+                    page.scripts.push({
+                        attributes,
+                        body: childText(),
+                    });
+                }
+                visit(node.childNodes, script);
+                if (isTemplate(node)) {
+                    visit(node.content.childNodes, false);
+                }
+            }
+        }
+    };
+
+    visit(parse(source).childNodes, false);
+    return page;
+};
+
+/** The text of every executable `<script>` without `src` (the CSP hash input). */
+const inlineScriptsOf = (page: ParsedPage): string[] =>
+    page.scripts
+        .filter(({ attributes }) => !attributes.has('src') && isExecutable(attributes))
+        .map(({ body }) => body);
+
+/** The text of every executable inline `<script>` of a page, as a browser parses it. */
+const inlineScripts = (html: string): string[] => inlineScriptsOf(parsePage(html));
+
+/** The CSP source of an inline script: `'sha256-…'`. */
+const scriptHash = (text: string): string =>
+    `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
+
+/** Same-origin scripts a page loads: `<script src>` and `<link rel="modulepreload">`. */
+const localScriptPaths = (page: ParsedPage): string[] => {
+    const sources = page.elements.map(({ name, attributes }) => {
+        if (name === 'script') {
+            return attributes.get('src');
+        }
+        const rel = (attributes.get('rel') ?? '').toLowerCase().split(/[\t\n\f\r ]+/);
+
+        return name === 'link' && rel.includes('modulepreload')
+            ? attributes.get('href')
+            : undefined;
+    });
+
+    return [
+        ...new Set(
+            sources
+                .map(src => src?.replace(ASCII_WHITESPACE, ''))
+                .filter((src): src is string => !!src && /^\/(?!\/)/.test(src)),
+        ),
+    ];
+};
+
+// A second, stricter net for handlers and `javascript:` URLs: the source scanned as text, script
+// elements and comments cut out. It flags garbled markup that a browser reads differently, e.g.
+// `<p <!-- --> onclick="go()">`. The parse5 tree above is what the browser runs; this scan can
+// only add problems, never hide one.
+// End tags may carry whitespace or junk before `>` (`</script >`), as HTML parsers accept. The
+// name ends at whitespace, `/` or `>`: `<script-x>` is a custom element, not a script.
+const SCRIPT_ELEMENT = /<script(?=[\s/>])[^>]*>[\s\S]*?<\/script(?=[\s/>])[^>]*>/gi;
+const COMMENT = /<!--[\s\S]*?-->/g;
+
+const parseSourceAttributes = (source: string): Attributes => {
     const attributes: Attributes = new Map();
 
     for (const match of source.matchAll(
@@ -55,50 +199,26 @@ const parseAttributes = (source: string): Attributes => {
     return attributes;
 };
 
-const tags = (html: string, name: string): Attributes[] =>
-    [...html.matchAll(new RegExp(`<${name}\\b([^>]*)>`, 'gi'))].map(match =>
-        parseAttributes(match[1] ?? ''),
+/** The attributes of every tag in the source text, outside script elements and comments. */
+const sourceTagAttributes = (source: string): Attributes[] => {
+    // One pass each, every match becomes a space: the pieces around a match stay apart, so they
+    // cannot join into a new tag or attribute, and no markup between two pieces is deleted.
+    const markup = source.replace(SCRIPT_ELEMENT, ' ').replace(COMMENT, ' ');
+
+    return [...markup.matchAll(/<[a-z][\w-]*\b([^>]*)>/gi)].map(match =>
+        parseSourceAttributes(match[1] ?? ''),
     );
-
-const isExecutable = (attributes: Attributes): boolean =>
-    JS_TYPES.has((attributes.get('type') ?? '').trim().toLowerCase());
-
-/** Every `<script>` element: attributes and body. Script bodies are cut out before markup checks. */
-const scriptElements = (html: string) =>
-    [...html.matchAll(SCRIPT_ELEMENT)].map(match => ({
-        attributes: parseAttributes(match[1] ?? ''),
-        body: match[2] ?? '',
-    }));
-
-/** The page markup without script bodies (or comments, when `comments` is false). */
-const markup = (html: string, { comments }: { comments: boolean }): string => {
-    // One pass, each match becomes a space: the pieces around a match stay apart, so they cannot
-    // join into a new tag or attribute, and no markup between two pieces is deleted.
-    const noScripts = html.replace(SCRIPT_ELEMENT, ' ');
-
-    return comments ? noScripts : noScripts.replace(COMMENT, ' ');
 };
 
-/** The text of every executable `<script>` without `src` (the CSP hash input). */
-const inlineScripts = (html: string): string[] =>
-    scriptElements(html)
-        .filter(({ attributes }) => !attributes.has('src') && isExecutable(attributes))
-        .map(({ body }) => body);
+/** A URL that runs script: the browser drops tabs and newlines and trims C0 controls and spaces. */
+const isJavaScriptUrl = (value: string): boolean => {
+    const url = value.replace(/[\t\n\r]/g, '');
+    let start = 0;
 
-/** The CSP source of an inline script: `'sha256-…'`. */
-const scriptHash = (text: string): string =>
-    `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
-
-/** Same-origin scripts a page loads: `<script src>` and `<link rel="modulepreload">`. */
-const localScriptPaths = (html: string): string[] => {
-    const sources = [
-        ...tags(html, 'script').map(attributes => attributes.get('src')),
-        ...tags(html, 'link')
-            .filter(attributes => attributes.get('rel') === 'modulepreload')
-            .map(attributes => attributes.get('href')),
-    ];
-
-    return [...new Set(sources.filter((src): src is string => !!src && /^\/(?!\/)/.test(src)))];
+    while (start < url.length && url.charCodeAt(start) <= 0x20) {
+        start += 1;
+    }
+    return url.slice(start, start + 'javascript:'.length).toLowerCase() === 'javascript:';
 };
 
 interface ScriptInfo {
@@ -128,68 +248,65 @@ const staticImports = (path: string, code: string): string[] =>
 /** The rule violations of one built page. */
 const checkPage = ({ file, html, script }: PageInput): string[] => {
     const problems: string[] = [];
-    const title = /<title>([^<]*)<\/title>/i.exec(html)?.[1]?.trim();
-    const description = tags(html, 'meta')
-        .find(attributes => attributes.get('name') === 'description')
-        ?.get('content')
+    const page = parsePage(html);
+    const description = page.elements
+        .find(({ name, attributes }) => name === 'meta' && attributes.get('name') === 'description')
+        ?.attributes.get('content')
         ?.trim();
 
-    if (!title) {
+    if (!page.title?.trim()) {
         problems.push(`${file}: missing <title>`);
     }
     if (!description) {
         problems.push(`${file}: missing <meta name="description">`);
     }
     // Executable scripts may name such variables; data scripts and comments ship as text.
-    const text = [
-        markup(html, { comments: true }),
-        ...scriptElements(html)
-            .filter(({ attributes }) => !isExecutable(attributes))
-            .map(({ body }) => body),
-    ].join('\n');
-
-    if (FORBIDDEN_TEXT.test(text) || JWT.test(html)) {
+    if (FORBIDDEN_TEXT.test(page.text.join('\n')) || JWT.test(html)) {
         problems.push(`${file}: token-like or session content in the HTML`);
     }
-    // The invite token must not reach analytics (A-15).
+    // The invite token must not reach analytics (A-15). The raw HTML is searched: any mention,
+    // even in a comment or script text, fails.
     if (file.startsWith('join/') && ANALYTICS_SCRIPT.test(html)) {
         problems.push(`${file}: analytics script on an invite page`);
     }
     // The site CSP has `style-src 'self'` (§3.6): no inline styles.
-    if (/<style\b/i.test(html) || /\sstyle\s*=/i.test(html)) {
+    if (page.elements.some(({ name, attributes }) => name === 'style' || attributes.has('style'))) {
         problems.push(`${file}: inline style (build.inlineStylesheets must stay 'never')`);
     }
     // The CSP blocks inline handlers and `javascript:` URLs: they would silently not work.
-    const elements = [
-        ...markup(html, { comments: false }).matchAll(/<[a-z][\w-]*\b([^>]*)>/gi),
-    ].map(match => parseAttributes(match[1] ?? ''));
+    const attributeSets = [
+        ...page.elements.map(({ attributes }) => attributes),
+        ...sourceTagAttributes(html),
+    ];
 
-    if (elements.some(attributes => [...attributes.keys()].some(name => /^on[a-z]+$/.test(name)))) {
-        problems.push(`${file}: inline event handler attribute`);
-    }
     if (
-        elements.some(attributes =>
-            [...attributes.values()].some(value => /^\s*javascript:/i.test(value)),
+        attributeSets.some(attributes =>
+            [...attributes.keys()].some(name => /^on[a-z]+$/.test(name)),
         )
     ) {
+        problems.push(`${file}: inline event handler attribute`);
+    }
+    if (attributeSets.some(attributes => [...attributes.values()].some(isJavaScriptUrl))) {
         problems.push(`${file}: javascript: URL`);
     }
     // §3.6: islands hydrate only with client:visible or client:idle.
     if (
-        tags(html, 'astro-island').some(
-            attributes => !['visible', 'idle'].includes(attributes.get('client') ?? ''),
+        page.elements.some(
+            ({ name, attributes }) =>
+                name === 'astro-island' &&
+                !['visible', 'idle'].includes(attributes.get('client') ?? ''),
         )
     ) {
         problems.push(`${file}: island without client:visible or client:idle`);
     }
 
     // The page's scripts and everything they import statically, plus its inline scripts.
-    let jsBytes = inlineScripts(html).reduce(
+    let jsBytes = inlineScriptsOf(page).reduce(
         (sum, text) => sum + gzipSync(Buffer.from(text, 'utf8')).length,
         0,
     );
     const seen = new Set<string>();
-    const queue = localScriptPaths(html);
+    const queue = localScriptPaths(page);
 
     for (let path = queue.shift(); path !== undefined; path = queue.shift()) {
         if (seen.has(path)) {

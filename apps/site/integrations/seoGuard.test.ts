@@ -243,6 +243,75 @@ describe('seoGuard scripts', () => {
         expect(problemsOf('index.html', page(HEAD, body))).toEqual([problem]);
     });
 
+    // #820: the guard reads the page as the browser parses it (parse5), so markup that a text scan
+    // reads as a comment, a script or an attribute value cannot hide live markup.
+    test.each([
+        ['a bogus comment around a comment opener', '<!<!-- ><p onclick="go()"> -->'],
+        [
+            'a processing instruction around a comment opener',
+            '<?x <!-- ?><p onclick="go()"><!-- -->',
+        ],
+        ['an abruptly closed empty comment', '<!--><p onclick="go()"><!-- x -->'],
+        ['an abruptly closed comment with a dash', '<!---><p onclick="go()"><!-- x -->'],
+        ['a comment closed by --!>', '<!-- a --!><p onclick="go()"><!-- b -->'],
+        [
+            'comment markers inside attribute values',
+            '<b title="<!--"><p onclick="go()"></p><i title="-->">',
+        ],
+        [
+            'a script start tag inside a comment',
+            '<!-- <script> --><p onclick="go()"></p><i></script>',
+        ],
+        ...['textarea', 'title', 'style', 'xmp', 'iframe', 'noembed', 'noframes', 'noscript'].map(
+            element =>
+                [
+                    `a script start tag inside <${element}>`,
+                    `<${element}><script></${element}><p onclick="go()"></p></script>`,
+                ] as const,
+        ),
+        ['an SVG element', '<svg><a onclick="go()"></a></svg>'],
+        ['a handler inside <template>', '<template><p onclick="go()"></p></template>'],
+    ])('finds a handler the browser sees: %s', (_name, body) => {
+        expect(problemsOf('index.html', page(HEAD, body))).toContain(HANDLER);
+    });
+
+    test.each([
+        ['an entity in the scheme', '<a href="&#106;avascript:go()">x</a>'],
+        ['a tab in the scheme', '<a href="java&#9;script:go()">x</a>'],
+        ['a leading control character', '<a href="&#1;javascript:go()">x</a>'],
+        [
+            'a script start tag inside a comment',
+            '<!-- <script> --><a href="javascript:go()">x</a></script>',
+        ],
+    ])('finds a javascript: URL the browser sees: %s', (_name, body) => {
+        expect(problemsOf('index.html', page(HEAD, body))).toEqual([JS_URL]);
+    });
+
+    test.each([
+        ['an entity in the name', '<p>invite&#84;oken</p>'],
+        [
+            'comment markers inside attribute values',
+            '<b title="<!--"><p>inviteToken</p><i title="-->">',
+        ],
+        [
+            'a script start tag inside <textarea>',
+            '<textarea><script></textarea><p>inviteToken</p></script>',
+        ],
+    ])('finds token text the browser shows: %s', (_name, body) => {
+        expect(problemsOf('index.html', page(HEAD, body))).toEqual([TOKEN]);
+    });
+
+    test('hashes only the scripts the browser parses as scripts', () => {
+        const html = page(
+            HEAD,
+            '<!-- <script>a()</script> --><textarea><script>b()</script></textarea>' +
+                '<b title="<script>c()</script>"></b><script>d()</script>' +
+                '<template><script>e()</script></template><svg><script>f()</script></svg>',
+        );
+
+        expect(inlineScripts(html)).toEqual(['d()', 'e()', 'f()']);
+    });
+
     test('a removed comment does not join the pieces of an attribute name', () => {
         expect(problemsOf('index.html', page(HEAD, '<p on<!-- -->click="go()">x</p>'))).toEqual([]);
     });
