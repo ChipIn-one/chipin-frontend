@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 export const GATE_JOB_NAME = 'frontend-ci';
 
 // Steps of the frontend-ci job that belong to the gate, in workflow order (after Issue admission).
-// The last one runs only when every gate step before it succeeded, so its success marks a passed gate.
+// The last one runs only when every step before it succeeded, so its success marks a passed gate.
 // scripts/ci-gate-policy.test.mjs pins this list against .github/workflows/frontend-ci.yml.
 export const GATE_STEPS = Object.freeze([
     'Resolve gate reuse',
@@ -25,29 +25,48 @@ export const GATE_STEPS = Object.freeze([
 ]);
 export const GATE_PASSED_STEP = GATE_STEPS.at(-1);
 
-const NEUTRAL_STEP_CONCLUSIONS = new Set([null, undefined, 'success', 'skipped']);
+// Steps that run before the gate. Only a stop here means the gate never started. The verdict does
+// not rely on the gate step names: an earlier run may have used a workflow with gate steps this list
+// does not know, and an unknown stopped step must count as a failed gate, never as "none".
+export const PRE_GATE_STEPS = Object.freeze([
+    'Set up job',
+    'Checkout verified source SHA',
+    'Setup Node',
+    'Require canonical Issue admission for PR',
+]);
+
+const STOPPED = new Set(['failure', 'cancelled', 'timed_out', 'action_required', 'stale']);
 
 /**
- * Gate verdict of one finished frontend-ci job attempt.
- * - `pass`: the gate ran (or reused a passed gate) and every gate step succeeded.
- * - `fail`: a gate step failed, timed out or was cancelled, or the job is not finished.
- * - `none`: the gate never started (for example Issue admission failed first); says nothing.
+ * Gate verdict of one frontend-ci job attempt.
+ * - `pass`: the pass marker succeeded and the whole job succeeded.
+ * - `none`: the gate never started: no step ran, or the first stopped step is a pre-gate step
+ *   (for example Issue admission rejected the PR body). Says nothing about the gate.
+ * - `fail`: anything else, including an unfinished job or a stopped step this file does not know.
  */
 export function gateVerdict(job) {
     if (job.status !== 'completed') {
         return 'fail';
     }
-    const steps = (job.steps ?? []).filter(step => GATE_STEPS.includes(step.name));
+    const steps = [...(job.steps ?? [])].sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
     const passed = steps.find(step => step.name === GATE_PASSED_STEP);
 
-    if (passed?.conclusion === 'success') {
-        return job.conclusion === 'success' ? 'pass' : 'fail';
+    if (passed?.conclusion === 'success' && job.conclusion === 'success') {
+        return 'pass';
     }
-    if (steps.some(step => !NEUTRAL_STEP_CONCLUSIONS.has(step.conclusion))) {
-        return 'fail';
+    if (steps.length === 0) {
+        return 'none';
     }
-    return 'none';
+    const firstStopped = steps.find(step => STOPPED.has(step.conclusion));
+
+    return firstStopped && PRE_GATE_STEPS.includes(firstStopped.name) ? 'none' : 'fail';
 }
+
+// Newest first; on equal start times the later run and attempt come first.
+const newestFirst = (a, b) =>
+    String(b.started_at ?? '').localeCompare(String(a.started_at ?? '')) ||
+    (b.run_id ?? 0) - (a.run_id ?? 0) ||
+    (b.run_attempt ?? 0) - (a.run_attempt ?? 0);
 
 /**
  * Picks the decision from every frontend-ci job attempt of this workflow on the head SHA.
@@ -65,24 +84,15 @@ export function decideGateReuse({ jobs, headSha, self }) {
         return { reuse: false, reason: 'another frontend-ci run on this SHA is not finished' };
     }
 
-    const newestFirst = [...others].sort((a, b) =>
-        String(b.started_at ?? '').localeCompare(String(a.started_at ?? '')),
-    );
-
-    for (const job of newestFirst) {
+    for (const job of [...others].sort(newestFirst)) {
         const verdict = gateVerdict(job);
+        const where = `run ${job.run_id} attempt ${job.run_attempt}`;
 
         if (verdict === 'pass') {
-            return {
-                reuse: true,
-                reason: `gate passed in run ${job.run_id} attempt ${job.run_attempt}`,
-            };
+            return { reuse: true, reason: `gate passed in ${where}` };
         }
         if (verdict === 'fail') {
-            return {
-                reuse: false,
-                reason: `newest gate on this SHA did not pass (run ${job.run_id} attempt ${job.run_attempt})`,
-            };
+            return { reuse: false, reason: `newest gate on this SHA did not pass (${where})` };
         }
     }
     return { reuse: false, reason: 'no earlier gate ran on this SHA' };
@@ -97,6 +107,8 @@ async function github(path, token) {
                 authorization: `Bearer ${token}`,
                 'x-github-api-version': '2022-11-28',
             },
+            // A hung request must not eat the job timeout that the full gate needs.
+            signal: AbortSignal.timeout(15_000),
         },
     );
 
@@ -112,20 +124,29 @@ export async function collectGateJobs({ repository, runId, headSha, token, reque
         `/repos/${repository}/actions/workflows/${current.workflow_id}/runs?event=pull_request&head_sha=${headSha}&per_page=100`,
         token,
     );
+    const workflowRuns = runs.workflow_runs ?? [];
     const jobs = [];
 
-    for (const run of runs.workflow_runs ?? []) {
-        // filter=all lists the jobs of every attempt, so a re-run attempt counts on its own.
+    if ((runs.total_count ?? workflowRuns.length) > workflowRuns.length) {
+        throw new Error('more than one page of runs on this SHA');
+    }
+    for (const run of workflowRuns) {
+        // filter=all lists the jobs of every attempt (oldest first), so a re-run attempt counts.
         const page = await request(
             `/repos/${repository}/actions/runs/${run.id}/jobs?filter=all&per_page=100`,
             token,
         );
-        jobs.push(...(page.jobs ?? []));
+        const runJobs = page.jobs ?? [];
+
+        if ((page.total_count ?? runJobs.length) > runJobs.length) {
+            throw new Error(`more than one page of jobs in run ${run.id}`);
+        }
+        jobs.push(...runJobs);
     }
     return jobs;
 }
 
-async function main() {
+export async function main(env = process.env, request = github) {
     const {
         GITHUB_REPOSITORY,
         GITHUB_RUN_ID,
@@ -133,7 +154,7 @@ async function main() {
         GITHUB_OUTPUT,
         GH_TOKEN,
         HEAD_SHA,
-    } = process.env;
+    } = env;
     let decision;
 
     try {
@@ -145,6 +166,7 @@ async function main() {
             runId: GITHUB_RUN_ID,
             headSha: HEAD_SHA,
             token: GH_TOKEN,
+            request,
         });
 
         decision = decideGateReuse({
@@ -161,6 +183,7 @@ async function main() {
     if (GITHUB_OUTPUT) {
         appendFileSync(GITHUB_OUTPUT, `reuse=${decision.reuse}\n`);
     }
+    return decision;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

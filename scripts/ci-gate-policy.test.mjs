@@ -243,11 +243,11 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         ]);
     });
 
-    test('master pushes never share a concurrency group; only a new PR commit cancels a run', () => {
+    test('master pushes never share a concurrency group; only a new PR head or base cancels a run', () => {
         expect(workflow.concurrency).toEqual({
             group: 'frontend-ci-${{ github.event.pull_request.number || github.sha }}',
             'cancel-in-progress':
-                "${{ github.event_name == 'pull_request' && github.event.action != 'edited' && github.event.action != 'ready_for_review' }}",
+                "${{ github.event_name == 'pull_request' && ((github.event.action != 'edited' && github.event.action != 'ready_for_review') || github.event.changes.base != null) }}",
         });
     });
 
@@ -284,7 +284,9 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         expect(reuse.if).toBe(
             "github.event_name == 'pull_request' && (github.event.action == 'ready_for_review' || (github.event.action == 'edited' && !github.event.changes.base))",
         );
-        expect(reuse.run).toBe('node scripts/ci-gate-reuse.mjs');
+        expect(reuse.run).toContain('node scripts/ci-gate-reuse.mjs');
+        // Without the script (a head from before #792) the gate runs in full.
+        expect(reuse.run).toMatch(/else\s+echo "reuse=false" >> "\$GITHUB_OUTPUT"/u);
         expect(reuse.env).toEqual({
             GH_TOKEN: '${{ github.token }}',
             HEAD_SHA: '${{ github.event.pull_request.head.sha }}',

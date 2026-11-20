@@ -15,14 +15,14 @@ permissions:
   actions: read
 
 concurrency:
-  # PRs share a group per PR number. A new commit (opened, reopened, synchronize) cancels the running
-  # run; `edited` and `ready_for_review` keep the head SHA, so they wait behind a running gate instead
-  # of cancelling it, then reuse its result (chipin-frontend#792, docs/engineering/pr-metadata.md).
+  # PRs share a group per PR number. A new commit (opened, reopened, synchronize) or a base change
+  # cancels the running run; `edited` and `ready_for_review` keep the head SHA, so they wait behind a
+  # running gate instead of cancelling it, then reuse its result (chipin-frontend#792, docs/engineering/pr-metadata.md).
   # Each master push gets its own group (keyed by SHA), so a push run is never cancelled nor replaced
   # while pending: each one is release-QA evidence for its exact SHA and covers the diff from the
   # previous push.
   group: frontend-ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' && github.event.action != 'ready_for_review' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && ((github.event.action != 'edited' && github.event.action != 'ready_for_review') || github.event.changes.base != null) }}
 
 jobs:
   frontend-ci:
@@ -59,7 +59,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/ci-gate-reuse.mjs
+        # A PR head branched before chipin-frontend#792 has no script: run the full gate.
+        run: |
+          if [ -f scripts/ci-gate-reuse.mjs ]; then
+            node scripts/ci-gate-reuse.mjs
+          else
+            echo "reuse=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Resolve verification mode
         id: gate
         env:
