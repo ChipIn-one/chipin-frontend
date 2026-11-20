@@ -11,6 +11,11 @@ const UnstyledButton = styled(Button)`
     cursor: pointer;
     box-sizing: border-box;
     position: relative;
+
+    &:focus-visible {
+        outline: 2px solid var(--cp-focus-ring);
+        outline-offset: 2px;
+    }
 `;
 
 interface NavButtonProps extends ComponentPropsWithoutRef<typeof Button> {

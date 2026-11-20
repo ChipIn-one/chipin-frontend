@@ -56,3 +56,20 @@ test.each([
         expect(screen.getByLabelText('Current route').textContent).toBe(expectedRoute);
     });
 });
+
+test('marks the active link with aria-current, not by color alone', () => {
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+
+    render(
+        <MemoryRouter initialEntries={['/activity']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <HeaderNav />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBe(
+        'page',
+    );
+    expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBeNull();
+});

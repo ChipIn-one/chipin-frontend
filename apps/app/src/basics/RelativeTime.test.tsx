@@ -18,7 +18,7 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-import RelativeTime from './RelativeTime';
+import { RelativeTime } from './RelativeTime';
 
 test('formats time with the time format it is given, and follows a change of it', () => {
     const view = render(<RelativeTime createdAt={1_785_328_628} isTime24H />);

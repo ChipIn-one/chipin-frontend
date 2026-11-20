@@ -8,7 +8,7 @@ import { toastLedgerWriteError, useIsLedgerEntryCreating } from 'hooks/useLedger
 import { useSelfUser } from 'hooks/useSelfUser';
 import { minorUnits, moneyLedgerText } from 'shared/money';
 
-import type { SelectItem } from 'components/Select';
+import type { SelectItem } from 'basics/Select';
 
 import { OverlayBody, OverlayFooter } from '../../components';
 import {

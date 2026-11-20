@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 
-import BalanceSummaryText from './BalanceSummaryText';
+import { BalanceSummaryText } from './BalanceSummaryText';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),

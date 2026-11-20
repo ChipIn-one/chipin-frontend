@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { type ExpenseTargetMode, useExpenseModalStore } from 'store/expenseModalStore';
 
-import SegmentedControl from 'components/SegmentedControl';
+import { SegmentedControl } from 'basics/SegmentedControl';
 
 import ExpensePayerSearchSelect from '../expense-payer-search-select/ExpensePayerSearchSelect';
 

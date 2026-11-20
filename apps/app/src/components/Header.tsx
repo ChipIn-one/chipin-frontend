@@ -19,9 +19,9 @@ import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
-import { NavButton } from 'basics/buttons';
 import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
+import { NavButton } from 'components/NavButton';
 
 import DevMenu from './DevMenu';
 import { LandingMobileMenu } from './header/LandingMobileMenu';

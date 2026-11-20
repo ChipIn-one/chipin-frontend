@@ -3,7 +3,7 @@ import { Button, Flex, Text, TextField } from '@radix-ui/themes';
 import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import Select, { type SelectItem } from 'components/Select';
+import { Select, type SelectItem } from 'basics/Select';
 
 import { AmountField, CurrencyField, LargeAmountInput, StaticCurrencyField } from '../styled';
 

@@ -29,27 +29,6 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/BalanceBadges.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/basics/BalanceSummaryText.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/basics/Checkbox.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/ChipInLoader.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -80,11 +59,6 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/RelativeTime.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/UserAvatar.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -97,11 +71,6 @@
   },
   "apps/app/src/basics/buttons/CopyButton.tsx": {
     "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/basics/buttons/NavButton.tsx": {
-    "boundaries/dependencies": {
       "count": 1
     }
   },
@@ -170,11 +139,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/Dropdown.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/Footer.test.tsx": {
     "boundaries/dependencies": {
       "count": 1
@@ -209,16 +173,6 @@
     }
   },
   "apps/app/src/components/OfflineQRCode.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/SegmentedControl.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/Select.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -447,11 +401,6 @@
     }
   },
   "apps/app/src/components/nav-bars/desktop-sidebar/components/profile-actions/ProfileActions.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/progress-bar/ProgressBar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }

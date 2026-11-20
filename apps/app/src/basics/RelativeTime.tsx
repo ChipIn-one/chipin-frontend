@@ -20,4 +20,4 @@ const RelativeTime = ({ createdAt, isTime24H }: Props) => {
     );
 };
 
-export default RelativeTime;
+export { RelativeTime };

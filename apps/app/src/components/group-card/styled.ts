@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { themeColor } from 'helpers/colors';
 import { interactiveCardLinkStyles } from 'helpers/interactiveCardStyles';
 
-import { NavButton } from 'basics/buttons';
+import { NavButton } from 'components/NavButton';
 
 const GroupNavButton = styled(NavButton)`
     ${interactiveCardLinkStyles({

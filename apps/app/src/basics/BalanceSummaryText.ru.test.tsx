@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { i18n } from 'i18n';
 
-import BalanceSummaryText from './BalanceSummaryText';
+import { BalanceSummaryText } from './BalanceSummaryText';
 
 beforeEach(async () => {
     await act(() => i18n.changeLanguage('ru'));

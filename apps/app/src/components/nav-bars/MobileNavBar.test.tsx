@@ -204,3 +204,22 @@ test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
         'calc(var(--space-7) - var(--space-1))',
     );
 });
+
+test('marks the active item with aria-current, not by color alone', () => {
+    resolveGlobalTargets();
+
+    render(
+        <MemoryRouter initialEntries={['/activity']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <MobileNavBar />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBe(
+        'page',
+    );
+    expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBeNull();
+});

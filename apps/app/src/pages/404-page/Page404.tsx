@@ -6,7 +6,7 @@ import { ROUTES } from 'constants/routes';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
-import { NavButton } from 'basics/buttons';
+import { NavButton } from 'components/NavButton';
 
 import { HintCard, Icon404 } from './components';
 

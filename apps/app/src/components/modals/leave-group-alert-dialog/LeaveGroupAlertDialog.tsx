@@ -10,7 +10,7 @@ import { toastGroupWriteError, useLeaveGroup } from 'hooks/useGroupMutations';
 import { useSelfUser } from 'hooks/useSelfUser';
 
 import { UserAvatar } from 'basics';
-import Select, { type SelectItem } from 'components/Select';
+import { Select, type SelectItem } from 'basics/Select';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
 

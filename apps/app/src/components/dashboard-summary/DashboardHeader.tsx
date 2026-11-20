@@ -6,8 +6,8 @@ import { ROUTES } from 'constants/routes';
 import { useIsUserAdmin, useSelfUserState } from 'hooks/useSelfUser';
 
 import { UserAvatar } from 'basics';
-import { NavButton } from 'basics/buttons';
 import DevMenu from 'components/DevMenu';
+import { NavButton } from 'components/NavButton';
 
 import ViewModeSwitch from '../ViewModeSwitch';
 

@@ -3,7 +3,7 @@ import styled, { css } from 'styled-components';
 
 import { themeColor } from 'helpers/colors';
 
-import { NavButton } from 'basics/buttons';
+import { NavButton } from 'components/NavButton';
 
 const MobileNavBarWrapper = styled(Box)`
     --mobile-nav-action-lift: var(--space-3);

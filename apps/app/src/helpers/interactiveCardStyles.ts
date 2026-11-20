@@ -66,6 +66,11 @@ const interactiveCardLinkStyles = ({
         ${hover(hoverOptions)}
     }
 
+    // The inner card draws the focus ring, so the link drops its own outline.
+    &:focus-visible {
+        outline: none;
+    }
+
     &:focus-visible [data-interactive-card] {
         ${focus(focusOptions)}
     }
