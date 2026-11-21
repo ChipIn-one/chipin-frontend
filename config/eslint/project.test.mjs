@@ -530,6 +530,7 @@ describe('storage boundary (#675): storage only through helpers/localStorage.ts'
         'window.localStorage.getItem("k");',
         'window.sessionStorage.getItem("k");',
         'globalThis.sessionStorage.getItem("k");',
+        'self.localStorage.getItem("k");',
     ];
 
     test.each(access)('rejects %s in app code and in shared/offline', async code => {
@@ -541,6 +542,7 @@ describe('storage boundary (#675): storage only through helpers/localStorage.ts'
         expect(await lint(code, 'src/helpers/localStorage.ts')).toEqual([]);
         expect(await lint(code, 'src/components/Header.test.tsx')).toEqual([]);
         expect(await lint(code, 'src/test/setup.ts')).toEqual([]);
+        expect(await lint(code, 'src/shared/offline/network.test.ts')).toEqual([]);
     });
 
     test('navigator.onLine stays restricted outside shared/offline, tests included', async () => {

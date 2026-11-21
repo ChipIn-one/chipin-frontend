@@ -396,12 +396,12 @@ const NAVIGATOR_ONLINE = {
     property: 'onLine',
     message: 'Use isNetworkUsable() (shared/offline/network).',
 };
-const GLOBAL_STORAGE = ['window', 'globalThis'].flatMap(object =>
+const GLOBAL_STORAGE = ['window', 'globalThis', 'self'].flatMap(object =>
     STORAGE_NAMES.map(property => ({ object, property, message: STORAGE_MESSAGE })),
 );
 
 /**
- * Storage boundary: localStorage and sessionStorage (also as `window.*`/`globalThis.*`) only
+ * Storage boundary: localStorage and sessionStorage (also as `window.*`/`globalThis.*`/`self.*`) only
  * through helpers/localStorage.ts; tests and test support arrange storage directly.
  * `navigator.onLine` below; named exports only (D11, 02-C13: the existing default exports are
  * suppressions that only shrink, D31; a touched file switches to `export { X }` with its importers

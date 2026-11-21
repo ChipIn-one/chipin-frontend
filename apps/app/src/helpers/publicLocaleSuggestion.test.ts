@@ -75,3 +75,20 @@ test('unavailable sessionStorage does not break manual language switching', () =
     }
     expect(window.sessionStorage.getItem(SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN)).toBeNull();
 });
+
+// Runs on a fresh module: the tests above leave the document-local fallback on, which would skip
+// the storage read.
+test('a throwing storage read does not throw and does not suppress the suggestion', async () => {
+    vi.resetModules();
+    const fresh = await import('./publicLocaleSuggestion');
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Blocked', 'SecurityError');
+    });
+    try {
+        expect(() => fresh.isPublicLocaleSuggestionSuppressed()).not.toThrow();
+        expect(fresh.isPublicLocaleSuggestionSuppressed()).toBe(false);
+        expect(getItem).toHaveBeenCalled();
+    } finally {
+        getItem.mockRestore();
+    }
+});
