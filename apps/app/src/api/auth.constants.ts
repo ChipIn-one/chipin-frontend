@@ -1,12 +1,2 @@
-const AUTH_API_PATH = {
-    GOOGLE_OAUTH_EXCHANGE: '/auth/oauth/google/exchange',
-    LOGOUT: '/auth/logout',
-    LOGOUT_OTHER_DEVICES: '/auth/logout-other-devices',
-    REFRESH: '/auth/refresh',
-} as const;
-
-const AUTH_CSRF_HEADERS = {
-    'X-Chipin-Csrf': '1',
-} as const;
-
-export { AUTH_API_PATH, AUTH_CSRF_HEADERS };
+// The auth endpoint paths live in `shared/api/authPaths.ts`; legacy callers keep this path.
+export { AUTH_API_PATH, AUTH_CSRF_HEADERS } from 'shared/api/authPaths';

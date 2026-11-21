@@ -1,11 +1,11 @@
 // Failed-request classification (spec 03 §1.8): tells "no network" from "backend down" from an
 // error of one request. The interceptors hand every failed response here through the callback
 // wired in `bootstrap/initializeApi`; only `offline` and `backend-down` change app state.
-import { type BackendHealth, probeBackendHealth } from 'api/healthApi';
 import { ApiError } from 'shared/lib/apiError';
 import { getLastOfflineAt, isNetworkUsable } from 'shared/offline/network';
 
 import { isNetworkError } from './client';
+import { type BackendHealth, probeBackendHealth } from './health';
 
 /**
  * - `offline`: no usable network, or a network error and `/health` also gets no response;

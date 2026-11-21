@@ -13,7 +13,7 @@ const health = vi.hoisted(() => ({
     probeBackendHealth: vi.fn<(sentAfter?: number) => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
-vi.mock('api/healthApi', () => ({ probeBackendHealth: health.probeBackendHealth }));
+vi.mock('shared/api/health', () => ({ probeBackendHealth: health.probeBackendHealth }));
 
 const setNavigatorOnLine = (value: boolean): void => {
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(value);

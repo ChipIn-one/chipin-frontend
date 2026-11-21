@@ -182,9 +182,11 @@ export const LAYER_GRAPH = {
     entities: ['entities', 'helpers', 'shared-api', 'shared-lib', 'api', 'base'],
     basics: ['basics', 'helpers', 'shared-lib', 'base'],
     helpers: ['helpers', 'shared-lib', 'base'],
-    'shared-api': ['shared-api', 'shared-lib', 'api', 'base'],
+    'shared-api': ['shared-api', 'shared-lib', 'base'],
     'shared-lib': ['shared-lib', 'base'],
-    api: ['api', 'base'],
+    // `api` re-exports the shared HTTP core (instance, interceptors, apiPath, health probe) for
+    // its legacy callers until they migrate; `shared-api` never imports `api`.
+    api: ['api', 'shared-api', 'base'],
     test: LAYER_TYPES,
     base: ['base'],
 };
@@ -320,10 +322,7 @@ const RUNTIME_API_MODULE =
 export const layerImports = ({ appDir }) => {
     // These modules own the configured Axios instance and interceptors, and the `api()` wrapper
     // over it (its test drives the real Axios pipeline with a stub adapter).
-    const axiosOwners = appGlob(
-        appDir,
-        'src/{api/chipin.{instance,interceptors}.ts,shared/api/client{,.test}.ts}',
-    );
+    const axiosOwners = appGlob(appDir, 'src/shared/api/{instance,interceptors,client{,.test}}.ts');
     const ui = appGlob(appDir, 'src/{pages,features,components,basics}/**/*.{ts,tsx}');
     const numbers = appGlob(appDir, 'src/{helpers/numbers.ts,basics/numbers/**/*.{ts,tsx}}');
     // Layers of the target architecture (specs 03/04): new code there reads money from the wire.
@@ -335,7 +334,7 @@ export const layerImports = ({ appDir }) => {
             id: 'axios',
             path: 'axios',
             ignores: [axiosOwners, ui, numbers],
-            message: 'Use the configured Axios instance from src/api.',
+            message: 'Use the configured Axios instance from src/shared/api.',
         },
         {
             id: 'axios-in-ui',
