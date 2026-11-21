@@ -1,5 +1,7 @@
 # Spec 05: styles, tokens, dark theme, assets
 
+> ds-gallery was removed by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830); design review moves to Claude Design. Every ds-gallery mention below is history and is withdrawn.
+
 Owner decisions: D14 (styles), D16 (assets, vendor regex), D7 (`packages/tokens`), D8 (the Astro site uses tokens), D23, D31 (plan cuts: a hand-written `tokens.css`, no DTCG `tokens.json`/generator; no separate themeColor codemod PR).
 Based on DS v1: `docs/superpowers/specs/2026-10-22-design-system-v1-design.md` (on master since 01312ea).
 The DS v1 decisions are not revisited, except those listed in the section "Changes relative to DS v1".
@@ -10,7 +12,7 @@ PR identifiers are `05-<n>` (global scheme, `00-overview.md`; after review C `05
 
 ## Goal
 
-1. A single source of tokens for the app, the Astro site, and ds-gallery: the hand-written `packages/tokens/tokens.css` (D31; no DTCG `tokens.json`, no generator).
+1. A single source of tokens for the app and the Astro site (ds-gallery removed by D33, 2026-11-21): the hand-written `packages/tokens/tokens.css` (D31; no DTCG `tokens.json`, no generator).
 2. A single theme switching mechanism (light/dark/system); both themes stay.
    - Currently there are 4. One is needed: a value in the store → a class on `<html>` → `<Theme appearance>`.
    - No flicker on load (FOUC).
@@ -165,13 +167,13 @@ The scales come before `base.css`, as in Radix's own `tokens/index.css`: the oli
   - `src/constants/styled-themes.ts`;
   - `src/helpers/colors.ts` (`hexToRgba` is not used);
   - `src/types/styled.d.ts`;
-  - the styled-components `<ThemeProvider>` in `main.tsx`, `PublicApp.tsx` (if still present), and `ds-gallery/gallery.tsx`;
+  - the styled-components `<ThemeProvider>` in `main.tsx` and `PublicApp.tsx` (if still present; the `ds-gallery/gallery.tsx` one is withdrawn by D33, 2026-11-21);
   - and adds the phantom `@radix-ui/colors` to `no-restricted-imports` (registry row in spec 02 §D0).
 
 **The rule "no new styled-components".**
 
 - `config/eslint/styled-components-allowlist.json` is generated once by the script `scripts/generate-styled-allowlist.mjs` from the current importers (55 non-test files + tests that import `styled-components`).
-- `no-restricted-imports` for `styled-components` applies to `src/**`, `ds-gallery/**`, and is turned off for files in the allowlist.
+- `no-restricted-imports` for `styled-components` applies to `src/**` (`ds-gallery/**` withdrawn by D33, 2026-11-21), and is turned off for files in the allowlist.
 - Flat config trap: a same-named rule in a later block **replaces** the options, it does not merge them. Therefore all `no-restricted-imports` blocks are built through the shared helper `restrictedImports(extraPaths, extraPatterns)` from `config/eslint/project.js`, otherwise the restrictions on axios and api disappear (`eslint.config.js:143-210`). The config refactoring and the `restrictedImports()` helper are spec 02 (PR 02-C4); 05-5 depends on it and only adds its own paths.
 - `scripts/check-styled-allowlist.mjs` (in `lint`, about 60 lines):
   1. every entry exists and still imports `styled-components`, otherwise the error "remove the entry";
@@ -297,16 +299,9 @@ In PR 05-6, the 3 unchecked buttons from the audit are checked against these ite
   - ESLint: `no-restricted-imports` with the pattern `regex: '\\.svg\\?react$'` and an allowlist of 3 files (`Footer.tsx`, `mode-logotype/styled.ts` or its future module, `AuthButtons.tsx`).
   - Drawing new SVG icons is forbidden. If lucide lacks the needed icon, the owner decides.
 
-### 7. ds-gallery
+### 7. ~~ds-gallery~~
 
-- It gets tokens exactly the way the app does:
-  - imports `apps/app/src/styles/index.css`;
-  - is wrapped in `AppTheme`;
-  - switches the theme through `appearanceStore.setPreference`.
-- `ThemeProvider` and `styled-themes` are removed from the gallery (`gallery.tsx:28,402`) by the design-phase PR that removes `styled-themes.ts` (§3), not by 05-7. The manual list of aliases in `ds-gallery/vite.config.ts` is removed by 02-C3 (not this spec).
-- The "Tokens" section: a table of samples of all `--cp-*` color roles in light/dark. Built from the names found in `@chipin/tokens/tokens.css?raw` (a regex over `--cp-[a-z0-9-]+`), so a new token appears in the gallery automatically.
-- The styled `ThemeProvider` of the gallery stays until the design-phase PR that removes `styled-themes.ts` (§3).
-- **Visual regression harness — no.** This is YAGNI: DS v1 (owner decision 4) forbids cloud VR tools, and local Playwright with data fixtures for a single developer costs more than it is worth. The gallery stays the place for manual before/after comparison at the component level. Automatic VR is a DS v1 follow-up, not this spec.
+Withdrawn by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery is removed, design review moves to Claude Design. The plan below (tokens and `AppTheme` in the gallery, a Tokens section) is not done. Component-level before/after comparison happens in Claude Design; automatic visual regression stays a DS v1 follow-up.
 
 ## Details
 
@@ -398,7 +393,7 @@ Mockups in Pencil or Figma are one-off: they are needed for discussion and are n
 | ~~05-4~~ | Withdrawn as a separate PR (D31): the `themeColor` → `--cp-*` migration and the removal of `styled-themes.ts`/`colors.ts`/`styled.d.ts`/`ThemeProvider`s/`@radix-ui/colors` happen file by file in the design phase (DS v1 tasks, §3) | — | — | — |
 | 05-5 | stylelint + config, `lint:css`, `no-raw-colors` (`no-restricted-syntax`, §3) + fixtures, existing ESLint violations → `--suppress-rule` (they shrink as the design phase migrates files), styled allowlist + `check-styled-allowlist.mjs --base`, the `style` rule, the svgr rule (blocks through the 02-C4 helpers), `css.modules` in Vite, `helpers/cx.ts`, the reference conversion of `mode-logotype/styled.ts` to a CSS Module, 6 inline styles | 14 | 05-2b, 02-C4 | 02 (except 02-C4) |
 | 05-6 | The basics boundary: move RelativeTime, BalanceBadgesSkeleton (PWABadge — no, see 04-2d); NavButton, BalanceSummaryText (C1-24); removal of Checkbox/RadioGroup; moving SegmentedControl/Select/Dropdown/ProgressBar to basics with named exports (they leave the 02-C13 baseline); a11y check of 3 buttons; removes the boundaries entries from suppressions | 28 (imports) | — (the boundaries rule is enabled by 02-C9) | 05-2…05-5 |
-| 05-7 | ds-gallery: `AppTheme` + store, the Tokens section from `tokens.css` (the aliases are removed by 02-C3; the styled `ThemeProvider` goes with `styled-themes.ts` in the design phase) | 4 | 05-3 | 05-5, 05-6 |
+| ~~05-7~~ | Withdrawn by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery is removed, design review moves to Claude Design. | — | — | — |
 
 - Every PR is released independently; the `Version impact` field is removed (the owner chooses the bump in the release PR, spec 02 D7). A design-phase PR that migrates a file off `themeColor()` visibly changes a shade (gray → olive) — note it in the release notes.
 - DS v1 tasks 3–8 (documentation, patterns, cards, routing, screen audit) come after 05-2b/05-3 in the DS v1 order and carry the file-by-file `themeColor()` migration (D31). Their PRs do not overlap with the files of 05-5…05-7.
@@ -418,7 +413,7 @@ Gate PR (commands) — items 2–8; item 1 — owner QA, not a PR gate (C2-18, C
    - For 05-1, 05-2a, 05-2b, 05-3, 05-5, 05-6, 05-7: 0 differing pixels beyond fuzz.
    - For a design-phase PR that migrates files off `themeColor()`: differences are acceptable only in the areas drawn by the migrated files, and only as a shift of the gray shade. The owner confirms the pairs in the PR.
 2. After 05-3 a reload in dark (saved and system) does not show a light frame. Check: a performance recording or a screenshot under Slow 4G throttling. In addition, `document.documentElement.className` contains `dark` before `root.tsx` executes.
-3. `grep -rn "next-themes" apps` after 05-3 gives 0 lines; `grep -rn "styled-themes\|themeColor\|@radix-ui/colors" apps` gives 0 lines after the design-phase PR that removes `styled-themes.ts` (ds-gallery lives in `apps/app/ds-gallery`, C2-31).
+3. `grep -rn "next-themes" apps` after 05-3 gives 0 lines; `grep -rn "styled-themes\|themeColor\|@radix-ui/colors" apps` gives 0 lines after the design-phase PR that removes `styled-themes.ts` (ds-gallery was removed by D33, 2026-11-21).
 4. After 05-1 the 9 unused palettes are not in the built CSS, and the total app CSS is smaller by at least 24 KB raw versus `22ad7eea` (there is no separate `vendor-radix.css`; owner decision 2026-11-16, §5). The `sw.js` precache includes `dashboard-onboarding.webp`.
 5. `dashboard-onboarding.webp` ≤ 40 KB.
 6. Lint fixtures:
@@ -427,7 +422,7 @@ Gate PR (commands) — items 2–8; item 1 — owner QA, not a PR gate (C2-18, C
    - TS: the `no-raw-colors` fixtures from §3 (4 errors, 0 on `'#add-expense'`);
    - editing a `styled.ts` from the allowlist without converting it — a `check-styled-allowlist` error.
 7. Unit tests: `tokens.test.ts` ("Checks" 1–3, plus a negative fixture for each), `appearanceStore` (system/matchMedia, key migration, html class), `theme-init` (hash in CSP, key).
-8. The existing tests and `build:ds-gallery` are green.
+8. The existing tests are green (`build:ds-gallery` withdrawn by D33, 2026-11-21).
 
 ## Backend requirements
 

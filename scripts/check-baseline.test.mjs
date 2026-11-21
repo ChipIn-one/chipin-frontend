@@ -199,14 +199,12 @@ describe('check-baseline across the apps/app move (04-0a)', () => {
         expect(
             movedBaseline({
                 'src/a.ts': count(1),
-                'ds-gallery/gallery.tsx': count(1),
                 'contract-tests/support/http.ts': count(1),
                 'apps/app/src/b.ts': count(2),
                 'scripts/x.mjs': count(3),
             }),
         ).toEqual({
             'apps/app/src/a.ts': count(1),
-            'apps/app/ds-gallery/gallery.tsx': count(1),
             'apps/app/contract-tests/support/http.ts': count(1),
             'apps/app/src/b.ts': count(2),
             'scripts/x.mjs': count(3),

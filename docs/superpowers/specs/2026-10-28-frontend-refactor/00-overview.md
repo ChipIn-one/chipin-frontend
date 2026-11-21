@@ -44,7 +44,7 @@ The mode is **incremental**: no feature freeze, every PR is released independent
 | Version format and normalization | 04-0a (`version-resolver.mjs`: prod = `x.y.z`, otherwise `x.y.z-dev-<sha7>`; root from `import.meta.dirname`) | 02 D7 references it; 03-20 compares only the semver core |
 | Cutover rollback | 04 §4.5: step 1 (04-4a2) — a targeted PR that deletes only the legacy redirects (the app-host `/api` rewrites stay); step 2 (04-4b) — move the domain `chipin.one` (`dev.chipin.one`) back to the app project, which still holds the step-1 redirects (D30); until 04-5a the app project serves the public pages and compat redirects; there is no freeze window or Promote ban (D26) | DEPLOYMENT.md (section "Domains and rollback", 04-4a2 and 04-4b) |
 | Locale parity test | 04-2c | 02 references it |
-| ds-gallery | location — 04 §6; typecheck — 02-C5; aliases — 02-C3; tokens/theme — 05-7 | |
+| ~~ds-gallery~~ | Withdrawn by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery is removed, design review moves to Claude Design. | |
 | CSP | 01-1 base directives in the hand-written `vercel.json` of each project (D31); 05-3 adds the sha256 of theme-init; each project has its own CSP on its own hosts (04 §3.6, §2.9), projects do not proxy each other (D26) | |
 | `.gitignore .env*` | 01-1 | 02-A3 does not repeat it |
 | Invite URL | site `chipin.one/join/group/<t>`, `/join/friend/<t>` (04-3c) → button → screen 01-2 at `app.chipin.one/group/join/<t>`, `/friends/join/<t>` | old `chipin.one/group/join/<t>` — redirect to the site landing (302 until 04-5a, then 301) |
@@ -238,7 +238,7 @@ Total: 44 items (20, 31, 32, 39, 40 withdrawn); still open are the owner actions
 - `05-C Single theme-switching mechanism (light/dark/system) without FOUC, remove next-themes`
 - `05-D Retire styled-themes: themeColor codemod, styled allowlist, stylelint, CSS Modules` (#535, D31: no codemod PR 05-4 — the migration is file by file in the design phase; 05-5 after 05-2b with suppressions; to sync)
 - `05-E basics/components boundary and Radix wrappers cleanup`
-- `05-F ds-gallery on app tokens and theme`
+- ~~`05-F ds-gallery on app tokens and theme`~~ (withdrawn by D33, 2026-11-21)
 - Synchronization after review C (coordinator): new PR ids (03-4a/b, 03-7a/b, 03-15a–c, 03-16a/b, 04-2a2b, 04-2h, 04-3b1/b2, 05-2a/b) — in the bodies of #522, #523, #525, #528, #529, #530, #533; close chipin-backend#208.
 - Follow-ups outside the specs: `Telemetry: generic token redaction`, `Security: CSP img-src, report-to, Sentry tunnel`, `Auth: client PKCE after BE-01-1`, `Invites: group preview on confirmation screen after BE-01-3`.
 - In `syllik/ai-workflow`: `02-A0 Routing block: read .ai/context.md and .ai/decisions.md only if present`.

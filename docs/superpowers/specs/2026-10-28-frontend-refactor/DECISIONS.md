@@ -72,3 +72,6 @@ D31 (R6, plan cuts). (1) Codemods 02-D2/02-D3 withdrawn: named exports via `impo
 
 ## Added 2026-11-17 (owner)
 D32 (amends D3; 00 item 35, review C1-16a/C3-27, comment on #525). Outbox mutations use `networkMode: 'always'` and `retry: false`; the wait for the network, the `auth`/`outdated` gates and the backoff live in `runOutboxOp` (03 §2.1, §2.4), not in TanStack's paused mutations: the TanStack pause fires only between retries and knows nothing about the gate. Restore still hydrates the persisted ops as paused mutations and continues them (03-15b). Queries keep `networkMode: 'offlineFirst'` (D3). 03-15a implements it.
+
+## Added 2026-11-21 (owner)
+D33. ds-gallery is removed (ChipIn-one/chipin-frontend#830): the `apps/app/ds-gallery` folder, `build:ds-gallery` and its step in `verify:full`/CI, and its tsconfig, ESLint and Prettier entries. Nobody opens it, and design review moves to Claude Design. Withdrawn: 05-7 and 05 §7, the gallery parts of 05 §3 and of 02-C3/02-C5, the 00-overview ds-gallery row, 04 §6, and the DS v1 role of the gallery as the specification surface (component cards no longer link to gallery sections). Amends D17.

@@ -1,5 +1,7 @@
 # ChipIn Design System v1 Design
 
+> ds-gallery was removed by D33 of the frontend refactor (owner, 2026-11-21; ChipIn-one/chipin-frontend#830); design review moves to Claude Design. Every ds-gallery mention below is history and is withdrawn.
+
 ## Goal
 
 Give ChipIn one structured, code-first design system that every agent (and later a human designer)
@@ -135,7 +137,7 @@ The migration task re-greps for `grass|olive|color="green"|color="red"` and fixe
   `UserAvatar`, `GroupAvatar`, `UsersRow`, `GroupRoleBadge`, `LedgerScopeBadge`, `EmptyState`
   (with its variants), `ChipInLoader`, skeletons, `SegmentedControl`, `Select`, `Dropdown`,
   `ProgressBar`, `ModeLogotype`. The documentation task finalizes the list.
-- `ds-gallery` is the official specification surface. Every component card links to its gallery
+- Withdrawn by D33 of the frontend refactor (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery is removed and design review moves to Claude Design; gallery anchors and the `patterns` section below are not built. Original text: `ds-gallery` is the official specification surface. Every component card links to its gallery
   section and every gallery section links back to the card. The gallery gets a `patterns` section
   that demonstrates the money and hierarchy rules (one primary action, debt colors, amount
   hierarchy).

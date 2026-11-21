@@ -16,7 +16,6 @@
         "vitest.config.ts",
         "vitest.contract.config.ts",
         "pwa-assets.config.ts",
-        "ds-gallery/vite.config.ts",
         "contract-tests/**/*.ts",
         "playwright.config.ts",
         "playwright.sw.config.ts",

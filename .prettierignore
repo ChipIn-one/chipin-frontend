@@ -17,7 +17,6 @@ eslint-suppressions.json
 public
 LICENSE
 THIRD_PARTY_NOTICES.txt
-apps/app/ds-gallery/standalone.html
 
 # Locale JSON is not reformatted
 apps/app/src/i18n/locales/**

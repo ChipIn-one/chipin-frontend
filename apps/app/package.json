@@ -19,7 +19,6 @@
         "test:e2e:sw": "playwright test -c playwright.sw.config.ts",
         "prerender:public": "node scripts/prerender-public.mjs",
         "verify:public-precache": "node scripts/verify-public-precache.mjs",
-        "build:ds-gallery": "vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs",
         "api:fetch": "node scripts/api/fetch-openapi.mjs",
         "api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging",
         "api:gen": "node scripts/api/gen-types.mjs && node scripts/offline/write-model-hash.mjs",

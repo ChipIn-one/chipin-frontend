@@ -108,7 +108,7 @@ describe('money entries (spec 03 §4.3) merged with the existing selector entrie
                 parserOptions: { ecmaFeatures: { jsx: true } },
             },
         },
-        ...restrictedSyntax([...projectSyntax({ appDir: '.' }), ...reactSyntax({ appDir: '.' })]),
+        ...restrictedSyntax([...projectSyntax({ appDir: '.' }), ...reactSyntax()]),
         ...restrictedImports(projectImports()),
     ];
     const tsSource = [
@@ -158,7 +158,6 @@ describe('money entries (spec 03 §4.3) merged with the existing selector entrie
         ['src/shared/money/format.tsx', ['money-deep-import', 'i18n-attributes']],
         ['src/shared/lib/formatNumber.ts', ['money-deep-import']],
         ['src/components/A.test.tsx', ['money-deep-import']],
-        ['ds-gallery/gallery.tsx', ['money-deep-import']],
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const source = file.endsWith('.tsx') ? tsxSource : tsSource;
@@ -184,7 +183,7 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         ...restrictedSyntax([
             ...projectSyntax({ appDir: '.' }),
             ...projectRules({ appDir: '.' }),
-            ...reactSyntax({ appDir: '.' }),
+            ...reactSyntax(),
         ]),
     ];
     const source = [
@@ -259,7 +258,6 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         ],
         // Tests keep the project entries; money and i18n attributes are exempt there.
         ['src/components/A.test.tsx', PROJECT.filter(id => !id.startsWith('money'))],
-        ['ds-gallery/gallery.tsx', PROJECT.filter(id => !id.startsWith('money'))],
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const [result] = await eslint.lintText(source, { filePath: file });
@@ -318,7 +316,7 @@ describe('query-key-literal (spec 03 §1.3)', () => {
         ...restrictedSyntax([
             ...projectSyntax({ appDir: '.' }),
             ...projectRules({ appDir: '.' }),
-            ...reactSyntax({ appDir: '.' }),
+            ...reactSyntax(),
         ]),
     ];
     const source = [
@@ -359,7 +357,7 @@ describe('site-paths (04-2f, spec 04 §2.1)', () => {
         ...restrictedSyntax([
             ...projectSyntax({ appDir: '.' }),
             ...projectRules({ appDir: '.' }),
-            ...reactSyntax({ appDir: '.' }),
+            ...reactSyntax(),
         ]),
     ];
     const source = [
@@ -394,7 +392,7 @@ describe('store-object-without-shallow: fallbacks, nested conditionals, returns 
         ...restrictedSyntax([
             ...projectSyntax({ appDir: '.' }),
             ...projectRules({ appDir: '.' }),
-            ...reactSyntax({ appDir: '.' }),
+            ...reactSyntax(),
         ]),
     ];
     const flagged = [
@@ -455,13 +453,11 @@ describe('import-x/no-default-export (02-C13): on everywhere except the spec 02 
         ['src/components/A.tsx', 2],
         ['src/basics/numbers/amount/index.ts', 2],
         ['scripts/sentry-sourcemaps.ts', 2],
-        ['ds-gallery/gallery.tsx', 2],
         ['vite.config.ts', undefined],
         ['vitest.contract.config.ts', undefined],
         ['eslint.config.js', undefined],
         ['prettier.config.js', undefined],
         ['pwa-assets.config.ts', undefined],
-        ['ds-gallery/vite.config.ts', undefined],
         ['src/types/global.d.ts', undefined],
     ])('%s resolves the rule to %s', async (file, severity) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
