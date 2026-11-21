@@ -1,0 +1,86 @@
+---
+import type { SupportedLocale } from '../../i18n/locales';
+import { messages } from '../../i18n/ui';
+import type { IconName } from '../../lib/icons';
+import type { StatField } from '../../lib/landingStats';
+import Icon from '../Icon.astro';
+
+// The landing statistics (app hero-section LandingStats, spec 04 §3.4): hidden until the script
+// below has valid numbers from `/api/stats`; it stays hidden on any error (lib/landingStats.ts).
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+const { stats } = messages(locale).landing;
+const items: { field: StatField; label: string; icon: IconName }[] = [
+    { field: 'expensesCount', label: stats.expensesSplit, icon: 'receipt' },
+    { field: 'debtsTrackedUsd', label: stats.debtsTracked, icon: 'handCoins' },
+    { field: 'activeGroupsCount', label: stats.activeGroups, icon: 'users2' },
+    { field: 'peopleSharingCount', label: stats.peopleSharing, icon: 'userCheck' },
+];
+---
+
+<div class="stats" role="region" aria-label={stats.regionLabel} data-landing-stats hidden>
+    {
+        items.map(item => (
+            <div class="stat" role="group" aria-label={item.label}>
+                <span class="value">
+                    <Icon name={item.icon} size={20} />
+                    <span data-stat={item.field} />
+                </span>
+                <span class="label">{item.label}</span>
+            </div>
+        ))
+    }
+</div>
+
+<script>
+    import { loadLandingStats } from '../../lib/landingStats';
+
+    const block = document.querySelector<HTMLElement>('[data-landing-stats]');
+
+    if (block) {
+        void loadLandingStats(block);
+    }
+</script>
+
+<style>
+    .stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cp-space-6);
+        justify-content: center;
+        width: 100%;
+        padding-top: var(--cp-space-4);
+    }
+
+    .stats[hidden] {
+        display: none;
+    }
+
+    .stat {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        gap: var(--cp-space-1);
+        align-items: center;
+        min-width: 120px;
+    }
+
+    .value {
+        display: flex;
+        gap: var(--cp-space-1);
+        align-items: center;
+        color: var(--green-11);
+        font-size: var(--cp-font-size-5);
+        font-weight: var(--cp-font-weight-bold);
+        white-space: nowrap;
+    }
+
+    .label {
+        color: var(--cp-text-secondary);
+        font-size: var(--cp-font-size-3);
+        text-align: center;
+    }
+</style>

@@ -1,0 +1,172 @@
+---
+import type { SupportedLocale } from '../../i18n/locales';
+import { messages } from '../../i18n/ui';
+import type { IconName } from '../../lib/icons';
+import Icon from '../Icon.astro';
+
+// The app features-section: five feature cards (the app does not render `soloBudget`).
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+const { features } = messages(locale).landing;
+const cards: { text: { title: string; description: string }; icon: IconName; tone: string }[] = [
+    { text: features.smartGroups, icon: 'users', tone: 'green' },
+    { text: features.quickExpense, icon: 'zap', tone: 'blue' },
+    { text: features.autoCalc, icon: 'calculator', tone: 'violet' },
+    { text: features.multiCurrency, icon: 'globe', tone: 'cyan' },
+    { text: features.settleUp, icon: 'arrowLeftRight', tone: 'crimson' },
+];
+---
+
+<section id="features" class="features">
+    <div class="intro">
+        <span class="eyebrow">{features.eyebrow}</span>
+        <h2>
+            {features.titlePart1}{' '}
+            <span class="highlight">{features.titleHighlight}</span>{' '}
+            {features.titlePart2}
+        </h2>
+        <p class="subtitle">{features.subtitle}</p>
+    </div>
+    <ul class="grid">
+        {
+            cards.map(card => (
+                <li class="card">
+                    <div class="card-head">
+                        <span class:list={['avatar', card.tone]}>
+                            <Icon name={card.icon} size={20} />
+                        </span>
+                        <h3>{card.text.title}</h3>
+                    </div>
+                    <p>{card.text.description}</p>
+                </li>
+            ))
+        }
+    </ul>
+</section>
+
+<style>
+    .features {
+        max-width: 1136px;
+        margin: 0 auto;
+        padding: var(--cp-space-8) 0;
+    }
+
+    .intro {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-3);
+        align-items: center;
+        margin-bottom: var(--cp-space-8);
+        text-align: center;
+    }
+
+    .eyebrow {
+        color: var(--green-11);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    h2 {
+        margin: 0;
+        font-size: var(--cp-font-size-7);
+        line-height: 1.2;
+    }
+
+    .highlight {
+        color: var(--green-11);
+    }
+
+    .subtitle {
+        max-width: 580px;
+        margin: 0;
+        color: var(--cp-text-secondary);
+        font-size: var(--cp-font-size-4);
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--cp-space-4);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-3);
+        padding: var(--cp-space-5);
+        border: 1px solid var(--cp-border-translucent);
+        border-radius: var(--cp-radius-4);
+        background: var(--cp-surface-subtle);
+    }
+
+    .card-head {
+        display: flex;
+        gap: var(--cp-space-3);
+        align-items: center;
+    }
+
+    h3 {
+        margin: 0;
+        font-size: var(--cp-font-size-4);
+    }
+
+    .card p {
+        margin: 0;
+        color: var(--cp-text-secondary);
+    }
+
+    .avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: var(--cp-radius-3);
+    }
+
+    .green {
+        background: var(--green-a3);
+        color: var(--green-a11);
+    }
+
+    .blue {
+        background: var(--blue-a3);
+        color: var(--blue-a11);
+    }
+
+    .violet {
+        background: var(--violet-a3);
+        color: var(--violet-a11);
+    }
+
+    .cyan {
+        background: var(--cyan-a3);
+        color: var(--cyan-a11);
+    }
+
+    .crimson {
+        background: var(--crimson-a3);
+        color: var(--crimson-a11);
+    }
+
+    @media (min-width: 520px) {
+        .grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        h2 {
+            font-size: var(--cp-font-size-8);
+        }
+
+        .grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+</style>

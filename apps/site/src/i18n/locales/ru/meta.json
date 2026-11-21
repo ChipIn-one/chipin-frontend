@@ -1,6 +1,13 @@
 {
     "ogLocale": "ru_RU",
     "languageName": "Русский",
+    "brand": "ChipIn",
+    "header": {
+        "openApp": "Открыть ChipIn"
+    },
+    "footer": {
+        "telegram": "Telegram"
+    },
     "home": {
         "title": "ChipIn — Делите общие расходы без таблиц",
         "description": "Создавайте группы, добавляйте общие расходы и отслеживайте, кто кому должен — в поездках, дома и с друзьями."

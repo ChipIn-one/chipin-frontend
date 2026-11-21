@@ -1,0 +1,133 @@
+---
+import logoUrl from '@chipin/tokens/assets/logo.svg?url';
+
+import { localizedPath, type SupportedLocale } from '../i18n/locales';
+import { messages } from '../i18n/ui';
+import { appLoginUrl } from '../lib/appOrigin';
+
+import LanguageLinks from './LanguageLinks.astro';
+
+// The site header (spec 04 §3.4, §3.6, §4.4): the logo to the locale home, the landing anchors on
+// the home page, the language links and "Open ChipIn" → `${PUBLIC_APP_ORIGIN}/login` on every
+// page. There is no redirect of a signed-in visitor: the app's `/login` takes them straight in.
+interface Props {
+    locale: SupportedLocale;
+    /** The page slug for the language links (`''` = home). */
+    slug: string;
+    locales: readonly SupportedLocale[];
+    appOrigin: string;
+    /** The home page shows the anchors of its sections. */
+    landingNav?: boolean;
+}
+
+const { locale, slug, locales, appOrigin, landingNav = false } = Astro.props;
+const { meta, landing } = messages(locale);
+const anchors = [
+    { href: '#features', label: landing.nav.features },
+    { href: '#how-it-works', label: landing.nav.howItWorks },
+    { href: '#pricing', label: landing.nav.pricing },
+];
+---
+
+<header class="site-header">
+    <div class="bar">
+        <a class="brand" href={localizedPath(locale, '')} aria-label={meta.brand}>
+            <img src={logoUrl} alt="" width="40" height="40" />
+            <span class="brand-name">{meta.brand}</span>
+        </a>
+        {
+            landingNav && (
+                <nav class="anchors">
+                    {anchors.map(anchor => (
+                        <a href={anchor.href}>{anchor.label}</a>
+                    ))}
+                </nav>
+            )
+        }
+        <div class="actions">
+            <LanguageLinks current={locale} slug={slug} locales={locales} />
+            <a class="open-app" href={appLoginUrl(appOrigin)}>{meta.header.openApp}</a>
+        </div>
+    </div>
+</header>
+
+<style>
+    .site-header {
+        position: sticky;
+        top: 0;
+        z-index: var(--cp-z-raised);
+        border-bottom: 1px solid var(--cp-border-brand);
+        background: var(--cp-surface-base);
+    }
+
+    .bar {
+        display: flex;
+        gap: var(--cp-space-4);
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1136px;
+        margin: 0 auto;
+        padding: var(--cp-space-4);
+    }
+
+    .brand {
+        display: flex;
+        gap: var(--cp-space-4);
+        align-items: center;
+        color: var(--green-11);
+        text-decoration: none;
+    }
+
+    .brand-name {
+        display: none;
+        font-size: var(--cp-font-size-6);
+        font-weight: var(--cp-font-weight-bold);
+    }
+
+    .anchors {
+        display: none;
+        gap: var(--cp-space-6);
+    }
+
+    .anchors a {
+        color: var(--cp-text-secondary);
+        font-size: var(--cp-font-size-3);
+        text-decoration: none;
+    }
+
+    .anchors a:hover {
+        color: var(--cp-text-primary);
+    }
+
+    .actions {
+        display: flex;
+        gap: var(--cp-space-4);
+        align-items: center;
+    }
+
+    .open-app {
+        padding: var(--cp-space-2) var(--cp-space-4);
+        border-radius: var(--cp-radius-pill);
+        background: var(--green-a3);
+        color: var(--green-a11);
+        font-weight: var(--cp-font-weight-medium);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .open-app:hover {
+        background: var(--green-a4);
+    }
+
+    @media (min-width: 520px) {
+        .brand-name {
+            display: inline;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .anchors {
+            display: flex;
+        }
+    }
+</style>

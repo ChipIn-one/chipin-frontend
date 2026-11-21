@@ -1,0 +1,55 @@
+---
+import type { SupportedLocale } from '../../i18n/locales';
+import { messages } from '../../i18n/ui';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { appLoginUrl, resolveAppOrigin } from '../../lib/appOrigin';
+
+import Cta from './Cta.astro';
+import Features from './Features.astro';
+import Hero from './Hero.astro';
+import HowItWorks from './HowItWorks.astro';
+import Showcase from './Showcase.astro';
+
+// The site home (spec 04 §3.4, row 04-3b1): the app landing (pages/HomePage.tsx with
+// features/landing/*) in the app's order, its texts from landing.json and shared.json
+// (landingParity.test.ts). No redirect of a signed-in visitor (§3.6), no app localStorage.
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+const { home } = messages(locale).meta;
+const appOrigin = resolveAppOrigin({
+    value: import.meta.env.PUBLIC_APP_ORIGIN,
+    onVercel: process.env.VERCEL === '1',
+});
+const signInUrl = appLoginUrl(appOrigin, locale);
+---
+
+<BaseLayout locale={locale} slug="" title={home.title} description={home.description} landing>
+    <Hero locale={locale} signInUrl={signInUrl} />
+    <Features locale={locale} />
+    <Showcase locale={locale} />
+    <HowItWorks locale={locale} />
+    <Cta locale={locale} signInUrl={signInUrl} />
+</BaseLayout>
+
+<style is:global>
+    /* The solid green button of the hero and the call to action. */
+    .button-solid {
+        display: inline-flex;
+        gap: var(--cp-space-2);
+        align-items: center;
+        padding: var(--cp-space-3) var(--cp-space-5);
+        border-radius: var(--cp-radius-3);
+        background: var(--cp-accent-solid);
+        color: var(--cp-text-inverse);
+        font-size: var(--cp-font-size-4);
+        font-weight: var(--cp-font-weight-medium);
+        text-decoration: none;
+    }
+
+    .button-solid:hover {
+        background: var(--grass-10);
+    }
+</style>

@@ -1,0 +1,28 @@
+{
+    "buttons": {
+        "getStarted": "Get started",
+        "invitePeople": "Invite people",
+        "settleUp": "Settle up"
+    },
+    "footer": {
+        "copyright": "{{year}}. All rights reserved ©",
+        "mediaTitle": "We are in the media",
+        "privacy": "Privacy",
+        "terms": "Terms"
+    },
+    "preview": {
+        "members": "4 members",
+        "owedToYou": "Owed to you",
+        "youAreOwed": "You are owed",
+        "tabs": {
+            "expenses": "Expenses",
+            "balances": "Balances",
+            "settings": "Settings"
+        },
+        "today": "Today",
+        "paidAmount": "{{payer}} paid",
+        "you": "You",
+        "youLent": "You lent",
+        "youBorrowed": "You borrowed"
+    }
+}

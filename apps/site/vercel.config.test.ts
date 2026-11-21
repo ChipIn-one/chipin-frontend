@@ -2,12 +2,13 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { THEME_INIT_SCRIPT, THEME_INIT_SCRIPT_SHA256 } from '@chipin/tokens/theme-init';
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 
 import { APP_ROUTES } from '../app/src/app/router/routeManifest';
 
-import { cspScriptHashes } from './integrations/seoGuard';
+import { cspScriptHashes, scriptHash } from './integrations/seoGuard';
 import { localizedPath, NON_DEFAULT_LOCALES, SUPPORTED_LOCALES } from './src/i18n/locales';
 
 // Reads the committed, hand-written apps/site/vercel.json and evaluates it with Vercel's own
@@ -540,8 +541,10 @@ describe('invite landing (§3.5)', () => {
         },
     );
 
-    test('USR-080 every rewrite is the invite landing', () => {
-        expect((config as { rewrites?: unknown[] }).rewrites).toEqual([
+    test('USR-080 every rewrite but the statistics proxy is the invite landing', () => {
+        const rewrites = (config as { rewrites?: { source?: unknown }[] }).rewrites ?? [];
+
+        expect(rewrites.filter(row => row.source !== '/api/stats')).toEqual([
             { source: '/join/:kind(group|friend)/:token{/}?', destination: '/join/:kind' },
         ]);
     });
@@ -580,5 +583,84 @@ describe('invite landing (§3.5)', () => {
 
         expect(disallowed).toEqual(expect.arrayContaining(['/join/', '/api/']));
         expect(robots).toMatch(/^User-agent: \*$/m);
+    });
+});
+
+// ---- 04-3b1: the home page (spec 04 §3.6, §4.1) ----
+
+describe('theme-init on every page (§3.6, 05-3)', () => {
+    test('the CSP allows the inline theme-init script by its hash', () => {
+        const hash = scriptHash(THEME_INIT_SCRIPT);
+
+        expect(hash).toBe(`'${THEME_INIT_SCRIPT_SHA256}'`);
+        expect(cspScriptHashes(config)).toContain(hash);
+    });
+});
+
+describe('/api/stats, the landing statistics proxy (§4.1)', () => {
+    /** Where the rewrites send `path` on `host`: the first matching rewrite after the files. */
+    const rewriteOn = (path: string, host: string): string | undefined => {
+        const afterFilesystem = routes.slice(routes.findIndex(route => 'handle' in route) + 1);
+
+        for (const route of afterFilesystem as (EvaluatedRoute & { dest?: string })[]) {
+            const match = route.src === undefined ? null : new RegExp(route.src).exec(path);
+
+            if (
+                match !== null &&
+                route.dest !== undefined &&
+                (route.has ?? []).every(condition => conditionMatches(condition, host))
+            ) {
+                return route.dest;
+            }
+        }
+        return undefined;
+    };
+
+    /** The backend of each host's environment, as the app project's `/api` proxy. */
+    const STATS_BACKENDS: Record<string, string> = {
+        'chipin.one': 'https://api.chipin.one/stats',
+        'dev.chipin.one': 'https://api-dev.chipin.one/stats',
+        'site-dev.chipin.one': 'https://api-dev.chipin.one/stats',
+        'chipin-site-git-x.vercel.app': 'https://api-dev.chipin.one/stats',
+    };
+
+    test.each(Object.entries(STATS_BACKENDS))('on %s proxies to %s', (host, backend) => {
+        expect(request('/api/stats', host).status).toBe(200);
+        expect(rewriteOn('/api/stats', host)).toBe(backend);
+    });
+
+    test.each(['www.chipin.one', 'app.chipin.one', 'evil.example', 'chipin.one.evil.example'])(
+        'on %s proxies nothing',
+        host => {
+            expect(rewriteOn('/api/stats', host)).toBeUndefined();
+        },
+    );
+
+    test('only /api/stats reaches the backend: no other API path, no prefix match', () => {
+        for (const host of Object.keys(STATS_BACKENDS)) {
+            for (const path of ['/api/stats/x', '/api/statsx', '/api/users/me', '/api', '/stats']) {
+                expect([host, path, rewriteOn(path, host)]).toEqual([host, path, undefined]);
+            }
+        }
+    });
+
+    test.each(ALL_HOSTS)('on %s the response is never cached', host => {
+        expect(request('/api/stats', host).headers).toMatchObject({
+            'Cache-Control': 'private, no-store',
+            'X-Vercel-Enable-Rewrite-Caching': '0',
+        });
+        expect(request('/', host).headers['X-Vercel-Enable-Rewrite-Caching']).toBeUndefined();
+    });
+
+    // A file wins over a rewrite (§4.1): nothing in public/ may serve /api/*.
+    test('no site file shadows the proxy', () => {
+        expect(existsSync(join(SITE_DIR, 'public/api'))).toBe(false);
+        expect(existsSync(join(SITE_DIR, 'src/pages/api'))).toBe(false);
+    });
+
+    test('the CSP keeps connect-src to the same origin', () => {
+        expect(request('/', PROD).headers['Content-Security-Policy']).toMatch(
+            /(?:^|; )connect-src 'self'(?:;|$)/,
+        );
     });
 });

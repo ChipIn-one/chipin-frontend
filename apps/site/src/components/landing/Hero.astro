@@ -1,0 +1,92 @@
+---
+import type { SupportedLocale } from '../../i18n/locales';
+import { messages } from '../../i18n/ui';
+import Icon from '../Icon.astro';
+
+import LandingStats from './LandingStats.astro';
+
+// The app hero-section. "Get started" opens the app sign-in with the page language for a new
+// account (spec 04 §4.4). The app's "Install app" button needs the app's PWA install prompt and
+// does not move to the site.
+interface Props {
+    locale: SupportedLocale;
+    signInUrl: string;
+}
+
+const { locale, signInUrl } = Astro.props;
+const { landing, shared } = messages(locale);
+---
+
+<section class="hero">
+    <span class="badge">{landing.badge}</span>
+    <h1>
+        {landing.heroTitle}{' '}
+        <span class="highlight">{landing.heroTitleHighlight}</span>
+    </h1>
+    <p class="description">{landing.heroDescription}</p>
+    <div class="actions">
+        <a class="button-solid" href={signInUrl}>
+            {shared.buttons.getStarted}
+            <Icon name="arrowRight" size={18} />
+        </a>
+    </div>
+    <LandingStats locale={locale} />
+</section>
+
+<style>
+    .hero {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-5);
+        align-items: center;
+        max-width: 1136px;
+        margin: 0 auto;
+        padding: var(--cp-space-8) 0;
+        text-align: center;
+    }
+
+    .badge {
+        padding: var(--cp-space-1) var(--cp-space-3);
+        border: 1px solid var(--green-a6);
+        border-radius: var(--cp-radius-pill);
+        background: var(--green-a2);
+        color: var(--green-a11);
+        font-size: var(--cp-font-size-2);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    h1 {
+        margin: 0;
+        font-size: var(--cp-font-size-8);
+        line-height: 1.2;
+    }
+
+    .highlight {
+        color: var(--green-11);
+    }
+
+    .description {
+        max-width: 560px;
+        margin: 0;
+        color: var(--cp-text-secondary);
+        font-size: var(--cp-font-size-4);
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cp-space-3);
+        justify-content: center;
+        padding-top: var(--cp-space-2);
+    }
+
+    @media (min-width: 1024px) {
+        h1 {
+            font-size: var(--cp-font-size-9);
+        }
+
+        .description {
+            font-size: var(--cp-font-size-5);
+        }
+    }
+</style>

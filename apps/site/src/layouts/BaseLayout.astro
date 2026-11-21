@@ -1,5 +1,8 @@
 ---
-import LanguageLinks from '../components/LanguageLinks.astro';
+import { THEME_INIT_SCRIPT } from '@chipin/tokens/theme-init';
+
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
 import {
     DEFAULT_LOCALE,
     localizedPath,
@@ -8,6 +11,7 @@ import {
 } from '../i18n/locales';
 import { messages } from '../i18n/ui';
 import { ANALYTICS_REDACT_SCRIPT } from '../lib/analyticsRedact';
+import { resolveAppOrigin } from '../lib/appOrigin';
 
 import '@chipin/tokens/radix-colors.css';
 import '@chipin/tokens/tokens.css';
@@ -31,6 +35,8 @@ interface Props {
     includeAnalytics?: boolean;
     /** `no-referrer` for invite pages, on top of the vercel.json header (KB USR-085). */
     referrer?: 'no-referrer';
+    /** The home page: full-width sections and the header anchors to them. */
+    landing?: boolean;
 }
 
 const {
@@ -42,7 +48,13 @@ const {
     noindex = false,
     includeAnalytics = true,
     referrer,
+    landing = false,
 } = Astro.props;
+
+const appOrigin = resolveAppOrigin({
+    value: import.meta.env.PUBLIC_APP_ORIGIN,
+    onVercel: process.env.VERCEL === '1',
+});
 
 // `site` is always https://chipin.one: dev hosts never reach canonical or hreflang (§3.2).
 const site = Astro.site ?? new URL('https://chipin.one');
@@ -61,6 +73,8 @@ const xDefault =
 <html lang={locale}>
     <head>
         <meta charset="utf-8" />
+        <!-- First, before any CSS: sets html.light|dark (spec 04 §3.6, spec 05 PR 05-3). -->
+        <script is:inline set:html={THEME_INIT_SCRIPT} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
         <meta name="description" content={description} />
@@ -87,25 +101,38 @@ const xDefault =
         }
     </head>
     <body>
-        <header class="site-header">
-            <LanguageLinks current={locale} slug={slug ?? ''} locales={translations} />
-        </header>
-        <main>
+        <SiteHeader
+            locale={locale}
+            slug={slug ?? ''}
+            locales={translations}
+            appOrigin={appOrigin}
+            landingNav={landing}
+        />
+        <main class:list={[landing ? 'landing' : 'page']}>
             <slot />
         </main>
+        <SiteFooter locale={locale} />
     </body>
 </html>
 
-<style>
-    .site-header {
-        display: flex;
-        justify-content: flex-end;
-        padding: 1rem;
+<style is:global>
+    body {
+        margin: 0;
+        background: var(--cp-surface-base);
+        color: var(--cp-text-primary);
+        font-family: var(--cp-font-sans);
+        line-height: 1.5;
     }
+</style>
 
-    main {
+<style>
+    .page {
         max-width: 48rem;
         margin: 0 auto;
         padding: 1rem;
+    }
+
+    .landing {
+        padding: 0 var(--cp-space-4);
     }
 </style>

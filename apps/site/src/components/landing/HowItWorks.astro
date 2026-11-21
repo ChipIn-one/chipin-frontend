@@ -1,0 +1,144 @@
+---
+import type { SupportedLocale } from '../../i18n/locales';
+import { messages } from '../../i18n/ui';
+
+// The app how-it-works-section: four numbered steps on a timeline.
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+const { howItWorks } = messages(locale).landing;
+const steps = [howItWorks.step1, howItWorks.step2, howItWorks.step3, howItWorks.step4].map(
+    (step, index) => ({ ...step, number: String(index + 1).padStart(2, '0') }),
+);
+---
+
+<section id="how-it-works" class="how-it-works">
+    <div class="intro">
+        <span class="eyebrow">{howItWorks.eyebrow}</span>
+        <h2>{howItWorks.title}</h2>
+        <p class="subtitle">{howItWorks.subtitle}</p>
+    </div>
+    <ol class="timeline">
+        {
+            steps.map(step => (
+                <li class="step">
+                    <span class="marker">
+                        <span class="number" aria-hidden="true">
+                            {step.number}
+                        </span>
+                        <span class="line" />
+                    </span>
+                    <span class="text">
+                        <h3>{step.title}</h3>
+                        <p>{step.description}</p>
+                    </span>
+                </li>
+            ))
+        }
+    </ol>
+</section>
+
+<style>
+    .how-it-works {
+        max-width: 688px;
+        margin: 0 auto;
+        padding: var(--cp-space-8) 0;
+    }
+
+    .intro {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-3);
+        align-items: center;
+        margin-bottom: var(--cp-space-9);
+        text-align: center;
+    }
+
+    .eyebrow {
+        color: var(--green-11);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    h2 {
+        margin: 0;
+        font-size: var(--cp-font-size-7);
+        line-height: 1.2;
+    }
+
+    .subtitle {
+        margin: 0;
+        color: var(--cp-text-secondary);
+        font-size: var(--cp-font-size-4);
+    }
+
+    .timeline {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 0;
+        list-style: none;
+    }
+
+    .step {
+        display: flex;
+        gap: var(--cp-space-5);
+        align-items: stretch;
+    }
+
+    .marker {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        align-items: center;
+    }
+
+    .number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: var(--cp-radius-pill);
+        background: var(--green-a3);
+        color: var(--green-a11);
+        font-size: var(--cp-font-size-4);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    .line {
+        flex: 1;
+        width: 2px;
+        min-height: var(--cp-space-9);
+        margin: var(--cp-space-2) 0;
+        background: var(--green-6);
+    }
+
+    .step:last-child .line {
+        display: none;
+    }
+
+    .text {
+        padding-bottom: var(--cp-space-7);
+    }
+
+    .step:last-child .text {
+        padding-bottom: 0;
+    }
+
+    h3 {
+        margin: 0 0 var(--cp-space-1);
+        font-size: var(--cp-font-size-4);
+    }
+
+    .text p {
+        margin: 0;
+        color: var(--cp-text-secondary);
+    }
+
+    @media (min-width: 1024px) {
+        h2 {
+            font-size: var(--cp-font-size-9);
+        }
+    }
+</style>

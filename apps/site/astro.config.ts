@@ -18,6 +18,13 @@ export default defineConfig({
         // The site CSP has `style-src 'self'`; seoGuard fails on inline styles.
         inlineStylesheets: 'never',
     },
+    vite: {
+        build: {
+            // Astro inlines a small bundled `<script>` (e.g. the landing statistics) into the HTML;
+            // the CSP would then need a build-dependent hash. Scripts stay files under `/_astro/`.
+            assetsInlineLimit: (file: string) => (/\.m?js$/.test(file) ? false : undefined),
+        },
+    },
     // The legal texts must render word for word (C2-35): no curly quotes or dashes from `'`/`--`.
     markdown: { smartypants: false },
     i18n: {
