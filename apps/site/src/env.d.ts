@@ -3,8 +3,9 @@ interface ImportMetaEnv {
     readonly PUBLIC_APP_ORIGIN?: string;
 }
 
-// Plain TypeScript (typed ESLint, vitest) cannot resolve `.astro` imports; `astro check` resolves
-// the real files first and never falls back to this wildcard.
+// Plain TypeScript (typed ESLint, vitest) cannot resolve `.astro` imports; `astro check` types an
+// existing file from the file itself. A missing `.astro` path is not reported by `astro check`
+// because of this wildcard: the build and the tests catch it.
 declare module '*.astro' {
     import type { AstroComponentFactory } from 'astro/runtime/server/index.js';
 
