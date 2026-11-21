@@ -22,7 +22,10 @@ export default defineConfig({
         build: {
             // Astro inlines a small bundled `<script>` (e.g. the landing statistics) into the HTML;
             // the CSP would then need a build-dependent hash. Scripts stay files under `/_astro/`.
-            assetsInlineLimit: (file: string) => (/\.m?js$/.test(file) ? false : undefined),
+            // The favicon (2 KB, under the 4 KB default) is also kept a hashed file, as spec 04 A-28
+            // says, not a `data:` URI in every page.
+            assetsInlineLimit: (file: string) =>
+                /\.m?js$|\/favicon\.svg$/.test(file) ? false : undefined,
         },
     },
     // The legal texts must render word for word (C2-35): no curly quotes or dashes from `'`/`--`.

@@ -1,4 +1,5 @@
 ---
+import faviconUrl from '@chipin/tokens/assets/favicon.svg?url';
 import { THEME_INIT_SCRIPT } from '@chipin/tokens/theme-init';
 
 import LanguageLinks from '../components/LanguageLinks.astro';
@@ -85,6 +86,7 @@ const xDefault =
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
         <meta name="description" content={description} />
+        <link rel="icon" href={faviconUrl} type="image/svg+xml" />
         {noindex && <meta name="robots" content="noindex" />}
         {referrer && <meta name="referrer" content={referrer} />}
         {canonical && <link rel="canonical" href={canonical} />}
