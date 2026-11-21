@@ -23,8 +23,8 @@ without it (and a preview build unless it is `dev`), as defined by #180. At
 runtime an invalid value, an unknown host, or a `.vercel.app` host without the
 variable fails closed. The app and legacy hostnames (`app.chipin.one`,
 `chipin.one`, `app-dev.chipin.one`, `dev.chipin.one`) resolve from `ENV_URLS`
-in `apps/app/src/constants/env.ts` when the variable is absent (local runs
-only, 04-2g). Custom `*.dev.chipin.one` branch domains are intentionally not
+in `apps/app/src/constants/env.ts` when the variable is absent (a build
+without it served on those hosts; Vercel builds always set it, 04-2g). Custom `*.dev.chipin.one` branch domains are intentionally not
 part of the deployment contract.
 
 Sentry runtime reporting reads `VITE_SENTRY_DSN` from the deployment
