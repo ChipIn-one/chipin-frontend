@@ -1,9 +1,10 @@
+import Logotype from '@chipin/tokens/assets/logo.svg?react';
 import { Badge, Box, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { PROJECT_NAME } from 'constants/chipin';
 
-import { StyledModeLogotype } from './styled';
+import styles from './ModeLogotype.module.css';
 
 interface Props {
     isSoloMode: boolean;
@@ -17,7 +18,7 @@ const ModeLogotype = ({ isSoloMode, isModeBadgeVisible = true }: Props) => {
 
     return (
         <Flex gap="4" align="center">
-            <StyledModeLogotype $isSoloMode={isSoloMode} />
+            <Logotype className={styles.root} data-mode={isSoloMode ? 'solo' : 'group'} />
             <Box display={{ initial: 'none', sm: 'block' }}>
                 <Flex align="center" gap="2">
                     <Text size="6" weight="bold" color={activeColor}>
@@ -34,4 +35,4 @@ const ModeLogotype = ({ isSoloMode, isModeBadgeVisible = true }: Props) => {
     );
 };
 
-export default ModeLogotype;
+export { ModeLogotype };

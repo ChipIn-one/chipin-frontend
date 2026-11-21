@@ -1,6 +1,6 @@
 import { Box, Container, Flex } from '@radix-ui/themes';
 
-import ChipInLoader from './ChipInLoader';
+import { ChipInLoader } from './ChipInLoader';
 
 const PageLoader = () => {
     return (

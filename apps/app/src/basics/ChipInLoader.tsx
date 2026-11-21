@@ -7,7 +7,7 @@ const ChipInLoader = ({ size = 64, strokeWidth = 2 }: LoaderProps) => (
     <svg
         width={size}
         height={size}
-        stroke="#80C837"
+        stroke="var(--cp-brand-loader)"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
     >
@@ -51,4 +51,4 @@ const ChipInLoader = ({ size = 64, strokeWidth = 2 }: LoaderProps) => (
     </svg>
 );
 
-export default ChipInLoader;
+export { ChipInLoader };

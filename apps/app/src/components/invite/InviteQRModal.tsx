@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { InviteQrContent } from 'hooks/pwaHooks';
 
 import { BaseModal, OverlayBody, OverlayFooter } from 'components/modals';
-import OfflineQRCode from 'components/OfflineQRCode';
+import { OfflineQRCode } from 'components/OfflineQRCode';
 
 interface Props {
     children?: ReactNode;

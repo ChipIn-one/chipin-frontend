@@ -105,7 +105,7 @@ const resolveSentryUploadConfig = (
 const appVersionInfo = resolveAppVersionInfo();
 const appVersion = appVersionInfo.version;
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
     const buildEnvironment = loadEnv(mode, '.', '');
     const pwaAppName = buildEnvironment.VITE_CHIPIN_ENV === 'dev' ? 'ChipIn DEV' : 'ChipIn';
     const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
@@ -131,6 +131,13 @@ export default defineConfig(({ mode }) => {
             'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(
                 sentryBuildConfig.environment,
             ),
+        },
+        // CSS Modules (spec 05 §3): readable class names in dev, short hashes in the build.
+        css: {
+            modules: {
+                localsConvention: 'camelCaseOnly',
+                generateScopedName: command === 'serve' ? '[name]__[local]' : '[hash:base64:6]',
+            },
         },
         plugins: [
             svgr(),

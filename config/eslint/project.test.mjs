@@ -557,3 +557,115 @@ describe('storage boundary (#675): storage only through helpers/localStorage.ts'
         expect(await lint(code, 'src/shared/offline/network.test.ts')).toEqual([]);
     });
 });
+
+describe('no-raw-colors and inline-style (spec 05 §3, 05-5)', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: {
+                parser: tseslint.parser,
+                parserOptions: { ecmaFeatures: { jsx: true } },
+            },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax(),
+        ]),
+    ];
+    const lintIds = async (source, file) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        return result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]);
+    };
+    const colors = [
+        "export const a = '#fff';",
+        'export const b = `color: rgb(0 0 0)`;',
+        'export const c = `border: 1px solid #ddd`;',
+        "export const d = 'var(--gray-11)';",
+        // Fine: a token, anchors and ids that are not a whole hex string.
+        "export const e = 'var(--cp-text-primary)';",
+        "export const f = '#add-expense';",
+        "export const g = '#feedback';",
+    ].join('\n');
+
+    test.each([
+        ['src/components/A.tsx', Array(4).fill('no-raw-colors')],
+        ['src/components/A.test.tsx', Array(4).fill('no-raw-colors')],
+        ['vite.config.ts', Array(4).fill('no-raw-colors')],
+        // The token package holds the raw values.
+        ['packages/tokens/src/theme.ts', []],
+    ])('%s reports exactly %j', async (file, ids) => {
+        expect(await lintIds(colors, file)).toEqual(ids);
+    });
+
+    test('the message says where the colors come from', async () => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText("export const a = '#fff';", {
+            filePath: 'src/A.ts',
+        });
+
+        expect(result.messages[0].message).toBe(
+            '[no-raw-colors] use var(--cp-*) from @chipin/tokens',
+        );
+    });
+
+    test('style objects take only custom properties', async () => {
+        const source = [
+            'export const A = () => <div style={{ width: 1, maxWidth: 2 }} />;',
+            "export const B = () => <div style={{ '--cover-url': url }} />;",
+            'export const C = () => <div style={STYLE} />;',
+        ].join('\n');
+
+        expect(await lintIds(source, 'src/components/A.tsx')).toEqual([
+            'inline-style',
+            'inline-style',
+        ]);
+    });
+});
+
+describe('styled-components and svgr imports (spec 05 §3, §6) keep the other import entries', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedImports(
+            projectImports({
+                appDir: '.',
+                styledAllowlist: ['src/a/styled.ts', 'src/b/B.test.tsx'],
+            }),
+        ),
+    ];
+    const source = [
+        "import styled from 'styled-components';",
+        "import Logo from '@chipin/tokens/assets/logo.svg?react';",
+        "import Google from 'assets/google-icon.svg?react';",
+        "import Other from 'assets/other.svg?react';",
+        "import url from 'assets/other.svg?url';",
+        "import { split } from 'shared/money/split';",
+        'export { Google, Logo, Other, split, styled, url };',
+    ].join('\n');
+
+    test.each([
+        ['src/components/New.tsx', ['styled-components', 'svgr-react', 'money-deep-import']],
+        ['src/a/styled.ts', ['svgr-react', 'money-deep-import']],
+        ['src/b/B.test.tsx', ['svgr-react', 'money-deep-import']],
+    ])('%s reports exactly %j', async (file, ids) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        expect(
+            result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
+        ).toEqual(ids);
+    });
+
+    test('the allowlist is one glob (one scope)', () => {
+        const [entry] = projectImports({ styledAllowlist: ['a.ts', 'b.ts'] });
+
+        expect(entry.ignores).toEqual(['{a.ts,b.ts}']);
+        expect(projectImports({ styledAllowlist: ['a.ts'] })[0].ignores).toEqual(['a.ts']);
+        expect(projectImports({ styledAllowlist: [] })[0].ignores).toBeUndefined();
+    });
+});

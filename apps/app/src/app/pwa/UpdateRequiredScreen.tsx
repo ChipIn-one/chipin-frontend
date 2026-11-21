@@ -13,6 +13,8 @@ import {
 
 import { UPDATE_REQUIRED_WAIT_MS, useIsUpdateRequired } from './updateRequired';
 
+import styles from './UpdateRequiredScreen.module.css';
+
 type UpdateStatus = 'idle' | 'checking' | 'notPublished';
 
 /**
@@ -55,14 +57,9 @@ const UpdateRequiredView = () => {
     };
 
     return (
-        <Box
-            position="fixed"
-            inset="0"
-            p="4"
-            style={{ zIndex: 2147483000, background: 'var(--color-background)' }}
-        >
+        <Box position="fixed" inset="0" p="4" className={styles.root}>
             <Flex height="100%" align="center" justify="center">
-                <Card size="3" style={{ maxWidth: 420 }}>
+                <Card size="3" className={styles.card}>
                     <Flex
                         direction="column"
                         gap="3"

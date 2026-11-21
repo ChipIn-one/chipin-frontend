@@ -34,7 +34,7 @@ const ShareDivider = styled(Flex)`
         content: '';
         flex: 1;
         height: 1px;
-        background: var(--gray-a6);
+        background: var(--cp-border-translucent);
     }
 `;
 
@@ -97,4 +97,4 @@ const InviteOnboarding = ({ invite }: Props) => {
     );
 };
 
-export default InviteOnboarding;
+export { InviteOnboarding };

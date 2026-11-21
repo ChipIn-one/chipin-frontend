@@ -1,0 +1,23 @@
+.root {
+    position: relative;
+    width: 128px;
+    height: 128px;
+}
+
+.file {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.frown {
+    position: absolute;
+    top: 48px;
+    left: 40px;
+}
+
+.search {
+    position: absolute;
+    right: -10px;
+    bottom: -16px;
+}

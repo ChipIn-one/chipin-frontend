@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import QRCode from 'qrcode-generator';
 
+import { cssToken } from 'helpers/cssToken';
+
 const QUIET_ZONE = 4; // required by QR standard
 
 type QRSize = 'small' | 'medium' | 'large';
@@ -39,10 +41,10 @@ const OfflineQRCode = ({ url, size = 'medium' }: { url: string; size?: QRSize })
         canvas.height = fullSize;
 
         // background
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = cssToken('--cp-media-on');
         ctx.fillRect(0, 0, fullSize, fullSize);
 
-        ctx.fillStyle = '#000';
+        ctx.fillStyle = cssToken('--cp-media-scrim');
 
         for (let y = 0; y < moduleCount; y++) {
             for (let x = 0; x < moduleCount; x++) {
@@ -56,4 +58,4 @@ const OfflineQRCode = ({ url, size = 'medium' }: { url: string; size?: QRSize })
     return <canvas ref={ref} />;
 };
 
-export default OfflineQRCode;
+export { OfflineQRCode };

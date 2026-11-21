@@ -1,0 +1,10 @@
+.root {
+    /* Above every app layer, Radix portals included. */
+    z-index: 2147483000;
+    /* stylelint-disable-next-line declaration-property-value-disallowed-list, csstools/value-no-unknown-custom-properties -- the Radix page background (white in light, gray-1 in dark) has no --cp-* token, and a token on :root cannot reference it */
+    background: var(--color-background);
+}
+
+.card {
+    max-width: 420px;
+}
