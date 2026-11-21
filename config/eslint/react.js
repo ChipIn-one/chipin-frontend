@@ -2,7 +2,7 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 
-import { appGlob, LINT_FILES } from './base.js';
+import { LINT_FILES } from './base.js';
 
 // There is no `warn` level (spec 02 §D0): the hooks preset's warnings become errors.
 const asErrors = rules =>
@@ -15,14 +15,11 @@ const asErrors = rules =>
         }),
     );
 
-// Demo literals of the design-system gallery are not translated (spec 02 §D5 i18n).
-const i18nIgnores = appDir => [appGlob(appDir, 'ds-gallery/**')];
-
 /**
  * React hooks (v7 recommended), the six jsx-a11y rules of §D0 and the i18n JSX text rule.
  * The rest of `jsx-a11y/recommended` is class c and stays off (`no-autofocus`: modals).
  */
-export const reactConfig = ({ appDir }) => [
+export const reactConfig = () => [
     {
         files: [LINT_FILES],
         plugins: {
@@ -46,7 +43,6 @@ export const reactConfig = ({ appDir }) => [
     },
     {
         files: [LINT_FILES],
-        ignores: i18nIgnores(appDir),
         rules: {
             // docs/engineering/rules/30-ui.md §i18n: JSX text goes through i18n, `{t('key')}`.
             'react/jsx-no-literals': [
@@ -66,13 +62,13 @@ export const reactConfig = ({ appDir }) => [
  * `no-restricted-syntax` entries (see project.js): user-facing attributes go through i18n.
  * Technical attributes (`variant`, `size`, `type`, …) are not checked (spec 02 §Nuances).
  */
-export const reactSyntax = ({ appDir }) => [
+export const reactSyntax = () => [
     {
         id: 'i18n-attributes',
         selector:
             'JSXAttribute[name.name=/^(aria-label|aria-description|placeholder|title|alt)$/] > Literal[value=/\\w/]',
         // Test-harness markup is not user-facing (same test glob as the type-aware tests override).
-        ignores: [...i18nIgnores(appDir), '**/*.test.{ts,tsx}'],
+        ignores: ['**/*.test.{ts,tsx}'],
         message:
             "User-facing attribute text goes through i18n: `aria-label={t('...')}` with a key in every locale (docs/engineering/rules/30-ui.md §i18n).",
     },

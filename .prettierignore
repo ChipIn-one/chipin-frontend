@@ -13,11 +13,10 @@ apps/app/src/shared/api/generated/**
 apps/app/openapi/chipin.yaml
 eslint-suppressions.json
 
-# Static assets, legal texts, standalone builds
+# Static assets, legal texts
 public
 LICENSE
 THIRD_PARTY_NOTICES.txt
-apps/app/ds-gallery/standalone.html
 
 # Locale JSON is not reformatted
 apps/app/src/i18n/locales/**

@@ -4,11 +4,6 @@
       "count": 1
     }
   },
-  "apps/app/ds-gallery/gallery.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    }
-  },
   "apps/app/src/api/chipin.instance.ts": {
     "boundaries/dependencies": {
       "count": 1
