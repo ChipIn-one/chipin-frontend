@@ -124,7 +124,7 @@ export const useAppearanceStore = create<AppearanceStore>(set => ({
     },
 }));
 
-// Another tab changed the theme (as next-themes synced it): follow it without writing it back.
+// Another tab changed the theme: follow it without writing it back.
 // `key === null` is a `localStorage.clear()` there: the key is gone, as with a removal.
 const onStorage = (event: StorageEvent): void => {
     if (event.key !== LS_KEY_THEME && event.key !== null) {
