@@ -205,4 +205,16 @@ describe('review hardening (05-5)', () => {
             check({ baseAllowlist: ALLOWLIST, changes, exempt: [entry], baseExempt: [entry] }),
         ).toEqual([expect.stringMatching(/^src\/a\/styled\.ts: changed styled code/)]);
     });
+
+    test('rule 3: re-sorting a createGlobalStyle import is not a touch', () => {
+        expect(
+            isTouch('src/b/B.tsx', {
+                added: [
+                    "import { createGlobalStyle } from 'styled-components';",
+                    '    createGlobalStyle,',
+                ],
+                removed: ["import { css, createGlobalStyle } from 'styled-components';"],
+            }),
+        ).toBe(false);
+    });
 });

@@ -30,6 +30,9 @@ const STYLE_CODE = /\bstyled[.(]|\bcss`|\bkeyframes`|\bcreateGlobalStyle\b/;
 const IMPORT_EXPORT_LINE =
     /^\s*(?:$|(?:import|export)\b|}\s*from\s|(?:type\s+)?[\w$]+(?:\s+as\s+[\w$]+)?,?\s*$|};?\s*$)/;
 
+// Lines of an import statement: `import …`, `} from '…'`, a bare specifier (`    Foo,`).
+const IMPORT_LINE = /^\s*(?:import\b|}\s*from\s|(?:type\s+)?[\w$]+(?:\s+as\s+[\w$]+)?,?\s*$)/;
+
 /**
  * Changed lines per file of a `git diff --unified=0` output.
  * @returns {Record<string, { added: string[], removed: string[] }>}
@@ -67,7 +70,8 @@ export const parseDiff = diff => {
 
 /** True when a change of a listed file counts as a touch (rule 3). */
 export const isTouch = (path, { added, removed }) => {
-    if (added.some(line => STYLE_CODE.test(line))) {
+    // Style code counts even on an `export` line; import lines (`createGlobalStyle,`) do not.
+    if (added.some(line => !IMPORT_LINE.test(line) && STYLE_CODE.test(line))) {
         return true;
     }
     if ([...added, ...removed].every(line => IMPORT_EXPORT_LINE.test(line))) {
