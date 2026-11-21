@@ -1,15 +1,15 @@
 // App route manifest (spec 04 §2.2): pure data. Only type imports and erasable syntax, so that a
 // Node 24 script can import this file with type stripping and no build.
 //
-// Not here yet: `home` (the index redirect to the preferred mode) lands in 04-5a and `login` (the
-// sign-in screen) in 04-2f; neither has a page today. Until 04-5a the index is the transitional
-// `publicHome`.
+// Not here yet: `home` (the index redirect to the preferred mode) lands in 04-5a; it has no page
+// today. Until 04-5a the index is the transitional `publicHome`.
 
 type RouteAccess = 'public' | 'protected';
 // `internal` = InternalPageLayout with navigation; `public` is for the transitional ids only.
 type RouteLayout = 'internal' | 'bare' | 'public';
 
 type AppRouteId =
+    | 'login'
     | 'oauthCallback'
     | 'dashboard'
     | 'solo'
@@ -44,6 +44,15 @@ interface AppRouteDef {
 }
 
 const APP_ROUTES: readonly AppRouteDef[] = [
+    {
+        // 04-2f: the sign-in screen (`?returnTo`, `?locale`); `requireSession` and the site lead here.
+        id: 'login',
+        path: 'login',
+        access: 'public',
+        layout: 'bare',
+        meta: { titleKey: 'login.title' },
+        legacyPaths: ['/login'],
+    },
     {
         id: 'oauthCallback',
         path: 'oauth/callback',

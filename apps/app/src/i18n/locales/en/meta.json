@@ -11,6 +11,10 @@
         "title": "ChipIn — Terms of Service",
         "description": "Read the interim terms for using ChipIn"
     },
+    "login": {
+        "title": "ChipIn — Sign In",
+        "description": "Sign in to ChipIn to split shared expenses"
+    },
     "oauthCallback": {
         "title": "ChipIn — Signing In",
         "description": "Completing sign in to ChipIn"

@@ -17,7 +17,7 @@ import { SS_KEY_ROUTE_CHUNK_RELOAD } from 'constants/localstorage';
 import { ROUTES } from 'constants/routes';
 import { checkForServiceWorkerUpdate, reloadApp, updateServiceWorker } from 'helpers/appUpdate';
 import { SessionStorage } from 'helpers/localStorage';
-import Page404 from 'pages/404-page';
+import { Page404 } from 'pages/404-page';
 import { isNetworkUsable } from 'shared/offline/network';
 
 import BackgroundBox from 'basics/BackgroundBox';

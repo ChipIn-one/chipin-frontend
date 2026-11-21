@@ -14,6 +14,7 @@ interface RouteModule {
 // next to the page; a flat page file (`pages/DashboardPage.tsx`) gets it under `./routes/<id>/`,
 // because a new `pages/*` file or folder is another pages slice and pages cannot import pages.
 const ROUTE_MODULES = {
+    login: () => import('pages/login-page/route'),
     oauthCallback: () => import('pages/oauth-callback-page/route'),
     dashboard: () => import('./routes/dashboard/route'),
     solo: () => import('pages/solo-page/route'),
