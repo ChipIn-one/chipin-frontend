@@ -47,6 +47,33 @@ describe('layer boundaries (config/eslint/layers.js)', () => {
         expect(errors).toContain('boundaries/dependencies');
     });
 
+    test('shared-api cannot import api', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/shared/api/errors.ts',
+            "import { probeBackendHealth } from 'api/healthApi';\nexport const x = probeBackendHealth;\n",
+        );
+
+        expect(errors).toContain('boundaries/dependencies');
+    });
+
+    test('shared-api cannot re-export api', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/shared/offline/network.ts',
+            "export { probeBackendHealth } from 'api/healthApi';\n",
+        );
+
+        expect(errors).toContain('boundaries/dependencies');
+    });
+
+    test('api may import shared-api (its re-exports for legacy callers)', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/api/healthApi.ts',
+            "import { probeBackendHealth } from 'shared/api/health';\nexport const x = probeBackendHealth;\n",
+        );
+
+        expect(errors).toEqual([]);
+    });
+
     test('a features slice cannot import the internals of another slice', async () => {
         const errors = await layerErrors(
             'apps/app/src/features/landing/hero-section/HeroSection.tsx',

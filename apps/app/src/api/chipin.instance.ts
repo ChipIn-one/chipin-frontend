@@ -1,19 +1,2 @@
-import axios from 'axios';
-
-import { getChipInApiUrl } from 'helpers/env';
-
-export const apiInstance = axios.create({
-    baseURL: getChipInApiUrl(),
-    headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-    },
-});
-
-export const publicApiInstance = axios.create({
-    baseURL: getChipInApiUrl(),
-    headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-    },
-});
+// The configured Axios instances live in `shared/api/instance.ts`; legacy callers keep this path.
+export { apiInstance, publicApiInstance } from 'shared/api/instance';

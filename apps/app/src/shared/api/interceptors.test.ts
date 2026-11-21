@@ -3,10 +3,10 @@ import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { APP_VERSION } from 'constants/version';
 
-import { AUTH_API_PATH } from './auth.constants';
-import { apiInstance, publicApiInstance } from './chipin.instance';
-import { initChipInApiInterceptors } from './chipin.interceptors';
+import { AUTH_API_PATH } from './authPaths';
 import { parseVersionCore } from './clientVersion';
+import { apiInstance, publicApiInstance } from './instance';
+import { type ApiAuthSession, initChipInApiInterceptors } from './interceptors';
 
 const onUnauthorizedSession = vi.fn();
 const onRequestFailure = vi.fn<(error: unknown, requestStartedAt?: number) => Promise<void>>();
@@ -29,21 +29,24 @@ vi.mock('sonner', () => ({
     },
 }));
 
-vi.mock('helpers/authSession', () => ({
+// No expected-subject request reaches the interceptors in these cases.
+const authSession: ApiAuthSession = {
+    getAccessTokenSubject: () => null,
     getAuthSessionVersion: () => authSessionMocks.currentVersion,
     hasAuthAccessTokenRotated: authSessionMocks.hasAuthAccessTokenRotated,
     isAuthSessionCurrent: (version: number) => version === authSessionMocks.currentVersion,
     isAuthSessionSignedOut: () => authSessionMocks.signedOut,
     prepareAuthRequest: authSessionMocks.prepareAuthRequest,
     refreshAuthSession: authSessionMocks.refreshAuthSession,
-}));
+};
 
-vi.mock('helpers/env', () => ({
+vi.mock('shared/lib/env', () => ({
     getChipInApiUrl: () => 'https://api.example.test',
 }));
 
 beforeAll(() => {
     initChipInApiInterceptors(
+        authSession,
         onUnauthorizedSession,
         onRequestFailure,
         onResponseSuccess,
