@@ -5,6 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 import type { AstroIntegration } from 'astro';
+import {
+    type DefaultTreeAdapterMap,
+    type DefaultTreeAdapterTypes,
+    html,
+    Parser,
+    type Token,
+} from 'parse5';
 
 // Build gate of the site (spec 04 §3.2, §3.6), moved from the app's prerender-public.mjs: it runs
 // on `astro:build:done` and fails the build on the first page that breaks a rule.
@@ -19,29 +26,255 @@ const FORBIDDEN_TEXT = /(?:refreshToken|accessToken|inviteToken|sessionStorage)/
 // A JWT: base64url header `{"…` and payload.
 const JWT = /eyJ[\w-]{10,}\.[\w-]{10,}/;
 
-// End tags may carry whitespace or junk before `>` (`</script >`), as HTML parsers accept. The
-// name ends at whitespace, `/` or `>`: `<script-x>` is a custom element, not a script.
-const SCRIPT_ELEMENT = /<script(?=[\s/>])([^>]*)>([\s\S]*?)<\/script(?=[\s/>])[^>]*>/gi;
-const COMMENT = /<!--[\s\S]*?-->/g;
-
-// `type` values a browser executes (compared lowercased and trimmed).
+// `type` values a browser executes: the JavaScript MIME type essences, `module` and the empty
+// string (compared lowercased and trimmed of ASCII whitespace, as the HTML spec does).
 const JS_TYPES = new Set([
     '',
     'module',
-    'text/javascript',
-    'application/javascript',
-    'text/ecmascript',
     'application/ecmascript',
-    'text/x-javascript',
+    'application/javascript',
+    'application/x-ecmascript',
     'application/x-javascript',
+    'text/ecmascript',
+    'text/javascript',
+    'text/javascript1.0',
+    'text/javascript1.1',
+    'text/javascript1.2',
+    'text/javascript1.3',
+    'text/javascript1.4',
+    'text/javascript1.5',
+    'text/jscript',
+    'text/livescript',
+    'text/x-ecmascript',
+    'text/x-javascript',
 ]);
 
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
 const VERCEL_SCRIPT = /^\/_vercel\//;
 
+// Inline scripts of these types are also checked against `script-src` (import maps, speculation
+// rules), so their hashes belong in the CSP too; they do not count towards the JS budget.
+const CSP_INLINE_TYPES = new Set([...JS_TYPES, 'importmap', 'speculationrules']);
+
 type Attributes = Map<string, string>;
 
-const parseAttributes = (source: string): Attributes => {
+/** A start tag: lowercased name, decoded attribute values by qualified name (`xlink:href`). */
+interface Tag {
+    name: string;
+    attributes: Attributes;
+}
+
+interface InlineScript {
+    /** The script text as the browser parses it: the CSP hash input. */
+    body: string;
+    /** It runs as JavaScript (not an import map or speculation rules): counted in the budget. */
+    javascript: boolean;
+}
+
+/** A built page as a browser parses it (parse5 implements the HTML parsing algorithm). */
+interface ParsedPage {
+    /** Every element of the tree in document order, `<template>` contents included. */
+    elements: Tag[];
+    /** Every start tag the tokenizer emitted, with scripting on and off (`<noscript>` content),
+     * also those the tree builder drops or moves (e.g. inside `<select>`). */
+    tags: Tag[];
+    /** Inline scripts the CSP checks against `script-src`. */
+    inlineScripts: InlineScript[];
+    /** Same-origin and other script URLs the page loads, untrimmed. */
+    scriptSources: (string | undefined)[];
+    /** The text of the first HTML `<title>` outside `<template>`. */
+    title: string | undefined;
+    /** The `content` of the first `<meta name="description">` outside `<template>`. */
+    description: string | undefined;
+    /** Markup a reader can see in the HTML: tag and attribute names, attribute values, text and
+     * comments, without the bodies of executable scripts. */
+    text: string[];
+    /** The documents of `<iframe srcdoc>`: they inherit the page's CSP. */
+    frames: ParsedPage[];
+    /** `<iframe srcdoc>` documents only a scripting-off parse has (inside `<noscript>`): their
+     * markup is checked, their scripts never run. */
+    inertFrames: ParsedPage[];
+}
+
+const ASCII_WHITESPACE = /^[\t\n\f\r ]+|[\t\n\f\r ]+$/g;
+
+const attributeMap = (attrs: readonly Token.Attribute[]): Attributes =>
+    new Map(attrs.map(({ name, prefix, value }) => [prefix ? `${prefix}:${name}` : name, value]));
+
+/** The parser, recording every start tag before the tree builder handles it. */
+class TagRecorder extends Parser<DefaultTreeAdapterMap> {
+    readonly tags: Tag[] = [];
+
+    override onStartTag(token: Token.TagToken): void {
+        this.tags.push({ name: token.tagName, attributes: attributeMap(token.attrs) });
+        super.onStartTag(token);
+    }
+}
+
+const parseDocument = (source: string, scriptingEnabled: boolean) => {
+    const parser = new TagRecorder({ scriptingEnabled });
+
+    parser.tokenizer.write(source, true);
+    return { document: parser.document, tags: parser.tags };
+};
+
+/** The script block's type (HTML "prepare the script element"), lowercased and trimmed. */
+const scriptType = (attributes: Attributes): string => {
+    const type = attributes.get('type');
+    const language = attributes.get('language');
+
+    if (type === undefined) {
+        return language ? `text/${language}`.toLowerCase() : '';
+    }
+    return type.replace(ASCII_WHITESPACE, '').toLowerCase();
+};
+
+const isTemplate = (
+    node: DefaultTreeAdapterTypes.Element,
+): node is DefaultTreeAdapterTypes.Template => 'content' in node;
+
+const parsePage = (source: string): ParsedPage => {
+    const scripting = parseDocument(source, true);
+    const page: ParsedPage = {
+        elements: [],
+        tags: [...scripting.tags, ...parseDocument(source, false).tags],
+        inlineScripts: [],
+        scriptSources: [],
+        title: undefined,
+        description: undefined,
+        text: [],
+        frames: [],
+        inertFrames: [],
+    };
+
+    const visit = (
+        nodes: readonly DefaultTreeAdapterTypes.ChildNode[],
+        { inScript, inTemplate }: { inScript: boolean; inTemplate: boolean },
+    ) => {
+        for (const node of nodes) {
+            if (node.nodeName === '#text' && 'value' in node) {
+                if (!inScript) {
+                    page.text.push(node.value);
+                }
+            } else if (node.nodeName === '#comment' && 'data' in node) {
+                page.text.push(node.data);
+            } else if ('tagName' in node) {
+                const attributes = attributeMap(node.attrs);
+                const childText = () =>
+                    node.childNodes.map(child => ('value' in child ? child.value : '')).join('');
+                const isHtml = node.namespaceURI === html.NS.HTML;
+                let javascript = false;
+
+                for (const [name, value] of attributes) {
+                    page.text.push(name, value);
+                }
+                page.text.push(node.tagName);
+                page.elements.push({ name: node.tagName, attributes });
+
+                if (!inTemplate && isHtml && node.tagName === 'title' && page.title === undefined) {
+                    page.title = childText();
+                }
+                if (
+                    !inTemplate &&
+                    isHtml &&
+                    node.tagName === 'meta' &&
+                    attributes.get('name') === 'description' &&
+                    page.description === undefined
+                ) {
+                    page.description = attributes.get('content') ?? '';
+                }
+                if (node.tagName === 'script') {
+                    // An SVG `<script>` loads `href` (or `xlink:href`), not `src`.
+                    const src = isHtml
+                        ? attributes.get('src')
+                        : (attributes.get('href') ?? attributes.get('xlink:href'));
+                    const type = scriptType(attributes);
+
+                    javascript = JS_TYPES.has(type);
+                    if (src !== undefined) {
+                        page.scriptSources.push(src);
+                    } else if (CSP_INLINE_TYPES.has(type)) {
+                        page.inlineScripts.push({ body: childText(), javascript });
+                    }
+                }
+                if (node.tagName === 'link') {
+                    const rel = (attributes.get('rel') ?? '').toLowerCase().split(/[\t\n\f\r ]+/);
+
+                    if (rel.includes('modulepreload')) {
+                        page.scriptSources.push(attributes.get('href'));
+                    }
+                }
+                visit(node.childNodes, { inScript: javascript, inTemplate });
+                if (isTemplate(node)) {
+                    visit(node.content.childNodes, { inScript: false, inTemplate: true });
+                }
+            }
+        }
+    };
+
+    visit(scripting.document.childNodes, { inScript: false, inTemplate: false });
+    const srcdocs = (tags: readonly Tag[]) =>
+        new Set(
+            tags.flatMap(({ name, attributes }) => {
+                const srcdoc = attributes.get('srcdoc');
+
+                return name === 'iframe' && srcdoc !== undefined ? [srcdoc] : [];
+            }),
+        );
+    // Each document once, though both token passes see most of them.
+    const live = srcdocs(scripting.tags);
+
+    page.frames = [...live].map(parsePage);
+    page.inertFrames = [...srcdocs(page.tags)].filter(srcdoc => !live.has(srcdoc)).map(parsePage);
+    return page;
+};
+
+/** The page and the documents of its `<iframe srcdoc>`, recursively. */
+const documentsOf = (page: ParsedPage): ParsedPage[] => [
+    page,
+    ...[...page.frames, ...page.inertFrames].flatMap(documentsOf),
+];
+
+/** The page and the `<iframe srcdoc>` documents whose scripts can run, recursively. */
+const liveDocumentsOf = (page: ParsedPage): ParsedPage[] => [
+    page,
+    ...page.frames.flatMap(liveDocumentsOf),
+];
+
+/** The text of every inline script the CSP checks, `<iframe srcdoc>` included (the hash input). */
+const inlineScriptsOf = (page: ParsedPage): InlineScript[] =>
+    liveDocumentsOf(page).flatMap(({ inlineScripts: scripts }) => scripts);
+
+/** The text of every inline script of a page that the CSP checks, as a browser parses it. */
+const inlineScripts = (source: string): string[] =>
+    inlineScriptsOf(parsePage(source)).map(({ body }) => body);
+
+/** The CSP source of an inline script: `'sha256-…'`. */
+const scriptHash = (text: string): string =>
+    `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
+
+/** Same-origin scripts a page loads: `<script src>` and `<link rel="modulepreload">`. */
+const localScriptPaths = (page: ParsedPage): string[] => [
+    ...new Set(
+        liveDocumentsOf(page)
+            .flatMap(({ scriptSources }) => scriptSources)
+            .map(src => src?.replace(ASCII_WHITESPACE, ''))
+            // `/_vercel/*` (Web Analytics, Speed Insights) is served by the platform, not the build.
+            .filter(
+                (src): src is string => !!src && /^\/(?!\/)/.test(src) && !VERCEL_SCRIPT.test(src),
+            ),
+    ),
+];
+
+// A second, stricter net: the source scanned as text, script elements and comments cut out. It
+// flags garbled markup that a browser reads differently, e.g. `<p <!-- --> onclick="go()">`.
+// The parse5 tokens and tree above are what the browser runs; this scan can only add problems.
+// End tags may carry whitespace or junk before `>` (`</script >`), as HTML parsers accept. The
+// name ends at whitespace, `/` or `>`: `<script-x>` is a custom element, not a script.
+const SCRIPT_ELEMENT = /<script(?=[\s/>])[^>]*>[\s\S]*?<\/script(?=[\s/>])[^>]*>/gi;
+const COMMENT = /<!--[\s\S]*?-->/g;
+
+const parseSourceAttributes = (source: string): Attributes => {
     const attributes: Attributes = new Map();
 
     for (const match of source.matchAll(
@@ -56,57 +289,27 @@ const parseAttributes = (source: string): Attributes => {
     return attributes;
 };
 
-const tags = (html: string, name: string): Attributes[] =>
-    [...html.matchAll(new RegExp(`<${name}\\b([^>]*)>`, 'gi'))].map(match =>
-        parseAttributes(match[1] ?? ''),
-    );
+/** Every tag in the source text, outside script elements and comments. */
+const sourceTags = (source: string): Tag[] => {
+    // One pass each, every match becomes a space: the pieces around a match stay apart, so they
+    // cannot join into a new tag or attribute, and no markup between two pieces is deleted.
+    const markup = source.replace(SCRIPT_ELEMENT, ' ').replace(COMMENT, ' ');
 
-const isExecutable = (attributes: Attributes): boolean =>
-    JS_TYPES.has((attributes.get('type') ?? '').trim().toLowerCase());
-
-/** Every `<script>` element: attributes and body. Script bodies are cut out before markup checks. */
-const scriptElements = (html: string) =>
-    [...html.matchAll(SCRIPT_ELEMENT)].map(match => ({
-        attributes: parseAttributes(match[1] ?? ''),
-        body: match[2] ?? '',
+    return [...markup.matchAll(/<([a-z][\w-]*)\b([^>]*)>/gi)].map(match => ({
+        name: (match[1] ?? '').toLowerCase(),
+        attributes: parseSourceAttributes(match[2] ?? ''),
     }));
-
-/** The page markup without script bodies (or comments, when `comments` is false). */
-const markup = (html: string, { comments }: { comments: boolean }): string => {
-    // One pass, each match becomes a space: the pieces around a match stay apart, so they cannot
-    // join into a new tag or attribute, and no markup between two pieces is deleted.
-    const noScripts = html.replace(SCRIPT_ELEMENT, ' ');
-
-    return comments ? noScripts : noScripts.replace(COMMENT, ' ');
 };
 
-/** The text of every executable `<script>` without `src` (the CSP hash input). */
-const inlineScripts = (html: string): string[] =>
-    scriptElements(html)
-        .filter(({ attributes }) => !attributes.has('src') && isExecutable(attributes))
-        .map(({ body }) => body);
+/** A URL that runs script: the browser drops tabs and newlines and trims C0 controls and spaces. */
+const isJavaScriptUrl = (value: string): boolean => {
+    const url = value.replace(/[\t\n\r]/g, '');
+    let start = 0;
 
-/** The CSP source of an inline script: `'sha256-…'`. */
-const scriptHash = (text: string): string =>
-    `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
-
-/** Same-origin scripts a page loads: `<script src>` and `<link rel="modulepreload">`. */
-const localScriptPaths = (html: string): string[] => {
-    const sources = [
-        ...tags(html, 'script').map(attributes => attributes.get('src')),
-        ...tags(html, 'link')
-            .filter(attributes => attributes.get('rel') === 'modulepreload')
-            .map(attributes => attributes.get('href')),
-    ];
-
-    // `/_vercel/*` (Web Analytics, Speed Insights) is served by the platform, not by the build.
-    return [
-        ...new Set(
-            sources.filter(
-                (src): src is string => !!src && /^\/(?!\/)/.test(src) && !VERCEL_SCRIPT.test(src),
-            ),
-        ),
-    ];
+    while (start < url.length && url.charCodeAt(start) <= 0x20) {
+        start += 1;
+    }
+    return url.slice(start, start + 'javascript:'.length).toLowerCase() === 'javascript:';
 };
 
 interface ScriptInfo {
@@ -136,68 +339,65 @@ const staticImports = (path: string, code: string): string[] =>
 /** The rule violations of one built page. */
 const checkPage = ({ file, html, script }: PageInput): string[] => {
     const problems: string[] = [];
-    const title = /<title>([^<]*)<\/title>/i.exec(html)?.[1]?.trim();
-    const description = tags(html, 'meta')
-        .find(attributes => attributes.get('name') === 'description')
-        ?.get('content')
-        ?.trim();
+    const page = parsePage(html);
+    const description = page.description?.trim();
 
-    if (!title) {
+    if (!page.title?.trim()) {
         problems.push(`${file}: missing <title>`);
     }
     if (!description) {
         problems.push(`${file}: missing <meta name="description">`);
     }
     // Executable scripts may name such variables; data scripts and comments ship as text.
-    const text = [
-        markup(html, { comments: true }),
-        ...scriptElements(html)
-            .filter(({ attributes }) => !isExecutable(attributes))
-            .map(({ body }) => body),
-    ].join('\n');
+    // `<iframe srcdoc>` documents included; the JWT also in decoded text (`&#46;` for `.`).
+    const text = documentsOf(page)
+        .flatMap(document => document.text)
+        .join('\n');
 
-    if (FORBIDDEN_TEXT.test(text) || JWT.test(html)) {
+    if (FORBIDDEN_TEXT.test(text) || JWT.test(text) || JWT.test(html)) {
         problems.push(`${file}: token-like or session content in the HTML`);
     }
-    // The invite token must not reach analytics (A-15).
+    // The invite token must not reach analytics (A-15). The raw HTML is searched: any mention,
+    // even in a comment or script text, fails.
     if (file.startsWith('join/') && ANALYTICS_SCRIPT.test(html)) {
         problems.push(`${file}: analytics script on an invite page`);
     }
+    // Every start tag of the page and its `<iframe srcdoc>` documents: tree, tokens, source scan.
+    const tags = [
+        ...documentsOf(page).flatMap(({ elements, tags: tokens }) => [...elements, ...tokens]),
+        ...sourceTags(html),
+    ];
+
     // The site CSP has `style-src 'self'` (§3.6): no inline styles.
-    if (/<style\b/i.test(html) || /\sstyle\s*=/i.test(html)) {
+    if (tags.some(({ name, attributes }) => name === 'style' || attributes.has('style'))) {
         problems.push(`${file}: inline style (build.inlineStylesheets must stay 'never')`);
     }
     // The CSP blocks inline handlers and `javascript:` URLs: they would silently not work.
-    const elements = [
-        ...markup(html, { comments: false }).matchAll(/<[a-z][\w-]*\b([^>]*)>/gi),
-    ].map(match => parseAttributes(match[1] ?? ''));
-
-    if (elements.some(attributes => [...attributes.keys()].some(name => /^on[a-z]+$/.test(name)))) {
+    if (
+        tags.some(({ attributes }) => [...attributes.keys()].some(name => /^on[a-z]+$/.test(name)))
+    ) {
         problems.push(`${file}: inline event handler attribute`);
     }
-    if (
-        elements.some(attributes =>
-            [...attributes.values()].some(value => /^\s*javascript:/i.test(value)),
-        )
-    ) {
+    if (tags.some(({ attributes }) => [...attributes.values()].some(isJavaScriptUrl))) {
         problems.push(`${file}: javascript: URL`);
     }
     // §3.6: islands hydrate only with client:visible or client:idle.
     if (
-        tags(html, 'astro-island').some(
-            attributes => !['visible', 'idle'].includes(attributes.get('client') ?? ''),
+        tags.some(
+            ({ name, attributes }) =>
+                name === 'astro-island' &&
+                !['visible', 'idle'].includes(attributes.get('client') ?? ''),
         )
     ) {
         problems.push(`${file}: island without client:visible or client:idle`);
     }
 
     // The page's scripts and everything they import statically, plus its inline scripts.
-    let jsBytes = inlineScripts(html).reduce(
-        (sum, text) => sum + gzipSync(Buffer.from(text, 'utf8')).length,
-        0,
-    );
+    let jsBytes = inlineScriptsOf(page)
+        .filter(({ javascript }) => javascript)
+        .reduce((sum, { body }) => sum + gzipSync(Buffer.from(body, 'utf8')).length, 0);
     const seen = new Set<string>();
-    const queue = localScriptPaths(html);
+    const queue = localScriptPaths(page);
 
     for (let path = queue.shift(); path !== undefined; path = queue.shift()) {
         if (seen.has(path)) {

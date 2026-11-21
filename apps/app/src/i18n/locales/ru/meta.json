@@ -11,6 +11,10 @@
         "title": "ChipIn — Условия использования",
         "description": "Ознакомьтесь с временными условиями использования ChipIn"
     },
+    "login": {
+        "title": "ChipIn — Вход",
+        "description": "Войдите в ChipIn, чтобы делить общие расходы"
+    },
     "oauthCallback": {
         "title": "ChipIn — Выполняется вход",
         "description": "Завершаем вход в ChipIn"

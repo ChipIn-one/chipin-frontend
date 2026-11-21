@@ -10,12 +10,12 @@
     },
     "redirects": [
         {
-            "source": "/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/].*?)}?{/}?",
+            "source": "/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/\\\\\\t\\n\\r].*?)}?{/}?",
             "destination": "/:path",
             "statusCode": 301
         },
         {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found)",
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found|login)",
             "has": [
                 {
                     "type": "host",
@@ -54,7 +54,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path([^/].*?)/index.html",
+            "source": "/:path([^/\\\\\\t\\n\\r].*?)/index.html",
             "has": [
                 {
                     "type": "host",
@@ -80,7 +80,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found)",
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found|login)",
             "has": [
                 {
                     "type": "host",
@@ -119,7 +119,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path([^/].*?)/index.html",
+            "source": "/:path([^/\\\\\\t\\n\\r].*?)/index.html",
             "has": [
                 {
                     "type": "host",
@@ -347,7 +347,7 @@
             "headers": [
                 {
                     "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; manifest-src 'self'; worker-src 'self' blob:; connect-src 'self' https://*.sentry.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+                    "value": "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'sha256-csvYgt4QHyi37935f6OISh43lFcujwqd2YA+fdnDPOc='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; manifest-src 'self'; worker-src 'self' blob:; connect-src 'self' https://*.sentry.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
                 },
                 {
                     "key": "X-Frame-Options",

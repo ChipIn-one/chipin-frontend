@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { RADIX_THEME } from '@chipin/tokens/theme';
 import { Theme } from '@radix-ui/themes';
 import type { i18n as I18nInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
@@ -62,14 +63,7 @@ const PublicApp = ({ route, i18nInstance, server = false }: PublicAppProps) => {
             <I18nextProvider i18n={i18nInstance}>
                 <ThemeProvider theme={isDark ? darkThemeStyled : lightThemeStyled}>
                     <ModalOverlayGlobalStyles />
-                    <Theme
-                        appearance={isDark ? 'dark' : 'light'}
-                        accentColor="grass"
-                        grayColor="olive"
-                        radius="large"
-                        panelBackground="solid"
-                        hasBackground
-                    >
+                    <Theme {...RADIX_THEME} appearance={isDark ? 'dark' : 'light'} hasBackground>
                         {routerContent}
                     </Theme>
                 </ThemeProvider>

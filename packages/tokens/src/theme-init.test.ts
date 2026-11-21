@@ -6,6 +6,23 @@ import { describe, expect, test } from 'vitest';
 import { THEME_INIT_SCRIPT, THEME_INIT_SCRIPT_SHA256 } from './theme-init';
 
 const APP_CONSTANTS = new URL('../../../apps/app/src/constants/', import.meta.url);
+const APP_VERCEL_JSON = new URL('../../../apps/app/vercel.json', import.meta.url);
+
+interface VercelHeaders {
+    headers?: { headers?: { key: string; value: string }[] }[];
+}
+
+/** Every `script-src` directive of every Content-Security-Policy header of the app. */
+const appScriptSources = (): string[] => {
+    const config = JSON.parse(readFileSync(APP_VERCEL_JSON, 'utf8')) as VercelHeaders;
+
+    return (config.headers ?? [])
+        .flatMap(rule => rule.headers ?? [])
+        .filter(header => header.key.toLowerCase() === 'content-security-policy')
+        .flatMap(header => header.value.split(';'))
+        .map(directive => directive.trim())
+        .filter(directive => directive.startsWith('script-src '));
+};
 
 interface FakeEnv {
     saved: string | null;
@@ -47,6 +64,19 @@ describe('THEME_INIT_SCRIPT', () => {
         expect(THEME_INIT_SCRIPT_SHA256, `set THEME_INIT_SCRIPT_SHA256 to '${expected}'`).toBe(
             expected,
         );
+    });
+
+    test('the script-src of the app CSP allows the script by its hash', () => {
+        const expected = `'sha256-${createHash('sha256').update(THEME_INIT_SCRIPT, 'utf8').digest('base64')}'`;
+        const sources = appScriptSources();
+
+        expect(sources.length).toBeGreaterThan(0);
+        for (const source of sources) {
+            expect(
+                source.split(/\s+/),
+                `add ${expected} to script-src of apps/app/vercel.json`,
+            ).toContain(expected);
+        }
     });
 
     test('reads the app LS_KEY_THEME key', () => {

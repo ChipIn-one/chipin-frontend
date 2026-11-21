@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 
-import AuthModal from './AuthModal';
+import { AuthModal } from './AuthModal';
 
 vi.mock('assets/google-icon.svg?react', () => ({
     default: () => <svg aria-hidden="true" />,

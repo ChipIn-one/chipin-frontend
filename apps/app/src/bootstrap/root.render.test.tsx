@@ -29,7 +29,7 @@ vi.mock('virtual:pwa-register/react', async () => {
     };
 });
 vi.mock('main', () => ({
-    default: () => {
+    Main: () => {
         if (boot.mainMode === 'crash') {
             throw new Error('first render crashed');
         }

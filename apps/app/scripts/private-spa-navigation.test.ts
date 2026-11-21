@@ -15,6 +15,7 @@ test.each([
     '/settings',
     '/oauth/callback',
     '/not-found',
+    '/login',
 ])('keeps offline app shell navigation for private %s', pathname => {
     expect(allowsPrivateFallback(pathname)).toBe(true);
 });
@@ -32,6 +33,8 @@ test.each([
     '/oauthish',
     '/api/users/self',
     '/not-foundish',
+    '/loginx',
+    '/login/x',
 ])('never substitutes the private app shell for public or unknown %s', pathname => {
     expect(allowsPrivateFallback(pathname)).toBe(false);
 });

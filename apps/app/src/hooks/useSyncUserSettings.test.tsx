@@ -1,16 +1,17 @@
 import { dehydrate, hydrate, QueryClient } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, type MockInstance, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
+import { LS_KEY_THEME } from 'constants/localstorage';
 import { reconcileRestoredSelf, type SelfUser, usersKeys } from 'entities/users';
-import { saveLocalUser } from 'helpers/localStorage';
+import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
+import { type AppearanceStore, resetAppearanceStore, useAppearanceStore } from 'store/ui-prefs';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 
 import { useSyncUserSettings } from './useSyncUserSettings';
 
-const setTheme = vi.hoisted(() => vi.fn());
 const setAppLanguage = vi.hoisted(() => vi.fn((_: string) => Promise.resolve()));
 // The language i18next runs in now (`i18n.resolvedLanguage`).
 const i18n = vi.hoisted(() => ({ resolvedLanguage: undefined as string | undefined }));
@@ -20,10 +21,6 @@ const captureException = vi.hoisted(() => vi.fn());
 const locale = vi.hoisted(() => ({
     matchLocale: vi.fn<(raw: string) => string | null>(() => 'en'),
     saveLocalePreference: vi.fn(),
-}));
-
-vi.mock('next-themes', () => ({
-    useTheme: () => ({ setTheme }),
 }));
 
 vi.mock('@sentry/react', () => ({
@@ -55,8 +52,14 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
+// The real appearance store; its `setPreference` is watched.
+let setPreference: MockInstance<AppearanceStore['setPreference']>;
+
 beforeEach(() => {
     vi.clearAllMocks();
+    LocalStorage.setRaw(LS_KEY_THEME, 'system');
+    resetAppearanceStore();
+    setPreference = vi.spyOn(useAppearanceStore.getState(), 'setPreference');
     i18n.resolvedLanguage = undefined;
     pending.language = null;
     saveLocalUser({ role: 'ADMIN', settings });
@@ -86,7 +89,7 @@ test('does not reapply cached user settings after logout', () => {
 
     renderHook(() => useSyncUserSettings());
 
-    expect(setTheme).not.toHaveBeenCalled();
+    expect(setPreference).not.toHaveBeenCalled();
     expect(locale.saveLocalePreference).not.toHaveBeenCalled();
     expect(setAppLanguage).not.toHaveBeenCalled();
 });
@@ -108,7 +111,7 @@ test('applies cached user theme settings while the authenticated user is loading
 
     renderHook(() => useSyncUserSettings());
 
-    expect(setTheme).toHaveBeenCalledWith('light');
+    expect(setPreference).toHaveBeenCalledWith('light');
     // setAppLanguage saves the preference itself.
     expect(setAppLanguage).toHaveBeenCalledWith('en');
 });
@@ -185,7 +188,9 @@ test('applies the self query settings over the cached user', () => {
 
     renderHook(() => useSyncUserSettings());
 
-    expect(setTheme).toHaveBeenCalledWith('dark');
+    expect(setPreference).toHaveBeenCalledWith('dark');
+    expect(useAppearanceStore.getState().resolved).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(setAppLanguage).toHaveBeenCalledWith('ru');
 });
 
@@ -202,7 +207,7 @@ test('changes the language only when the language changes', () =>
         seedSelfUser(selfUser({ language: 'ru', defaultCurrency: 'EUR' }));
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
             expect(setAppLanguage).toHaveBeenCalledTimes(1);
-            expect(setTheme).toHaveBeenCalledTimes(1);
+            expect(setPreference).toHaveBeenCalledTimes(1);
 
             seedSelfUser(selfUser({ language: 'en' }));
             return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
@@ -242,7 +247,7 @@ test.each([
     renderHook(() => useSyncUserSettings());
 
     expect(setAppLanguage).toHaveBeenLastCalledWith('en');
-    expect(setTheme).toHaveBeenLastCalledWith('light');
+    expect(setPreference).toHaveBeenLastCalledWith('light');
 });
 
 test('a restored self user takes only the cached language and theme, and keeps its update time', () => {
@@ -290,8 +295,8 @@ test('a restored self user does not override the newer cached language and theme
     expect(setAppLanguage).toHaveBeenCalledWith('ru');
     expect(setAppLanguage).not.toHaveBeenCalledWith('en');
     expect(locale.saveLocalePreference).not.toHaveBeenCalledWith('en');
-    expect(setTheme).toHaveBeenCalledWith('dark');
-    expect(setTheme).not.toHaveBeenCalledWith('light');
+    expect(setPreference).toHaveBeenCalledWith('dark');
+    expect(setPreference).not.toHaveBeenCalledWith('light');
 });
 
 test('an optimistic change on the restored self user keeps the cached language', () =>
@@ -315,7 +320,7 @@ test('an optimistic change on the restored self user keeps the cached language',
         });
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
             expect(setAppLanguage).not.toHaveBeenCalledWith('en');
-            expect(setTheme).toHaveBeenLastCalledWith('system');
+            expect(setPreference).toHaveBeenLastCalledWith('system');
         });
     }));
 
@@ -331,6 +336,6 @@ test('a server value loaded after the restore applies over the cached user', () 
         seedSelfUser(selfUser({ language: 'de', theme: 'light' }));
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
             expect(setAppLanguage).toHaveBeenLastCalledWith('de');
-            expect(setTheme).toHaveBeenLastCalledWith('light');
+            expect(setPreference).toHaveBeenLastCalledWith('light');
         });
     }));

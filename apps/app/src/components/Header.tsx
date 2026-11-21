@@ -9,6 +9,7 @@ import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { PUBLIC_HOME_PAGE } from 'constants/publicRouteManifest';
 import { ROUTES } from 'constants/routes';
+import { SITE_PATHS } from 'constants/sitePaths';
 import { themeColor } from 'helpers/colors';
 import { matchLocale, type SupportedLocale } from 'helpers/locale';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
@@ -21,9 +22,9 @@ import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
 import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
-import { NavButton } from 'components/NavButton';
+import { NavButton, UnstyledButton } from 'components/NavButton';
 
-import DevMenu from './DevMenu';
+import { DevMenu } from './DevMenu';
 import { LandingMobileMenu } from './header/LandingMobileMenu';
 import { LandingNav } from './header/LandingNav';
 import { SignInEntry } from './modals/auth-modal';
@@ -56,7 +57,7 @@ const Header = () => {
 
     const currentPublicRoute = getPublicRoute(location.pathname);
     const getPublicLanguageHref = (locale: SupportedLocale) =>
-        currentPublicRoute ? getPublicPath(currentPublicRoute.page, locale) : ROUTES.HOME;
+        currentPublicRoute ? getPublicPath(currentPublicRoute.page, locale) : SITE_PATHS.home;
     const onLandingLanguageChange = (locale: SupportedLocale) => {
         if (!currentPublicRoute) {
             return;
@@ -75,11 +76,15 @@ const Header = () => {
     const isLandingPage = !isLoggedIn && currentPublicRoute?.page === 'home';
     const isPublicLegalPage = currentPublicRoute && currentPublicRoute.page !== 'home';
     const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
-    const logoRoute = isLoggedIn
-        ? getPreferredModeRoute(isSoloMode)
-        : currentPublicRoute
-          ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
-          : ROUTES.HOME;
+    // Signed out, the logo leads to the site: a plain link, never a router navigation (§2.1).
+    const siteHomeHref = currentPublicRoute
+        ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
+        : SITE_PATHS.home;
+    const logo = (
+        <ModeLogotype isSoloMode={isLoggedIn && isSoloMode} isModeBadgeVisible={isLoggedIn} />
+    );
+    // The sign-in page itself needs no sign-in button.
+    const isLoginPage = location.pathname === ROUTES.LOGIN;
 
     return (
         <StickyBox
@@ -95,12 +100,21 @@ const Header = () => {
         >
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
-                    <NavButton to={logoRoute} aria-label={PROJECT_NAME} unsetStyles>
-                        <ModeLogotype
-                            isSoloMode={isLoggedIn && isSoloMode}
-                            isModeBadgeVisible={isLoggedIn}
-                        />
-                    </NavButton>
+                    {isLoggedIn ? (
+                        <NavButton
+                            to={getPreferredModeRoute(isSoloMode)}
+                            aria-label={PROJECT_NAME}
+                            unsetStyles
+                        >
+                            {logo}
+                        </NavButton>
+                    ) : (
+                        <UnstyledButton asChild>
+                            <a href={siteHomeHref} aria-label={PROJECT_NAME}>
+                                {logo}
+                            </a>
+                        </UnstyledButton>
+                    )}
 
                     {isLoggedIn && <HeaderNav />}
                     {isLandingPage && (
@@ -137,7 +151,7 @@ const Header = () => {
                                 onChange={onLandingLanguageChange}
                             />
                         )}
-                        {!isLoggedIn && !isLandingPage && (
+                        {!isLoggedIn && !isLandingPage && !isLoginPage && (
                             <SignInEntry>
                                 <Button
                                     size={{

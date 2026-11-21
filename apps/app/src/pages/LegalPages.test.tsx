@@ -5,7 +5,7 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { ROUTES } from 'constants/routes';
+import { SITE_PATHS } from 'constants/sitePaths';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
@@ -40,8 +40,8 @@ beforeEach(() => {
 });
 
 test.each([
-    { route: ROUTES.PRIVACY, Page: PrivacyPage },
-    { route: ROUTES.TERMS, Page: TermsPage },
+    { route: SITE_PATHS.privacy, Page: PrivacyPage },
+    { route: SITE_PATHS.terms, Page: TermsPage },
 ])('keeps mobile navigation available for an authenticated user on $route', ({ route, Page }) => {
     render(
         <MemoryRouter initialEntries={[route]}>
@@ -59,8 +59,8 @@ test.each([
 });
 
 test.each([
-    { route: ROUTES.PRIVACY, Page: PrivacyPage },
-    { route: ROUTES.TERMS, Page: TermsPage },
+    { route: SITE_PATHS.privacy, Page: PrivacyPage },
+    { route: SITE_PATHS.terms, Page: TermsPage },
 ])('reserves bottom space for the fixed mobile navigation on $route', ({ route, Page }) => {
     render(
         <MemoryRouter initialEntries={[route]}>
@@ -79,7 +79,7 @@ test.each([
 
 test('discloses Google user data use and a privacy contact on the privacy page', () => {
     render(
-        <MemoryRouter initialEntries={[ROUTES.PRIVACY]}>
+        <MemoryRouter initialEntries={[SITE_PATHS.privacy]}>
             <ThemeProvider theme={lightThemeStyled}>
                 <Theme>
                     <PrivacyPage />

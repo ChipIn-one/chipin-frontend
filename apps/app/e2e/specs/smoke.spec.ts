@@ -209,7 +209,7 @@ test.describe('SMOKE-SHORT', () => {
         });
     });
 
-    test('after log out, reloading a protected page asks to sign in again', async ({
+    test('AUTH-071 after log out, reloading a protected page goes to the sign-in screen', async ({
         provisioning,
         signIn,
     }) => {
@@ -218,14 +218,11 @@ test.describe('SMOKE-SHORT', () => {
 
         await page.goto('/settings');
         await page.getByRole('button', { name: 'Sign Out', exact: true }).click();
-        await expect(page).not.toHaveURL(/\/settings/);
+        await expect(page).not.toHaveURL(/\/settings/, { timeout: 10_000 });
 
         await page.goto('/settings');
         await page.reload();
-        const signInDialog = page.getByRole('dialog', { name: 'Welcome to ChipIn' });
-        await expect(signInDialog).toBeVisible();
-        await expect(
-            signInDialog.getByRole('button', { name: 'Sign in with Google' }),
-        ).toBeVisible();
+        await expect(page).toHaveURL(/\/login\?returnTo=%2Fsettings$/);
+        await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
     });
 });

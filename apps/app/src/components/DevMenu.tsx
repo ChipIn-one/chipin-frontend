@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { Button, IconButton } from '@radix-ui/themes';
 import { BugIcon, CalendarPlusIcon, FlaskConicalIcon, MoonIcon, SunIcon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { isThemeDark } from 'helpers/theme';
 import { useExtendSubscriptionByDay, useUpdateSelf } from 'hooks/useUserMutations';
 import { AUTH_STATUS } from 'store/authConstants';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { selectResolvedAppearance, selectSetPreference, useAppearanceStore } from 'store/ui-prefs';
 
 import { Dropdown } from 'basics/Dropdown';
 
@@ -24,7 +23,8 @@ const LabeledTrigger = styled(Button)`
 
 const DevMenu = ({ isShowLabel = false }: Props) => {
     const [shouldCrash, setShouldCrash] = useState(false);
-    const { resolvedTheme, setTheme } = useTheme();
+    const resolved = useAppearanceStore(selectResolvedAppearance);
+    const setPreference = useAppearanceStore(selectSetPreference);
     const { t } = useTranslation();
     const authStatus = useAuthStore(selectAuthStatus);
     const { updateSelf } = useUpdateSelf();
@@ -34,12 +34,12 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
         throw new Error('Manual test error triggered from the header crash button.');
     }
 
-    const isDark = isThemeDark(resolvedTheme);
+    const isDark = resolved === 'dark';
     const onSwitchTheme = () => {
         const nextTheme = isDark ? 'light' : 'dark';
 
         if (authStatus !== AUTH_STATUS.AUTHENTICATED) {
-            setTheme(nextTheme);
+            setPreference(nextTheme);
             return;
         }
 
@@ -88,4 +88,4 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
     return <Dropdown items={items} trigger={trigger} align="end" />;
 };
 
-export default DevMenu;
+export { DevMenu };

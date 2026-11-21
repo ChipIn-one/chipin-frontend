@@ -40,10 +40,16 @@ vi.mock('@testing-library/react', async importOriginal => {
     };
 });
 
-Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: window.sessionStorage,
-});
+// A `@vitest-environment node` test (the public SSR/SSG graph) has no DOM: only the storage and
+// the HTMLElement stubs below need one.
+const hasDom = typeof window !== 'undefined';
+
+if (hasDom) {
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: window.sessionStorage,
+    });
+}
 
 class ResizeObserverMock implements ResizeObserver {
     disconnect = () => undefined;
@@ -56,24 +62,26 @@ Object.defineProperty(globalThis, 'ResizeObserver', {
     value: ResizeObserverMock,
 });
 
-Object.defineProperties(HTMLElement.prototype, {
-    hasPointerCapture: {
-        configurable: true,
-        value: () => false,
-    },
-    releasePointerCapture: {
-        configurable: true,
-        value: () => undefined,
-    },
-    scrollIntoView: {
-        configurable: true,
-        value: () => undefined,
-    },
-    setPointerCapture: {
-        configurable: true,
-        value: () => undefined,
-    },
-});
+if (hasDom) {
+    Object.defineProperties(HTMLElement.prototype, {
+        hasPointerCapture: {
+            configurable: true,
+            value: () => false,
+        },
+        releasePointerCapture: {
+            configurable: true,
+            value: () => undefined,
+        },
+        scrollIntoView: {
+            configurable: true,
+            value: () => undefined,
+        },
+        setPointerCapture: {
+            configurable: true,
+            value: () => undefined,
+        },
+    });
+}
 
 // Every locale namespace is a lazy chunk (spec 04 §2.10): tests render with both languages loaded,
 // as the synchronous resources did before, so a test can switch to `ru` without waiting.
