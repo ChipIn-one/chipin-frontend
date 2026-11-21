@@ -225,3 +225,121 @@ test('a fresh OAuth sign-in across the remount: the code is exchanged once', asy
     expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
     expect(useAuthStore.getState().status).toBe('authenticated');
 });
+
+/** Every `window.history` write after the spies start, in call order (callers filter by time). */
+const recordHistoryWrites = () => {
+    const replace = vi.spyOn(window.history, 'replaceState');
+    const push = vi.spyOn(window.history, 'pushState');
+    const writes = () =>
+        [
+            ...replace.mock.calls.map((args, i) => ({
+                kind: 'replace',
+                url: String(args[2]),
+                order: getOrThrow(replace.mock.invocationCallOrder, i),
+            })),
+            ...push.mock.calls.map((args, i) => ({
+                kind: 'push',
+                url: String(args[2]),
+                order: getOrThrow(push.mock.invocationCallOrder, i),
+            })),
+        ].sort((a, b) => a.order - b.order);
+    const restore = () => {
+        replace.mockRestore();
+        push.mockRestore();
+    };
+
+    return { writes, restore };
+};
+
+/** `/settings` as written to the history, whatever the router's URL form (absolute or not). */
+const pathOf = (url: string) => {
+    const { pathname, search } = new URL(url, window.location.origin);
+
+    return pathname + search;
+};
+
+test('AUTH-074: a fresh OAuth sign-in across the remount lands on the return address, and the address bar shows it', async () => {
+    window.history.replaceState(
+        null,
+        '',
+        '/oauth/callback?code=single-use-code-074&returnTo=%2Fsettings',
+    );
+    const historyLength = window.history.length;
+    const history = recordHistoryWrites();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, false);
+    vi.mocked(establishAuthSession).mockImplementation(() => {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+    });
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
+    LocalStorage.remove(LS_KEY_USER);
+    vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+        token: 'access-token',
+        is_new_user: false,
+    });
+    vi.mocked(fetchSelfUser).mockResolvedValue({ ...user, id: 'oauth-user' });
+
+    try {
+        render(<App />);
+
+        expect(await screen.findByText('settings')).toBeTruthy();
+        // (a) The rendered route, the live router and the address bar agree on the return address.
+        expect(window.location.pathname + window.location.search).toBe('/settings');
+        expect(routers()).toHaveLength(2);
+        const first = getOrThrow(routers(), 0);
+        const second = getOrThrow(routers(), 1);
+        expect(first.dispose).toHaveBeenCalledOnce();
+        // The old router never rendered the return address; only the live one did.
+        expect(first.state.location.pathname).toBe('/oauth/callback');
+        expect(second.state.location.pathname + second.state.location.search).toBe('/settings');
+        expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
+
+        // (b) The disposed router writes nothing: the stale callback's `navigate(returnTo)` is a no-op,
+        // so the only write after the dispose is the live router's one replace to the return address.
+        const disposedAt = getOrThrow(vi.mocked(first.dispose).mock.invocationCallOrder, 0);
+        const afterDispose = history.writes().filter(write => write.order > disposedAt);
+        expect(afterDispose.map(({ kind, url }) => ({ kind, url: pathOf(url) }))).toEqual([
+            { kind: 'replace', url: '/settings' },
+        ]);
+        // The stale callback did call the old router's `navigate`, and it was ignored.
+        expect(warn).toHaveBeenCalledWith('navigate on a disposed router is ignored');
+
+        // (c) Nothing pushed: no `/login` entry for Back to return to.
+        expect(history.writes().filter(write => write.kind === 'push')).toEqual([]);
+        expect(window.history.length).toBe(historyLength);
+    } finally {
+        history.restore();
+    }
+});
+
+test('AUTH-074: a navigate of the disposed router (an unmounted page) leaves the address bar on the live route', async () => {
+    window.history.replaceState(null, '', '/settings');
+    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockImplementation(() => {
+        useAuthStore.setState({ status: 'authenticated' });
+        return Promise.resolve('access-token');
+    });
+    vi.mocked(fetchSelfUser).mockResolvedValue({ ...user, id: 'stored-user' });
+
+    render(<App />);
+
+    expect(await screen.findByText('settings')).toBeTruthy();
+    expect(routers()).toHaveLength(2);
+    const first = getOrThrow(routers(), 0);
+    const second = getOrThrow(routers(), 1);
+    expect(first.dispose).toHaveBeenCalledOnce();
+    const history = recordHistoryWrites();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+        // What the old callback page's `.catch` does once its exchange settles after the remount.
+        await first.navigate('/login?returnTo=%2Fsettings', { replace: true });
+
+        expect(window.location.pathname + window.location.search).toBe('/settings');
+        expect(second.state.location.pathname + second.state.location.search).toBe('/settings');
+        expect(history.writes()).toEqual([]);
+        expect(warn).toHaveBeenCalledWith('navigate on a disposed router is ignored');
+        expect(screen.getByText('settings')).toBeTruthy();
+    } finally {
+        history.restore();
+    }
+});
