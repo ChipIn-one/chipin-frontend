@@ -1,12 +1,10 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
 import { PROJECT_NAME } from 'constants/chipin';
-import { lightThemeStyled } from 'constants/styled-themes';
 
-import ModeLogotype from './ModeLogotype';
+import { ModeLogotype } from './ModeLogotype';
 
 import 'i18n/index';
 
@@ -19,11 +17,9 @@ test.each([
     { isSoloMode: true, mode: 'Solo' },
 ])('shows the project name and $mode badge', ({ isSoloMode, mode }) => {
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <ModeLogotype isSoloMode={isSoloMode} />
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <ModeLogotype isSoloMode={isSoloMode} />
+        </Theme>,
     );
 
     expect(screen.getByText(PROJECT_NAME)).toBeTruthy();

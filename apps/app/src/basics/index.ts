@@ -4,7 +4,7 @@ import { LedgerScopeBadge } from './badges';
 import { BalanceBadges } from './BalanceBadges';
 import { BalanceSummaryText } from './BalanceSummaryText';
 import { BackButton } from './buttons';
-import ChipInLoader from './ChipInLoader';
+import { ChipInLoader } from './ChipInLoader';
 import {
     EmptyState,
     NoActivityEmptyState,

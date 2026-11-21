@@ -14,7 +14,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('components/OfflineQRCode', () => ({
-    default: ({ url }: { url: string }) => <div data-testid="qr-code">{url}</div>,
+    OfflineQRCode: ({ url }: { url: string }) => <div data-testid="qr-code">{url}</div>,
 }));
 
 test('shows invite QR content and closes from the footer action', () => {

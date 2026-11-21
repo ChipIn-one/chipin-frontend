@@ -23,7 +23,7 @@ const ActorAvatarImage = styled(UserAvatar)`
     width: 24px;
     height: 24px;
     pointer-events: none;
-    box-shadow: 0 0 0 2px var(--gray-1);
+    box-shadow: 0 0 0 2px var(--cp-surface-base);
 `;
 
 type EventActor = Pick<ActivityEvent, 'actorSnapshot' | 'actorUserId'>;

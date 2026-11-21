@@ -1,3 +1,1 @@
-import ModeLogotype from './ModeLogotype';
-
-export { ModeLogotype };
+export { ModeLogotype } from './ModeLogotype';

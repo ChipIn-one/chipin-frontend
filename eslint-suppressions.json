@@ -4,6 +4,11 @@
       "count": 1
     }
   },
+  "apps/app/pwa.config.test.ts": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
   "apps/app/src/api/chipin.interceptors.integration.test.ts": {
     "boundaries/dependencies": {
       "count": 2
@@ -19,8 +24,8 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/ChipInLoader.tsx": {
-    "import-x/no-default-export": {
+  "apps/app/src/basics/BalanceBadges.tsx": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -112,6 +117,9 @@
   "apps/app/src/components/AddExpenseButton.tsx": {
     "import-x/no-default-export": {
       "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 1
     }
   },
   "apps/app/src/components/CurrencySelect.tsx": {
@@ -149,11 +157,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/OfflineQRCode.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/UsersRow.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -161,6 +164,16 @@
   },
   "apps/app/src/components/ViewModeSwitch.tsx": {
     "import-x/no-default-export": {
+      "count": 1
+    }
+  },
+  "apps/app/src/components/backend-unavailable-page/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "apps/app/src/components/dashboard-onboarding/DashboardOnboarding.tsx": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -185,11 +198,8 @@
     }
   },
   "apps/app/src/components/invite-onboarding/InviteOnboarding.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    },
     "no-restricted-syntax": {
-      "count": 1
+      "count": 2
     }
   },
   "apps/app/src/components/invite/InviteActionRows.tsx": {
@@ -204,6 +214,11 @@
   },
   "apps/app/src/components/invite/InviteQRModal.tsx": {
     "import-x/no-default-export": {
+      "count": 1
+    }
+  },
+  "apps/app/src/components/modals/auth-modal/styled.ts": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -232,6 +247,11 @@
       "count": 1
     }
   },
+  "apps/app/src/components/modals/components/overlay-layout/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
   "apps/app/src/components/modals/create-update-group-modal/CreateUpdateGroupModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -250,6 +270,11 @@
   "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/GroupCoverPickerControl.tsx": {
     "import-x/no-default-export": {
       "count": 1
+    }
+  },
+  "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 2
     }
   },
   "apps/app/src/components/modals/create-update-group-modal/components/group-details-fields/GroupDetailsFields.tsx": {
@@ -342,14 +367,24 @@
       "count": 1
     }
   },
+  "apps/app/src/components/modals/settle-up-modal/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
   "apps/app/src/components/modals/user-avatar-modal/UserAvatarModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
-  "apps/app/src/components/mode-logotype/ModeLogotype.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
+  "apps/app/src/components/modals/user-avatar-modal/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "apps/app/src/components/nav-bars/MobileNavBar.test.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
     }
   },
   "apps/app/src/components/nav-bars/desktop-sidebar/DesktopSidebar.tsx": {
@@ -360,6 +395,26 @@
   "apps/app/src/components/nav-bars/desktop-sidebar/components/profile-actions/ProfileActions.tsx": {
     "import-x/no-default-export": {
       "count": 1
+    }
+  },
+  "apps/app/src/components/nav-bars/desktop-sidebar/components/profile-actions/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "apps/app/src/components/nav-bars/desktop-sidebar/constants.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "apps/app/src/components/nav-bars/desktop-sidebar/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "apps/app/src/components/nav-bars/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 4
     }
   },
   "apps/app/src/components/search-select/CategorySearchSelect.tsx": {
@@ -406,6 +461,11 @@
   "apps/app/src/constants/publicRoutes.ts": {
     "boundaries/dependencies": {
       "count": 1
+    }
+  },
+  "apps/app/src/constants/styled-themes.ts": {
+    "no-restricted-syntax": {
+      "count": 2
     }
   },
   "apps/app/src/features/activity/ActivityHeader.tsx": {
@@ -544,6 +604,11 @@
       "count": 1
     }
   },
+  "apps/app/src/features/add-expense/components/expense-details-section/components/expense-amount-fields/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
   "apps/app/src/features/add-expense/components/expense-details-section/components/expense-currency-category-fields/ExpenseCurrencyCategoryFields.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -571,6 +636,11 @@
   },
   "apps/app/src/features/add-expense/components/expense-split-card/components/expense-split-mode-control/ExpenseSplitModeControl.tsx": {
     "import-x/no-default-export": {
+      "count": 1
+    }
+  },
+  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-users-list/styled.ts": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -609,8 +679,18 @@
       "count": 1
     }
   },
+  "apps/app/src/features/landing/how-it-works-section/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
   "apps/app/src/features/landing/showcase-sections/ShowcaseSections.tsx": {
     "import-x/no-default-export": {
+      "count": 1
+    }
+  },
+  "apps/app/src/features/landing/showcase-sections/components/group-page-preview/GroupPagePreview.test.tsx": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -652,6 +732,11 @@
   "apps/app/src/helpers/authSession.ts": {
     "boundaries/dependencies": {
       "count": 3
+    }
+  },
+  "apps/app/src/helpers/colors.ts": {
+    "no-restricted-syntax": {
+      "count": 1
     }
   },
   "apps/app/src/helpers/currencies.ts": {
@@ -705,7 +790,7 @@
     }
   },
   "apps/app/src/pages/404-page/components/Icon404.tsx": {
-    "import-x/no-default-export": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -779,6 +864,11 @@
       "count": 1
     }
   },
+  "apps/app/src/pages/activity-subevents-page/components/activity-subevents-details/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
   "apps/app/src/pages/friends-page/FriendsPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -849,6 +939,11 @@
       "count": 1
     }
   },
+  "apps/app/src/pages/group-page/components/GroupCoverSection.test.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "apps/app/src/pages/group-page/components/GroupCoverSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -884,8 +979,18 @@
       "count": 1
     }
   },
+  "apps/app/src/pages/group-page/components/styled.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "apps/app/src/pages/group-page/index.ts": {
     "import-x/no-default-export": {
+      "count": 1
+    }
+  },
+  "apps/app/src/pages/group-page/styled.ts": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },

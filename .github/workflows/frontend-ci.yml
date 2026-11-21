@@ -114,6 +114,11 @@ jobs:
         env:
           BASE_SHA: ${{ steps.gate.outputs.base_sha }}
         run: node scripts/check-file-layout.mjs --base "$BASE_SHA"
+      - name: Check styled-components allowlist
+        if: github.event_name == 'pull_request' && (steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full')
+        env:
+          BASE_SHA: ${{ steps.gate.outputs.base_sha }}
+        run: node scripts/check-styled-allowlist.mjs --base "$BASE_SHA"
       - name: Check generated API types
         if: steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full'
         # Offline: regenerates from the committed apps/app/openapi/chipin.yaml and fails on any diff (spec 03 §5.5).
@@ -163,6 +168,7 @@ jobs:
           # Mirrors the root lint:full / format:check over apps/site, so a green site run
           # implies full would be green for these files.
           npx --no-install prettier --check apps/site
+          npx --no-install stylelint 'apps/site/**/*.{css,astro}' --max-warnings 0
           # `.astro` frontmatter is linted with types: `astro:content` types exist only after sync.
           npm run sync -w @chipin/site
           CHIPIN_ESLINT_FULL=1 npx --no-install eslint apps/site --max-warnings 0

@@ -11,6 +11,8 @@ import { NavButton } from 'components/NavButton';
 
 import { HintCard, Icon404 } from './components';
 
+import styles from './Page404.module.css';
+
 const Page404 = () => {
     const { t } = useTranslation('errors');
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
@@ -45,7 +47,7 @@ const Page404 = () => {
                         />
                         <Box
                             display={{ initial: 'none', sm: 'inline-block' }}
-                            style={{ alignSelf: 'stretch' }}
+                            className={styles.divider}
                         >
                             <Separator orientation="vertical" size="4" />
                         </Box>
@@ -56,7 +58,7 @@ const Page404 = () => {
                         />
                         <Box
                             display={{ initial: 'none', sm: 'inline-block' }}
-                            style={{ alignSelf: 'stretch' }}
+                            className={styles.divider}
                         >
                             <Separator orientation="vertical" size="4" />
                         </Box>

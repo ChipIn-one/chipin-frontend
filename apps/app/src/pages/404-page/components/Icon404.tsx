@@ -1,26 +1,18 @@
 import { FileIcon, FrownIcon, SearchIcon } from 'lucide-react';
 
+import styles from './Icon404.module.css';
+
 const Icon404 = () => (
-    <div style={{ position: 'relative', width: 128, height: 128 }}>
-        <FileIcon
-            size={128}
-            strokeWidth={1}
-            color="var(--gray-10)"
-            style={{ position: 'absolute', top: 0, left: 0 }}
-        />
+    <div className={styles.root}>
+        <FileIcon size={128} strokeWidth={1} color="var(--cp-text-muted)" className={styles.file} />
         <FrownIcon
             size={48}
             strokeWidth={2}
-            color="var(--gray-10)"
-            style={{ position: 'absolute', top: 48, left: 40 }}
+            color="var(--cp-text-muted)"
+            className={styles.frown}
         />
-        <SearchIcon
-            size={64}
-            strokeWidth={2}
-            color="var(--green-9)"
-            style={{ position: 'absolute', bottom: -16, right: -10 }}
-        />
+        <SearchIcon size={64} strokeWidth={2} color="var(--green-9)" className={styles.search} />
     </div>
 );
 
-export default Icon404;
+export { Icon404 };

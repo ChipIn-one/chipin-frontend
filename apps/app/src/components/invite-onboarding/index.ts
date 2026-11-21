@@ -1,1 +1,1 @@
-export { default as InviteOnboarding } from './InviteOnboarding';
+export { InviteOnboarding } from './InviteOnboarding';

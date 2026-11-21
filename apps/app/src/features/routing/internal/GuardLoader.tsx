@@ -2,7 +2,7 @@ import { Container, Flex } from '@radix-ui/themes';
 
 import { useConnectivityStore } from 'store/connectivityStore';
 
-import ChipInLoader from 'basics/ChipInLoader';
+import { ChipInLoader } from 'basics/ChipInLoader';
 import PageLoader from 'basics/PageLoader';
 import { OfflineBanner } from 'components/offline-banner';
 

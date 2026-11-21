@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import pluginQuery from '@tanstack/eslint-plugin-query';
 import importX from 'eslint-plugin-import-x';
 
@@ -21,7 +24,9 @@ import { TEST_FILES } from './layers.js';
 // match the Astro template, which astro-eslint-parser parses as JSX).
 export const PENDING_IDS = Symbol.for('chipin.eslint.pendingIds');
 
-const MAX_SCOPES = 6;
+// 2^n block pairs per rule. 7 since 05-5: `no-restricted-imports` had 6 layer/money scopes and the
+// styled-components allowlist needs its own one.
+const MAX_SCOPES = 7;
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const validateEntries = (ruleName, entries) => {
@@ -114,8 +119,37 @@ export const restrictedImports = entries =>
         return [{ paths, patterns }];
     });
 
+/** Repository-relative paths of the files that may still import styled-components (spec 05 §3). */
+export const STYLED_ALLOWLIST_PATH = 'config/eslint/styled-components-allowlist.json';
+
+const readStyledAllowlist = () =>
+    JSON.parse(readFileSync(resolve(import.meta.dirname, '../..', STYLED_ALLOWLIST_PATH), 'utf8'));
+
+/** One glob for a list of paths: a single scope of the restricted-entry helpers. */
+export const pathsGlob = paths => (paths.length === 1 ? paths[0] : `{${paths.join(',')}}`);
+
 /** ChipIn `no-restricted-imports` entries that are not layer boundaries. */
-export const projectImports = ({ appDir = '.' } = {}) => [
+export const projectImports = ({ appDir = '.', styledAllowlist = readStyledAllowlist() } = {}) => [
+    {
+        // spec 05 §3: no new styled-components; the allowlisted files only leave the list
+        // (scripts/check-styled-allowlist.mjs). No `files` glob: the scope limit; outside
+        // apps/app/src nothing imports it either.
+        id: 'styled-components',
+        path: 'styled-components',
+        ...(styledAllowlist.length > 0 ? { ignores: [pathsGlob(styledAllowlist)] } : {}),
+        message:
+            'No new styled-components: style with Radix props, then a CSS Module (`Component.module.css`, `var(--cp-*)`).',
+    },
+    {
+        // spec 05 §6: svgr (`?react`) only for the brand marks logo.svg and google-icon.svg (used
+        // by Footer.tsx, AuthButtons.tsx and mode-logotype). Allowlisted by the imported asset, not
+        // the importing file: no scope left for an ignore glob.
+        id: 'svgr-react',
+        pattern: {
+            regex: '^(?!(?:@chipin/tokens/assets/logo|assets/google-icon)\\.svg\\?react$).*\\.svg\\?react$',
+        },
+        message: 'Use a lucide-react icon (`<Name>Icon`); svgr is only for the brand marks.',
+    },
     {
         // lucide-react icons are imported only by their `<Name>Icon` export (no `Lucide<Name>`
         // aliases, no bare names, no namespace import): one import surface for icons.
@@ -344,6 +378,28 @@ export const projectRules = ({ appDir }) => [
         ignores: [appGlob(appDir, 'src/entities/*/api/queries.ts')],
         message:
             'Build query keys with the entity key factory (`statsKeys.all`, `groupKeys.detail(id)`) from entities/<entity>/api/queries.ts.',
+    },
+    {
+        // spec 05 §3 (D23): colors only as `var(--cp-*)` from @chipin/tokens. A whole-string hex
+        // (anchored, so `'#add-expense'` is not one), a color function, or a palette variable;
+        // the template form covers styled CSS. Not a color: `eslint-disable-next-line
+        // no-restricted-syntax -- not a color: <reason>`.
+        id: 'no-raw-colors',
+        selector: [
+            'Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$|\\b(?:rgba?|hsla?)\\(|var\\(--(?!cp-|_)[a-z]+-a?\\d+\\)/]',
+            'TemplateElement[value.raw=/(?:^|[\\s:,(])#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\\b|\\b(?:rgba?|hsla?)\\(|var\\(--(?!cp-|_)[a-z]+-a?\\d+\\)/]',
+        ].join(', '),
+        ignores: ['packages/tokens/**'],
+        message: 'use var(--cp-*) from @chipin/tokens',
+    },
+    {
+        // spec 05 §3: `style={{…}}` only for custom properties (`style={{ '--cover-url': url }}`).
+        id: 'inline-style',
+        selector:
+            "JSXAttribute[name.name='style'] ObjectExpression > Property:not([key.value=/^--/])",
+        astro: false,
+        message:
+            "No inline styles: use Radix props (`p`, `width`, `position`, …), else a CSS Module; `style` takes only custom properties (`{ '--x': v }`).",
     },
     {
         id: 'store-without-selector',

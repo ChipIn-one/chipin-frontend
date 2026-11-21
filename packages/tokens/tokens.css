@@ -123,6 +123,10 @@
     --cp-selection-surface: var(--jade-a2);
     --cp-selection-surface-hover: var(--jade-a3);
 
+    /* Components */
+    --cp-logo-mode-primary: var(--violet-9);
+    --cp-logo-mode-secondary: var(--violet-11);
+
     /* Media: text over a cover and its scrim, the same in both modes */
     --cp-media-on: #ffffff;
     --cp-media-scrim: #000000;

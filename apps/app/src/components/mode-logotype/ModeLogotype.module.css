@@ -1,0 +1,10 @@
+.root {
+    width: 40px;
+    height: 40px;
+}
+
+/* The logo's own custom properties (logo.svg falls back to the brand colors). */
+.root[data-mode='solo'] {
+    --logo-primary-color: var(--cp-logo-mode-primary);
+    --logo-secondary-color: var(--cp-logo-mode-secondary);
+}
