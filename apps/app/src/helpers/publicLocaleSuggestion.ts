@@ -1,32 +1,26 @@
 import { DEFAULT_LOCALE } from 'constants/locales';
+import { SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN } from 'constants/localstorage';
+import { SessionStorage } from 'helpers/localStorage';
 import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
 import type { PublicLocale } from 'types/publicRoutes';
 
-// This flag suppresses a toast; it does not store a public language preference.
-const SESSION_KEY = 'chipin.publicLanguageSuggestionShown';
-
-// A blocked or full sessionStorage must not break page navigation. Fall back
-// to document-local suppression only when persistence is unavailable.
+// The flag suppresses a toast; it does not store a public language preference.
+// A blocked or full session storage must not break page navigation (the helpers never throw).
+// Fall back to document-local suppression only when the write fails.
 let isSuppressedWithoutStorage = false;
 
 const isPublicLocaleSuggestionSuppressed = (): boolean => {
     if (typeof window === 'undefined' || isSuppressedWithoutStorage) {
         return true;
     }
-    try {
-        return window.sessionStorage.getItem(SESSION_KEY) === '1';
-    } catch {
-        return isSuppressedWithoutStorage;
-    }
+    return SessionStorage.getRaw(SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN) === '1';
 };
 
 const suppressPublicLocaleSuggestion = (): void => {
     if (typeof window === 'undefined') {
         return;
     }
-    try {
-        window.sessionStorage.setItem(SESSION_KEY, '1');
-    } catch {
+    if (!SessionStorage.setRaw(SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN, '1')) {
         isSuppressedWithoutStorage = true;
     }
 };

@@ -1,6 +1,6 @@
 // Spec 04 §2.11 item 4 (04-2d; moved from 03-13): an open expense draft survives an app reload (an
 // applied update, the "update required" button, the error fallback). Before the reload an
-// `onBeforeAppReload` callback writes it to `sessionStorage` (this tab only, gone with the tab); at
+// `onBeforeAppReload` callback writes it to session storage (this tab only, gone with the tab); at
 // startup it is read once, the key removed, and the modal reopens with it.
 // - Versioned key `chipin_expenseDraft_v1` and a `v` field: another version is dropped.
 // - `Money` holds `bigint` units, so the codec writes a bigint as `{ "$bigint": "<digits>" }`.
