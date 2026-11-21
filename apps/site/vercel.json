@@ -110,13 +110,19 @@
             "statusCode": 301
         }
     ],
+    "rewrites": [
+        {
+            "source": "/join/:kind(group|friend)/:token{/}?",
+            "destination": "/join/:kind"
+        }
+    ],
     "headers": [
         {
             "source": "/(.*)",
             "headers": [
                 {
                     "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+                    "value": "default-src 'self'; script-src 'self' 'sha256-RJMajugPYbN+lISmwXR5PoqA2k9KnK6a0Xwh/T8iAdQ=' 'sha256-xdaVP8y9P2Z9LYgdgUt3ML27hG5cT0wm6RPtSpX4EjQ='; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
                 },
                 {
                     "key": "Referrer-Policy",
@@ -137,6 +143,15 @@
                 {
                     "key": "Strict-Transport-Security",
                     "value": "max-age=63072000; includeSubDomains; preload"
+                }
+            ]
+        },
+        {
+            "source": "/join/(.*)",
+            "headers": [
+                {
+                    "key": "Referrer-Policy",
+                    "value": "no-referrer"
                 }
             ]
         },

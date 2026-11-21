@@ -50,6 +50,7 @@ const JS_TYPES = new Set([
 ]);
 
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
+const VERCEL_SCRIPT = /^\/_vercel\//;
 
 // Inline scripts of these types are also checked against `script-src` (import maps, speculation
 // rules), so their hashes belong in the CSP too; they do not count towards the JS budget.
@@ -258,7 +259,10 @@ const localScriptPaths = (page: ParsedPage): string[] => [
         liveDocumentsOf(page)
             .flatMap(({ scriptSources }) => scriptSources)
             .map(src => src?.replace(ASCII_WHITESPACE, ''))
-            .filter((src): src is string => !!src && /^\/(?!\/)/.test(src)),
+            // `/_vercel/*` (Web Analytics, Speed Insights) is served by the platform, not the build.
+            .filter(
+                (src): src is string => !!src && /^\/(?!\/)/.test(src) && !VERCEL_SCRIPT.test(src),
+            ),
     ),
 ];
 

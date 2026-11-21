@@ -1,0 +1,72 @@
+---
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '../i18n/locales';
+import { messages } from '../i18n/ui';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { resolveAppOrigin } from '../lib/appOrigin';
+import type { InviteKind } from '../lib/inviteToken';
+import { JOIN_SCRIPT } from '../lib/joinScript';
+
+// The invite landing (spec 04 §3.5, KB USR-080..USR-085): one block of texts per locale, the
+// inline JOIN_SCRIPT picks the block and the state. No analytics (USR-084), noindex (USR-085).
+interface Props {
+    kind: InviteKind;
+}
+
+const { kind } = Astro.props;
+const appOrigin = resolveAppOrigin({
+    value: import.meta.env.PUBLIC_APP_ORIGIN,
+    onVercel: process.env.VERCEL === '1',
+});
+const { title, description } = messages(DEFAULT_LOCALE).join;
+---
+
+<BaseLayout
+    locale={DEFAULT_LOCALE}
+    slug={null}
+    title={title}
+    description={description}
+    noindex
+    includeAnalytics={false}
+    referrer="no-referrer"
+>
+    <div class="join" data-join data-kind={kind} data-app-origin={appOrigin}>
+        {
+            SUPPORTED_LOCALES.map(locale => {
+                const text = messages(locale).join;
+
+                return (
+                    <section data-locale={locale} lang={locale} hidden={locale !== DEFAULT_LOCALE}>
+                        <h1>{text[kind].heading}</h1>
+                        <noscript>
+                            <p>{text.noscript}</p>
+                        </noscript>
+                        <p data-state="valid" hidden>
+                            <a class="open-invite" data-open-invite rel="noreferrer">
+                                {text.open}
+                            </a>
+                        </p>
+                        <div data-state="invalid" hidden>
+                            <p>{text.broken}</p>
+                            <p>
+                                <a href="/">{text.goHome}</a>
+                            </p>
+                        </div>
+                    </section>
+                );
+            })
+        }
+    </div>
+    <script is:inline set:html={JOIN_SCRIPT} />
+</BaseLayout>
+
+<style>
+    .open-invite {
+        display: inline-block;
+        padding: var(--cp-space-3) var(--cp-space-5);
+        border-radius: var(--cp-radius-3);
+        background: var(--cp-accent-solid);
+        color: var(--cp-text-inverse);
+        font-weight: var(--cp-font-weight-bold);
+        text-decoration: none;
+    }
+</style>
