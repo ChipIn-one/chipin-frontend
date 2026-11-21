@@ -194,3 +194,81 @@ describe('release-on-production guard', () => {
         expect(result.output).toBe('');
     });
 });
+
+describe('release-on-production guard: workflow files of the promoted SHA (#838)', () => {
+    const env = isolatedGitEnv();
+    const git = (cwd, ...args) => runGit(env, cwd, ...args);
+    const repo = mkdtempSync(join(tmpdir(), 'release-guard-workflows-'));
+    initTestRepo(env, repo);
+    mkdirSync(join(repo, '.github', 'workflows'), { recursive: true });
+    const commit = (name, workflowText) => {
+        if (workflowText !== undefined) {
+            writeFileSync(join(repo, '.github', 'workflows', 'ci.yml'), workflowText);
+            git(repo, 'add', '.github/workflows/ci.yml');
+        } else {
+            writeFileSync(join(repo, `${name}.txt`), name);
+            git(repo, 'add', `${name}.txt`);
+        }
+        git(repo, 'commit', '-q', '-m', name);
+        return git(repo, 'rev-parse', 'HEAD');
+    };
+    // base v1.0.0 (ci v1) - taggedOld v1.0.1 - oldWorkflows - workflowChange (ci v2) - sameWorkflows - head on master.
+    commit('base', 'v1\n');
+    git(repo, 'tag', 'v1.0.0');
+    const taggedOld = commit('tagged-old');
+    git(repo, 'tag', 'v1.0.1');
+    const oldWorkflows = commit('old-workflows');
+    commit('workflow-change', 'v2\n');
+    const sameWorkflows = commit('same-workflows');
+    const head = commit('head');
+    git(repo, 'update-ref', 'refs/remotes/origin/master', head);
+    afterAll(() => rmSync(repo, { recursive: true, force: true }));
+
+    const run = sha => {
+        const output = join(repo, '.git', `output-${sha}`);
+        writeFileSync(output, '');
+        const result = spawnSync('bash', ['-c', guardStep.run], {
+            cwd: repo,
+            encoding: 'utf8',
+            env: { ...env, DEPLOYED_SHA: sha, GITHUB_OUTPUT: output },
+        });
+        return {
+            status: result.status,
+            stdout: result.stdout,
+            output: readFileSync(output, 'utf8'),
+        };
+    };
+
+    test('fails an untagged SHA whose .github/workflows differs from the master tip, naming the cause and the files', () => {
+        const result = run(oldWorkflows);
+        expect(result.status).toBe(1);
+        expect(result.output).toBe('');
+        expect(result.stdout).toContain(
+            `::error::No release for ${oldWorkflows}: its .github/workflows differs from the master tip`,
+        );
+        expect(result.stdout).toContain('GITHUB_TOKEN cannot create a tag on such a commit (#838)');
+        expect(result.stdout).toContain('Promote to Production the master tip build');
+        expect(result.stdout).toContain('.github/workflows/ci.yml');
+    });
+
+    test('passes an already tagged SHA with different workflow files (engine no-op, no ref created)', () => {
+        const result = run(taggedOld);
+        expect(result.status).toBe(0);
+        expect(result.output).toBe(`sha=${taggedOld}\nrelease=true\n`);
+    });
+
+    test('passes an untagged SHA whose workflow files equal the master tip', () => {
+        for (const sha of [sameWorkflows, head]) {
+            const result = run(sha);
+            expect(result.status).toBe(0);
+            expect(result.output).toBe(`sha=${sha}\nrelease=true\n`);
+        }
+    });
+
+    test('runs the comparison with git diff-tree on tree OIDs only (no lazy blob fetch in the blob:none clone)', () => {
+        expect(guardStep.run).toContain(
+            'git diff-tree --quiet -r "$DEPLOYED_SHA" origin/master -- .github/workflows || differs=$?',
+        );
+        expect(guardStep.run).not.toMatch(/git diff (?!-tree)/u);
+    });
+});

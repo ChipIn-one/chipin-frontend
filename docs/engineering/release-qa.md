@@ -119,6 +119,7 @@ Only the sole current QA assignee counts; that is `syllik` only when he is the s
 
 2. Read the current result comment and the latest validation run. Then decide whether to **Promote** that exact deployment in Vercel.
 3. After a fix, run a new round: a new SHA gets its own QA Issue. Never carry a PASS across SHAs.
+4. **If the QA-approved build is not the `master` tip:** if its `.github/workflows/` differs from the `master` tip, the guard of `release-on-production.yml` fails with "its .github/workflows differs from the master tip" and no tag is created: GitHub does not let `GITHUB_TOKEN` create a tag on such a commit (#838). The untagged Production deployment stays live. Promote the `master` tip build instead (run a QA round on it first if it carries UI changes); its Promote creates the tag. A GitHub App token with the `workflows` permission would lift this limit (#838 option B); it is not built. Builds made before #838 have no such check and fail at the engine's tag step with a 403 instead; the action is the same.
 
 ## Two projects
 
