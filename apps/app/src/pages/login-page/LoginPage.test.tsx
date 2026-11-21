@@ -142,5 +142,7 @@ describe('signed in', () => {
 
         expect(await screen.findByRole('main')).toBeTruthy();
         expect(router.state.location.pathname + router.state.location.search).toBe(expected);
+        // Replaced, not pushed: Back does not return to the sign-in screen (#835).
+        expect(router.state.historyAction).toBe('REPLACE');
     });
 });

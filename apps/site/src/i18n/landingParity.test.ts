@@ -43,8 +43,6 @@ const lookup = (tree: unknown, key: string): unknown =>
 const NOT_RENDERED: Record<string, string> = {
     'features.soloBudget': 'FeaturesSection lists five cards without it',
     'sections.groups.cta': 'ShowcaseSection has no button',
-    'sections.groups.preview.coverAlt':
-        'the alt of the external cover photo; the site CSP allows only same-origin images, the site preview shows the cover gradient',
     'sections.expenses': 'ShowcaseSections renders only the groups showcase',
     'cta.openApp': 'CtaSection does not render it',
     promo: 'the early-supporter modal of the app, not the landing',
