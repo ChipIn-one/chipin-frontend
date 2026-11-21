@@ -16,14 +16,13 @@ import { PENDING_IDS } from '../config/eslint/project.js';
 const repoRoot = resolve(import.meta.dirname, '..');
 
 export const REGISTRY_PATH = 'config/eslint/rule-classes.json';
-// Files that must be linted (spec 02 §D0: a component, a store, a test; plus ds-gallery and a site
-// `.astro` page). Rules are collected from every linted file; the samples guard against a broken
-// file enumeration.
+// Files that must be linted (spec 02 §D0: a component, a store, a test; plus a site `.astro`
+// page). Rules are collected from every linted file; the samples guard against a broken file
+// enumeration.
 export const SAMPLE_FILES = [
     'apps/app/src/components/AddExpenseButton.tsx',
     'apps/app/src/store/authStore.ts',
     'apps/app/src/store/authStore.test.ts',
-    'apps/app/ds-gallery/gallery.tsx',
     'apps/site/src/pages/privacy.astro',
 ];
 const ID_RULES = new Set(['no-restricted-syntax', 'no-restricted-imports']);

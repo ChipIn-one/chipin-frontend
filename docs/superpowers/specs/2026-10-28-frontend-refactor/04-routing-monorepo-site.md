@@ -1,5 +1,7 @@
 # Spec 04: monorepo, app routing, and the public site (D6, D7, D8; ADR for FE#498)
 
+> ds-gallery was removed by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830); design review moves to Claude Design. Every ds-gallery mention below is history and is withdrawn.
+
 Status: draft for the owner, 2026-10-28. Repo: `ChipIn-one/chipin-frontend`. Verified read-only on branch `chore/issue-456-ds-gallery` @ `3d0086e`; paths re-checked against `origin/master` `522973a` (there are already no deploy workflows there — delivery = Vercel Git integration + Promote; rules in `docs/engineering/rules/`). Backend verified on `chipin-backend` (branch `develop`).
 
 PR identifiers are `04-<n>` (global scheme, `00-overview.md`); "phase N" in the text = PR `04-N`. After review A: `04-0` → `04-0a`/`04-0b`, `04-2a` → `04-2a1…04-2a4`, new `04-2f`, `04-2g`, `04-3d`. After review C (2026-10-28): `04-2a2` is split into `04-2a2`/`04-2a2b`, new `04-2h` (Playwright E2E SW), `04-3b` → `04-3b1`/`04-3b2`. 2026-10-29 (D26, owner decision): the app moves to the subdomain `app.chipin.one` (dev — `app-dev.chipin.one`) instead of the path `/app/`, the site stays on `chipin.one` (dev — `site-dev.chipin.one`). D26 simplifies D25: there is no longer a base path `/app/`, a `CUTOVER` constant, an SW scope change, a reinstall banner, or a freeze window; cutover = moving the domains in Vercel with rollback by moving them back (§4.5). PR ids are kept, the content of `04-2g`, `04-3d`, `04-4` is rewritten. 2026-11-10 (D30, D31, owner decisions): the cutover runs in two steps — step 1 (`04-4a1` + `04-4a2`) moves the app to `app.chipin.one` on the current project while `chipin.one` keeps today's landing, step 2 (`04-4b`, the former `04-4`) gives `chipin.one` to the site (§4.5); the routing-artifact generator, `hosting.base.json`, and the prefetch loaders (`04-2e`) are withdrawn: `vercel.json` and the SW allowlist stay hand-written and are tied to the manifest by tests (§2.9). Backend issues — `BE-04-<n>`.
@@ -598,7 +600,9 @@ Rollback of step 2 (minutes):
 - Legacy-host rules in `apps/app/vercel.json` (04-5a): the enumerated SPA rewrites (the catch-all stays), the step-1 redirects, the compat redirects `/join/*`, the `/sw.js` host rewrites and `public/sw-kill.js` (the worker is written to `/sw.js` again, §2.11), `chipin.one`/`dev.chipin.one` in the `/api` rewrites. `scripts/private-spa-navigation.ts` stays (the hand-written SW allowlist, §2.9); 04-5a adds `/` to it.
 - Lint check: after the removal `knip` finds no unused exports from the listed modules.
 
-### 6. ds-gallery
+### 6. ~~ds-gallery~~
+
+Withdrawn by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery is removed, design review moves to Claude Design. The text below is history.
 
 **Decision: it stays in `apps/app/ds-gallery/`.** The gallery renders the real app components (`basics/*`, `components/*`) through aliases to `src/*` (`ds-gallery/vite.config.ts`). A separate `apps/ds-gallery` would require extracting these components into a package (`packages/ui`), which is a separate large refactoring outside D7. The gallery types are checked in the app's `typecheck` (D13). Revisit when `packages/ui` appears.
 

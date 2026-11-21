@@ -20,7 +20,7 @@ export const REGISTRY_PATH = 'config/eslint/rule-classes.json';
 
 // 04-0a moved these folders into the app workspace. A base commit from before the move keys their
 // suppressions without the prefix; read them under the new path so the move is not growth.
-const MOVED_TO_APP = /^(?:src|ds-gallery|contract-tests)\//;
+const MOVED_TO_APP = /^(?:src|contract-tests)\//;
 const APP_DIR = 'apps/app';
 
 /** Base-commit baseline with the keys of pre-move paths rewritten to their apps/app path. */

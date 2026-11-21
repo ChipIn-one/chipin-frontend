@@ -38,7 +38,7 @@ export default [
     },
     ...baseConfig({ appDir: APP_DIR }),
     ...typeAwareConfig({ appDir: APP_DIR }),
-    ...reactConfig({ appDir: APP_DIR }).map(block => ({
+    ...reactConfig().map(block => ({
         ...block,
         ignores: [...(block.ignores ?? []), PACKAGES],
     })),
@@ -53,7 +53,7 @@ export default [
     ...restrictedSyntax([
         ...projectSyntax({ appDir: APP_DIR }),
         ...projectRules({ appDir: APP_DIR }),
-        ...reactSyntax({ appDir: APP_DIR }),
+        ...reactSyntax(),
     ]),
     ...astroConfig({ siteDir: SITE_DIR, appDir: APP_DIR }),
     {

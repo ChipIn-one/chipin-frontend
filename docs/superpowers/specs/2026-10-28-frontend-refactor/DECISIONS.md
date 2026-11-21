@@ -24,6 +24,7 @@ D11. Named exports everywhere (lint import/no-default-export, exceptions: route 
 D12. Zustand reads: single pattern = selector with useShallow; useConnect hooks removed.
 D13. Formatting/strictness: Prettier installed + lint-staged + pre-commit hook; eslint --max-warnings 0 in CI; type-aware ESLint (no-floating-promises, no-misused-promises), jsx-a11y, import boundaries rule (eslint-plugin-boundaries or no-restricted-imports) enforcing layer direction, import-sort groups include all aliases; TS: noUncheckedIndexedAccess staged, verbatimModuleSyntax unified, typecheck covers ds-gallery and vite configs.
   Amended 2026-10-28 (owner review, PR #542): every lint/format rule is either auto-fixable or a correctness/boundary rule with a fix hint; non-autofixable style rules are dropped (handle* naming, React.FC ban, nested ternary, no-multi-comp, file naming); jsx-a11y = 6 correctness rules; pre-commit only fixes and never blocks; CI is the only blocker (spec 02 §D0).
+  Amended by D33 (2026-11-21): ds-gallery is removed, so the typecheck covers the vite configs only.
 D14. Styling: Radix Themes + CSS variables as token source (packages/tokens); styled-themes.ts replaced by var(--…); single theme-switching mechanism for light/dark/system (Radix appearance + html class; next-themes removed); <Theme> configured once; styled-components shrunk gradually to CSS Modules as files are touched (no big-bang); no Tailwind. grayColor olive vs gray mismatch resolved to one value (writer picks, flag for owner).
 D15. Versioning: bump at release only; CI runs version:check; one deploy workflow documented.
   Amended (#608/02-C10, owner 2026-11-05): the version comes from the git tag per ChipIn-one/.github#172; the release-branch version policy (CI version-check step, `version-check.mjs` extension) and the release section in release-qa.md (the release order belongs to #172) are dropped from 02-C10; removing `version:check`/`version:bump` is #172's job.
@@ -43,6 +44,7 @@ D16. Misc approved: remove dexie, dexie-react-hooks, sharp, sharp-ico, workbox-c
 ## Added 2026-10-28 (after DS discussion)
 D17. Design system: DS v1 spec decisions stand (code is source of truth, tokens.json DTCG 2025.10 → generated tokens.css in packages/tokens; grass/olive/lucide; no Figma now, FE#458 stays follow-up). Mockups: Pencil (.pen) locally for fast owner review before screen changes; mockups are disposable, never a token source. Later Figma migration = tokens via DTCG import, components redrawn from ds-gallery.
   Amended by D31 (2026-11-10): no DTCG `tokens.json` and no generator for now; `packages/tokens` holds a hand-written `tokens.css` (the source of truth in code), favicon/logo and the theme script. A later Figma/DTCG export is a separate decision.
+  Amended by D33 (2026-11-21): ds-gallery is removed; design review moves to Claude Design, not to a redraw from the gallery.
 
 ## Added 2026-10-28 (owner answers to confirmation items)
 D18. Vercel Analytics/Speed Insights stay for now. Owner intends to leave Vercel as provider later (cost/limits): separate research task (hosting + analytics replacement). Specs must not deepen Vercel lock-in beyond rewrites/headers config; keep hosting-specific bits isolated (vercel.json only, no Vercel-only APIs in app code).
@@ -72,3 +74,6 @@ D31 (R6, plan cuts). (1) Codemods 02-D2/02-D3 withdrawn: named exports via `impo
 
 ## Added 2026-11-17 (owner)
 D32 (amends D3; 00 item 35, review C1-16a/C3-27, comment on #525). Outbox mutations use `networkMode: 'always'` and `retry: false`; the wait for the network, the `auth`/`outdated` gates and the backoff live in `runOutboxOp` (03 §2.1, §2.4), not in TanStack's paused mutations: the TanStack pause fires only between retries and knows nothing about the gate. Restore still hydrates the persisted ops as paused mutations and continues them (03-15b). Queries keep `networkMode: 'offlineFirst'` (D3). 03-15a implements it.
+
+## Added 2026-11-21 (owner)
+D33. ds-gallery is removed (ChipIn-one/chipin-frontend#830): the `apps/app/ds-gallery` folder, `build:ds-gallery` and its step in `verify:full`/CI, and its tsconfig, ESLint and Prettier entries. Nobody opens it, and design review moves to Claude Design. Withdrawn: 05-7 and 05 §7, the gallery parts of 05 §3 and of 02-C3/02-C5, the 00-overview ds-gallery row, 04 §6, and the DS v1 role of the gallery as the specification surface (component cards no longer link to gallery sections). Amends D13, D17.

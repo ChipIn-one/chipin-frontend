@@ -1,5 +1,7 @@
 # Spec 02 — a single rulebook, tooling, dependency cleanup
 
+> ds-gallery was removed by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830); design review moves to Claude Design. Every ds-gallery mention below is history and is withdrawn.
+
 Decisions: D9, D11, D12, D13, D15, D16 (dependencies and build hygiene), D27, D31 (no codemods: named exports via `import-x/no-default-export` + shrinking suppressions, 02-C13). Related decisions: D21 (the `money/` module; D10 withdrawn), D3 (TanStack Query), D6 (data router), D4 (zod at boundaries).
 Related specs: **01** (hotfix: `.gitignore`, CSP — already there), **03** (D3/D4/D21: `src/shared/money`, the Query layer, removal of `useConnect`, money lint rules), **04** (D6/D7: monorepo — configs move to the root, see §D9; data router and `src/app/`), **05** (D14: stylelint, styled allowlist, `no-raw-colors`).
 PR identifiers use the global scheme `<spec>-<n>`: `02-A0…02-A3`, `02-B1…02-B2`, `02-C1…02-C13` (02-D1 withdrawn, §D0; the codemods 02-D2a–e/02-D3a–e withdrawn by D31) (see `00-overview.md`).
@@ -603,9 +605,9 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 | **02-B2** | replace `@uidotdev/usehooks`: `useCopyToClipboard` → `helpers/clipboard.ts`, `useNetworkState` → `hooks/useOnlineStatus.ts` (`useSyncExternalStore` + `online/offline`), `useIntersectionObserver` → `hooks/useIntersectionObserver.ts`; delete the commented-out call `pages/GlobalHooks.tsx:19`; update 2 mocks | — |
 | **02-C1** | Prettier + eslint-config-prettier + `format`/`format:check` (not yet in `verify`) + `prettier.config.js` | — |
 | **02-C2a–c** | `prettier --write` over `src/components` / `src/{pages,features}` / the rest; then `format:check` in `verify`; `.git-blame-ignore-revs` | 02-C1 |
-| **02-C3** | T2 (paths without baseUrl, ds-gallery alias) + `config/eslint/aliases.js` + import-sort autofix | 02-C2 |
+| **02-C3** | T2 (paths without baseUrl, ds-gallery alias — the gallery part withdrawn by D33, 2026-11-21) + `config/eslint/aliases.js` + import-sort autofix | 02-C2 |
 | **02-C4** | turn off the class c rules (§D0: the `handle*` selector, react-refresh, etc.) and the async selector `eslint.config.js:99-122` (C2-04); **`--max-warnings 0`**; delete the dead authSession override; the helpers `restrictedSyntax()`/`restrictedImports()` (the only owner; 03-1 and 05-5 only add their blocks); split `eslint.config.js` into `config/eslint/*`; the baseline mechanism (C2-05): `eslint-suppressions.json`, `baseline:update`, `check-baseline.mjs` + test, `rule-classes.json` + `check-rule-registry.mjs`, `lint:full`; CI: `base_sha` in `GITHUB_OUTPUT` and the `check-baseline` step (C1-15) | 02-C3 |
-| **02-C5** | T1 (typecheck of ds-gallery + configs), `tsconfig.base.json` | — |
+| **02-C5** | T1 (typecheck of configs; the ds-gallery typecheck is withdrawn by D33, 2026-11-21: the gallery is removed), `tsconfig.base.json` | — |
 | **02-C6** | type-aware preset + `consistent-type-imports` autofix + T3 `verbatimModuleSyntax`; `--suppress-rule` for `no-floating-promises`/`no-misused-promises`/`no-unsafe-*`/`no-non-null-assertion` | 02-C4, 02-C5 |
 | **02-C7a/b** | `no-floating-promises`/`no-misused-promises`: fix store/helpers/hooks (a), UI (b); edit 00.Promises.5 and 20.Effects.5 | 02-C6 |
 | **02-C8** | 6 jsx-a11y rules + `jsx-no-literals` + the i18n attribute selector (D5) + baseline | 02-C4 |
@@ -622,7 +624,7 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 1. `npm run verify:full` is green on `master` after each PR; 1230+ tests pass.
 2. After 02-C4: `npx eslint . --max-warnings 0` gives exit 0; `grep -c warning` on the output = 0.
 3. After 02-C2: `npx prettier --check .` gives exit 0.
-4. After 02-C5: `tsc -b` checks `ds-gallery/gallery.tsx`. Check: a temporary type error in this file fails `npm run typecheck`. The same for `ds-gallery/vite.config.ts` and `pwa-assets.config.ts`.
+4. After 02-C5: `tsc -b` checks `pwa-assets.config.ts`. Check: a temporary type error in this file fails `npm run typecheck`. (The `ds-gallery/gallery.tsx` and `ds-gallery/vite.config.ts` checks are withdrawn by D33, 2026-11-21.)
 5. After 02-C9: the fixture `basics/__boundary_probe.ts` with `import 'store/users-store'` gives a `boundaries/dependencies` error (checked in the PR and deleted).
 6. After 02-C10: a PR that changes `version` from a non-release branch gets a red `frontend-ci`. A release branch with a matching version — green. There is a unit test in `scripts/version-check.test.mjs`.
 7. After 02-A1/02-A2: `grep -rn "useConnect\|@codex\|Vite 7\|pre-1.0\|docs/specs/\|JavaScript \`Number\`" AGENTS.md docs/engineering` is empty (except the migration tables); `wc -l AGENTS.md` ≤ 90; AGENTS.md has exactly 15 invariants.
