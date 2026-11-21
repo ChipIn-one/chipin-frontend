@@ -5,7 +5,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 
-import AuthButtons from './AuthButtons';
+import { AuthButtons } from './AuthButtons';
 
 import 'i18n/index';
 

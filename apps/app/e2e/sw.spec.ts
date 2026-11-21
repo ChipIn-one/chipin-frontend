@@ -9,7 +9,7 @@ import { expect, type Page, type Request, test } from '@playwright/test';
 const APP_SHELL_PATH = '/app.html';
 const PRIVATE_PATH = '/dashboard';
 const UPDATE_TOAST_TEXT = 'New version available';
-const SIGNED_OUT_DIALOG_NAME = 'Welcome to ChipIn';
+const SIGN_IN_BUTTON_NAME = 'Sign in with Google';
 
 interface RegistrationSnapshot {
     scope: string;
@@ -136,9 +136,12 @@ test.describe('app service worker (spec 04 §2.11)', () => {
         expect(offline?.fromServiceWorker()).toBe(true);
         expect(offline?.status()).toBe(200);
         expect(await offline?.text()).toBe(shell);
-        // The shell's scripts also come from precache, so the app mounts offline and shows its
-        // signed-out screen (no user is signed in).
-        await expect(page.getByRole('dialog', { name: SIGNED_OUT_DIALOG_NAME })).toBeVisible();
+        // The shell's scripts also come from precache, so the app mounts offline and, with no user
+        // signed in, its guard sends it to the sign-in screen (AUTH-071) without another request.
+        await expect(page).toHaveURL(
+            `${origin}/login?returnTo=${encodeURIComponent(PRIVATE_PATH)}`,
+        );
+        await expect(page.getByRole('button', { name: SIGN_IN_BUTTON_NAME })).toBeVisible();
         expect(assetFailures).toEqual([]);
         expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toBe(
             `${origin}/sw.js`,

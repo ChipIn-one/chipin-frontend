@@ -11,7 +11,6 @@ import { LS_KEY_AUTH_SESSION_HINT, SS_KEY_ROUTE_CHUNK_RELOAD } from 'constants/l
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRoutes';
 import { checkForServiceWorkerUpdate, reloadApp, updateServiceWorker } from 'helpers/appUpdate';
 import { LocalStorage } from 'helpers/localStorage';
-import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { i18n } from 'i18n';
 import { syncHtmlLang } from 'i18n/htmlLang';
 import { startCacheRestore } from 'shared/offline/restore';
@@ -217,6 +216,7 @@ describe('the route tree', () => {
         expect([...paths].sort()).toEqual(
             [
                 ...PUBLIC_ROUTE_ENTRIES.map(route => route.path),
+                '/login',
                 '/oauth/callback',
                 '/dashboard',
                 '/solo',
@@ -295,16 +295,30 @@ describe('navigation', () => {
         }
     });
 
-    test('a signed-out deep link to an internal page shows the auth modal on the same URL', async () => {
+    test('AUTH-071 unauthenticated on /dashboard goes to /login?returnTo=%2Fdashboard', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
-        const router = renderAt('/group/123');
+        const router = renderAt('/dashboard');
 
-        expect(await screen.findByTestId('auth-modal')).toBeTruthy();
-        expect(screen.queryByText('group')).toBeNull();
-        expect(router.state.location.pathname).toBe('/group/123');
+        expect(await screen.findByText('login')).toBeTruthy();
+        expect(router.state.location.pathname + router.state.location.search).toBe(
+            '/login?returnTo=%2Fdashboard',
+        );
+        expect(screen.queryByText('dashboard')).toBeNull();
+        expect(screen.queryByTestId('auth-modal')).toBeNull();
     });
 
-    test('an explicit sign-out on an internal page leads to the landing', async () => {
+    test('AUTH-071 a never-signed-in deep link goes to /login with its path and query', async () => {
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
+        const router = renderAt('/group/123?tab=members');
+
+        expect(await screen.findByText('login')).toBeTruthy();
+        expect(screen.queryByText('group')).toBeNull();
+        expect(router.state.location.search).toBe(
+            `?returnTo=${encodeURIComponent('/group/123?tab=members')}`,
+        );
+    });
+
+    test('AUTH-071 an explicit sign-out on an internal page goes to /login', async () => {
         useAuthStore.setState({
             status: 'unauthenticated',
             unauthReason: UNAUTH_REASON.SIGNED_OUT,
@@ -312,17 +326,19 @@ describe('navigation', () => {
         const router = renderAt('/settings');
 
         await waitFor(() => {
-            expect(router.state.location.pathname).toBe(getLastAccountLandingPath());
+            expect(router.state.location.pathname).toBe('/login');
         });
+        expect(router.state.location.search).toBe('?returnTo=%2Fsettings');
         expect(screen.queryByText('settings')).toBeNull();
     });
 
-    test('a join page is protected and has no internal navigation', async () => {
+    test('AUTH-075 a join page is protected and keeps its token in returnTo', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
-        renderAt('/friends/join/invite-token');
+        const router = renderAt('/friends/join/invite-token');
 
-        expect(await screen.findByTestId('auth-modal')).toBeTruthy();
+        expect(await screen.findByText('login')).toBeTruthy();
         expect(screen.queryByText('friendJoin')).toBeNull();
+        expect(router.state.location.search).toBe('?returnTo=%2Ffriends%2Fjoin%2Finvite-token');
         expect(screen.queryByRole('complementary', { name: 'Desktop navigation' })).toBeNull();
     });
 
@@ -594,7 +610,8 @@ describe('the guard and layout chain of every manifest route', () => {
         renderAt(urlOf(route.path));
 
         if (route.access === 'protected') {
-            expect(await screen.findByTestId('auth-modal')).toBeTruthy();
+            // 04-2f: the guard sends a never-signed-in user to /login.
+            expect(await screen.findByText('login')).toBeTruthy();
             expect(screen.queryByText(route.id)).toBeNull();
         } else {
             expect(await screen.findByText(route.id)).toBeTruthy();

@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { ROUTES } from 'constants/routes';
+import { SITE_PATHS } from 'constants/sitePaths';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { usePwaStore } from 'store/pwaStore';
 
@@ -25,7 +25,7 @@ vi.mock('components/modals', () => ({
 
 const renderSection = () => {
     render(
-        <MemoryRouter initialEntries={[ROUTES.HOME]}>
+        <MemoryRouter initialEntries={[SITE_PATHS.home]}>
             <ThemeProvider theme={lightThemeStyled}>
                 <CtaSection />
             </ThemeProvider>

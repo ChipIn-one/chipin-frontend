@@ -350,6 +350,41 @@ describe('query-key-literal (spec 03 §1.3)', () => {
     });
 });
 
+describe('site-paths (04-2f, spec 04 §2.1)', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax({ appDir: '.' }),
+        ]),
+    ];
+    const source = [
+        'export const a = ROUTES.HOME;',
+        'export const b = ROUTES.PRIVACY;',
+        'export const c = navigate(ROUTES.TERMS, { replace: true });',
+        // Fine: app routes, SITE_PATHS, a HOME of another object.
+        'export const d = ROUTES.DASHBOARD;',
+        'export const e = SITE_PATHS.home;',
+        'export const f = KEYS.HOME;',
+    ].join('\n');
+
+    test.each([
+        ['src/components/Header.tsx', Array(3).fill('site-paths')],
+        ['src/helpers/url.test.ts', Array(3).fill('site-paths')],
+    ])('04-2f lint: %s reports exactly %j', async (file, ids) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        expect(
+            result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
+        ).toEqual(ids);
+    });
+});
+
 describe('store-object-without-shallow: fallbacks, nested conditionals, returns in if (#625)', () => {
     const config = [
         {
