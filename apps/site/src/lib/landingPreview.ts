@@ -1,9 +1,8 @@
 import type { IconName } from './icons';
 
 // The sample group of the landing "Group page preview" (the app's group-page-preview/internal/
-// constants.ts). The app shows member photos and a cover photo from external hosts; the site CSP
-// allows images from its own origin only, so the site shows the members' initials and the cover
-// gradient without the photo.
+// constants.ts). The site CSP allows images from its own origin only, so the site shows the members'
+// initials and the cover gradient without a photo; the app preview does the same since #672.
 
 /** The preview members: their initials are shown, the count is in the "4 members" badge text. */
 const PREVIEW_MEMBERS = ['Anna', 'Luis', 'Mia', 'Noah'] as const;
