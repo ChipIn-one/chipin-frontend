@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import stylelint from 'stylelint';
 import { describe, expect, test } from 'vitest';
+
+import { SITE_PALETTE_VAR_FILES } from '../stylelint.config.js';
 
 // The root stylelint config (spec 05 §3, D23), resolved as `npm run lint:css` does.
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -84,6 +87,41 @@ describe('stylelint (05-5 acceptance item 6)', () => {
 
         expect(await lint(code, 'apps/site/src/components/X.astro')).toEqual([
             { line: 5, rule: 'color-no-hex' },
+        ]);
+    });
+
+    // The 10 site files frozen by 05-5 (ChipIn-one/chipin-frontend#535). The list only shrinks:
+    // remove a file from both lists when it is migrated to `--cp-*`; never add one.
+    const FROZEN_SITE_FILES = [
+        'apps/site/src/components/SiteFooter.astro',
+        'apps/site/src/components/SiteHeader.astro',
+        'apps/site/src/components/landing/Cta.astro',
+        'apps/site/src/components/landing/Features.astro',
+        'apps/site/src/components/landing/GroupPreview.astro',
+        'apps/site/src/components/landing/Hero.astro',
+        'apps/site/src/components/landing/HomePage.astro',
+        'apps/site/src/components/landing/HowItWorks.astro',
+        'apps/site/src/components/landing/LandingStats.astro',
+        'apps/site/src/components/landing/Showcase.astro',
+    ];
+
+    test('the site palette-variable exemption only shrinks and lists existing files', () => {
+        expect(FROZEN_SITE_FILES).toHaveLength(10);
+        for (const file of SITE_PALETTE_VAR_FILES) {
+            expect(FROZEN_SITE_FILES).toContain(file);
+            expect(existsSync(resolve(repoRoot, file))).toBe(true);
+        }
+    });
+
+    test('an exempt site file still fails on hex and allows palette variables', async () => {
+        const code = [
+            '<style>',
+            '    p { color: #000; background: var(--green-3); }',
+            '</style>',
+        ].join('\n');
+
+        expect(await lint(code, 'apps/site/src/components/landing/Hero.astro')).toEqual([
+            { line: 2, rule: 'color-no-hex' },
         ]);
     });
 });
