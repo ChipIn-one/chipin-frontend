@@ -221,6 +221,8 @@ test.describe('SMOKE-SHORT', () => {
         await expect(page).not.toHaveURL(/\/settings/, { timeout: 10_000 });
 
         await page.goto('/settings');
+        // Wait for the client redirect to finish; reloading mid-redirect aborts in Firefox.
+        await expect(page).toHaveURL(/\/login\?returnTo=%2Fsettings$/);
         await page.reload();
         await expect(page).toHaveURL(/\/login\?returnTo=%2Fsettings$/);
         await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
