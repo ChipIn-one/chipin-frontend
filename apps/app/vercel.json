@@ -10,7 +10,7 @@
     },
     "redirects": [
         {
-            "source": "/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/].*?)}?{/}?",
+            "source": "/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/\\\\\\t\\n\\r].*?)}?{/}?",
             "destination": "/:path",
             "statusCode": 301
         },
@@ -54,7 +54,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path([^/].*?)/index.html",
+            "source": "/:path([^/\\\\\\t\\n\\r].*?)/index.html",
             "has": [
                 {
                     "type": "host",
@@ -119,7 +119,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path([^/].*?)/index.html",
+            "source": "/:path([^/\\\\\\t\\n\\r].*?)/index.html",
             "has": [
                 {
                     "type": "host",
