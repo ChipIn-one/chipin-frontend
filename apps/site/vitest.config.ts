@@ -1,7 +1,8 @@
+/// <reference types="vitest/config" />
 import { getViteConfig } from 'astro/config';
 
 // Site unit tests; CI runs them in the site step (`npm run test -w @chipin/site`). Astro's Vite
-// config lets a test render `.astro` components with the Container API (home.test.ts).
+// config lets a test render `.astro` components with the Container API (HomePage.test.ts).
 export default getViteConfig({
     test: {
         include: ['**/*.test.ts'],

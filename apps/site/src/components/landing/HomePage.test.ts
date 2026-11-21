@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, test } from 'vitest';
 import { checkPage } from '../../../integrations/seoGuard';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../../i18n/locales';
 import { interpolate, messages } from '../../i18n/ui';
-import { PROD_APP_ORIGIN } from '../../lib/appOrigin';
+import { resolveAppOrigin } from '../../lib/appOrigin';
 import { STAT_FIELDS } from '../../lib/landingStats';
 
 import HomePage from './HomePage.astro';
@@ -62,6 +62,12 @@ const leaves = (value: unknown): string[] =>
         ? Object.values(value).flatMap(leaves)
         : [String(value)];
 
+// The origin the page was rendered with (the test env's PUBLIC_APP_ORIGIN, the prod app without it).
+const APP_ORIGIN = resolveAppOrigin({
+    value: import.meta.env.PUBLIC_APP_ORIGIN,
+    onVercel: false,
+});
+
 const pages = new Map<SupportedLocale, string>();
 
 beforeAll(async () => {
@@ -103,18 +109,31 @@ describe.each(SUPPORTED_LOCALES)('%s home page', locale => {
     });
 
     test('renders every landing.json and shared.json text', () => {
-        const strings = visibleStrings(page(locale).document);
+        // Whole text nodes and attribute values, trimmed: a text must not only be part of another.
+        const strings = new Set(
+            visibleStrings(page(locale).document).map(value => value.replace(/\s+/g, ' ').trim()),
+        );
         const year = new Date().getFullYear();
+        const { preview } = shared;
+        // Texts the page composes with other values; each is checked in its composed form.
+        const composed = new Set([
+            shared.footer.copyright,
+            preview.paidAmount,
+            preview.you,
+            preview.youAreOwed,
+        ]);
+        const paid = (payer: string, amount: string) =>
+            `${interpolate(preview.paidAmount, { payer })} ${amount}`;
         const expected = [
             ...leaves(landing),
-            ...leaves({ ...shared, footer: { ...shared.footer, copyright: undefined } }).filter(
-                value => value !== 'undefined' && !value.includes('{{'),
-            ),
+            ...leaves(shared).filter(value => !composed.has(value)),
             interpolate(shared.footer.copyright, { year }),
-            interpolate(shared.preview.paidAmount, { payer: shared.preview.you }),
-            interpolate(shared.preview.paidAmount, { payer: 'Aleh' }),
+            paid(preview.you, '420 EUR'),
+            paid('Aleh', '86 EUR'),
+            paid(preview.you, '120 EUR'),
+            `${preview.youAreOwed} 227 EUR`,
         ];
-        const missing = expected.filter(value => !strings.some(string => string.includes(value)));
+        const missing = expected.filter(value => !strings.has(value));
 
         expect(expected.length).toBeGreaterThan(60);
         expect(missing).toEqual([]);
@@ -137,7 +156,7 @@ describe.each(SUPPORTED_LOCALES)('%s home page', locale => {
     });
 
     test('"Get started" and "Get started for free" open the app sign-in in the page language', () => {
-        const signIn = `${PROD_APP_ORIGIN}/login?locale=${locale}`;
+        const signIn = `${APP_ORIGIN}/login?locale=${locale}`;
         const links = elements(page(locale).document).filter(
             element => element.tagName === 'a' && attr(element, 'href') === signIn,
         );
@@ -150,8 +169,7 @@ describe.each(SUPPORTED_LOCALES)('%s home page', locale => {
 
     test('the header "Open ChipIn" opens the app sign-in', () => {
         const links = elements(page(locale).document).filter(
-            element =>
-                element.tagName === 'a' && attr(element, 'href') === `${PROD_APP_ORIGIN}/login`,
+            element => element.tagName === 'a' && attr(element, 'href') === `${APP_ORIGIN}/login`,
         );
 
         expect(links.map(link => text(link).trim())).toEqual([meta.header.openApp]);

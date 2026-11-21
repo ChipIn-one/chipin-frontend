@@ -139,7 +139,7 @@ const fakeBlock = (fields: readonly string[] = STAT_FIELDS) => {
         querySelector: (selector: string) => {
             const field = /^\[data-stat="(\w+)"\]$/.exec(selector)?.[1];
 
-            return (field && elements.get(field)) ?? null;
+            return field === undefined ? null : (elements.get(field) ?? null);
         },
     };
 };

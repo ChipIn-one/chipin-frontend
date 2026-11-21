@@ -1,6 +1,7 @@
 ---
 import { THEME_INIT_SCRIPT } from '@chipin/tokens/theme-init';
 
+import LanguageLinks from '../components/LanguageLinks.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import {
@@ -37,6 +38,11 @@ interface Props {
     referrer?: 'no-referrer';
     /** The home page: full-width sections and the header anchors to them. */
     landing?: boolean;
+    /**
+     * `minimal` keeps only the language links (the invite landing): no "Open ChipIn" to `/login`
+     * that would lose the invite, no footer in one fixed language (KB USR-081, USR-083).
+     */
+    chrome?: 'full' | 'minimal';
 }
 
 const {
@@ -49,6 +55,7 @@ const {
     includeAnalytics = true,
     referrer,
     landing = false,
+    chrome = 'full',
 } = Astro.props;
 
 const appOrigin = resolveAppOrigin({
@@ -101,17 +108,25 @@ const xDefault =
         }
     </head>
     <body>
-        <SiteHeader
-            locale={locale}
-            slug={slug ?? ''}
-            locales={translations}
-            appOrigin={appOrigin}
-            landingNav={landing}
-        />
+        {
+            chrome === 'minimal' ? (
+                <header class="minimal-header">
+                    <LanguageLinks current={locale} slug={slug ?? ''} locales={translations} />
+                </header>
+            ) : (
+                <SiteHeader
+                    locale={locale}
+                    slug={slug ?? ''}
+                    locales={translations}
+                    appOrigin={appOrigin}
+                    landingNav={landing}
+                />
+            )
+        }
         <main class:list={[landing ? 'landing' : 'page']}>
             <slot />
         </main>
-        <SiteFooter locale={locale} />
+        {chrome === 'full' && <SiteFooter locale={locale} />}
     </body>
 </html>
 
@@ -126,6 +141,12 @@ const xDefault =
 </style>
 
 <style>
+    .minimal-header {
+        display: flex;
+        justify-content: flex-end;
+        padding: 1rem;
+    }
+
     .page {
         max-width: 48rem;
         margin: 0 auto;
