@@ -1,5 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import { SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN } from 'constants/localstorage';
+
 import {
     getPublicLocaleSuggestionTarget,
     isPublicLocaleSuggestionSuppressed,
@@ -45,6 +47,8 @@ test('a storage quota write failure still suppresses repeated suggestions', () =
     } finally {
         storage.mockRestore();
     }
+    // The failed write went to the mocked storage: the real one never got the flag.
+    expect(window.sessionStorage.getItem(SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN)).toBeNull();
 });
 
 test('unavailable sessionStorage does not break manual language switching', () => {
@@ -68,5 +72,23 @@ test('unavailable sessionStorage does not break manual language switching', () =
         expect(getPublicLocaleSuggestionTarget('/privacy', 'ru')).toBe('/ru/privacy');
     } finally {
         storage.mockRestore();
+    }
+    expect(window.sessionStorage.getItem(SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN)).toBeNull();
+});
+
+// Runs on a fresh module: the tests above leave the document-local fallback on, which would skip
+// the storage read.
+test('a throwing storage read does not throw and does not suppress the suggestion', async () => {
+    vi.resetModules();
+    const fresh = await import('./publicLocaleSuggestion');
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Blocked', 'SecurityError');
+    });
+    try {
+        expect(() => fresh.isPublicLocaleSuggestionSuppressed()).not.toThrow();
+        expect(fresh.isPublicLocaleSuggestionSuppressed()).toBe(false);
+        expect(getItem).toHaveBeenCalled();
+    } finally {
+        getItem.mockRestore();
     }
 });
