@@ -5,6 +5,7 @@
 const PRIVATE_SPA_NAVIGATION_ALLOWLIST: RegExp[] = [
     /^\/(?:dashboard|solo|group|activity|friends|settings|oauth)(?:\/|$)/,
     /^\/not-found$/,
+    /^\/login$/,
 ];
 
 export { PRIVATE_SPA_NAVIGATION_ALLOWLIST };

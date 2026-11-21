@@ -287,6 +287,14 @@ export const projectRules = ({ appDir }) => [
             'Switch the language with setAppLanguage (saves the preference) or applyLanguage from helpers/setAppLanguage.',
     },
     {
+        // spec 04 §2.1 (04-2f): the site pages are not app routes; links to them are SITE_PATHS,
+        // used only as `<a href>` or `window.location.assign`.
+        id: 'site-paths',
+        selector: "MemberExpression[object.name='ROUTES'][property.name=/^(HOME|PRIVACY|TERMS)$/]",
+        message:
+            'Link to the site with SITE_PATHS from constants/sitePaths (`<a href>` or `window.location.assign`), never navigate/<Link>.',
+    },
+    {
         id: 'img-element',
         // `<img>`, `styled.img`, `styled('img')`, `createElement('img')`, `React.createElement('img')`.
         selector: [

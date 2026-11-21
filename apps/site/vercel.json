@@ -21,7 +21,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?)",
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
             "has": [
                 {
                     "type": "host",
@@ -34,7 +34,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?)",
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
             "has": [
                 {
                     "type": "host",
@@ -47,7 +47,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?)",
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
             "has": [
                 {
                     "type": "host",
@@ -85,8 +85,28 @@
             "statusCode": 301
         },
         {
+            "source": "/privacy/",
+            "destination": "/privacy",
+            "statusCode": 301
+        },
+        {
+            "source": "/terms/",
+            "destination": "/terms",
+            "statusCode": 301
+        },
+        {
             "source": "/ru",
             "destination": "/ru/",
+            "statusCode": 301
+        },
+        {
+            "source": "/ru/privacy/",
+            "destination": "/ru/privacy",
+            "statusCode": 301
+        },
+        {
+            "source": "/ru/terms/",
+            "destination": "/ru/terms",
             "statusCode": 301
         }
     ],
