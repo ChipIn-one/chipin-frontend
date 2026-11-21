@@ -8,12 +8,18 @@
 # The app's Production environment is `Production` or `Production – chipin-frontend` (a second Vercel project, chipin-site,
 # suffixes the names; its `Production – chipin-site` never matches): the list lives in scripts/deployment-environments.mjs
 # and scripts/deployment-environments.test.mjs keeps this condition equal to it (chipin-frontend#801).
-# The guard job releases only a promoted SHA that is on master and is not older than the newest version tag:
+# The guard job releases only a promoted SHA that is on master, is not older than the newest version tag and, if
+# untagged, has the same .github/workflows as the master tip:
 # - a SHA outside master (a promoted branch preview) gets no tag (the engine takes a deploy-tag SHA as is);
 # - a re-posted status or a rollback promote of an already tagged SHA reaches the engine and is a no-op
 #   (ALREADY_RELEASED);
 # - an untagged SHA behind the newest tag (rollback promote, re-posted old status) gets no tag (no lower version after
-#   a higher one).
+#   a higher one);
+# - an untagged SHA whose .github/workflows differs from the master tip fails the guard (red job, no release, no
+#   redeploy): GitHub refuses GITHUB_TOKEN, which never holds the `workflows` permission, to create a tag on such a
+#   commit (403 at the engine's tag step, #838). Promote the master tip build, or one whose workflow files equal it.
+#   "Master tip" is master when the guard runs; a workflow change merged during the release still ends in the engine
+#   403. A re-posted success status of such a build repeats the red run (harmless).
 # A skip is a green run with a warning. A deployment_status run uses the workflow file at the deployment's SHA, so the
 # first automatic release is the Promote of a master build that contains this file.
 # After a fresh tag (engine outcome RELEASED) the redeploy job redeploys the same Vercel deployment to Production
@@ -66,7 +72,7 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
-      - name: Require a master SHA not older than the newest tag
+      - name: Require a master SHA not older than the newest tag, with master's workflow files
         id: guard
         env:
           DEPLOYED_SHA: ${{ github.event.deployment.sha }}
@@ -80,6 +86,20 @@ jobs:
           newest="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' | head -n 1 || true)"
           if [[ -z "$tagged" && -n "$newest" ]]; then
             git merge-base --is-ancestor "$newest" "$DEPLOYED_SHA" || skip "rollback to a commit behind the newest tag $newest"
+          fi
+          if [[ -z "$tagged" ]]; then
+            # Tree OIDs only: no blob is fetched lazily in the blob:none clone. Exit 1 = differs, other non-zero = error.
+            differs=0
+            git diff-tree --quiet -r "$DEPLOYED_SHA" origin/master -- .github/workflows || differs=$?
+            if [[ "$differs" -eq 1 ]]; then
+              echo "::error::No release for $DEPLOYED_SHA: its .github/workflows differs from the master tip, and GITHUB_TOKEN cannot create a tag on such a commit (#838). Promote to Production the master tip build, or a build whose workflow files equal master."
+              echo "Workflow files that differ from origin/master:"
+              git diff-tree --name-only -r "$DEPLOYED_SHA" origin/master -- .github/workflows
+              exit 1
+            elif [[ "$differs" -ne 0 ]]; then
+              echo "::error::Cannot compare .github/workflows of $DEPLOYED_SHA with origin/master (git diff-tree exit $differs)"
+              exit 1
+            fi
           fi
           echo "sha=$DEPLOYED_SHA" >> "$GITHUB_OUTPUT"
           echo "release=true" >> "$GITHUB_OUTPUT"

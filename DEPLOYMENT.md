@@ -117,6 +117,18 @@ Hook or Vercel token secrets
   warning and that tag stays without an in-app version until it is promoted
   again. If the job fails, redeploy by hand: Vercel → the Production deployment
   → **Redeploy**.
+- A promoted untagged commit gets a tag only if its `.github/workflows/` equals
+  the `master` tip: GitHub does not let `GITHUB_TOKEN` create a tag on a commit
+  whose workflow files differ from the default branch (#838). If
+  `.github/workflows/` of the chosen build differs from the `master` tip, the
+  guard job fails with "its .github/workflows differs from the master tip" and
+  release and redeploy are skipped; the untagged Production deployment stays
+  live. Promote the `master` tip build instead (after a release QA round on it
+  if needed, [release QA](docs/engineering/release-qa.md#owner-read-the-result-and-release)).
+  A GitHub App token with the `workflows` permission would lift this limit
+  (#838 option B); it is not built. The check runs only for builds that
+  contain it (a `deployment_status` run uses the workflow file of the promoted
+  commit): an older build still fails at the engine's tag step with a 403.
 - The repository has no completion caller. The ChipIn-one/.github org sweep
   (`frontend-production-completion.yml`) runs `deployment-receipt` for the
   frontend (registry `capabilities.completion: automatic` since
