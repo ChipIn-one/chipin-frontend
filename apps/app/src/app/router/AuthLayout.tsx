@@ -1,14 +1,13 @@
 import { type RefObject, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { onlineManager } from '@tanstack/react-query';
-import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
 import { readSessionEnvironment, sessionAccess } from 'app/auth/requireSession';
 import { readSession } from 'app/auth/session';
-import { ROUTES } from 'constants/routes';
 import { GuardLoader } from 'features/routing';
-import { getLastAccountLandingPath } from 'helpers/publicRoutes';
+import { loginPathFor } from 'helpers/url';
 import { isNetworkUsable } from 'shared/offline/network';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
@@ -85,14 +84,18 @@ const subscribeNetwork = (listener: () => void): (() => void) => onlineManager.s
 
 /**
  * The layout of every protected route (spec 04 §2.3), after its loader `requireSession`. It follows
- * the live session, as `ProtectedRoute` did: a later expiry, a remote logout of another tab, or a
- * session that resolves after the loader's 5 s timeout. The page is rendered only once the
- * session lets it through; after that an expiry keeps it mounted and hidden under `AuthModal`.
- * Before that (never signed in, or a session that expired before the page was shown) the modal
- * stands alone, as before: there is no page state to keep, and no page query starts signed out.
+ * the live session, as `ProtectedRoute` did: a later expiry, a remote logout of another tab (→
+ * `/login?returnTo=`), or a session that resolves after the loader's 5 s timeout. The page is
+ * rendered only once the session lets it through; after that an expiry keeps it mounted and hidden
+ * under `AuthModal`. Before that (a session that expired before the page was shown, or a session
+ * error) the modal stands alone, as before: there is no page state to keep, and no page query
+ * starts signed out.
  */
 const AuthLayout = () => {
     const navigate = useNavigate();
+    const { pathname, search } = useLocation();
+    // Signed out, or the modal closed: `/login` returns here, the invite token of a join route kept.
+    const loginPath = loginPathFor(pathname + search);
     // Re-rendered on a session change; `sessionAccess` reads the same live session.
     const { status } = useAuthStore(
         useShallow(state => ({ status: state.status, unauthReason: state.unauthReason })),
@@ -117,8 +120,12 @@ const AuthLayout = () => {
     if (access === 'pass' && !wasPageShown) {
         setWasPageShown(true);
     }
-    if (access === 'landing') {
-        return <Navigate to={getLastAccountLandingPath()} replace />;
+    if (access === 'login') {
+        return <Navigate to={loginPath} replace />;
+    }
+    // This tab signed out and is leaving for the landing (full navigation): show nothing of the page.
+    if (access === 'leaving') {
+        return <GuardLoader />;
     }
 
     const authModal = (
@@ -126,7 +133,7 @@ const AuthLayout = () => {
             isOpened
             onOpenChange={isOpen => {
                 if (!isOpen) {
-                    void navigate(ROUTES.HOME, { replace: true });
+                    void navigate(loginPath, { replace: true });
                 }
             }}
         />

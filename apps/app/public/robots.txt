@@ -9,5 +9,6 @@ Disallow: /activity
 Disallow: /friends
 Disallow: /settings
 Disallow: /not-found
+Disallow: /login
 
 Sitemap: https://chipin.one/sitemap.xml

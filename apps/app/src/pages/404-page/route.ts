@@ -1,1 +1,1 @@
-export { default as Component } from './Page404';
+export { Page404 as Component } from './Page404';

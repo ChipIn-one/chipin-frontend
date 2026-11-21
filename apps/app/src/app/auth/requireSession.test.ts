@@ -1,11 +1,10 @@
-// Spec 04 §2.3, the `requireSession` table (04-2a2b; before 04-2f an unauthenticated user sees what
-// they saw before: `SIGNED_OUT` → the landing, `MISSING` → `AuthModal`, no `/login`).
+// Spec 04 §2.3, the `requireSession` table (04-2a2b; 04-2f: `SIGNED_OUT` and `MISSING` → `/login`).
 import { onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { LocalStorage } from 'helpers/localStorage';
-import { getLastAccountLandingPath } from 'helpers/publicRoutes';
+import { loginPathFor } from 'helpers/url';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { startCacheRestore } from 'shared/offline/restore';
 import { UNAUTH_REASON, type UnauthReason } from 'store/authConstants';
@@ -23,17 +22,17 @@ const loaderArgs = (path: string) => ({ request: new Request(`http://localhost${
 
 const unauth = (reason: UnauthReason): Session => ({ status: 'unauthenticated', reason });
 const ENVIRONMENTS = [
-    { hasSessionHint: true, isNetworkUsable: true },
-    { hasSessionHint: true, isNetworkUsable: false },
-    { hasSessionHint: false, isNetworkUsable: true },
-    { hasSessionHint: false, isNetworkUsable: false },
+    { hasSessionHint: true, isNetworkUsable: true, isLeavingAfterSignOut: false },
+    { hasSessionHint: true, isNetworkUsable: false, isLeavingAfterSignOut: false },
+    { hasSessionHint: false, isNetworkUsable: true, isLeavingAfterSignOut: false },
+    { hasSessionHint: false, isNetworkUsable: false, isLeavingAfterSignOut: false },
 ] as const;
 
 // Every row of the table, in every environment: [session, online access, hint+offline access].
 const ROWS: [string, Session, SessionAccess, SessionAccess][] = [
     ['authenticated', { status: 'authenticated' }, 'pass', 'pass'],
-    ['signed_out', unauth(UNAUTH_REASON.SIGNED_OUT), 'landing', 'landing'],
-    ['missing', unauth(UNAUTH_REASON.MISSING), 'modal', 'modal'],
+    ['signed_out', unauth(UNAUTH_REASON.SIGNED_OUT), 'login', 'login'],
+    ['missing', unauth(UNAUTH_REASON.MISSING), 'login', 'login'],
     ['expired', unauth(UNAUTH_REASON.EXPIRED), 'modalOverPage', 'modalOverPage'],
     ['invalid', unauth(UNAUTH_REASON.INVALID), 'modalOverPage', 'modalOverPage'],
     ['error', unauth(UNAUTH_REASON.ERROR), 'modal', 'pass'],
@@ -42,14 +41,27 @@ const ROWS: [string, Session, SessionAccess, SessionAccess][] = [
 ];
 
 describe('sessionAccess', () => {
-    test.each(ROWS)('%s', (_name, session, otherwise, hintOffline) => {
-        ENVIRONMENTS.forEach(env => {
-            const expected = env.hasSessionHint && !env.isNetworkUsable ? hintOffline : otherwise;
+    test.each(ROWS)(
+        'AUTH-071 %s: redirect, sign-in over the page, or the cached page offline with a hint',
+        (_name, session, otherwise, hintOffline) => {
+            ENVIRONMENTS.forEach(env => {
+                const expected =
+                    env.hasSessionHint && !env.isNetworkUsable ? hintOffline : otherwise;
 
-            expect({ env, access: sessionAccess(session, env) }).toEqual({
-                env,
-                access: expected,
+                expect({ env, access: sessionAccess(session, env) }).toEqual({
+                    env,
+                    access: expected,
+                });
             });
+        },
+    );
+
+    test('AUTH-071 an explicit sign-out in this tab is leaving, not a /login redirect; only it', () => {
+        ENVIRONMENTS.forEach(env => {
+            const leaving = { ...env, isLeavingAfterSignOut: true };
+
+            expect(sessionAccess(unauth(UNAUTH_REASON.SIGNED_OUT), leaving)).toBe('leaving');
+            expect(sessionAccess(unauth(UNAUTH_REASON.MISSING), leaving)).toBe('login');
         });
     });
 });
@@ -71,18 +83,51 @@ describe('requireSession', () => {
         LocalStorage.remove(LS_KEY_USER);
     });
 
-    test('an explicit sign-out redirects to the landing of the last account', async () => {
+    test.each(['signed_out', 'missing'] as const)(
+        'AUTH-071 %s on /dashboard redirects to /login?returnTo=%%2Fdashboard',
+        async reason => {
+            useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+
+            const response = await requireSession(loaderArgs('/dashboard'));
+
+            expect(response?.status).toBe(302);
+            expect(response?.headers.get('Location')).toBe('/login?returnTo=%2Fdashboard');
+            expect(clearUserData).not.toHaveBeenCalled();
+        },
+    );
+
+    test('AUTH-075 returnTo keeps the path and the query of a join link', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
-        const response = await requireSession(loaderArgs('/dashboard'));
+        const response = await requireSession(loaderArgs('/group/join/tok-1?ref=x'));
 
-        expect(response?.status).toBe(302);
-        expect(response?.headers.get('Location')).toBe(getLastAccountLandingPath());
+        expect(response?.headers.get('Location')).toBe(
+            `/login?returnTo=${encodeURIComponent('/group/join/tok-1?ref=x')}`,
+        );
+    });
+
+    test('AUTH-071 loginPathFor encodes the whole returnTo', () => {
+        expect(loginPathFor('/friends/join/a&b?c=d#e')).toBe(
+            '/login?returnTo=%2Ffriends%2Fjoin%2Fa%26b%3Fc%3Dd%23e',
+        );
+    });
+
+    test('AUTH-071 the loader does not redirect an explicit sign-out leaving for the landing', async () => {
+        useAuthStore.setState({
+            status: 'unauthenticated',
+            unauthReason: 'signed_out',
+            isLeavingAfterSignOut: true,
+        });
+
+        try {
+            await expect(requireSession(loaderArgs('/group/1'))).resolves.toBeNull();
+        } finally {
+            useAuthStore.setState({ isLeavingAfterSignOut: false });
+        }
     });
 
     test.each([
         ['authenticated', undefined],
-        ['unauthenticated', 'missing'],
         ['unauthenticated', 'expired'],
         ['unauthenticated', 'invalid'],
         ['unauthenticated', 'error'],
@@ -127,6 +172,6 @@ describe('requireSession', () => {
         useAuthStore.setState({ status: 'authenticated' });
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
-        expect((await decision)?.headers.get('Location')).toBe(getLastAccountLandingPath());
+        expect((await decision)?.headers.get('Location')).toBe('/login?returnTo=%2Fdashboard');
     });
 });

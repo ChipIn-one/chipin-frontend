@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { ROUTES } from 'constants/routes';
+import { SITE_PATHS } from 'constants/sitePaths';
 import { usePwaStore } from 'store/pwaStore';
 
 import { HeroSection } from './HeroSection';
@@ -35,7 +35,7 @@ test('hides PWA actions when the PWA is installed', () => {
     usePwaStore.setState({ isPwaInstalled: true });
 
     render(
-        <MemoryRouter initialEntries={[ROUTES.HOME]}>
+        <MemoryRouter initialEntries={[SITE_PATHS.home]}>
             <HeroSection />
         </MemoryRouter>,
     );
@@ -51,7 +51,7 @@ test('hides PWA actions when no install prompt is available', () => {
     });
 
     render(
-        <MemoryRouter initialEntries={[ROUTES.HOME]}>
+        <MemoryRouter initialEntries={[SITE_PATHS.home]}>
             <HeroSection />
         </MemoryRouter>,
     );
@@ -69,7 +69,7 @@ test('offers installation only after the browser provides an install prompt', ()
     usePwaStore.setState({ isPwaInstalled: false, pwaInstallPrompt });
 
     render(
-        <MemoryRouter initialEntries={[ROUTES.HOME]}>
+        <MemoryRouter initialEntries={[SITE_PATHS.home]}>
             <HeroSection />
         </MemoryRouter>,
     );
