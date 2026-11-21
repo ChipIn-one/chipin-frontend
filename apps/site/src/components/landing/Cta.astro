@@ -1,0 +1,121 @@
+---
+import type { SupportedLocale } from '../../i18n/locales';
+import { messages } from '../../i18n/ui';
+import Icon from '../Icon.astro';
+
+// The app cta-section: "Get started for free" opens the app sign-in with the page language
+// (spec 04 §4.4). The app's "Install app" button needs its PWA install prompt and stays in the app.
+interface Props {
+    locale: SupportedLocale;
+    signInUrl: string;
+}
+
+const { locale, signInUrl } = Astro.props;
+const { cta } = messages(locale).landing;
+const bullets = [
+    cta.bullets.noCard,
+    cta.bullets.unlimitedGroups,
+    cta.bullets.freePermanently,
+    cta.bullets.allDevices,
+];
+---
+
+<section id="pricing" class="cta">
+    <div class="card">
+        <span class="badge">{cta.badge}</span>
+        <h2>{cta.title}</h2>
+        <p class="subtitle">{cta.subtitle}</p>
+        <a class="button-solid" href={signInUrl}>
+            {cta.getStartedFree}
+            <Icon name="arrowRight" size={18} />
+        </a>
+        <ul class="bullets">
+            {
+                bullets.map(bullet => (
+                    <li>
+                        <span class="check">
+                            <Icon name="checkCircle" size={16} />
+                        </span>
+                        {bullet}
+                    </li>
+                ))
+            }
+        </ul>
+    </div>
+</section>
+
+<style>
+    .cta {
+        max-width: 688px;
+        margin: 0 auto;
+        padding: var(--cp-space-8) 0;
+    }
+
+    .card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-5);
+        align-items: center;
+        padding: var(--cp-space-6) var(--cp-space-5);
+        overflow: hidden;
+        border: 1px solid var(--cp-border-translucent);
+        border-radius: var(--cp-radius-5);
+        background: radial-gradient(circle at 50% -10%, var(--green-5) 0%, var(--green-2) 55%);
+        text-align: center;
+    }
+
+    .badge {
+        padding: var(--cp-space-1) var(--cp-space-3);
+        border: 1px solid var(--green-a6);
+        border-radius: var(--cp-radius-pill);
+        background: var(--green-a2);
+        color: var(--green-a11);
+        font-size: var(--cp-font-size-2);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    h2 {
+        margin: 0;
+        font-size: var(--cp-font-size-6);
+        line-height: 1.2;
+    }
+
+    .subtitle {
+        max-width: 480px;
+        margin: 0;
+        color: var(--cp-text-secondary);
+        font-size: var(--cp-font-size-4);
+    }
+
+    .bullets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cp-space-4);
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        color: var(--cp-text-secondary);
+    }
+
+    .bullets li {
+        display: flex;
+        gap: var(--cp-space-1);
+        align-items: center;
+    }
+
+    .check {
+        display: inline-flex;
+        color: var(--green-11);
+    }
+
+    @media (min-width: 1024px) {
+        .card {
+            padding: var(--cp-space-8);
+        }
+
+        h2 {
+            font-size: var(--cp-font-size-8);
+        }
+    }
+</style>

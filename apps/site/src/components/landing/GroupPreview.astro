@@ -1,0 +1,392 @@
+---
+import type { SupportedLocale } from '../../i18n/locales';
+import { interpolate, messages } from '../../i18n/ui';
+import {
+    PREVIEW_CURRENCY,
+    PREVIEW_EXPENSES,
+    PREVIEW_MEMBERS,
+    PREVIEW_NET_BALANCE,
+} from '../../lib/landingPreview';
+import { formatSummary } from '../../lib/landingStats';
+import Icon from '../Icon.astro';
+
+// The app "Group page preview" (showcase-sections GroupPagePreview): a static picture of a group
+// page, one image for assistive technology (`role="img"` with its label), not interactive.
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+const { landing, shared } = messages(locale);
+const { preview } = landing.sections.groups;
+// The app's `Amount type="summary"` with the preview's precisions.
+const money = (value: number, precision?: number): string =>
+    `${formatSummary(Math.abs(value), precision)} ${PREVIEW_CURRENCY}`;
+const expenses = PREVIEW_EXPENSES.map(expense => ({
+    ...expense,
+    name: preview.expenses[expense.key],
+    paid: `${interpolate(shared.preview.paidAmount, {
+        payer: expense.payer === 'you' ? shared.preview.you : expense.payer,
+    })} ${money(expense.amount)}`,
+    isOwed: expense.debt > 0,
+}));
+---
+
+<div class="preview" role="img" aria-label={preview.label}>
+    <div class="surface" inert>
+        <div class="cover">
+            <div class="cover-text">
+                <span class="members-badge">{shared.preview.members}</span>
+                <span class="group-name">{preview.groupName}</span>
+                <span class="group-description">{preview.groupDescription}</span>
+            </div>
+        </div>
+        <div class="body">
+            <div class="owed-card">
+                <span class="owed-title">
+                    <span class="owed-icon"><Icon name="trendingUp" size={16} /></span>
+                    {shared.preview.owedToYou}
+                </span>
+                <span class="owed-total">{money(PREVIEW_NET_BALANCE, 0)}</span>
+            </div>
+            <div class="toolbar">
+                <span class="people">
+                    <span class="avatars">
+                        {PREVIEW_MEMBERS.map(name => <span class="avatar">{name.charAt(0)}</span>)}
+                    </span>
+                    <span class="invite" aria-label={shared.buttons.invitePeople}>
+                        <Icon name="plus" size={18} />
+                    </span>
+                </span>
+                <span class="settle">{shared.buttons.settleUp}</span>
+            </div>
+            <div class="tabs">
+                <span class="tab active">{shared.preview.tabs.expenses}</span>
+                <span class="tab">{shared.preview.tabs.balances}</span>
+                <span class="tab">{shared.preview.tabs.settings}</span>
+            </div>
+            <div class="divider">
+                <span class="today">{shared.preview.today}</span>
+                <span class="line"></span>
+                <span class="summary">
+                    {shared.preview.youAreOwed}{' '}
+                    {money(PREVIEW_NET_BALANCE, 2)}
+                </span>
+            </div>
+            <ul class="expenses" aria-label={preview.expensesLabel}>
+                {
+                    expenses.map(expense => (
+                        <li class="expense">
+                            <span class="expense-main">
+                                <span
+                                    class:list={[
+                                        'expense-icon',
+                                        expense.payer === 'you' ? 'mine' : 'theirs',
+                                    ]}
+                                >
+                                    <Icon name={expense.icon} size={16} label={expense.name} />
+                                </span>
+                                <span class="expense-text">
+                                    <span class="expense-name">{expense.name}</span>
+                                    <span class="expense-paid">{expense.paid}</span>
+                                </span>
+                            </span>
+                            <span class:list={['expense-debt', expense.isOwed ? 'owed' : 'owing']}>
+                                <span class="debt-label">
+                                    {expense.isOwed
+                                        ? shared.preview.youLent
+                                        : shared.preview.youBorrowed}
+                                </span>
+                                <span class="debt-amount">{money(expense.debt, 0)}</span>
+                            </span>
+                        </li>
+                    ))
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .preview {
+        width: 100%;
+        pointer-events: none;
+    }
+
+    .surface {
+        overflow: hidden;
+        border: 1px solid var(--cp-border-translucent);
+        border-radius: var(--cp-radius-4);
+        background: var(--cp-surface-base);
+        box-shadow: var(--cp-shadow-popover);
+    }
+
+    .cover {
+        position: relative;
+        display: flex;
+        aspect-ratio: 16 / 9;
+        background:
+            radial-gradient(circle at 80% 18%, var(--violet-a8), transparent 38%),
+            linear-gradient(135deg, var(--grass-9), var(--jade-11));
+        color: var(--cp-media-on);
+    }
+
+    .cover::after {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            to top,
+            var(--cp-media-scrim) 0%,
+            color-mix(in srgb, var(--cp-media-scrim) 56%, transparent) 28%,
+            transparent 58%
+        );
+        content: '';
+    }
+
+    .cover-text {
+        position: relative;
+        z-index: var(--cp-z-raised);
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-1);
+        align-items: flex-start;
+        margin-top: auto;
+        padding: 0 var(--cp-space-5) var(--cp-space-5);
+    }
+
+    .members-badge {
+        padding: 0 var(--cp-space-2);
+        border-radius: var(--cp-radius-2);
+        background: var(--gray-9);
+        color: var(--cp-media-on);
+        font-size: var(--cp-font-size-1);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    .group-name {
+        font-size: var(--cp-font-size-7);
+        font-weight: var(--cp-font-weight-bold);
+    }
+
+    .group-description {
+        font-size: var(--cp-font-size-2);
+        opacity: 0.78;
+    }
+
+    .body {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-4);
+        padding: var(--cp-space-4);
+    }
+
+    .owed-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--cp-space-3);
+        border: 1px solid var(--cp-border-translucent);
+        border-radius: var(--cp-radius-3);
+        color: var(--grass-11);
+        font-size: var(--cp-font-size-4);
+    }
+
+    .owed-title {
+        display: inline-flex;
+        gap: var(--cp-space-2);
+        align-items: center;
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    .owed-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--cp-radius-3);
+        background: var(--grass-a3);
+    }
+
+    .owed-total {
+        font-weight: var(--cp-font-weight-bold);
+    }
+
+    .toolbar,
+    .people {
+        display: flex;
+        gap: var(--cp-space-3);
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .people {
+        gap: var(--cp-space-2);
+    }
+
+    .avatars {
+        display: flex;
+    }
+
+    .avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-right: calc(-1 * var(--cp-space-1));
+        border: 2px solid var(--cp-surface-base);
+        border-radius: var(--cp-radius-pill);
+        background: var(--green-a3);
+        color: var(--green-a11);
+        font-size: var(--cp-font-size-2);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    .invite {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-left: var(--cp-space-2);
+        border: 1px solid var(--cp-border-strong);
+        border-radius: var(--cp-radius-pill);
+        color: var(--cp-text-secondary);
+    }
+
+    .settle {
+        padding: var(--cp-space-1) var(--cp-space-3);
+        border-radius: var(--cp-radius-2);
+        background: var(--grass-a3);
+        color: var(--grass-a11);
+        font-size: var(--cp-font-size-2);
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    .tabs {
+        display: flex;
+        gap: var(--cp-space-4);
+        border-bottom: 1px solid var(--cp-border-default);
+        font-size: var(--cp-font-size-2);
+    }
+
+    .tab {
+        padding: var(--cp-space-2) 0;
+        color: var(--cp-text-secondary);
+    }
+
+    .tab.active {
+        border-bottom: 2px solid var(--cp-accent-solid);
+        color: var(--cp-text-primary);
+    }
+
+    .divider {
+        display: flex;
+        gap: var(--cp-space-3);
+        align-items: center;
+        font-size: var(--cp-font-size-1);
+    }
+
+    .today {
+        color: var(--cp-text-secondary);
+        font-weight: var(--cp-font-weight-medium);
+        white-space: nowrap;
+    }
+
+    .line {
+        flex-grow: 1;
+        height: 1px;
+        background: var(--cp-border-default);
+    }
+
+    .summary {
+        color: var(--green-11);
+        font-weight: var(--cp-font-weight-medium);
+        text-align: right;
+    }
+
+    .expenses {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-2);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .expense {
+        display: flex;
+        gap: var(--cp-space-3);
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--cp-space-3);
+        border: 1px solid var(--cp-border-translucent);
+        border-radius: var(--cp-radius-3);
+    }
+
+    .expense-main {
+        display: flex;
+        gap: var(--cp-space-3);
+        align-items: center;
+        min-width: 0;
+    }
+
+    .expense-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--cp-radius-3);
+    }
+
+    .mine {
+        background: var(--green-a3);
+        color: var(--green-a11);
+    }
+
+    .theirs {
+        background: var(--red-a3);
+        color: var(--red-a11);
+    }
+
+    .expense-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .expense-name {
+        font-weight: var(--cp-font-weight-medium);
+    }
+
+    .expense-paid {
+        color: var(--cp-text-secondary);
+        font-size: var(--cp-font-size-2);
+    }
+
+    .expense-debt {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        align-items: flex-end;
+    }
+
+    .owed {
+        color: var(--cp-debt-owed);
+    }
+
+    .owing {
+        color: var(--cp-debt-owing);
+    }
+
+    .debt-label {
+        font-size: var(--cp-font-size-1);
+    }
+
+    .debt-amount {
+        font-size: var(--cp-font-size-2);
+        font-weight: var(--cp-font-weight-medium);
+    }
+</style>

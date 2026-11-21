@@ -32,4 +32,14 @@ const resolveAppOrigin = ({
     return url.origin;
 };
 
-export { PROD_APP_ORIGIN, resolveAppOrigin };
+/**
+ * The app sign-in of the site buttons (spec 04 §4.4): "Sign in/Get started" pass the page language
+ * for a new account (`/login?locale=<code>`), the header "Open ChipIn" passes none (`/login`; a
+ * signed-in visitor goes straight into the app).
+ */
+const appLoginUrl = (appOrigin: string, locale?: string): string =>
+    locale === undefined
+        ? `${appOrigin}/login`
+        : `${appOrigin}/login?locale=${encodeURIComponent(locale)}`;
+
+export { appLoginUrl, PROD_APP_ORIGIN, resolveAppOrigin };

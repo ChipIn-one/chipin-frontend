@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PROD_APP_ORIGIN, resolveAppOrigin } from './appOrigin';
+import { appLoginUrl, PROD_APP_ORIGIN, resolveAppOrigin } from './appOrigin';
 
 describe('resolveAppOrigin', () => {
     test('returns a bare https origin', () => {
@@ -26,5 +26,21 @@ describe('resolveAppOrigin', () => {
         'javascript:alert(1)',
     ])('rejects %s', value => {
         expect(() => resolveAppOrigin({ value, onVercel: false })).toThrow(/PUBLIC_APP_ORIGIN/);
+    });
+});
+
+// Spec 04 §4.4 (row 04-3b1): the site's sign-in buttons.
+describe('appLoginUrl', () => {
+    test('"Sign in/Get started" opens the app sign-in in the page language', () => {
+        expect(appLoginUrl('https://app.chipin.one', 'ru')).toBe(
+            'https://app.chipin.one/login?locale=ru',
+        );
+        expect(appLoginUrl('https://app-dev.chipin.one', 'en')).toBe(
+            'https://app-dev.chipin.one/login?locale=en',
+        );
+    });
+
+    test('"Open ChipIn" opens the app sign-in without a language', () => {
+        expect(appLoginUrl('https://app.chipin.one')).toBe('https://app.chipin.one/login');
     });
 });

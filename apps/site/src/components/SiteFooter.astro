@@ -1,0 +1,136 @@
+---
+import logoUrl from '@chipin/tokens/assets/logo.svg?url';
+
+import { localizedPath, type SupportedLocale } from '../i18n/locales';
+import { interpolate, messages } from '../i18n/ui';
+
+import Icon from './Icon.astro';
+
+// The public footer of the app (components/Footer.tsx with PublicBuildYearContext, spec 04 §3.4):
+// the copyright year is the build year.
+interface Props {
+    locale: SupportedLocale;
+}
+
+const { locale } = Astro.props;
+const { meta, shared } = messages(locale);
+const year = new Date().getFullYear();
+const TELEGRAM_URL = 'https://t.me/chipin_one';
+---
+
+<footer class="site-footer">
+    <div class="columns">
+        <div class="brand">
+            <span class="brand-line">
+                <img src={logoUrl} alt="" width="28" height="28" />
+                <span class="brand-name">{meta.brand}</span>
+            </span>
+            <span class="muted">{interpolate(shared.footer.copyright, { year })}</span>
+        </div>
+        <div class="media">
+            <span class="muted">{shared.footer.mediaTitle}</span>
+            <a class="media-link" href={TELEGRAM_URL} target="_blank" rel="noreferrer">
+                <span class="media-icon"><Icon name="send" size={16} /></span>
+                {meta.footer.telegram}
+            </a>
+        </div>
+        <nav class="legal">
+            <a href={localizedPath(locale, 'privacy')}>{shared.footer.privacy}</a>
+            <a href={localizedPath(locale, 'terms')}>{shared.footer.terms}</a>
+        </nav>
+    </div>
+</footer>
+
+<style>
+    .site-footer {
+        margin-top: var(--cp-space-6);
+        padding: var(--cp-space-6) var(--cp-space-4);
+        border-top: 1px solid var(--cp-border-default);
+        font-size: var(--cp-font-size-2);
+    }
+
+    .columns {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-4);
+        align-items: center;
+        max-width: 1136px;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .brand {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cp-space-2);
+    }
+
+    .brand-line {
+        display: flex;
+        gap: var(--cp-space-2);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brand-name {
+        font-size: var(--cp-font-size-3);
+        font-weight: var(--cp-font-weight-bold);
+    }
+
+    .muted,
+    .legal a,
+    .media-link {
+        color: var(--cp-text-secondary);
+    }
+
+    .media {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cp-space-4);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .media-link,
+    .legal a {
+        display: inline-flex;
+        gap: var(--cp-space-2);
+        align-items: center;
+        text-decoration: none;
+    }
+
+    .media-link:hover,
+    .legal a:hover {
+        text-decoration: underline;
+    }
+
+    .media-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--cp-radius-pill);
+        background: var(--blue-a3);
+        color: var(--blue-a11);
+    }
+
+    .legal {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cp-space-5);
+        justify-content: center;
+    }
+
+    @media (min-width: 1024px) {
+        .columns {
+            flex-direction: row;
+            justify-content: space-between;
+            text-align: start;
+        }
+
+        .brand-line {
+            justify-content: flex-start;
+        }
+    }
+</style>

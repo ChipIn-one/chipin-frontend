@@ -1,0 +1,28 @@
+{
+    "buttons": {
+        "getStarted": "Начать",
+        "invitePeople": "Пригласить людей",
+        "settleUp": "Рассчитаться"
+    },
+    "footer": {
+        "copyright": "{{year}}. Все права защищены ©",
+        "mediaTitle": "Мы в медиа",
+        "privacy": "Конфиденциальность",
+        "terms": "Условия"
+    },
+    "preview": {
+        "members": "4 участника",
+        "owedToYou": "Вам должны",
+        "youAreOwed": "Вам должны",
+        "tabs": {
+            "expenses": "Расходы",
+            "balances": "Балансы",
+            "settings": "Настройки"
+        },
+        "today": "Сегодня",
+        "paidAmount": "{{payer}} заплатил(а)",
+        "you": "Вы",
+        "youLent": "Вы одолжили",
+        "youBorrowed": "Вы заняли"
+    }
+}
