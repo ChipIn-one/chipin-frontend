@@ -4,15 +4,13 @@ import js from '@eslint/js';
 import astro from 'eslint-plugin-astro';
 import tseslint from 'typescript-eslint';
 
-import { basePlugins, baseRules, TYPE_AWARE_RULES } from './base.js';
-
-/** Astro components, pages and layouts. */
-export const ASTRO_FILES = '**/*.astro';
+import { ASTRO_FILES, basePlugins, baseRules, TYPE_AWARE_RULES } from './base.js';
 
 /**
  * `.astro` files of the site (spec 04 §3): `eslint-plugin-astro` recommended rules, plus the JS,
  * typescript-eslint recommended, base and type-aware rules of the `.ts` presets on the
- * frontmatter. Every block is scoped to `siteDir`: the plugin's own rule block has no `files`.
+ * frontmatter (the `no-restricted-*` and formatting blocks of project.js/base.js include
+ * ASTRO_FILES themselves). Every block is scoped to `siteDir`: the plugin's own rule block has no `files`.
  * @param {{ siteDir: string, appDir: string }} options
  */
 export const astroConfig = ({ siteDir, appDir }) => {

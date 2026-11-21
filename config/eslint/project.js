@@ -1,7 +1,7 @@
 import pluginQuery from '@tanstack/eslint-plugin-query';
 import importX from 'eslint-plugin-import-x';
 
-import { appGlob, LINT_FILES } from './base.js';
+import { appGlob, ASTRO_FILES, LINT_FILES } from './base.js';
 
 // In flat config a later block replaces the options of `no-restricted-syntax` /
 // `no-restricted-imports` for the files it matches, so separate blocks silently drop each
@@ -62,7 +62,11 @@ const scopedBlocks = (ruleName, entries, toOptions) => {
 
         return {
             name: `chipin/${ruleName}/${combo.join(' & ') || 'all'}`,
-            files: [[LINT_FILES, ...combo]],
+            // `.astro` frontmatter too (its client scripts match LINT_FILES as virtual files).
+            files: [
+                [LINT_FILES, ...combo],
+                [ASTRO_FILES, ...combo],
+            ],
             rules: { [ruleName]: active.length > 0 ? ['error', ...toOptions(active)] : 'off' },
             [PENDING_IDS]: active
                 .filter(entry => entry.pending)
@@ -392,7 +396,7 @@ export const projectConfig = ({ appDir }) => [
         },
     },
     {
-        files: [LINT_FILES],
+        files: [LINT_FILES, ASTRO_FILES],
         rules: {
             'no-restricted-globals': [
                 'error',
@@ -412,7 +416,7 @@ export const projectConfig = ({ appDir }) => [
     {
         // spec 03 §1.7: TanStack `onlineManager` is the single source of "network is usable";
         // `navigator.onLine` is read only by its bootstrap and probe in shared/offline.
-        files: [LINT_FILES],
+        files: [LINT_FILES, ASTRO_FILES],
         ignores: [appGlob(appDir, 'src/shared/offline/**')],
         rules: {
             'no-restricted-properties': [

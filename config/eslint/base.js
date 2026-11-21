@@ -15,6 +15,12 @@ import { importSortGroups } from './aliases.js';
 /** Files the ESLint presets apply to. */
 export const LINT_FILES = '**/*.{ts,tsx,js,jsx}';
 
+/**
+ * Astro components, pages and layouts (the site): the Astro preset (astro.js), the repo
+ * restriction rules and the formatting re-enables also apply to their frontmatter.
+ */
+export const ASTRO_FILES = '**/*.astro';
+
 /** TypeScript files: the type-aware rules apply only to them (JS files get no type information). */
 export const TS_FILES = '**/*.{ts,tsx}';
 
@@ -141,7 +147,7 @@ export const formattingConfig = () => [
     {
         // eslint-config-prettier turns these off; both are safe with Prettier.
         // `curly: all` never conflicts; `no-unexpected-multiline` is a correctness rule.
-        files: [LINT_FILES],
+        files: [LINT_FILES, ASTRO_FILES],
         rules: {
             curly: ['error', 'all'],
             'no-unexpected-multiline': 'error',
