@@ -384,6 +384,7 @@ describe('paths the site never redirects (§4.2)', () => {
         '/.well-known/assetlinks.json',
         '/_astro/index.Ab12Cd34.css',
         '/_astro/hoisted.Ab12Cd34.js',
+        '/_astro/favicon.Ab12Cd34.svg',
         '/_vercel/insights/script.js',
         '/_vercel/speed-insights/script.js',
         '/favicon.svg',
