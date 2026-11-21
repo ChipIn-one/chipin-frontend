@@ -45,7 +45,7 @@ describe('invite links point to the site join page', () => {
     test.each([
         [ENV_PROD, 'https://chipin.one'],
         [ENV_DEV, 'https://site-dev.chipin.one'],
-    ])('in %s they are built on %s', (env, siteOrigin) => {
+    ])('USR-086 in %s they are built on %s', (env, siteOrigin) => {
         vi.stubEnv('VITE_CHIPIN_ENV', env);
 
         expect(buildGroupInviteLink({ inviteToken: 'group-token' })).toBe(
@@ -56,7 +56,7 @@ describe('invite links point to the site join page', () => {
         );
     });
 
-    test('encode the token as one path segment', () => {
+    test('USR-086 encode the token as one path segment', () => {
         vi.stubEnv('VITE_CHIPIN_ENV', ENV_PROD);
 
         expect(buildGroupInviteLink({ inviteToken: 'a/b?c#d e' })).toBe(

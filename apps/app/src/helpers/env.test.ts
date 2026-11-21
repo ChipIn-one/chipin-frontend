@@ -155,6 +155,16 @@ describe('app hosts and the site origin', () => {
         expect(getSiteOrigin()).toBe('https://site-dev.chipin.one');
     });
 
+    test.each(['app.chipin.one.example.com', 'xchipin.one', 'evil-chipin.one'])(
+        'a look-alike host %s still fails closed',
+        hostname => {
+            setWindowLocation(`https://${hostname}`);
+
+            expect(() => getEnv()).toThrowError(/environment configuration/i);
+            expect(() => getSiteOrigin()).toThrowError(/environment configuration/i);
+        },
+    );
+
     test('the site origin has no trailing slash', () => {
         for (const env of [ENV_PROD, ENV_DEV]) {
             expect(ENV_URLS[env].siteOrigin.endsWith('/')).toBe(false);

@@ -80,7 +80,7 @@
             "statusCode": 302
         },
         {
-            "source": "/join/group/:token([^/\\\\\\t\\n\\r]+)",
+            "source": "/join/group/:token([^/\\\\\\t\\n\\r]+){/}?",
             "has": [
                 {
                     "type": "host",
@@ -93,7 +93,7 @@
             "statusCode": 302
         },
         {
-            "source": "/join/friend/:token([^/\\\\\\t\\n\\r]+)",
+            "source": "/join/friend/:token([^/\\\\\\t\\n\\r]+){/}?",
             "has": [
                 {
                     "type": "host",
@@ -171,7 +171,7 @@
             "statusCode": 302
         },
         {
-            "source": "/join/group/:token([^/\\\\\\t\\n\\r]+)",
+            "source": "/join/group/:token([^/\\\\\\t\\n\\r]+){/}?",
             "has": [
                 {
                     "type": "host",
@@ -184,7 +184,7 @@
             "statusCode": 302
         },
         {
-            "source": "/join/friend/:token([^/\\\\\\t\\n\\r]+)",
+            "source": "/join/friend/:token([^/\\\\\\t\\n\\r]+){/}?",
             "has": [
                 {
                     "type": "host",
