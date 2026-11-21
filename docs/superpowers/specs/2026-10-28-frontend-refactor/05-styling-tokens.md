@@ -7,7 +7,7 @@ Based on DS v1: `docs/superpowers/specs/2026-10-22-design-system-v1-design.md` (
 The DS v1 decisions are not revisited, except those listed in the section "Changes relative to DS v1".
 PR identifiers are `05-<n>` (global scheme, `00-overview.md`; after review C `05-2` is split into `05-2a`/`05-2b`; 05-4 withdrawn as a separate PR by D31). All lint/stylelint rules of this spec are rows of the spec 02 registry §D0 (C1-14). There are no deviations from DECISIONS; deviations from DS v1 are in a separate section.
 
-**Order relative to the monorepo (04-0):** 05-1 — before or after 04-0 (works in `src/`); 05-2a…05-7 — only after 04-0 (npm workspaces are needed). The themeColor → `--cp-*` migration (formerly 05-4) happens file by file in the design phase (D31).
+**Order relative to the monorepo (04-0):** 05-1 — before or after 04-0 (works in `src/`); 05-2a…05-6 — only after 04-0 (05-7 withdrawn, D33) (npm workspaces are needed). The themeColor → `--cp-*` migration (formerly 05-4) happens file by file in the design phase (D31).
 **Ownership of overlapping topics:** vendor-regex and removal of `dexie` — 02-B1; lazy-loading of locales — 04-2c; SW registration (`PWABadge`) — 04-2d; the ESLint config and the `restrictedImports()` helper — 02-C4; boundaries — 02-C9; jsx-a11y — 02-C8; ds-gallery aliases — 02-C3; ds-gallery typecheck — 02-C5. This spec is the sole owner of `packages/tokens`, next-themes, stylelint, the styled allowlist, and `no-raw-colors`.
 
 ## Goal
@@ -410,7 +410,7 @@ Gate PR (commands) — items 2–8; item 1 — owner QA, not a PR gate (C2-18, C
    - the settle-up modal;
    - the Activity feed.
    - Procedure: the owner, `npm run dev` under their own dev account (`dev.chipin.one` backend), viewport 390×844 and 1280×800, the same data before and after. Screenshots before (master) and after (the PR branch). Comparison: `compare -metric AE -fuzz 1%` (ImageMagick). The pairs are attached to the PR.
-   - For 05-1, 05-2a, 05-2b, 05-3, 05-5, 05-6, 05-7: 0 differing pixels beyond fuzz.
+   - For 05-1, 05-2a, 05-2b, 05-3, 05-5, 05-6 (05-7 withdrawn, D33): 0 differing pixels beyond fuzz.
    - For a design-phase PR that migrates files off `themeColor()`: differences are acceptable only in the areas drawn by the migrated files, and only as a shift of the gray shade. The owner confirms the pairs in the PR.
 2. After 05-3 a reload in dark (saved and system) does not show a light frame. Check: a performance recording or a screenshot under Slow 4G throttling. In addition, `document.documentElement.className` contains `dark` before `root.tsx` executes.
 3. `grep -rn "next-themes" apps` after 05-3 gives 0 lines; `grep -rn "styled-themes\|themeColor\|@radix-ui/colors" apps` gives 0 lines after the design-phase PR that removes `styled-themes.ts` (ds-gallery was removed by D33, 2026-11-21).

@@ -158,6 +158,8 @@ describe('money entries (spec 03 §4.3) merged with the existing selector entrie
         ['src/shared/money/format.tsx', ['money-deep-import', 'i18n-attributes']],
         ['src/shared/lib/formatNumber.ts', ['money-deep-import']],
         ['src/components/A.test.tsx', ['money-deep-import']],
+        // Outside src/ the money entries are off (moneyScope).
+        ['contract-tests/support/a.tsx', ['money-deep-import', 'i18n-attributes']],
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const source = file.endsWith('.tsx') ? tsxSource : tsSource;
@@ -258,6 +260,8 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         ],
         // Tests keep the project entries; money and i18n attributes are exempt there.
         ['src/components/A.test.tsx', PROJECT.filter(id => !id.startsWith('money'))],
+        // Outside src/ the money entries are off (moneyScope).
+        ['scripts/a.tsx', [...PROJECT.filter(id => !id.startsWith('money')), 'i18n-attributes']],
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const [result] = await eslint.lintText(source, { filePath: file });
