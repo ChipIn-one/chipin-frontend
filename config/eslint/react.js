@@ -73,6 +73,8 @@ export const reactSyntax = ({ appDir }) => [
             'JSXAttribute[name.name=/^(aria-label|aria-description|placeholder|title|alt)$/] > Literal[value=/\\w/]',
         // Test-harness markup is not user-facing (same test glob as the type-aware tests override).
         ignores: [...i18nIgnores(appDir), '**/*.test.{ts,tsx}'],
+        // The site localizes with its own `messages(locale)`, not `t()` (spec 04 §3).
+        astro: false,
         message:
             "User-facing attribute text goes through i18n: `aria-label={t('...')}` with a key in every locale (docs/engineering/rules/30-ui.md §i18n).",
     },

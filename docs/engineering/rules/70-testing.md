@@ -88,10 +88,11 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   dead in `lint`. Extra arguments go to ESLint: `npm run lint -- <args>`.
 - Lint scope: `.ts`/`.tsx`/`.js`/`.jsx` files of the app, the packages, the site and the repository
   scripts, and the site's `.astro` files (`config/eslint/astro.js`: `eslint-plugin-astro` recommended
-  rules plus the base, type-aware and `no-restricted-*` rules on the frontmatter; client `<script>`
+  rules plus the base, type-aware and `no-restricted-*` rules on the frontmatter and template, except
+  the app-only JSX entries marked `astro: false` such as `#img-element`; client `<script>`
   blocks are linted like `.ts` files but without type information, so rules that need it, such as
-  `no-floating-promises` and `no-unsafe-*`, do not run there). Type information for `astro:content` exists only after
-  `astro sync`, so `lint`, `lint:full`, `baseline:update` and the CI site step run
+  `no-floating-promises` and `no-unsafe-*`, do not run there). Type information for `astro:content`
+  exists only after `astro sync`, so `lint`, `lint:full`, `baseline:update` and the CI site step run
   `npm run sync -w @chipin/site` (`npm run sync:site`) first; run it once before a direct
   `npx eslint <file>.astro`. Prettier does not format `.astro` files.
 - `npm run baseline:update` prunes fixed entries from `eslint-suppressions.json`; it never adds entries.

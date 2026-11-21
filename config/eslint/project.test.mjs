@@ -92,7 +92,9 @@ describe('pending entries', () => {
 
         expect(blocks.map(block => [block.name, block[PENDING_IDS]])).toEqual([
             ['chipin/no-restricted-syntax/all', []],
+            ['chipin/no-restricted-syntax/astro/all', []],
             ['chipin/no-restricted-syntax/src/money/**', ['no-restricted-syntax#money']],
+            ['chipin/no-restricted-syntax/astro/src/money/**', ['no-restricted-syntax#money']],
         ]);
     });
 });
@@ -267,6 +269,47 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         expect(
             result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
         ).toEqual(ids);
+    });
+});
+
+describe('restrictedSyntax() on `.astro` files (#829)', () => {
+    const config = restrictedSyntax([
+        { id: 'everywhere', selector: 'WithStatement', message: 'Remove it.' },
+        { id: 'react-only', selector: 'JSXOpeningElement', message: 'Fix.', astro: false },
+        { id: 'only-ui', selector: 'Y', message: 'Use Z.', files: ['src/ui/**'] },
+    ]);
+
+    test.each([
+        ['src/a.astro', ['everywhere']],
+        ['src/ui/a.astro', ['everywhere', 'only-ui']],
+        ['src/a.tsx', ['everywhere', 'react-only']],
+        // A client `<script>` of an `.astro` file is a virtual `.ts` child: the LINT_FILES blocks.
+        ['src/a.astro/0.ts', ['everywhere', 'react-only']],
+    ])('%s gets %j', async (file, ids) => {
+        expect(await resolvedIds(config, file, 'no-restricted-syntax')).toEqual(ids.sort());
+    });
+
+    test('the app-only JSX entries (img-element, i18n-attributes) skip site `.astro` files', async () => {
+        const syntax = restrictedSyntax([
+            ...projectSyntax({ appDir: 'apps/app' }),
+            ...projectRules({ appDir: 'apps/app' }),
+            ...reactSyntax({ appDir: 'apps/app' }),
+        ]);
+        const astro = await resolvedIds(
+            syntax,
+            'apps/site/src/pages/a.astro',
+            'no-restricted-syntax',
+        );
+        const app = await resolvedIds(
+            syntax,
+            'apps/app/src/components/A.tsx',
+            'no-restricted-syntax',
+        );
+
+        expect(astro).not.toContain('img-element');
+        expect(astro).not.toContain('i18n-attributes');
+        expect(astro).toContain('export-all');
+        expect(app).toEqual(expect.arrayContaining(['img-element', 'i18n-attributes']));
     });
 });
 
