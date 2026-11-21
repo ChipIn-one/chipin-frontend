@@ -1,10 +1,10 @@
 import type { AuthService } from 'constants/auth.types';
 import { ROUTES } from 'constants/routes';
-import { SITE_PATHS } from 'constants/sitePaths';
+import { SITE_PAGE_PATHS } from 'constants/sitePaths';
 import { isSupportedLocale } from 'helpers/locale';
 import { resolveRegistrationLocale } from 'helpers/publicRoutes';
 
-import { getChipInApiUrl, getChipInAppUrl } from './env';
+import { getChipInApiUrl, getSiteOrigin } from './env';
 
 /** Where a sign-in returns to when `returnTo` is missing or rejected. */
 export const DEFAULT_RETURN_TO = ROUTES.DASHBOARD;
@@ -114,9 +114,11 @@ export const getSocialAuthUrl = (provider: AuthService, options: SocialAuthOptio
 
     const { origin, pathname, search, hash } = window.location;
 
+    // A sign-in from the in-app landing (the root path of this origin) goes to the dashboard. A
+    // relative path check: the absolute `SITE_PATHS` of `helpers/sitePaths` never equal a pathname.
     const returnTo =
         options.returnTo ??
-        (pathname === SITE_PATHS.home ? DEFAULT_RETURN_TO : `${pathname}${search}${hash}`);
+        (pathname === SITE_PAGE_PATHS.home ? DEFAULT_RETURN_TO : `${pathname}${search}${hash}`);
     const callbackUrl = new URL(ROUTES.OAUTH_CALLBACK, origin);
     callbackUrl.searchParams.set('returnTo', returnTo);
 
@@ -134,11 +136,14 @@ export const getSocialAuthUrl = (provider: AuthService, options: SocialAuthOptio
     return `${apiUrl}auth/login/${provider}?${query.toString()}`;
 };
 
+// Spec 04 §3.5 (04-2g): invite links open the site's join page (`<site>/join/friend|group/<t>`),
+// which leads to the app route `/friends/join/<t>` or `/group/join/<t>`. Until step 2 the legacy
+// hosts belong to the app project and `vercel.json` redirects these paths to the app host (302).
 export const buildFriendInviteLink = ({ inviteToken }: { inviteToken: string }) =>
-    `${getChipInAppUrl()}${ROUTES.FRIENDS_JOIN}/${inviteToken}`;
+    `${getSiteOrigin()}/join/friend/${encodeURIComponent(inviteToken)}`;
 
 export const buildGroupInviteLink = ({ inviteToken }: { inviteToken: string }) =>
-    `${getChipInAppUrl()}${ROUTES.GROUP_JOIN}/${inviteToken}`;
+    `${getSiteOrigin()}/join/group/${encodeURIComponent(inviteToken)}`;
 
 export const buildActivitySubeventsRoute = (parentActivityId: string) =>
     `${ROUTES.ACTIVITY}/${parentActivityId}`;

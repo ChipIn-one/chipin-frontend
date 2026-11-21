@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { ENV_DEV, ENV_PROD } from 'constants/env';
 import { ROUTES } from 'constants/routes';
 
 import {
     buildFriendInviteLink,
+    buildGroupInviteLink,
     DEFAULT_RETURN_TO,
     getSocialAuthUrl,
     resolveOAuthReturnTo,
@@ -33,10 +35,54 @@ test('preserves the exact protected route including search and hash', () => {
     expect(getReturnToFromSocialAuthUrl()).toBe('/group/123?tab=members#balances');
 });
 
-test('builds personal friend invite links on the canonical route', () => {
-    expect(buildFriendInviteLink({ inviteToken: 'friend-token' })).toContain(
-        '/friends/join/friend-token',
-    );
+// Spec 04 §3.5 (04-2g): invite links open the site's join page on the site origin of the
+// environment, never the app origin they were built on.
+describe('invite links point to the site join page', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
+    test.each([
+        [ENV_PROD, 'https://chipin.one'],
+        [ENV_DEV, 'https://site-dev.chipin.one'],
+    ])('in %s they are built on %s', (env, siteOrigin) => {
+        vi.stubEnv('VITE_CHIPIN_ENV', env);
+
+        expect(buildGroupInviteLink({ inviteToken: 'group-token' })).toBe(
+            `${siteOrigin}/join/group/group-token`,
+        );
+        expect(buildFriendInviteLink({ inviteToken: 'friend-token' })).toBe(
+            `${siteOrigin}/join/friend/friend-token`,
+        );
+    });
+
+    test('encode the token as one path segment', () => {
+        vi.stubEnv('VITE_CHIPIN_ENV', ENV_PROD);
+
+        expect(buildGroupInviteLink({ inviteToken: 'a/b?c#d e' })).toBe(
+            'https://chipin.one/join/group/a%2Fb%3Fc%23d%20e',
+        );
+        expect(buildFriendInviteLink({ inviteToken: '../x' })).toBe(
+            'https://chipin.one/join/friend/..%2Fx',
+        );
+    });
+});
+
+// 04-2g: the landing check compares the pathname with the relative root path; the absolute
+// `SITE_PATHS` never match a pathname.
+test.each(['/', '/?utm_source=x', '/#top'])(
+    'a sign-in started on the landing %s returns to the dashboard',
+    url => {
+        window.history.replaceState({}, '', url);
+
+        expect(getReturnToFromSocialAuthUrl()).toBe(DEFAULT_RETURN_TO);
+    },
+);
+
+test.each(['/ru/', '/privacy', '/group/1'])('a sign-in started on %s keeps its own path', url => {
+    window.history.replaceState({}, '', url);
+
+    expect(getReturnToFromSocialAuthUrl()).toBe(url);
 });
 
 test('preserves a friend invite route through OAuth sign in', () => {

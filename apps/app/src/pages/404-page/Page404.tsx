@@ -3,7 +3,7 @@ import { ChartPieIcon, HomeIcon, LayoutListIcon, SearchIcon } from 'lucide-react
 import { useTranslation } from 'react-i18next';
 
 import { ROUTES } from 'constants/routes';
-import { SITE_PATHS } from 'constants/sitePaths';
+import { SITE_PATHS } from 'helpers/sitePaths';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
@@ -76,7 +76,7 @@ const Page404 = () => {
                 ) : (
                     // The site home is a plain link, never a router navigation (spec 04 §2.1).
                     <Button asChild size="4" variant="solid" mt="2">
-                        <a href={SITE_PATHS.home}>
+                        <a href={SITE_PATHS.home()}>
                             <HomeIcon size={24} />
                             {t('page404.goHome')}
                         </a>
