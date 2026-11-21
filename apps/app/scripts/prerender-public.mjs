@@ -87,6 +87,17 @@ const main = () =>
                     if (forbidden.some(pattern => pattern.test(rendered.html))) {
                         throw new Error('Protected/session content in public HTML: ' + route.path);
                     }
+                    // #672: no third-party image on public pages; React 19 SSR hoists an `<img>`
+                    // into `<link rel="preload" as="image">`, so both forms fail the build.
+                    const thirdPartyImage = [
+                        // A URL starts the value or a `srcset` candidate (`, url 2x`), so the
+                        // `http://www.w3.org` inside a `data:` SVG does not count.
+                        /<img\b[^>]*\s(?:src="|srcset="(?:[^"]*,\s*)?)(?:https?:)?\/\//i,
+                        /<link\b(?=[^>]*\srel="preload")[^>]*\s(?:href="|imagesrcset="(?:[^"]*,\s*)?)(?:https?:)?\/\//i,
+                    ];
+                    if (thirdPartyImage.some(pattern => pattern.test(rendered.html))) {
+                        throw new Error('Absolute image URL in public HTML: ' + route.path);
+                    }
                     const canonical = routes.getPublicCanonical(route);
                     const html = replaceHead(template, route, {
                         ...content,
