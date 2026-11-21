@@ -9,6 +9,7 @@ import { createRequire } from 'node:module';
 import { basename } from 'node:path';
 
 import { BRAND_COLORS } from '@chipin/tokens/theme';
+import { THEME_INIT_SCRIPT } from '@chipin/tokens/theme-init';
 import type { HtmlTagDescriptor, Plugin } from 'vite';
 
 export const FAVICON_FILE = 'favicon.svg';
@@ -49,4 +50,30 @@ export const brandPlugin = (): Plugin => ({
     },
     transformIndexHtml: (_html, { filename }) =>
         basename(filename) === THEME_COLOR_ENTRY ? [THEME_COLOR_META] : [],
+});
+
+// Spec 05 §2 (05-3): the anti-FOUC theme script runs as the first element of `<head>` of the SPA
+// shell `app.html`, before any CSS or app code, so a dark reload never shows a light frame. The
+// public `index.html` (and its prerendered pages) is not touched until spec 04: `PublicApp` sets its
+// own theme there. The script text is inserted as is (Vite serialises string `children` verbatim
+// and does not rewrite an inline classic script), so its CSP hash THEME_INIT_SCRIPT_SHA256 matches
+// the `script-src` of vercel.json (theme-init.test.ts checks it).
+/** The HTML entry that gets the theme script: the SPA shell. */
+export const THEME_INIT_ENTRY = 'app.html';
+
+export const THEME_INIT_TAG: HtmlTagDescriptor = {
+    tag: 'script',
+    children: THEME_INIT_SCRIPT,
+    injectTo: 'head-prepend',
+};
+
+export const themeInitPlugin = (): Plugin => ({
+    name: 'chipin-theme-init',
+    transformIndexHtml: {
+        // Late (`post`), after Vite's own processing: the tag stays first in `<head>` as long as no
+        // hook that runs after it uses `head-prepend` (none does: VitePWA, an `enforce: 'post'` plugin that runs later, does not).
+        order: 'post',
+        handler: (_html, { filename }) =>
+            basename(filename) === THEME_INIT_ENTRY ? [THEME_INIT_TAG] : [],
+    },
 });

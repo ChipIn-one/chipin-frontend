@@ -132,6 +132,24 @@ const LocalStorage = {
             return null;
         }
     },
+
+    /** Like `getRaw`, but `undefined` when the storage cannot be read (blocked, no storage). */
+    tryGetRaw(key: StorageKey): string | null | undefined {
+        try {
+            return localStorage.getItem(key);
+        } catch {
+            return undefined;
+        }
+    },
+
+    /** Writes the value as is, not as JSON: the theme key holds the raw theme name (the format saved before 05-3). */
+    setRaw(key: typeof LS_KEY_THEME, value: ThemeName): void {
+        try {
+            localStorage.setItem(key, value);
+        } catch {
+            // ignore write errors (storage full, private mode, etc.)
+        }
+    },
 };
 
 type SessionStorageKey = typeof SS_KEY_EXPENSE_DRAFT | typeof SS_KEY_ROUTE_CHUNK_RELOAD;

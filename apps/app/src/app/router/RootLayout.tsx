@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { Box, Spinner } from '@radix-ui/themes';
 import { CircleCheckIcon, CircleXIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { Outlet, ScrollRestoration } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
@@ -9,9 +8,9 @@ import { RestoreGate } from 'app/providers/RestoreGate';
 import { ServiceWorkerSafePoints } from 'app/pwa/ServiceWorkerSafePoints';
 import { UpdateRequiredScreen } from 'app/pwa/UpdateRequiredScreen';
 import { AddExpenseModal } from 'features/add-expense';
-import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
 import { GlobalHooks } from 'pages/GlobalHooks';
+import { selectResolvedAppearance, useAppearanceStore } from 'store/ui-prefs';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PageLoader from 'basics/PageLoader';
@@ -42,7 +41,7 @@ const ToastLoadingIcon = () => <Spinner size="2" />;
  * fallback for anything that suspends while a page renders.
  */
 const RootLayout = () => {
-    const { resolvedTheme } = useTheme();
+    const appearance = useAppearanceStore(selectResolvedAppearance);
     const isMobile = useIsMobile();
 
     return (
@@ -65,7 +64,7 @@ const RootLayout = () => {
                 <ScrollRestoration />
 
                 <Toaster
-                    theme={isThemeDark(resolvedTheme) ? 'dark' : 'light'}
+                    theme={appearance}
                     richColors
                     closeButton
                     position={isMobile ? 'top-center' : 'bottom-left'}

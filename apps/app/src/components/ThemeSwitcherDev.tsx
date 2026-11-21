@@ -1,14 +1,14 @@
 import { IconButton } from '@radix-ui/themes';
 import { MoonIcon, SunIcon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 
-import { isThemeDark } from 'helpers/theme';
+import { selectResolvedAppearance, selectSetPreference, useAppearanceStore } from 'store/ui-prefs';
 
 const ThemeSwitcherDev = () => {
-    const { resolvedTheme, setTheme } = useTheme();
+    const resolved = useAppearanceStore(selectResolvedAppearance);
+    const setPreference = useAppearanceStore(selectSetPreference);
     const { t } = useTranslation();
-    const isDark = isThemeDark(resolvedTheme);
+    const isDark = resolved === 'dark';
 
     const icon = isDark ? <SunIcon size={20} /> : <MoonIcon size={20} />;
     const themeSwitchLabel = isDark
@@ -23,11 +23,11 @@ const ThemeSwitcherDev = () => {
             }}
             variant="surface"
             aria-label={themeSwitchLabel}
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            onClick={() => setPreference(isDark ? 'light' : 'dark')}
         >
             {icon}
         </IconButton>
     );
 };
 
-export default ThemeSwitcherDev;
+export { ThemeSwitcherDev };

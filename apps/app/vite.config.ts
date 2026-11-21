@@ -8,7 +8,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { resolveAppVersionInfo } from '../../scripts/version-resolver.mjs';
 
 import { buildPwaOptions } from './pwa.config.ts';
-import { brandPlugin } from './scripts/brand-plugin.ts';
+import { brandPlugin, themeInitPlugin } from './scripts/brand-plugin.ts';
 import { shouldUploadSourcemaps } from './scripts/sentry-sourcemaps.ts';
 import { swAppPlugin } from './scripts/sw-app-plugin.ts';
 
@@ -165,6 +165,9 @@ export default defineConfig(({ mode }) => {
                       }),
                   ]
                 : []),
+            // The anti-FOUC theme script becomes the first element of `<head>` in app.html: its hook
+            // runs late (`order: 'post'`), and no hook after it prepends to `<head>`.
+            themeInitPlugin(),
         ],
 
         server: {

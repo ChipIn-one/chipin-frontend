@@ -129,11 +129,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/DevMenu.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/Footer.test.tsx": {
     "boundaries/dependencies": {
       "count": 1
@@ -165,11 +160,6 @@
     }
   },
   "apps/app/src/components/OfflineQRCode.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/ThemeSwitcherDev.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -716,11 +706,6 @@
   },
   "apps/app/src/i18n/index.ts": {
     "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "apps/app/src/main.tsx": {
-    "import-x/no-default-export": {
       "count": 1
     }
   },

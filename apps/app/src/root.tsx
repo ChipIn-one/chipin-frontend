@@ -1,21 +1,18 @@
 import * as Sentry from '@sentry/react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { ThemeProvider } from 'next-themes';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import { persistedUserId } from 'app/providers/persistedUserId';
 import { ServiceWorkerManager } from 'app/pwa/ServiceWorkerManager';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
-import { LS_KEY_THEME } from 'constants/localstorage';
 import { getLegacyHostAppUrl, removeLegacyHostWebAppHeadTags } from 'helpers/legacyHost';
 import { getLocalUser } from 'helpers/localStorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
 import { checkIsPwaInstalled } from 'helpers/pwa';
 import { applyLanguage } from 'helpers/setAppLanguage';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
-import { resolveStoredTheme } from 'helpers/theme';
 import { i18n, i18nReady } from 'i18n';
 import { syncHtmlLang } from 'i18n/htmlLang';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
@@ -109,13 +106,14 @@ if (legacyHostAppUrl) {
 } else {
     // The user's query cache is restored from IndexedDB before the app (and its router) renders;
     // the public SSG branch above never touches IndexedDB. The first render waits for the initial
-    // language's lazy chunks (spec 04 §2.10), so it never shows raw keys.
+    // language's lazy chunks (spec 04 §2.10), so it never shows raw keys. Importing `main` runs
+    // `initAppearance()`, which applies the theme class to `<html>` before that render (spec 05 §2).
     Promise.all([
         import('main'),
         import('shared/offline/restore'),
         import('app/pwa/expenseDraftReload'),
     ])
-        .then(([{ default: Main }, { startCacheRestore }, { startExpenseDraftReload }]) => {
+        .then(([{ Main }, { startCacheRestore }, { startExpenseDraftReload }]) => {
             startCacheRestore(persistedUserId(getLocalUser()?.id));
             // Spec 04 §2.11 item 4: an expense draft saved before an app reload reopens once.
             startExpenseDraftReload();
@@ -125,16 +123,9 @@ if (legacyHostAppUrl) {
             createRoot(rootElement).render(
                 <>
                     <GlobalErrorBoundary>
-                        <ThemeProvider
-                            attribute="class"
-                            defaultTheme={resolveStoredTheme()}
-                            storageKey={LS_KEY_THEME}
-                            enableSystem
-                        >
-                            <Analytics beforeSend={sanitizeTelemetryEvent} />
-                            <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
-                            <Main />
-                        </ThemeProvider>
+                        <Analytics beforeSend={sanitizeTelemetryEvent} />
+                        <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
+                        <Main />
                     </GlobalErrorBoundary>
                     {/* The single SW registration, once per page, outside the error boundary: it
                         keeps running for the error fallback when the app crashes on first render. */}
