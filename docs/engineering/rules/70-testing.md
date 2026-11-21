@@ -68,7 +68,7 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - Local runs (agents: sessions, tracks, subagents): only fast, light checks, at most about 2 minutes
   per check pass: `npm run verify` and `npm run test:task -- <paths>` with the smallest set of test
   files. Never run `npm run verify:full`, `npm run test:full`, a full `vitest run`, `npm run build`,
-  the ds-gallery or site build, or e2e on a developer machine. If `verify` alone grows past ~2
+  the site build, or e2e on a developer machine. If `verify` alone grows past ~2
   minutes, run instead `npx prettier --check` and `npx eslint` on the changed files,
   `npm run check:file-layout`, `test:task`, and `npm run typecheck` only if it fits. CI is the full gate; a red CI is fixed with a new commit.
 - During development: use `npm run test:task -- <explicit test paths>`; this command refuses to run
@@ -91,7 +91,7 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   typecheck; it does not run
   Vitest or build.
 - `npm run verify:full` is CI's full gate, not run locally by agents: format check, `lint:full`,
-  `check:file-layout`, the complete Vitest suite, the production build, and the ds-gallery build. CI also runs
+  `check:file-layout`, the complete Vitest suite, and the production build. CI also runs
   `scripts/check-baseline.mjs` on pull requests. Husky `pre-commit` runs `lint-staged` with `CHIPIN_ESLINT_FAST=1`
   (no type-aware rules): `eslint --fix`, then Prettier, on staged files; remaining errors are printed
   and lint never blocks the commit (only a syntax error that Prettier cannot parse does). There is no `pre-push` hook.

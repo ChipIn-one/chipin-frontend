@@ -37,6 +37,5 @@
             "styles/*": ["./src/styles/*"]
         }
     },
-    "include": ["src", "ds-gallery"],
-    "exclude": ["ds-gallery/vite.config.ts"]
+    "include": ["src"]
 }

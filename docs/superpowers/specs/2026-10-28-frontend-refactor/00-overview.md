@@ -23,7 +23,7 @@ The mode is **incremental**: no feature freeze, every PR is released independent
 
 **04 — Monorepo, routing, site (D6–D8, D18, D22, D26, D30, D31, ADR FE#498).** npm workspaces (`apps/app`, `apps/site`, `packages/tokens`, `packages/i18n-content`), the first PR is a mechanical move (04-0a by script, 04-0b — docs); the version only in the root `package.json`. An RR7 data router from a single manifest with per-route `errorElement` and auth guards, no prefetch loaders (04-2e withdrawn, D31); a hand-written `vercel.json` per project: 04-2b = a host-scoped catch-all rewrite on the app hosts and a test that every router path is covered by the SW navigation allowlist; the hand-written legacy redirect lists with their tests live in 04-4a2 (app project, step 1) and 04-3d (site) (D31); lazy-loading of locales and `setAppLanguage` (the sole owner); a single SW registration `/sw.js` with scope `/` (the sole owner — 04-2d). Hosts per D26: the app on `app.chipin.one` (dev `app-dev.chipin.one`) with Vite `base: '/'`, the site on `chipin.one` (dev `site-dev.chipin.one`); the projects do not proxy each other, each has its own CSP, the `__Host-` refresh cookie is host-only for `app.chipin.one`, users sign in again once. Provider isolation (everything Vercel-specific only in `vercel.json`, `@vercel/*` in one module, D18). The cutover runs in two steps (D30): step 1 — `04-4a1` (SW host gate + host-aware kill-switch `sw-kill.js` in the shared build; the built app worker is `dist/sw-app.js` until 04-5a while the registration URL stays `/sw.js`) and `04-4a2` (the app moves to `app.chipin.one`/`app-dev.chipin.one` on the current Vercel project; `chipin.one` keeps today's landing, whose sign-in CTAs go to the app host; private app paths on the old hosts 302 to the app host), before the Astro site exists; rolling back step 1 = a targeted PR that deletes only the legacy redirects (the `/api` rewrites of the app hosts stay); step 2 — `04-4b` (the former 04-4): an Astro site with static pages, `/join/group|friend/<token>` with a button to the confirmation screen on `app.chipin.one`, a kill-switch `/sw.js` on `chipin.one` for ≥ 6 months, the site release model "Promote only", the site compatibility layer 04-3d, then moving the domains `dev.chipin.one`, then `chipin.one` to the site project; rollback — moving back, which keeps the step-1 redirects in the app project. The step-1 redirects stay 302 and are deleted by 04-5a (with `sw-kill.js` and the `/sw.js` host rewrites); only the site's step-2 redirects (04-3d) switch 302 → 301 in 04-5a. PWAs installed before the move are not supported (D26). The deviation from D8 (invite type in the path) was accepted by the owner (D20); the D20 catch-all rewrite was withdrawn by D26.
 
-**05 — Styles and tokens (D14, D16, D17, D23, D31).** `packages/tokens` (the sole owner; a hand-written `tokens.css`, `theme.ts` with `RADIX_THEME`/`PROP_COLOR`/`RADIX_PALETTES`/`BRAND_COLORS`, favicon/logo and the theme script — no DTCG `tokens.json`, no generator, no `tokens:check`; the PWA manifest, `theme-color`, and the site take the brand color from `BRAND_COLORS`, kept equal to `--cp-brand-primary` = grass-9 by a test; hex/rgb outside `packages/tokens` are banned by lint/stylelint), a single theme switching mechanism (light/dark/system: `appearanceStore` → `<html>` class → `<Theme>`, no FOUC, CSP hash), removal of `next-themes`, `themeColor()` → `var(--cp-*)` (gray → olive) file by file in the design phase (05-4 withdrawn, D31), styled-components frozen by an allowlist + a touch rule, stylelint, the `basics`/`components` boundary, Radix CSS in parts, WebP. ds-gallery stays in `apps/app/ds-gallery/` and receives the tokens as an app.
+**05 — Styles and tokens (D14, D16, D17, D23, D31).** `packages/tokens` (the sole owner; a hand-written `tokens.css`, `theme.ts` with `RADIX_THEME`/`PROP_COLOR`/`RADIX_PALETTES`/`BRAND_COLORS`, favicon/logo and the theme script — no DTCG `tokens.json`, no generator, no `tokens:check`; the PWA manifest, `theme-color`, and the site take the brand color from `BRAND_COLORS`, kept equal to `--cp-brand-primary` = grass-9 by a test; hex/rgb outside `packages/tokens` are banned by lint/stylelint), a single theme switching mechanism (light/dark/system: `appearanceStore` → `<html>` class → `<Theme>`, no FOUC, CSP hash), removal of `next-themes`, `themeColor()` → `var(--cp-*)` (gray → olive) file by file in the design phase (05-4 withdrawn, D31), styled-components frozen by an allowlist + a touch rule, stylelint, the `basics`/`components` boundary, Radix CSS in parts, WebP. ds-gallery is removed (D33, 2026-11-21).
 
 ## Who owns overlapping topics (decided, agreed across all specs)
 
@@ -44,7 +44,7 @@ The mode is **incremental**: no feature freeze, every PR is released independent
 | Version format and normalization | 04-0a (`version-resolver.mjs`: prod = `x.y.z`, otherwise `x.y.z-dev-<sha7>`; root from `import.meta.dirname`) | 02 D7 references it; 03-20 compares only the semver core |
 | Cutover rollback | 04 §4.5: step 1 (04-4a2) — a targeted PR that deletes only the legacy redirects (the app-host `/api` rewrites stay); step 2 (04-4b) — move the domain `chipin.one` (`dev.chipin.one`) back to the app project, which still holds the step-1 redirects (D30); until 04-5a the app project serves the public pages and compat redirects; there is no freeze window or Promote ban (D26) | DEPLOYMENT.md (section "Domains and rollback", 04-4a2 and 04-4b) |
 | Locale parity test | 04-2c | 02 references it |
-| ds-gallery | location — 04 §6; typecheck — 02-C5; aliases — 02-C3; tokens/theme — 05-7 | |
+| ~~ds-gallery~~ | Withdrawn by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery is removed, design review moves to Claude Design. | |
 | CSP | 01-1 base directives in the hand-written `vercel.json` of each project (D31); 05-3 adds the sha256 of theme-init; each project has its own CSP on its own hosts (04 §3.6, §2.9), projects do not proxy each other (D26) | |
 | `.gitignore .env*` | 01-1 | 02-A3 does not repeat it |
 | Invite URL | site `chipin.one/join/group/<t>`, `/join/friend/<t>` (04-3c) → button → screen 01-2 at `app.chipin.one/group/join/<t>`, `/friends/join/<t>` | old `chipin.one/group/join/<t>` — redirect to the site landing (302 until 04-5a, then 301) |
@@ -62,7 +62,7 @@ Hard dependencies (arrow = "cannot merge earlier"):
 04-0a ─> 04-2a1 ─> 04-2a2 (+03-5) ─> 04-2a2b ─> 04-2a3 ─> 04-2a4 ─> 04-2f
 04-2a4 + 04-2d + 04-2f + 04-3c + 04-4a2 (in prod) ─> 04-2g (site-facing app links; step 2 preparation)
 04-2a1 ─> 04-2b ; 04-2a2 ─> 04-2d ─> 04-2h ; 04-0a ─> 04-1a ─> 04-2c
-04-0a ─> 04-1b ; 04-0a ─> 05-2a ─> 05-2b ─> 05-3 ─> 05-7 ; 05-2b + 02-C4 ─> 05-5
+04-0a ─> 04-1b ; 04-0a ─> 05-2a ─> 05-2b ─> 05-3 ; 05-2b + 02-C4 ─> 05-5
 05-2a + 04-1a + 04-1b ─> 04-3a ─> 04-3b1 (+05-3), 04-3b2, 04-3c (+01-2), 04-3d (+04-2a1; site kill-switch and redirects; site Promote to prod before 04-4b)
 03-4b ─> 03-5 ─> 03-6, 03-7a ─> 03-7b ; 03-5 ─> 03-8, 03-9 ─> 03-10 ─> 03-11 ─> 03-12 ─> 03-13 ─> 03-14 ─> 03-14b ; 03-14 ─> 03-18
 03-7b + 03-14b (+ confirmation item 35) ─> 03-15a ─> 03-15b ─> 03-15c1 ─> 03-15c2 ─> 03-16a ─> 03-16b ─> 03-17 (+ BE-03-1, BE-03-2, BE-03-5, 03-20, 04-4a2 in prod)
@@ -129,7 +129,7 @@ An honest estimate of parallelism (C2-14): tracks run in parallel only between f
 - styles: `05-2b` → `05-3`, `05-5`, `05-6`.
 The end of the site work — `04-3d` in prod of the site → `04-4b` cutover step 2 (runbook part 2 in `DEPLOYMENT.md`; the owner moves `dev.chipin.one`, then `chipin.one` to the site project; rollback — moving back, the step-1 redirects stay in the app project, 04 §4.5). Step 2 does not gate 03-17 (item 44).
 
-**Phase 4 — retiring styled, cleanup.** `05-7`; the design phase (DS v1 tasks) migrates `themeColor()` → `var(--cp-*)` file by file and removes `styled-themes.ts` with the last caller (D31; each such PR carries its own screenshots); `04-5a/b` (after 7 days without rollback; 04-5a switches the site's step-2 redirects from 302 to 301, deletes the step-1 redirects, `sw-kill.js` and the `/sw.js` host rewrites from the app project, and renames `app.html`); `03-18` (done); `03-21` — per spec 03; `03-20` — as soon as BE-03-5 is ready (before `03-17`).
+**Phase 4 — retiring styled, cleanup.** ~~`05-7`~~ (withdrawn, D33); the design phase (DS v1 tasks) migrates `themeColor()` → `var(--cp-*)` file by file and removes `styled-themes.ts` with the last caller (D31; each such PR carries its own screenshots); `04-5a/b` (after 7 days without rollback; 04-5a switches the site's step-2 redirects from 302 to 301, deletes the step-1 redirects, `sw-kill.js` and the `/sw.js` host rewrites from the app project, and renames `app.html`); `03-18` (done); `03-21` — per spec 03; `03-20` — as soon as BE-03-5 is ready (before `03-17`).
 
 ## Backend issues (`chipin-backend`; when creating, set Type, Priority, assignee, Project 5)
 
@@ -238,7 +238,7 @@ Total: 44 items (20, 31, 32, 39, 40 withdrawn); still open are the owner actions
 - `05-C Single theme-switching mechanism (light/dark/system) without FOUC, remove next-themes`
 - `05-D Retire styled-themes: themeColor codemod, styled allowlist, stylelint, CSS Modules` (#535, D31: no codemod PR 05-4 — the migration is file by file in the design phase; 05-5 after 05-2b with suppressions; to sync)
 - `05-E basics/components boundary and Radix wrappers cleanup`
-- `05-F ds-gallery on app tokens and theme`
+- ~~`05-F ds-gallery on app tokens and theme`~~ (withdrawn by D33, 2026-11-21)
 - Synchronization after review C (coordinator): new PR ids (03-4a/b, 03-7a/b, 03-15a–c, 03-16a/b, 04-2a2b, 04-2h, 04-3b1/b2, 05-2a/b) — in the bodies of #522, #523, #525, #528, #529, #530, #533; close chipin-backend#208.
 - Follow-ups outside the specs: `Telemetry: generic token redaction`, `Security: CSP img-src, report-to, Sentry tunnel`, `Auth: client PKCE after BE-01-1`, `Invites: group preview on confirmation screen after BE-01-3`.
 - In `syllik/ai-workflow`: `02-A0 Routing block: read .ai/context.md and .ai/decisions.md only if present`.
@@ -260,7 +260,7 @@ Total: 44 items (20, 31, 32, 39, 40 withdrawn); still open are the owner actions
 
 ## What we do NOT do
 
-- Next.js, SSR, RR framework mode, RR actions/`<Form>`; Turborepo (while CI < 10 min); `packages/ui` and `apps/ds-gallery`.
+- Next.js, SSR, RR framework mode, RR actions/`<Form>`; Turborepo (while CI < 10 min); `packages/ui`.
 - Tailwind, shadcn, abandoning Radix Themes, a big-bang conversion of styled-components, Storybook, automatic visual regression, cloud VR.
 - Offline settle-up/payments; local recalculation of balances; Background Sync; fake events in activity caches; the API in SW `runtimeCaching`.
 - zod on API responses; replacing axios with fetch/`openapi-fetch`.

@@ -368,7 +368,6 @@ export const DEFAULT_EXPORT_EXCEPTIONS = [
     'eslint.config.js',
     'vite.config.ts',
     'vitest*.config.ts',
-    'ds-gallery/vite.config.ts',
     'pwa-assets.config.ts',
     '**/*.d.ts',
 ];

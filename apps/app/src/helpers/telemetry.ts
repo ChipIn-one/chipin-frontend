@@ -2,8 +2,12 @@ import {
     FRIEND_INVITE_ROUTE_PATTERN,
     GROUP_INVITE_API_PATTERN,
     GROUP_INVITE_ROUTE_PATTERN,
+    HEX_IDENTIFIER_PATTERN,
+    JWT_PATTERN,
+    TOKEN_SEGMENT_PATTERN,
     USER_INVITE_API_PATTERN,
     VERCEL_DOMAIN_SUFFIX,
+    WORD_SLUG_PATTERN,
 } from 'constants/telemetry';
 
 export const resolveTelemetryEnvironment = (buildEnvironment: string, hostname: string): string => {
@@ -14,6 +18,20 @@ export const resolveTelemetryEnvironment = (buildEnvironment: string, hostname: 
     return buildEnvironment;
 };
 
+// An opaque token is mixed-case, or mixes letters and digits outside a lowercase word slug.
+// Hex-only values (UUIDs, hashes), plain numbers and word slugs stay readable for debugging.
+const isOpaqueTokenSegment = (segment: string): boolean => {
+    if (HEX_IDENTIFIER_PATTERN.test(segment) || !/[A-Za-z]/.test(segment)) {
+        return false;
+    }
+
+    if (/[A-Z]/.test(segment) && /[a-z]/.test(segment)) {
+        return true;
+    }
+
+    return /\d/.test(segment) && !WORD_SLUG_PATTERN.test(segment);
+};
+
 export const sanitizeTelemetryUrl = (url: string): string => {
     const [withoutHash = ''] = url.split('#');
     const [withoutQuery = ''] = withoutHash.split('?');
@@ -22,7 +40,11 @@ export const sanitizeTelemetryUrl = (url: string): string => {
         .replace(GROUP_INVITE_ROUTE_PATTERN, '/group/join/:inviteToken')
         .replace(FRIEND_INVITE_ROUTE_PATTERN, '/friends/join/:inviteToken')
         .replace(USER_INVITE_API_PATTERN, '/users/invite/:inviteToken')
-        .replace(GROUP_INVITE_API_PATTERN, '/groups/invite/:inviteToken');
+        .replace(GROUP_INVITE_API_PATTERN, '/groups/invite/:inviteToken')
+        .replace(JWT_PATTERN, ':jwt')
+        .replace(TOKEN_SEGMENT_PATTERN, (match, segment: string) =>
+            isOpaqueTokenSegment(segment) ? '/:token' : match,
+        );
 };
 
 // Shallow pass over a telemetry record: every string value goes through sanitizeTelemetryUrl.
