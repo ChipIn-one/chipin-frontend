@@ -306,9 +306,11 @@ test('on an app host the landing sign-in opens the auth modal', () => {
         });
 });
 
+// 04-2g: off the transitional in-app public pages the logo leads to the site origin (tests run on
+// localhost, the development environment); on those pages it stays on their own locale home.
 test.each([
-    ['/login', '/'],
-    ['/not-found', '/'],
+    ['/login', 'https://site-dev.chipin.one/'],
+    ['/not-found', 'https://site-dev.chipin.one/'],
     ['/ru/privacy', '/ru/'],
 ])('04-2f site paths: signed out on %s the logo is a plain link to %s', (path, href) => {
     useAuthStore.setState({ status: 'unauthenticated' });

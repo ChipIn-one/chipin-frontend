@@ -307,7 +307,7 @@ export const projectRules = ({ appDir }) => [
         id: 'site-paths',
         selector: "MemberExpression[object.name='ROUTES'][property.name=/^(HOME|PRIVACY|TERMS)$/]",
         message:
-            'Link to the site with SITE_PATHS from constants/sitePaths (`<a href>` or `window.location.assign`), never navigate/<Link>.',
+            'Link to the site with SITE_PATHS from helpers/sitePaths (absolute URLs, `<a href>` or `window.location.assign`), never navigate/<Link>.',
     },
     {
         id: 'img-element',

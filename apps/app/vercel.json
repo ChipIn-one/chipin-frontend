@@ -80,6 +80,32 @@
             "statusCode": 302
         },
         {
+            "source": "/join/group/:token([^/\\\\\\t\\n\\r]+){/}?",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app.chipin.one/group/join/:token",
+            "statusCode": 302
+        },
+        {
+            "source": "/join/friend/:token([^/\\\\\\t\\n\\r]+){/}?",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app.chipin.one/friends/join/:token",
+            "statusCode": 302
+        },
+        {
             "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found|login)",
             "has": [
                 {
@@ -142,6 +168,32 @@
                 }
             ],
             "destination": "/legacy-host-has-no-manifest",
+            "statusCode": 302
+        },
+        {
+            "source": "/join/group/:token([^/\\\\\\t\\n\\r]+){/}?",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app-dev.chipin.one/group/join/:token",
+            "statusCode": 302
+        },
+        {
+            "source": "/join/friend/:token([^/\\\\\\t\\n\\r]+){/}?",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app-dev.chipin.one/friends/join/:token",
             "statusCode": 302
         }
     ],

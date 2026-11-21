@@ -206,7 +206,7 @@ test('DSH-015 copies the invite link again from the toast action and shows copie
         })
         .then(() => {
             expect(hookMocks.copyTextToClipboard).toHaveBeenLastCalledWith(
-                expect.stringContaining('/friends/join/friend-invite-token'),
+                expect.stringContaining('/join/friend/friend-invite-token'),
             );
             expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:friend.inviteLinkCopied');
             expect(result.current.isCopied).toBe(true);
@@ -264,7 +264,7 @@ test('uses friend-specific share and QR copy', () => {
 
     return Promise.resolve(act(() => result.current.onShare())).then(() => {
         expect(hookMocks.shareInvite).toHaveBeenCalledWith({
-            url: expect.stringContaining('/friends/join/friend-invite-token'),
+            url: expect.stringContaining('/join/friend/friend-invite-token'),
             title: 'friends:invite.shareTitle',
             text: 'friends:invite.shareText',
         });
@@ -282,7 +282,7 @@ test('builds and copies the personal friend invite link', () => {
 
     return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
         expect(hookMocks.copyTextToClipboard).toHaveBeenCalledWith(
-            expect.stringContaining('/friends/join/friend-invite-token'),
+            expect.stringContaining('/join/friend/friend-invite-token'),
         );
         expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:friend.inviteLinkCopied');
     });

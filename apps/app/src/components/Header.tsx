@@ -9,12 +9,12 @@ import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { PUBLIC_HOME_PAGE } from 'constants/publicRouteManifest';
 import { ROUTES } from 'constants/routes';
-import { SITE_PATHS } from 'constants/sitePaths';
 import { themeColor } from 'helpers/colors';
 import { matchLocale, type SupportedLocale } from 'helpers/locale';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
+import { SITE_PATHS } from 'helpers/sitePaths';
 import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -57,7 +57,7 @@ const Header = () => {
 
     const currentPublicRoute = getPublicRoute(location.pathname);
     const getPublicLanguageHref = (locale: SupportedLocale) =>
-        currentPublicRoute ? getPublicPath(currentPublicRoute.page, locale) : SITE_PATHS.home;
+        currentPublicRoute ? getPublicPath(currentPublicRoute.page, locale) : SITE_PATHS.home();
     const onLandingLanguageChange = (locale: SupportedLocale) => {
         if (!currentPublicRoute) {
             return;
@@ -79,7 +79,7 @@ const Header = () => {
     // Signed out, the logo leads to the site: a plain link, never a router navigation (§2.1).
     const siteHomeHref = currentPublicRoute
         ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
-        : SITE_PATHS.home;
+        : SITE_PATHS.home();
     const logo = (
         <ModeLogotype isSoloMode={isLoggedIn && isSoloMode} isModeBadgeVisible={isLoggedIn} />
     );

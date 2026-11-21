@@ -1,9 +1,10 @@
-// Money-critical flows (#667): a second user joins a group through its invite link,
-// `<origin>/group/join/<token>` (helpers/url.ts `buildGroupInviteLink`, on the app's own origin).
-// The app hands the link out only through the native share sheet or the clipboard, which a test
-// cannot read in every browser, so the token is read through the staging API (GRP-015) and the
-// link is opened on the app under test. The token appears in the `goto` URL, traces and failure
-// output; it is dead after the run's purge.
+// Money-critical flows (#667): a second user joins a group through its invite link. The link is
+// `<site>/join/group/<token>` (helpers/url.ts `buildGroupInviteLink`, spec 04 §3.5), which
+// leads to the app route `/group/join/<token>` opened here. The app hands the link out only
+// through the native share sheet or the clipboard, which a test cannot read in every browser, so
+// the token is read through the staging API (GRP-015) and the link is opened on the app under
+// test. The token appears in the `goto` URL, traces and failure output; it is dead after the
+// run's purge.
 import type { Response } from '@playwright/test';
 
 import { expect, test } from '../../support/fixtures';

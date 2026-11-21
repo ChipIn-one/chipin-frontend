@@ -17,10 +17,15 @@ production `.vercel.app` domain. A production build opened through a
 same-origin API traffic cannot reach production data. Only `chipin.one` maps
 to the production API (and `app.chipin.one`, see Domains and rollback).
 
-Vercel hosts still require an explicit `VITE_CHIPIN_ENV` configuration. A
-missing or invalid value fails closed as defined by #180. Custom
-`*.dev.chipin.one` branch domains are intentionally not part of the deployment
-contract.
+Vercel builds still require an explicit `VITE_CHIPIN_ENV` configuration: the
+build-time guard in `apps/app/vite.config.ts` fails a Vercel production build
+without it (and a preview build unless it is `dev`), as defined by #180. At
+runtime an invalid value, an unknown host, or a `.vercel.app` host without the
+variable fails closed. The app and legacy hostnames (`app.chipin.one`,
+`chipin.one`, `app-dev.chipin.one`, `dev.chipin.one`) resolve from `ENV_URLS`
+in `apps/app/src/constants/env.ts` when the variable is absent (a build
+without it served on those hosts; Vercel builds always set it, 04-2g). Custom `*.dev.chipin.one` branch domains are intentionally not
+part of the deployment contract.
 
 Sentry runtime reporting reads `VITE_SENTRY_DSN` from the deployment
 environment. Configure it independently for the Vercel environments that should
@@ -294,6 +299,7 @@ points at it):
    - `curl -sI https://chipin.one/dashboard` → `302`, `Location: https://app.chipin.one/dashboard`;
    - `https://chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1` → `302` with the same query;
    - `https://chipin.one/group/join/x` → `302` to `https://app.chipin.one/group/join/x`;
+   - 04-2g invite links (once 04-2g is in the promoted build): `curl -sI 'https://chipin.one/join/group/x?locale=ru'` → `302`, `Location: https://app.chipin.one/group/join/x?locale=ru`; `https://chipin.one/join/friend/x` → `302` to `https://app.chipin.one/friends/join/x`; on dev `curl -sI 'https://dev.chipin.one/join/group/x?locale=ru'` → `302`, `Location: https://app-dev.chipin.one/group/join/x?locale=ru`, and `https://dev.chipin.one/join/friend/x` → `302` to `https://app-dev.chipin.one/friends/join/x`;
    - `https://chipin.one/`, `/privacy`, `/ru/`, `/robots.txt`, `/.well-known/assetlinks.json` → `200`, no redirect, no `X-Robots-Tag`;
    - `https://chipin.one/index.html` → `302` to `/` on the same host;
    - `https://chipin.one/sw.js` → `200`, `Cache-Control: no-cache`, the kill-switch body; `https://app.chipin.one/sw.js` → the app worker;

@@ -613,6 +613,71 @@ describe('Vercel step-1 legacy redirects (04-4a2)', () => {
     });
 });
 
+// 04-2g (spec 04 §2.9, §4.2): the invite links are `<site>/join/group|friend/<t>`. While the legacy
+// hosts are in the app project, those paths 302 to the app route of the same environment, keeping
+// the token and the query (USR-086). An optional trailing slash is accepted, as on the site. They
+// never fire on the app hosts or previews.
+const JOIN_KINDS = [
+    ['/join/group/', '/group/join/'],
+    ['/join/friend/', '/friends/join/'],
+];
+const JOIN_TOKEN = 'AbCdEfGhIjKlMnOp_-12';
+
+describe('Vercel /join/* compat redirects (04-2g, USR-086)', () => {
+    test.each(
+        LEGACY_HOSTS.flatMap(host =>
+            JOIN_KINDS.flatMap(([sitePath, appPath]) =>
+                ['', '/'].flatMap(slash =>
+                    ['', '?locale=ru', '?a=1&b=2'].map(query => [
+                        host,
+                        `${sitePath}${JOIN_TOKEN}${slash}${query}`,
+                        `${legacyHostAppOrigin(host)}${appPath}${JOIN_TOKEN}${query}`,
+                    ]),
+                ),
+            ),
+        ),
+    )('USR-086 on %s redirects %s to %s with 302', (host, url, target) => {
+        expect(resolveRoute(host, url)).toEqual({ redirect: target, statusCode: 302 });
+    });
+
+    test.each(
+        LEGACY_HOSTS.flatMap(host =>
+            [
+                '/join',
+                '/join/',
+                '/join/group',
+                '/join/group/',
+                '/join/friend/',
+                `/join/group/${JOIN_TOKEN}/x`,
+                `/join/friend/${JOIN_TOKEN}/x/`,
+                `/join/group/${JOIN_TOKEN}//`,
+                `/join/other/${JOIN_TOKEN}`,
+            ].map(path => [host, path]),
+        ),
+    )('USR-086 on %s does not redirect %s (one token segment only)', (host, path) => {
+        expect(resolveRoute(host, path)?.redirect).toBeUndefined();
+    });
+
+    test.each(
+        [...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'].flatMap(host =>
+            JOIN_KINDS.map(([sitePath]) => [host, `${sitePath}${JOIN_TOKEN}`]),
+        ),
+    )('USR-086 on %s never redirects %s', (host, path) => {
+        expect(resolveRoute(host, path)?.redirect).toBeUndefined();
+    });
+
+    test.each(LEGACY_HOSTS.flatMap(host => JOIN_KINDS.map(([sitePath]) => [host, sitePath])))(
+        'USR-086 on %s the %s redirect ends on the app host without a loop',
+        (host, sitePath) => {
+            const { redirect } = resolveRoute(host, `${sitePath}${JOIN_TOKEN}`);
+            const target = new URL(redirect);
+
+            expect(target.origin).toBe(legacyHostAppOrigin(host));
+            expect(resolveRoute(target.host, target.pathname)).toEqual({ rewrite: '/app.html' });
+        },
+    );
+});
+
 // #821 (the app twin of the site fix in #814): a capture that starts the redirect path must not
 // start with `\`, tab, CR or LF. Browsers read `/\evil.example` as `//evil.example`, and the URL
 // parser drops tab, CR and LF anywhere, so `/<tab>/evil.example` is `//evil.example` too. Each
