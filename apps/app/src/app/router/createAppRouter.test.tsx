@@ -451,9 +451,11 @@ describe('route errors (04-2a3, spec 04 §2.5)', () => {
 
         expect(await screen.findByText('The app ran into a problem')).toBeTruthy();
         expect(screen.getByRole('complementary', SIDEBAR)).toBeTruthy();
-        expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-            tags: { routeId: 'dashboard' },
-        });
+        await waitFor(() =>
+            expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+                tags: { routeId: 'dashboard' },
+            }),
+        );
         expect(screen.queryByText(DEFAULT_ERROR_PAGE)).toBeNull();
     });
 
@@ -479,7 +481,7 @@ describe('route errors (04-2a3, spec 04 §2.5)', () => {
         renderAt('/not-found');
 
         expect(await screen.findByText('A new version is available')).toBeTruthy();
-        expect(reloadApp).toHaveBeenCalledTimes(1);
+        await waitFor(() => expect(reloadApp).toHaveBeenCalledTimes(1));
         expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
