@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 
 import js from '@eslint/js';
 import pluginQuery from '@tanstack/eslint-plugin-query';
+import astro from 'eslint-plugin-astro';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 import { afterEach, describe, expect, test } from 'vitest';
@@ -303,12 +304,14 @@ process.stdout.write(${JSON.stringify(RESULT_MARKER)} + JSON.stringify({
     });
 });
 
-// Rules of the presets that spec 02 §D0 registers as one row (class b).
+// Rules of the presets that spec 02 §D0 registers as one row (class b); the astro preset applies
+// only to the site `.astro` files.
 const presetRules = new Set([
     ...Object.keys(js.configs.recommended.rules),
     ...tseslint.configs.recommended.flatMap(config => Object.keys(config.rules ?? {})),
     ...Object.keys(reactHooks.configs.recommended.rules),
     ...pluginQuery.configs['flat/recommended'].flatMap(config => Object.keys(config.rules ?? {})),
+    ...astro.configs['flat/recommended'].flatMap(config => Object.keys(config.rules ?? {})),
 ]);
 
 // Backticked rule tokens of the §D0 registry tables with the class of their row.

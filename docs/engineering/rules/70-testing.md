@@ -86,6 +86,13 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   `import-x/no-cycle`). The registry check always resolves the config in both
   modes and checks their union, so a full-only rule must be registered and is not reported as
   dead in `lint`. Extra arguments go to ESLint: `npm run lint -- <args>`.
+- Lint scope: `.ts`/`.tsx`/`.js`/`.jsx` files of the app, the packages, the site and the repository
+  scripts, and the site's `.astro` files (`config/eslint/astro.js`: `eslint-plugin-astro` recommended
+  rules plus the base and type-aware TypeScript rules on the frontmatter; client `<script>` blocks get
+  every rule except the type-aware ones). Type information for `astro:content` exists only after
+  `astro sync`, so `lint`, `lint:full`, `baseline:update` and the CI site step run
+  `npm run sync -w @chipin/site` (`npm run sync:site`) first; run it once before a direct
+  `npx eslint <file>.astro`. Prettier does not format `.astro` files.
 - `npm run baseline:update` prunes fixed entries from `eslint-suppressions.json`; it never adds entries.
 - `npm run verify` is the fast local check: format check, lint, `check:file-layout`, and
   typecheck; it does not run

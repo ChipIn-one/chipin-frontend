@@ -1,3 +1,4 @@
+import { astroConfig } from './config/eslint/astro.js';
 import {
     baseConfig,
     fastModeConfig,
@@ -20,13 +21,21 @@ import { reactConfig, reactSyntax } from './config/eslint/react.js';
 const APP_DIR = 'apps/app';
 // Framework-free workspace packages (spec 04 §1.3): linted by every preset except the React one.
 const PACKAGES = 'packages/**';
-// The Astro site (@chipin/site, spec 04 §3): its `.ts` files get every preset; `.astro` files are
-// type-checked by `astro check` in the site CI step.
+// The Astro site (@chipin/site, spec 04 §3): its `.ts` files get every preset; `.astro` files get
+// the Astro preset (config/eslint/astro.js) and are type-checked by `astro check` in the site CI step.
 const SITE_DIR = 'apps/site';
 
 export default [
     // Astro's generated types and the build output of the site and its test fixtures.
-    { ignores: [`${SITE_DIR}/dist`, `${SITE_DIR}/**/.astro`, `${SITE_DIR}/test/fixtures/*/dist`] },
+    // The test fixtures are deliberately broken sites (e.g. invalid frontmatter), not lint targets.
+    {
+        ignores: [
+            `${SITE_DIR}/dist`,
+            `${SITE_DIR}/**/.astro`,
+            `${SITE_DIR}/test/fixtures/*/dist`,
+            `${SITE_DIR}/test/fixtures/**/*.astro`,
+        ],
+    },
     ...baseConfig({ appDir: APP_DIR }),
     ...typeAwareConfig({ appDir: APP_DIR }),
     ...reactConfig({ appDir: APP_DIR }).map(block => ({
@@ -46,6 +55,7 @@ export default [
         ...projectRules({ appDir: APP_DIR }),
         ...reactSyntax({ appDir: APP_DIR }),
     ]),
+    ...astroConfig({ siteDir: SITE_DIR, appDir: APP_DIR }),
     {
         // Astro and Vitest load their config files through a default export.
         files: [`${SITE_DIR}/*.config.ts`],
