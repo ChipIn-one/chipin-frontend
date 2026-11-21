@@ -1,8 +1,9 @@
-import { Box, Container, Flex, Heading, Separator, Text } from '@radix-ui/themes';
+import { Box, Button, Container, Flex, Heading, Separator, Text } from '@radix-ui/themes';
 import { ChartPieIcon, HomeIcon, LayoutListIcon, SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTES } from 'constants/routes';
+import { SITE_PATHS } from 'constants/sitePaths';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
@@ -13,10 +14,6 @@ import { HintCard, Icon404 } from './components';
 const Page404 = () => {
     const { t } = useTranslation('errors');
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-
-    const buttonRoute = isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME;
-    const buttonKey = isLoggedIn ? 'page404.backToDashboard' : 'page404.goHome';
-    const buttonIcon = isLoggedIn ? <ChartPieIcon size={24} /> : <HomeIcon size={24} />;
 
     return (
         <Container size="2">
@@ -71,13 +68,23 @@ const Page404 = () => {
                     </Flex>
                 </Flex>
 
-                <NavButton to={buttonRoute} size="4" variant="solid" mt="2">
-                    {buttonIcon}
-                    {t(buttonKey)}
-                </NavButton>
+                {isLoggedIn ? (
+                    <NavButton to={ROUTES.DASHBOARD} size="4" variant="solid" mt="2">
+                        <ChartPieIcon size={24} />
+                        {t('page404.backToDashboard')}
+                    </NavButton>
+                ) : (
+                    // The site home is a plain link, never a router navigation (spec 04 §2.1).
+                    <Button asChild size="4" variant="solid" mt="2">
+                        <a href={SITE_PATHS.home}>
+                            <HomeIcon size={24} />
+                            {t('page404.goHome')}
+                        </a>
+                    </Button>
+                )}
             </Flex>
         </Container>
     );
 };
 
-export default Page404;
+export { Page404 };

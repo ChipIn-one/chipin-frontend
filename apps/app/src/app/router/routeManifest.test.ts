@@ -12,6 +12,7 @@ const PUBLIC_PATHS = new Set(PUBLIC_ROUTE_ENTRIES.map(route => route.path));
 
 // Spec 04 §2.2 table: the routes whose old chipin.one path is redirected to the app host.
 const WITH_LEGACY_PATHS: readonly AppRouteId[] = [
+    'login',
     'oauthCallback',
     'dashboard',
     'solo',

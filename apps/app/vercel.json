@@ -15,7 +15,7 @@
             "statusCode": 301
         },
         {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found)",
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found|login)",
             "has": [
                 {
                     "type": "host",
@@ -80,7 +80,7 @@
             "statusCode": 302
         },
         {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found)",
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth)(?:/.*)?|not-found|login)",
             "has": [
                 {
                     "type": "host",

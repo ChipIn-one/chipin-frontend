@@ -6,7 +6,8 @@ import styled from 'styled-components';
 import { themeColor } from 'helpers/colors';
 import { useAppNavigate } from 'hooks/useAppNavigate';
 
-const UnstyledButton = styled(Button)`
+// Also the base of a plain `<a href>` that looks like the unstyled NavButton (`asChild`).
+export const UnstyledButton = styled(Button)`
     all: unset;
     display: inline-flex;
     cursor: pointer;

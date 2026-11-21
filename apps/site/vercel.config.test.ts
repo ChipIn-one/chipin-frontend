@@ -441,7 +441,12 @@ describe('paths the site never redirects (§4.2)', () => {
             '/app.html',
             '/:path([^/\\\\].*?)/index.html',
             '/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/\\\\].*?)}?{/}?',
-            ...NON_DEFAULT_LOCALES.map(locale => `/${locale}`),
+            // The trailing-slash 301 rows, pinned by "the trailing-slash 301 rows are LOCALE_PATH × pages".
+            ...redirects
+                .filter(
+                    redirect => redirect.statusCode === 301 && !isRemovedLocaleRedirect(redirect),
+                )
+                .map(({ source }) => source),
         ]);
     });
 });

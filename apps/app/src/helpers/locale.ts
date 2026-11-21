@@ -1,5 +1,6 @@
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from 'constants/locales';
 import { LS_KEY_LOCALE } from 'constants/localstorage';
+import { ROUTES } from 'constants/routes';
 import { getLocalUser, hasAuthSessionHint, LocalStorage } from 'helpers/localStorage';
 
 // Set for O(1) lookup — avoids repeated Array.includes casts.
@@ -172,12 +173,26 @@ const resolveBrowserLocale = (
 };
 
 /**
+ * The `?locale=` of `/login` (spec 04 §2.10: the site passes the language of its page), only when it
+ * is exactly a supported locale code.
+ */
+const getLoginPageLocale = (): SupportedLocale | null => {
+    if (typeof window === 'undefined' || window.location.pathname !== ROUTES.LOGIN) {
+        return null;
+    }
+    const requested = new URLSearchParams(window.location.search).get('locale') ?? '';
+
+    return isSupportedLocale(requested) ? requested : null;
+};
+
+/**
  * Resolves the active locale with priority:
  * 1. Valid local user locale while a non-secret auth-session hint is present
  * 2. Explicit persisted locale preference
  * 3. Legacy cached user locale when no explicit preference exists
- * 4. First matching browser language
- * 5. Fallback: 'en'
+ * 4. `?locale=` on `/login` (spec 04 §2.10)
+ * 5. First matching browser language
+ * 6. Fallback: 'en'
  *
  * Auto-detected locale is NOT persisted.
  */
@@ -192,11 +207,12 @@ const resolveLocale = (): SupportedLocale => {
         }
     }
 
-    return resolveBrowserLocale();
+    return getLoginPageLocale() ?? resolveBrowserLocale();
 };
 
 export {
     DEFAULT_LOCALE,
+    isSupportedLocale,
     matchLocale,
     normalizeLocale,
     resolveBrowserLocale,
