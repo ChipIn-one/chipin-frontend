@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_LOCALE, LS_KEY_USER } from 'constants/localstorage';
 
@@ -141,4 +141,37 @@ test('a removed explicit guest locale preference resolves to English', () => {
     LocalStorage.set(LS_KEY_LOCALE, 'pt-PT');
 
     expect(resolveLocale()).toBe('en');
+});
+
+describe('?locale on /login and the initial UI language (spec 04 §2.10)', () => {
+    beforeEach(() => {
+        vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        window.history.replaceState({}, '', '/');
+    });
+
+    test('AUTH-076 a supported ?locale wins over the browser languages', () => {
+        window.history.replaceState({}, '', '/login?locale=ru');
+
+        expect(resolveLocale()).toBe('ru');
+    });
+
+    test('AUTH-076 a saved locale wins over ?locale', () => {
+        saveLocalePreference('en');
+        window.history.replaceState({}, '', '/login?locale=ru');
+
+        expect(resolveLocale()).toBe('en');
+    });
+
+    test.each([['/login?locale=ru-RU'], ['/login?locale=xx'], ['/dashboard?locale=ru']])(
+        'AUTH-076 %s is ignored',
+        url => {
+            window.history.replaceState({}, '', url);
+
+            expect(resolveLocale()).toBe('en');
+        },
+    );
 });

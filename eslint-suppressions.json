@@ -124,11 +124,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/AuthButtons.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/CurrencySelect.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -218,11 +213,6 @@
     }
   },
   "apps/app/src/components/invite/InviteQRModal.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/auth-modal/AuthModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -719,22 +709,12 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/404-page/Page404.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/404-page/components/HintCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
   "apps/app/src/pages/404-page/components/Icon404.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/404-page/index.ts": {
     "import-x/no-default-export": {
       "count": 1
     }

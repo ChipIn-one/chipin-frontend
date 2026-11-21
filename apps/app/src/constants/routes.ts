@@ -1,10 +1,8 @@
-import { PUBLIC_ROUTE_ENTRIES } from './publicRoutes';
+import { PUBLIC_ROUTE_ENTRIES } from './publicRouteManifest';
 
 export const ROUTES = {
-    HOME: '/',
     NOT_FOUND_404: '/not-found',
-    PRIVACY: '/privacy',
-    TERMS: '/terms',
+    LOGIN: '/login',
     OAUTH_CALLBACK: '/oauth/callback',
     DASHBOARD: '/dashboard',
     SOLO: '/solo',
@@ -33,6 +31,11 @@ export const ROUTE_META: RouteMeta[] = [
         titleKey: route.metaKey + '.title',
         descriptionKey: route.metaKey + '.description',
     })),
+    {
+        path: ROUTES.LOGIN,
+        titleKey: 'login.title',
+        descriptionKey: 'login.description',
+    },
     {
         path: ROUTES.OAUTH_CALLBACK,
         titleKey: 'oauthCallback.title',
