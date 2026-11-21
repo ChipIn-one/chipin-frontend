@@ -342,6 +342,13 @@ describe('frontend-ci.yml runs the gates its mode requires', () => {
         expect(step('Check file layout baseline does not grow').if).toBe(
             `${PR_ONLY}(${APP_OR_FULL})`,
         );
+        expect(step('Check styled-components allowlist').if).toBe(`${PR_ONLY}(${APP_OR_FULL})`);
+        expect(step('Check styled-components allowlist').run).toBe(
+            'node scripts/check-styled-allowlist.mjs --base "$BASE_SHA"',
+        );
+        expect(step('Check styled-components allowlist').env).toEqual({
+            BASE_SHA: '${{ steps.gate.outputs.base_sha }}',
+        });
         expect(step('Check generated API types').if).toBe(APP_OR_FULL);
         expect(step('Verify frontend').if).toBe(APP_OR_FULL);
         expect(step('Verify frontend').run).toBe('npm run verify:full');
