@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { publicApiInstance } from './chipin.instance';
-import { probeBackendHealth } from './healthApi';
+import { probeBackendHealth } from './health';
+import { publicApiInstance } from './instance';
 
-vi.mock('./chipin.instance', () => ({
+vi.mock('./instance', () => ({
     publicApiInstance: {
         get: vi.fn(),
     },

@@ -10,7 +10,7 @@ const health = vi.hoisted(() => ({
     probeBackendHealth: vi.fn<(sentAfter?: number) => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
-vi.mock('api/healthApi', () => ({ probeBackendHealth: health.probeBackendHealth }));
+vi.mock('./health', () => ({ probeBackendHealth: health.probeBackendHealth }));
 
 // Axios error shapes (this layer does not import axios): `isAxiosError` marks an Axios error,
 // `__CANCEL__` a cancellation, `response` an HTTP answer.

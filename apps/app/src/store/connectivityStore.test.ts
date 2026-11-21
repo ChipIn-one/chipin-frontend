@@ -10,8 +10,8 @@ const healthMocks = vi.hoisted(() => ({
     probeBackendHealth: vi.fn<(sentAfter?: number) => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
-vi.mock('api/healthApi', async importOriginal => ({
-    ...(await importOriginal<typeof import('api/healthApi')>()),
+vi.mock('shared/api/health', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared/api/health')>()),
     probeBackendHealth: healthMocks.probeBackendHealth,
 }));
 

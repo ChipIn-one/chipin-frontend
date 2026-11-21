@@ -4,11 +4,6 @@
       "count": 1
     }
   },
-  "apps/app/src/api/chipin.instance.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "apps/app/src/api/chipin.interceptors.integration.test.ts": {
     "boundaries/dependencies": {
       "count": 2
@@ -16,7 +11,7 @@
   },
   "apps/app/src/api/chipin.interceptors.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 1
     }
   },
   "apps/app/src/basics/BackgroundBox.tsx": {

@@ -15,6 +15,7 @@ import {
     publicApi,
 } from './client';
 import {
+    type ApiAuthSession,
     apiInstance,
     EXPECTED_TOKEN_SUBJECT_CONFIG_KEY,
     initChipInApiInterceptors,
@@ -40,14 +41,16 @@ const auth = vi.hoisted(() => {
     };
 });
 
-vi.mock('helpers/authSession', () => ({
+// The auth session the interceptors are installed with (no expected-subject request reaches them).
+const authSession: ApiAuthSession = {
+    getAccessTokenSubject: () => null,
     getAuthSessionVersion: () => 1,
     hasAuthAccessTokenRotated: () => false,
     isAuthSessionCurrent: () => true,
     isAuthSessionSignedOut: () => false,
     prepareAuthRequest: auth.prepareAuthRequest,
     refreshAuthSession: auth.refreshAuthSession,
-}));
+};
 
 const UUID = '11111111-1111-1111-1111-111111111111';
 const USD = currencyCode('USD');
@@ -362,7 +365,7 @@ describe('ApiError', () => {
 
 describe('through the installed interceptors (auth refresh, connectivity classification)', () => {
     beforeAll(() => {
-        initChipInApiInterceptors(vi.fn(), auth.onRequestFailure);
+        initChipInApiInterceptors(authSession, vi.fn(), auth.onRequestFailure);
     });
 
     afterAll(() => {

@@ -2,7 +2,7 @@
 // `navigator.onLine` is read only here (lint `no-restricted-properties` outside shared/offline).
 import { onlineManager } from '@tanstack/react-query';
 
-import { probeBackendHealth } from 'api/healthApi';
+import { probeBackendHealth } from 'shared/api/health';
 
 /** While offline with `navigator.onLine === true` (captive portal, Wi-Fi without internet). */
 export const OFFLINE_RECHECK_MS = 15_000;
