@@ -1,11 +1,12 @@
 // The styled-components allowlist only shrinks (spec 05 §3, "no new styled-components"):
 // 1. every entry of config/eslint/styled-components-allowlist.json exists and still imports
 //    styled-components (otherwise: remove the entry);
-// 2. the list is not longer than at the base commit;
+// 2. the list only shrinks: no entry that is not in the list at the base commit;
 // 3. touch rule: a listed file changed since the base, that is a `styled.ts` or whose added lines
 //    write styles (styled./styled(, css`, keyframes`, createGlobalStyle), must move to a CSS Module
-//    and leave the list. A change of only `import`/`export` lines is not a touch;
-// 4. an exception is an entry `{ path, reason, issue }` in config/eslint/styled-touch-exempt.json.
+//    and leave the list. A change of only `import`/`export` lines without style code is not a touch;
+// 4. an exception is an entry `{ path, reason, issue }` added to config/eslint/styled-touch-exempt.json
+//    in the same change (an entry already present at the base commit no longer exempts).
 // When the allowlist does not exist at the base commit the check is new: only rule 1 applies.
 //
 // Usage: node scripts/check-styled-allowlist.mjs [--base <sha>]
@@ -66,11 +67,14 @@ export const parseDiff = diff => {
 
 /** True when a change of a listed file counts as a touch (rule 3). */
 export const isTouch = (path, { added, removed }) => {
+    if (added.some(line => STYLE_CODE.test(line))) {
+        return true;
+    }
     if ([...added, ...removed].every(line => IMPORT_EXPORT_LINE.test(line))) {
         return false;
     }
 
-    return /(?:^|\/)styled\.ts$/.test(path) || added.some(line => STYLE_CODE.test(line));
+    return /(?:^|\/)styled\.ts$/.test(path);
 };
 
 /**
@@ -79,27 +83,38 @@ export const isTouch = (path, { added, removed }) => {
  *   sources: Record<string, string | undefined>,
  *   exempt: unknown,
  *   baseAllowlist?: string[],
+ *   baseExempt?: unknown,
  *   changes?: Record<string, { added: string[], removed: string[] }>,
  * }} input
  *   `sources`: file contents by path (undefined: the file does not exist); `baseAllowlist`: the
  *   list at the base commit (undefined: the check is new or no base); `changes`: the diff since
- *   the base.
+ *   the base; `baseExempt`: the exempt list at the base (its entries no longer exempt).
  * @returns {string[]} errors
  */
-export const checkStyledAllowlist = ({ allowlist, sources, exempt, baseAllowlist, changes }) => {
+export const checkStyledAllowlist = ({
+    allowlist,
+    sources,
+    exempt,
+    baseAllowlist,
+    baseExempt,
+    changes,
+}) => {
     const errors = [];
 
     if (!Array.isArray(exempt)) {
         errors.push(`${EXEMPT_PATH}: must be an array of { path, reason, issue }`);
     }
     const exemptPaths = new Set();
+    const usedExemptions = new Set(
+        (Array.isArray(baseExempt) ? baseExempt : []).map(entry => JSON.stringify(entry)),
+    );
 
     for (const entry of Array.isArray(exempt) ? exempt : []) {
         if (!entry?.path || !entry.reason || !entry.issue) {
             errors.push(
                 `${EXEMPT_PATH}: ${JSON.stringify(entry)} needs path, reason and issue (the issue that converts the file)`,
             );
-        } else {
+        } else if (!usedExemptions.has(JSON.stringify(entry))) {
             exemptPaths.add(entry.path);
         }
     }
@@ -117,9 +132,11 @@ export const checkStyledAllowlist = ({ allowlist, sources, exempt, baseAllowlist
     }
 
     if (baseAllowlist) {
-        if (allowlist.length > baseAllowlist.length) {
+        const before = new Set(baseAllowlist);
+
+        for (const path of allowlist.filter(entry => !before.has(entry))) {
             errors.push(
-                `${ALLOWLIST_PATH}: ${allowlist.length} entries, ${baseAllowlist.length} at the base commit; the list only shrinks (use a CSS Module)`,
+                `${ALLOWLIST_PATH}: ${path} is not in the list at the base commit; the list only shrinks (use a CSS Module). If the branch is behind master, merge master first`,
             );
         }
         for (const path of allowlist) {
@@ -127,7 +144,7 @@ export const checkStyledAllowlist = ({ allowlist, sources, exempt, baseAllowlist
 
             if (change && !exemptPaths.has(path) && isTouch(path, change)) {
                 errors.push(
-                    `${path}: changed styled code; move it to a CSS Module (Component.module.css, var(--cp-*)) and remove it from ${ALLOWLIST_PATH}, or add { path, reason, issue } to ${EXEMPT_PATH}`,
+                    `${path}: changed styled code since the base commit (if the branch is behind master, merge master first); move it to a CSS Module (Component.module.css, var(--cp-*)) and remove it from ${ALLOWLIST_PATH}, or add { path, reason, issue } to ${EXEMPT_PATH}`,
                 );
             }
         }
@@ -192,10 +209,10 @@ export const resolveBase = (
     return { message: '::notice::check-styled-allowlist: no base commit, base checks skipped' };
 };
 
-/** The allowlist at `base`, or undefined when it does not exist there (the check is new). */
-const readAllowlistAt = base => {
+/** A JSON file at `base`, or undefined when it does not exist there (the check is new). */
+const readJsonAt = (base, path) => {
     try {
-        return JSON.parse(git(['show', `${base}:${ALLOWLIST_PATH}`]));
+        return JSON.parse(git(['show', `${base}:${path}`]));
     } catch (error) {
         if (/does not exist|exists on disk, but not in/.test(String(error.stderr ?? ''))) {
             return undefined;
@@ -231,7 +248,8 @@ export const main = (argv = process.argv.slice(2), env = process.env) => {
             return [path, existsSync(absolute) ? readFileSync(absolute, 'utf8') : undefined];
         }),
     );
-    const baseAllowlist = base ? readAllowlistAt(base) : undefined;
+    const baseAllowlist = base ? readJsonAt(base, ALLOWLIST_PATH) : undefined;
+    const baseExempt = base ? readJsonAt(base, EXEMPT_PATH) : undefined;
     // The working tree against the base: the same as HEAD in CI, and it includes local edits.
     const changes =
         base && baseAllowlist
@@ -252,6 +270,7 @@ export const main = (argv = process.argv.slice(2), env = process.env) => {
         sources,
         exempt: readJson(EXEMPT_PATH),
         baseAllowlist,
+        baseExempt,
         changes,
     });
 

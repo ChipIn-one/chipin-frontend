@@ -396,7 +396,7 @@ export const projectRules = ({ appDir }) => [
         // spec 05 §3: `style={{…}}` only for custom properties (`style={{ '--cover-url': url }}`).
         id: 'inline-style',
         selector:
-            "JSXAttribute[name.name='style'] ObjectExpression > Property[key.type='Identifier']",
+            "JSXAttribute[name.name='style'] ObjectExpression > Property:not([key.value=/^--/])",
         astro: false,
         message:
             "No inline styles: use Radix props (`p`, `width`, `position`, …), else a CSS Module; `style` takes only custom properties (`{ '--x': v }`).",

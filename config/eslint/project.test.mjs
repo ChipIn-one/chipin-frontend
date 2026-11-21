@@ -616,9 +616,11 @@ describe('no-raw-colors and inline-style (spec 05 §3, 05-5)', () => {
             'export const A = () => <div style={{ width: 1, maxWidth: 2 }} />;',
             "export const B = () => <div style={{ '--cover-url': url }} />;",
             'export const C = () => <div style={STYLE} />;',
+            "export const D = () => <div style={{ 'maxWidth': 2 }} />;",
         ].join('\n');
 
         expect(await lintIds(source, 'src/components/A.tsx')).toEqual([
+            'inline-style',
             'inline-style',
             'inline-style',
         ]);

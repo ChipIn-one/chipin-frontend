@@ -40,11 +40,19 @@ const OfflineQRCode = ({ url, size = 'medium' }: { url: string; size?: QRSize })
         canvas.width = fullSize;
         canvas.height = fullSize;
 
+        const light = cssToken('--cp-media-on');
+        const dark = cssToken('--cp-media-scrim');
+
+        // Without the tokens (app CSS not applied) the canvas would keep its default black for both.
+        if (!light || !dark) {
+            return;
+        }
+
         // background
-        ctx.fillStyle = cssToken('--cp-media-on');
+        ctx.fillStyle = light;
         ctx.fillRect(0, 0, fullSize, fullSize);
 
-        ctx.fillStyle = cssToken('--cp-media-scrim');
+        ctx.fillStyle = dark;
 
         for (let y = 0; y < moduleCount; y++) {
             for (let x = 0; x < moduleCount; x++) {

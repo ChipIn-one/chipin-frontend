@@ -48,9 +48,13 @@ describe('checkStyledAllowlist', () => {
 
     test('rule 2: the list only shrinks against the base', () => {
         expect(check({ baseAllowlist: ['src/a/styled.ts'] })).toEqual([
-            expect.stringMatching(/2 entries, 1 at the base commit; the list only shrinks/),
+            expect.stringMatching(/^\S+: src\/b\/B\.tsx is not in the list at the base commit/),
         ]);
         expect(check({ baseAllowlist: [...ALLOWLIST, 'src/c/C.tsx'] })).toEqual([]);
+        // A swap (one entry converted, another added) keeps the count but still fails.
+        expect(check({ baseAllowlist: ['src/a/styled.ts', 'src/c/C.tsx'] })).toEqual([
+            expect.stringMatching(/src\/b\/B\.tsx is not in the list at the base commit/),
+        ]);
     });
 
     test('rule 3: editing an allowlisted styled.ts without converting it fails', () => {
@@ -60,7 +64,7 @@ describe('checkStyledAllowlist', () => {
 
         expect(check({ baseAllowlist: ALLOWLIST, changes })).toEqual([
             expect.stringMatching(
-                /^src\/a\/styled\.ts: changed styled code; move it to a CSS Module/,
+                /^src\/a\/styled\.ts: changed styled code since the base commit .*; move it to a CSS Module/,
             ),
         ]);
     });
@@ -177,5 +181,28 @@ describe('parseArgs and resolveBase', () => {
         });
         expect(resolveBase('0'.repeat(40), pr).exit).toBe(1);
         expect(resolveBase('', push)).toEqual({ message: expect.stringMatching(/::notice::/) });
+    });
+});
+
+describe('review hardening (05-5)', () => {
+    test('rule 3: an exported one-line styled declaration is a touch', () => {
+        expect(
+            isTouch('src/a/styled.ts', {
+                added: ['export const Gap = styled.div`gap: 8px;`;'],
+                removed: [],
+            }),
+        ).toBe(true);
+        expect(
+            isTouch('src/b/B.tsx', { added: ['export const P = keyframes`from{}`;'], removed: [] }),
+        ).toBe(true);
+    });
+
+    test('rule 4: an exempt entry already at the base commit no longer exempts', () => {
+        const changes = { 'src/a/styled.ts': { added: ['    width: 41px;'], removed: [] } };
+        const entry = { path: 'src/a/styled.ts', reason: 'hotfix', issue: 845 };
+
+        expect(
+            check({ baseAllowlist: ALLOWLIST, changes, exempt: [entry], baseExempt: [entry] }),
+        ).toEqual([expect.stringMatching(/^src\/a\/styled\.ts: changed styled code/)]);
     });
 });
