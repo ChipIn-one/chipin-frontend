@@ -4,8 +4,6 @@ import styled from 'styled-components';
 import { GROUP_COVER_RATIO } from 'constants/groupCover';
 import { themeColor } from 'helpers/colors';
 
-import Image from 'basics/Image';
-
 const PreviewCover = styled(Flex)`
     position: relative;
     overflow: hidden;
@@ -27,18 +25,9 @@ const PreviewCoverScrim = styled.div`
     );
 `;
 
-const PreviewCoverImage = styled(Image)`
-    position: absolute;
-    inset: 0;
-
-    && {
-        object-fit: cover;
-    }
-`;
-
 const PreviewDescription = styled(Text)`
     color: ${themeColor('white')};
     opacity: 0.78;
 `;
 
-export { PreviewCover, PreviewCoverImage, PreviewCoverScrim, PreviewDescription };
+export { PreviewCover, PreviewCoverScrim, PreviewDescription };

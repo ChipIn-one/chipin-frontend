@@ -21,12 +21,11 @@ import UsersRow from 'components/UsersRow';
 import { LandingPreviewCard } from '../landing-preview-card';
 
 import {
-    GROUP_PREVIEW_COVER_URL,
     GROUP_PREVIEW_EXPENSES,
     GROUP_PREVIEW_MEMBERS,
     GROUP_PREVIEW_NET_BALANCE,
 } from './internal';
-import { PreviewCover, PreviewCoverImage, PreviewCoverScrim, PreviewDescription } from './styled';
+import { PreviewCover, PreviewCoverScrim, PreviewDescription } from './styled';
 
 const GroupPagePreview = () => {
     const { t } = useTranslation('landing');
@@ -34,12 +33,6 @@ const GroupPagePreview = () => {
     return (
         <LandingPreviewCard label={t('sections.groups.preview.label')}>
             <PreviewCover direction="column">
-                <PreviewCoverImage
-                    src={GROUP_PREVIEW_COVER_URL}
-                    alt={t('sections.groups.preview.coverAlt')}
-                    width="100%"
-                    height="100%"
-                />
                 <PreviewCoverScrim aria-hidden />
                 <Flex
                     direction="column"
