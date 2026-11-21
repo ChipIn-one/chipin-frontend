@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
@@ -27,21 +27,10 @@ test('renders the mobile Group preview with exactly three expenses', () => {
             name: 'sections.groups.preview.label',
         }),
     ).not.toBeNull();
-    const loadingCover = screen.getByAltText('sections.groups.preview.coverAlt');
-
-    fireEvent.load(loadingCover);
-
-    const cover = screen.getByRole('img', {
-        name: 'sections.groups.preview.coverAlt',
-    });
-
-    expect(cover.getAttribute('src')).toContain('photo-1646590126631-c3c01f631b74');
-    expect(GROUP_PREVIEW_MEMBERS.map(({ picture }) => picture)).toEqual([
-        'https://randomuser.me/api/portraits/women/44.jpg',
-        'https://randomuser.me/api/portraits/men/32.jpg',
-        'https://randomuser.me/api/portraits/women/65.jpg',
-        'https://randomuser.me/api/portraits/men/75.jpg',
-    ]);
+    // #672: no third-party image on the landing; the cover is a gradient and members show initials.
+    expect(screen.queryByAltText('sections.groups.preview.coverAlt')).toBeNull();
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+    expect(GROUP_PREVIEW_MEMBERS.filter(member => 'picture' in member)).toEqual([]);
     expect(screen.getByText('sections.groups.preview.groupName')).not.toBeNull();
     const description = screen.getByText('sections.groups.preview.groupDescription');
 
@@ -68,10 +57,16 @@ test('renders the mobile Group preview with exactly three expenses', () => {
     expect(within(tickets).getByText('activity:event.you paid')).not.toBeNull();
 
     return Promise.all([
+        Promise.all(
+            GROUP_PREVIEW_MEMBERS.map(({ displayName }) =>
+                screen.findByText(displayName.charAt(0)),
+            ),
+        ),
         within(hotel).findByLabelText('sections.groups.preview.expenses.hotel'),
         within(dinner).findByLabelText('sections.groups.preview.expenses.dinner'),
         within(tickets).findByLabelText('sections.groups.preview.expenses.tickets'),
-    ]).then(([hotelIcon, dinnerIcon, ticketsIcon]) => {
+    ]).then(([initials, hotelIcon, dinnerIcon, ticketsIcon]) => {
+        expect(initials).toHaveLength(GROUP_PREVIEW_MEMBERS.length);
         expect(hotelIcon.classList.contains('lucide-hotel')).toBe(true);
         expect(dinnerIcon.classList.contains('lucide-utensils-crossed')).toBe(true);
         expect(ticketsIcon.classList.contains('lucide-train-front')).toBe(true);
