@@ -1,5 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import { SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN } from 'constants/localstorage';
+
 import {
     getPublicLocaleSuggestionTarget,
     isPublicLocaleSuggestionSuppressed,
@@ -45,6 +47,8 @@ test('a storage quota write failure still suppresses repeated suggestions', () =
     } finally {
         storage.mockRestore();
     }
+    // The failed write went to the mocked storage: the real one never got the flag.
+    expect(window.sessionStorage.getItem(SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN)).toBeNull();
 });
 
 test('unavailable sessionStorage does not break manual language switching', () => {
@@ -69,4 +73,5 @@ test('unavailable sessionStorage does not break manual language switching', () =
     } finally {
         storage.mockRestore();
     }
+    expect(window.sessionStorage.getItem(SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN)).toBeNull();
 });

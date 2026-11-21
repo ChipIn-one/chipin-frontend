@@ -63,7 +63,6 @@ const installMatchMedia = (isDark: boolean): FakeSystemScheme => {
 
 /** Saves any string, also one the typed helper never writes (a broken or foreign value). */
 const saveRawTheme = (value: string) => {
-    // eslint-disable-next-line no-restricted-globals -- an invalid saved value, which `LocalStorage.setRaw` does not accept
     localStorage.setItem(LS_KEY_THEME, value);
 };
 

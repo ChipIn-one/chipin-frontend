@@ -2,6 +2,7 @@ import pluginQuery from '@tanstack/eslint-plugin-query';
 import importX from 'eslint-plugin-import-x';
 
 import { appGlob, ASTRO_FILES, LINT_FILES } from './base.js';
+import { TEST_FILES } from './layers.js';
 
 // In flat config a later block replaces the options of `no-restricted-syntax` /
 // `no-restricted-imports` for the files it matches, so separate blocks silently drop each
@@ -388,59 +389,86 @@ export const DEFAULT_EXPORT_EXCEPTIONS = [
     '**/*.d.ts',
 ];
 
+const STORAGE_MESSAGE = 'Use the typed helpers in helpers/localStorage.ts.';
+const STORAGE_NAMES = ['localStorage', 'sessionStorage'];
+const NAVIGATOR_ONLINE = {
+    object: 'navigator',
+    property: 'onLine',
+    message: 'Use isNetworkUsable() (shared/offline/network).',
+};
+const GLOBAL_STORAGE = ['window', 'globalThis'].flatMap(object =>
+    STORAGE_NAMES.map(property => ({ object, property, message: STORAGE_MESSAGE })),
+);
+
 /**
- * Storage boundary: localStorage only through helpers/localStorage.ts; `navigator.onLine` below;
- * named exports only (D11, 02-C13: the existing default exports are suppressions that only shrink,
- * D31; a touched file switches to `export { X }` with its importers and `vi.mock` in the same PR).
+ * Storage boundary: localStorage and sessionStorage (also as `window.*`/`globalThis.*`) only
+ * through helpers/localStorage.ts; tests and test support arrange storage directly.
+ * `navigator.onLine` below; named exports only (D11, 02-C13: the existing default exports are
+ * suppressions that only shrink, D31; a touched file switches to `export { X }` with its importers
+ * and `vi.mock` in the same PR).
  */
-export const projectConfig = ({ appDir }) => [
-    {
-        name: 'chipin/no-default-export',
-        files: [LINT_FILES],
-        ignores: [
-            ...DEFAULT_EXPORT_EXCEPTIONS.map(glob => appGlob(appDir, glob)),
-            '*.config.{js,ts,mjs}',
-        ],
-        plugins: { 'import-x': importX },
-        rules: {
-            'import-x/no-default-export': 'error',
-        },
-    },
-    {
-        files: [LINT_FILES, ASTRO_FILES],
-        rules: {
-            'no-restricted-globals': [
-                'error',
-                {
-                    name: 'localStorage',
-                    message: 'Use the typed helper in helpers/localStorage.ts.',
-                },
+export const projectConfig = ({ appDir }) => {
+    const storageExempt = [
+        appGlob(appDir, 'src/helpers/localStorage.ts'),
+        appGlob(appDir, 'src/test/**'),
+        ...TEST_FILES,
+    ];
+    const offline = appGlob(appDir, 'src/shared/offline/**');
+
+    return [
+        {
+            name: 'chipin/no-default-export',
+            files: [LINT_FILES],
+            ignores: [
+                ...DEFAULT_EXPORT_EXCEPTIONS.map(glob => appGlob(appDir, glob)),
+                '*.config.{js,ts,mjs}',
             ],
+            plugins: { 'import-x': importX },
+            rules: {
+                'import-x/no-default-export': 'error',
+            },
         },
-    },
-    {
-        files: [appGlob(appDir, 'src/helpers/localStorage.ts')],
-        rules: {
-            'no-restricted-globals': 'off',
+        {
+            files: [LINT_FILES, ASTRO_FILES],
+            ignores: storageExempt,
+            rules: {
+                'no-restricted-globals': [
+                    'error',
+                    ...STORAGE_NAMES.map(name => ({ name, message: STORAGE_MESSAGE })),
+                ],
+            },
         },
-    },
-    {
+        // `no-restricted-properties` holds both checks: a later block replaces the options of an
+        // earlier one, so each block lists everything its files must keep.
         // spec 03 §1.7: TanStack `onlineManager` is the single source of "network is usable";
         // `navigator.onLine` is read only by its bootstrap and probe in shared/offline.
-        files: [LINT_FILES, ASTRO_FILES],
-        ignores: [appGlob(appDir, 'src/shared/offline/**')],
-        rules: {
-            'no-restricted-properties': [
-                'error',
-                {
-                    object: 'navigator',
-                    property: 'onLine',
-                    message: 'Use isNetworkUsable() (shared/offline/network).',
-                },
-            ],
+        {
+            files: [LINT_FILES, ASTRO_FILES],
+            rules: {
+                'no-restricted-properties': ['error', NAVIGATOR_ONLINE, ...GLOBAL_STORAGE],
+            },
         },
-    },
-];
+        {
+            files: [offline],
+            rules: {
+                'no-restricted-properties': ['error', ...GLOBAL_STORAGE],
+            },
+        },
+        {
+            files: storageExempt,
+            ignores: [offline],
+            rules: {
+                'no-restricted-properties': ['error', NAVIGATOR_ONLINE],
+            },
+        },
+        {
+            files: [appGlob(appDir, 'src/shared/offline/**/*.{test,spec}.{ts,tsx}')],
+            rules: {
+                'no-restricted-properties': 'off',
+            },
+        },
+    ];
+};
 
 // There is no `warn` level (spec 02 §D0): the preset's warnings become errors, with or without
 // options (`'warn'`, `1`, `['warn', ...options]`); an unknown value shape fails the config load.
