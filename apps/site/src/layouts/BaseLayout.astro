@@ -7,6 +7,7 @@ import {
     type SupportedLocale,
 } from '../i18n/locales';
 import { messages } from '../i18n/ui';
+import { ANALYTICS_REDACT_SCRIPT } from '../lib/analyticsRedact';
 
 import '@chipin/tokens/radix-colors.css';
 import '@chipin/tokens/tokens.css';
@@ -23,6 +24,13 @@ interface Props {
     /** Locales that have a translation of this page; a missing one gets no hreflang (§3.3). */
     translations?: readonly SupportedLocale[];
     noindex?: boolean;
+    /**
+     * `false` leaves out Web Analytics and Speed Insights: invite pages carry the token in the URL
+     * (spec 04 §3.6, KB USR-084).
+     */
+    includeAnalytics?: boolean;
+    /** `no-referrer` for invite pages, on top of the vercel.json header (KB USR-085). */
+    referrer?: 'no-referrer';
 }
 
 const {
@@ -32,6 +40,8 @@ const {
     slug,
     translations = SUPPORTED_LOCALES,
     noindex = false,
+    includeAnalytics = true,
+    referrer,
 } = Astro.props;
 
 // `site` is always https://chipin.one: dev hosts never reach canonical or hreflang (§3.2).
@@ -55,6 +65,7 @@ const xDefault =
         <title>{title}</title>
         <meta name="description" content={description} />
         {noindex && <meta name="robots" content="noindex" />}
+        {referrer && <meta name="referrer" content={referrer} />}
         {canonical && <link rel="canonical" href={canonical} />}
         {alternates.map(link => <link rel="alternate" hreflang={link.hreflang} href={link.href} />)}
         {xDefault && <link rel="alternate" hreflang="x-default" href={xDefault} />}
@@ -64,6 +75,16 @@ const xDefault =
         <meta property="og:description" content={description} />
         <meta property="og:locale" content={messages(locale).meta.ogLocale} />
         {canonical && <meta property="og:url" content={canonical} />}
+        <!-- Before the analytics scripts: redacts invite tokens from reported URLs (§3.6). -->
+        <script is:inline set:html={ANALYTICS_REDACT_SCRIPT} />
+        {
+            includeAnalytics && (
+                <>
+                    <script is:inline defer src="/_vercel/insights/script.js" />
+                    <script is:inline defer src="/_vercel/speed-insights/script.js" />
+                </>
+            )
+        }
     </head>
     <body>
         <header class="site-header">
