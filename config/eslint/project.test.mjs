@@ -515,3 +515,45 @@ describe('import-x/no-default-export (02-C13): on everywhere except the spec 02 
         expect(rule?.[0]).toBe(severity);
     });
 });
+
+describe('storage boundary (#675): storage only through helpers/localStorage.ts', () => {
+    const config = projectConfig({ appDir: '.' });
+    const lint = async (code, filePath) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(code, { filePath });
+
+        return result.messages.map(message => message.ruleId);
+    };
+    const access = [
+        'localStorage.getItem("k");',
+        'sessionStorage.getItem("k");',
+        'window.localStorage.getItem("k");',
+        'window.sessionStorage.getItem("k");',
+        'globalThis.sessionStorage.getItem("k");',
+        'self.localStorage.getItem("k");',
+    ];
+
+    test.each(access)('rejects %s in app code and in shared/offline', async code => {
+        expect(await lint(code, 'src/helpers/publicLocaleSuggestion.ts')).toHaveLength(1);
+        expect(await lint(code, 'src/shared/offline/network.ts')).toHaveLength(1);
+    });
+
+    test.each(access)('accepts %s in the helper, tests and test support', async code => {
+        expect(await lint(code, 'src/helpers/localStorage.ts')).toEqual([]);
+        expect(await lint(code, 'src/components/Header.test.tsx')).toEqual([]);
+        expect(await lint(code, 'src/test/setup.ts')).toEqual([]);
+        expect(await lint(code, 'src/shared/offline/network.test.ts')).toEqual([]);
+    });
+
+    test('navigator.onLine stays restricted outside shared/offline, tests included', async () => {
+        const code = 'export const online = navigator.onLine;';
+
+        expect(await lint(code, 'src/components/A.tsx')).toEqual(['no-restricted-properties']);
+        expect(await lint(code, 'src/components/A.test.tsx')).toEqual(['no-restricted-properties']);
+        expect(await lint(code, 'src/helpers/localStorage.ts')).toEqual([
+            'no-restricted-properties',
+        ]);
+        expect(await lint(code, 'src/shared/offline/network.ts')).toEqual([]);
+        expect(await lint(code, 'src/shared/offline/network.test.ts')).toEqual([]);
+    });
+});

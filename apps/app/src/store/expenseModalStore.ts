@@ -252,7 +252,7 @@ const stepAmount = (amount: Money, delta: number): string => {
 };
 
 // Spec 04 §2.11 item 4 (04-2d): `app/pwa/expenseDraftReload.ts` saves the open draft to
-// `sessionStorage` before an app reload (an `onBeforeAppReload` callback; `editContext.original`
+// session storage before an app reload (an `onBeforeAppReload` callback; `editContext.original`
 // holds `Money`, so it uses a bigint-safe codec) and restores it at startup through `restoreDraft`.
 // A restored create draft waits here for the `initialize` of the modal that opens on mount.
 let pendingCreateDraft: ExpenseModalDraft | null = null;
