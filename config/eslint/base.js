@@ -15,6 +15,12 @@ import { importSortGroups } from './aliases.js';
 /** Files the ESLint presets apply to. */
 export const LINT_FILES = '**/*.{ts,tsx,js,jsx}';
 
+/**
+ * Astro components, pages and layouts (the site): the Astro preset (astro.js), the repo
+ * restriction rules and the formatting re-enables also apply to their frontmatter.
+ */
+export const ASTRO_FILES = '**/*.astro';
+
 /** TypeScript files: the type-aware rules apply only to them (JS files get no type information). */
 export const TS_FILES = '**/*.{ts,tsx}';
 
@@ -31,6 +37,30 @@ const DEFAULT_PROJECT_FILES = ['scripts/*.ts'];
  */
 export const appGlob = (appDir, pattern) => posix.join(appDir, pattern);
 
+/**
+ * Rules of `baseConfig` on top of the JS and typescript-eslint recommended sets; the Astro preset
+ * (astro.js) applies them to `.astro` frontmatter too.
+ * @param {{ appDir: string }} options
+ */
+export const baseRules = ({ appDir }) => ({
+    curly: ['error', 'all'],
+    // Unused variables are reported only by tsc `noUnused*` (spec 02 §D5).
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': 'off',
+    'unused-imports/no-unused-imports': 'error',
+    'simple-import-sort/exports': 'error',
+    // Groups are built from the tsconfig.app.json `paths` aliases (aliases.js).
+    'simple-import-sort/imports': ['error', { groups: importSortGroups({ appDir }) }],
+    // Inv. 6: no `!`; narrow with a guard or `?.` instead. Needs no type information.
+    '@typescript-eslint/no-non-null-assertion': 'error',
+});
+
+/** Plugins that `baseRules` needs. */
+export const basePlugins = {
+    'simple-import-sort': simpleImportSort,
+    'unused-imports': unusedImports,
+};
+
 /** JS + typescript-eslint recommended, unused imports, import sorting. */
 export const baseConfig = ({ appDir }) =>
     tseslint.config(
@@ -43,24 +73,35 @@ export const baseConfig = ({ appDir }) =>
                 ecmaVersion: 2020,
                 globals: globals.browser,
             },
-            plugins: {
-                'simple-import-sort': simpleImportSort,
-                'unused-imports': unusedImports,
-            },
-            rules: {
-                curly: ['error', 'all'],
-                // Unused variables are reported only by tsc `noUnused*` (spec 02 §D5).
-                'no-unused-vars': 'off',
-                '@typescript-eslint/no-unused-vars': 'off',
-                'unused-imports/no-unused-imports': 'error',
-                'simple-import-sort/exports': 'error',
-                // Groups are built from the tsconfig.app.json `paths` aliases (aliases.js).
-                'simple-import-sort/imports': ['error', { groups: importSortGroups({ appDir }) }],
-                // Inv. 6: no `!`; narrow with a guard or `?.` instead. Needs no type information.
-                '@typescript-eslint/no-non-null-assertion': 'error',
-            },
+            plugins: basePlugins,
+            rules: baseRules({ appDir }),
         },
     );
+
+/** The type-aware rules of §D0 (spec 02 §D5); the Astro preset applies them to `.astro` too. */
+export const TYPE_AWARE_RULES = {
+    // Inv. 7: a promise is returned, awaited, or marked `void`.
+    '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
+    // Inv. 7: no promise where void is expected, JSX attributes included:
+    // `onClick={() => void action()}`.
+    '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: true } }],
+    // Inv. 6: `any` does not leak into typed code.
+    '@typescript-eslint/no-unsafe-argument': 'error',
+    '@typescript-eslint/no-unsafe-assignment': 'error',
+    '@typescript-eslint/no-unsafe-call': 'error',
+    '@typescript-eslint/no-unsafe-member-access': 'error',
+    '@typescript-eslint/no-unsafe-return': 'error',
+    // Mostly autofixed; for a generic call use `getByRole<HTMLInputElement>(…)`, not `as`.
+    '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+    // Type-only imports are explicit (tsc `verbatimModuleSyntax`); all three are autofixed.
+    // `typeof import('x')` annotations stay allowed: they have no autofix (class a, §D0)
+    // and are the vitest idiom `vi.importActual<typeof import('x')>`.
+    '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { fixStyle: 'inline-type-imports', disallowTypeAnnotations: false },
+    ],
+    '@typescript-eslint/no-import-type-side-effects': 'error',
+};
 
 /**
  * Type-aware rules (spec 02 §D5): the explicit list of §D0, not the whole `recommendedTypeChecked`.
@@ -78,32 +119,7 @@ export const typeAwareConfig = ({ appDir }) => [
                 tsconfigRootDir: resolve(import.meta.dirname, '../..', appDir),
             },
         },
-        rules: {
-            // Inv. 7: a promise is returned, awaited, or marked `void`.
-            '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
-            // Inv. 7: no promise where void is expected, JSX attributes included:
-            // `onClick={() => void action()}`.
-            '@typescript-eslint/no-misused-promises': [
-                'error',
-                { checksVoidReturn: { attributes: true } },
-            ],
-            // Inv. 6: `any` does not leak into typed code.
-            '@typescript-eslint/no-unsafe-argument': 'error',
-            '@typescript-eslint/no-unsafe-assignment': 'error',
-            '@typescript-eslint/no-unsafe-call': 'error',
-            '@typescript-eslint/no-unsafe-member-access': 'error',
-            '@typescript-eslint/no-unsafe-return': 'error',
-            // Mostly autofixed; for a generic call use `getByRole<HTMLInputElement>(…)`, not `as`.
-            '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-            // Type-only imports are explicit (tsc `verbatimModuleSyntax`); all three are autofixed.
-            // `typeof import('x')` annotations stay allowed: they have no autofix (class a, §D0)
-            // and are the vitest idiom `vi.importActual<typeof import('x')>`.
-            '@typescript-eslint/consistent-type-imports': [
-                'error',
-                { fixStyle: 'inline-type-imports', disallowTypeAnnotations: false },
-            ],
-            '@typescript-eslint/no-import-type-side-effects': 'error',
-        },
+        rules: TYPE_AWARE_RULES,
     },
     {
         // vi.fn()/expect patterns in tests.
@@ -131,7 +147,7 @@ export const formattingConfig = () => [
     {
         // eslint-config-prettier turns these off; both are safe with Prettier.
         // `curly: all` never conflicts; `no-unexpected-multiline` is a correctness rule.
-        files: [LINT_FILES],
+        files: [LINT_FILES, ASTRO_FILES],
         rules: {
             curly: ['error', 'all'],
             'no-unexpected-multiline': 'error',

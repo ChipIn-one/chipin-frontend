@@ -10,10 +10,11 @@
     "scripts": {
         "dev": "npm run dev -w @chipin/app --",
         "build": "npm run build -w @chipin/app --",
-        "lint": "node scripts/check-rule-registry.mjs && eslint . --max-warnings 0 --pass-on-unpruned-suppressions",
-        "lint:full": "node scripts/check-rule-registry.mjs && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
-        "baseline:update": "CHIPIN_ESLINT_FULL=1 eslint . --prune-suppressions",
-        "fix": "eslint . --fix; prettier --write .",
+        "lint": "node scripts/check-rule-registry.mjs && npm run sync:site && eslint . --max-warnings 0 --pass-on-unpruned-suppressions",
+        "lint:full": "node scripts/check-rule-registry.mjs && npm run sync:site && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
+        "baseline:update": "npm run sync:site && CHIPIN_ESLINT_FULL=1 eslint . --prune-suppressions",
+        "sync:site": "npm run sync -w @chipin/site",
+        "fix": "npm run sync:site && eslint . --fix; prettier --write .",
         "layers:doc": "node scripts/generate-layers-doc.mjs",
         "check:file-layout": "node scripts/check-file-layout.mjs",
         "format": "prettier --write .",
@@ -48,6 +49,9 @@
             "node scripts/eslint-fix-staged.mjs",
             "prettier --write"
         ],
+        "*.astro": [
+            "node scripts/eslint-fix-staged.mjs"
+        ],
         "*.{json,md,css,scss,yml,yaml,html}": [
             "prettier --write"
         ]
@@ -59,6 +63,7 @@
         "eslint": "^10.15.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-import-resolver-typescript": "^4.4.5",
+        "eslint-plugin-astro": "^3.2.1",
         "eslint-plugin-boundaries": "^7.4.4",
         "eslint-plugin-import-x": "^4.18.1",
         "eslint-plugin-jsx-a11y": "^6.10.2",

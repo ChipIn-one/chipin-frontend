@@ -75,6 +75,7 @@ Consequences:
 | `no-restricted-imports` `shared/money/*` (only the module root; 03-1) and `moneyFromWire`/`moneyToWire` only in `entities/*/model/**` (03-4b) | b | money: one place of conversion (inv. 3) |
 | `no-restricted-syntax` a literal array in `queryKey` outside `entities/*/api/queries.ts` (03-5) | b | one source of keys |
 | `@tanstack/eslint-plugin-query` `recommended` (03-5) | b | query hook errors |
+| `eslint-plugin-astro` `flat/recommended` on the site's `.astro` files (#829) | b | invalid Astro directives, deprecated Astro APIs, exports Astro drops |
 | `no-restricted-imports` `zustand` only in `src/store/**`, `src/app/**`; `zustand/react/shallow` is allowed everywhere (spec 03 §6; C1-18) | b | UI state boundary |
 | `no-restricted-properties` `navigator.onLine` outside `src/shared/offline/**` (03-5) | b | one online predicate `isNetworkUsable()` (spec 04 §2.3) |
 | `no-restricted-imports` `@vercel/*` except `app/telemetry/vercelAnalytics.ts` (04-2b) | b | provider isolation (D18) |

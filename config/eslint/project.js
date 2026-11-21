@@ -1,7 +1,7 @@
 import pluginQuery from '@tanstack/eslint-plugin-query';
 import importX from 'eslint-plugin-import-x';
 
-import { appGlob, LINT_FILES } from './base.js';
+import { appGlob, ASTRO_FILES, LINT_FILES } from './base.js';
 
 // In flat config a later block replaces the options of `no-restricted-syntax` /
 // `no-restricted-imports` for the files it matches, so separate blocks silently drop each
@@ -9,13 +9,15 @@ import { appGlob, LINT_FILES } from './base.js';
 // (`restrictedSyntax()` / `restrictedImports()`, wired once in eslint.config.js); modules only
 // contribute entry lists.
 //
-// Entry: { id, message, files?, ignores?, pending?, ...rule fields }. `files`/`ignores` are globs
+// Entry: { id, message, files?, ignores?, pending?, astro?, ...rule fields }. `files`/`ignores` are globs
 // (each glob is one "scope"); an entry applies to a file that matches one of its `files` (or to
 // every file when `files` is absent) and none of its `ignores`. Every message is prefixed with
 // `[id]`; the id is the registry key `<rule>#<id>` in config/eslint/rule-classes.json.
 // `pending: true` marks an entry whose globs match no file yet (e.g. `src/money/**` before the
 // money module exists): scripts/check-rule-registry.mjs then does not report its key as dead.
 // Their `<rule>#<id>` keys are kept on each block under the PENDING_IDS symbol, which ESLint ignores.
+// `astro: false` keeps an entry off `.astro` files (React/app-only JSX selectors would otherwise
+// match the Astro template, which astro-eslint-parser parses as JSX).
 export const PENDING_IDS = Symbol.for('chipin.eslint.pendingIds');
 
 const MAX_SCOPES = 6;
@@ -57,17 +59,29 @@ const scopedBlocks = (ruleName, entries, toOptions) => {
         return [];
     }
 
-    return scopeCombinations(scopes).map(combo => {
+    const block = (combo, kind, files, active) => ({
+        name: `chipin/${ruleName}${kind}/${combo.join(' & ') || 'all'}`,
+        files: [[files, ...combo]],
+        rules: { [ruleName]: active.length > 0 ? ['error', ...toOptions(active)] : 'off' },
+        [PENDING_IDS]: active
+            .filter(entry => entry.pending)
+            .map(entry => `${ruleName}#${entry.id}`),
+    });
+
+    return scopeCombinations(scopes).flatMap(combo => {
         const active = entries.filter(entry => appliesTo(entry, new Set(combo)));
 
-        return {
-            name: `chipin/${ruleName}/${combo.join(' & ') || 'all'}`,
-            files: [[LINT_FILES, ...combo]],
-            rules: { [ruleName]: active.length > 0 ? ['error', ...toOptions(active)] : 'off' },
-            [PENDING_IDS]: active
-                .filter(entry => entry.pending)
-                .map(entry => `${ruleName}#${entry.id}`),
-        };
+        // `.astro` files (frontmatter and template) get every entry except `astro: false` ones
+        // (React/app-only JSX entries); their client scripts match LINT_FILES as virtual files.
+        return [
+            block(combo, '', LINT_FILES, active),
+            block(
+                combo,
+                '/astro',
+                ASTRO_FILES,
+                active.filter(entry => entry.astro !== false),
+            ),
+        ];
     });
 };
 
@@ -305,6 +319,8 @@ export const projectRules = ({ appDir }) => [
             "CallExpression[callee.object.name='React'][callee.property.name='createElement'][arguments.0.value='img']",
         ].join(', '),
         ignores: [appGlob(appDir, 'src/basics/Image.tsx')],
+        // The site cannot import basics/Image.
+        astro: false,
         message: 'Use the Image component from basics/Image instead of `<img>`/`styled.img`.',
     },
     {
@@ -391,7 +407,7 @@ export const projectConfig = ({ appDir }) => [
         },
     },
     {
-        files: [LINT_FILES],
+        files: [LINT_FILES, ASTRO_FILES],
         rules: {
             'no-restricted-globals': [
                 'error',
@@ -411,7 +427,7 @@ export const projectConfig = ({ appDir }) => [
     {
         // spec 03 §1.7: TanStack `onlineManager` is the single source of "network is usable";
         // `navigator.onLine` is read only by its bootstrap and probe in shared/offline.
-        files: [LINT_FILES],
+        files: [LINT_FILES, ASTRO_FILES],
         ignores: [appGlob(appDir, 'src/shared/offline/**')],
         rules: {
             'no-restricted-properties': [

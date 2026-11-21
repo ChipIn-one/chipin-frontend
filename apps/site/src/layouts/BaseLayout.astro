@@ -1,7 +1,4 @@
 ---
-import '@chipin/tokens/radix-colors.css';
-import '@chipin/tokens/tokens.css';
-
 import LanguageLinks from '../components/LanguageLinks.astro';
 import {
     DEFAULT_LOCALE,
@@ -11,6 +8,9 @@ import {
 } from '../i18n/locales';
 import { messages } from '../i18n/ui';
 import { ANALYTICS_REDACT_SCRIPT } from '../lib/analyticsRedact';
+
+import '@chipin/tokens/radix-colors.css';
+import '@chipin/tokens/tokens.css';
 
 interface Props {
     locale: SupportedLocale;

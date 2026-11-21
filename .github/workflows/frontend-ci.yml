@@ -163,6 +163,8 @@ jobs:
           # Mirrors the root lint:full / format:check over apps/site, so a green site run
           # implies full would be green for these files.
           npx --no-install prettier --check apps/site
+          # `.astro` frontmatter is linted with types: `astro:content` types exist only after sync.
+          npm run sync -w @chipin/site
           CHIPIN_ESLINT_FULL=1 npx --no-install eslint apps/site --max-warnings 0
           npm exec --no -w @chipin/site -- astro check
           # Build first: the site tests check the built dist (no SW registration, no redirect
