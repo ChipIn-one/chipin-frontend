@@ -8,6 +8,7 @@ import { describe, expect, test } from 'vitest';
 
 import { APP_ROUTES } from '../app/src/app/router/routeManifest';
 
+import { ROOT_FAVICONS } from './integrations/rootFavicons';
 import { cspScriptHashes, scriptHash } from './integrations/seoGuard';
 import { localizedPath, NON_DEFAULT_LOCALES, SUPPORTED_LOCALES } from './src/i18n/locales';
 
@@ -419,8 +420,23 @@ describe('paths the site never redirects (§4.2)', () => {
 
         expect(files).toContain('/sw.js');
         expect(files).toContain('/.well-known/assetlinks.json');
+        if (built) {
+            // Emitted by integrations/rootFavicons.ts (issue 859).
+            expect(files).toContain('/favicon.svg');
+            expect(files).toContain('/favicon.ico');
+            for (const { file, source } of ROOT_FAVICONS) {
+                expect(readFileSync(join(dist, file)).equals(readFileSync(source))).toBe(true);
+            }
+        }
         for (const file of files) {
             expect([file, request(file, host).status]).toEqual([file, 200]);
+        }
+    });
+
+    // Without a build: the root favicons rootFavicons emits are served, not redirected (issue 859).
+    test.each(ALL_HOSTS)('on %s no redirect matches the root favicons', host => {
+        for (const { file } of ROOT_FAVICONS) {
+            expect([file, request(`/${file}`, host).status]).toEqual([file, 200]);
         }
     });
 

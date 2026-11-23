@@ -1,6 +1,7 @@
 import sitemap from '@astrojs/sitemap';
 import { defineConfig } from 'astro/config';
 
+import { rootFavicons } from './integrations/rootFavicons';
 import { seoGuard } from './integrations/seoGuard';
 import { astroLocales, DEFAULT_LOCALE } from './src/i18n/locales';
 import { canonicalSitemapUrl } from './src/lib/sitemapUrl';
@@ -50,6 +51,9 @@ export default defineConfig({
                 links: item.links?.map(link => ({ ...link, url: canonicalSitemapUrl(link.url) })),
             }),
         }),
+        // `/favicon.svg` and `/favicon.ico` at the dist root (issue 859); seoGuard checks only
+        // HTML and scripts, so the extra files do not affect it.
+        rootFavicons(),
         seoGuard({ vercelJson: new URL('./vercel.json', import.meta.url) }),
     ],
 });
