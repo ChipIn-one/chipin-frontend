@@ -399,7 +399,8 @@ src/
     blog/[...slug].astro, [locale]/blog/[...slug].astro
     join/group.astro, join/friend.astro
     404.astro
-public/                   robots.txt, favicon.*, og/*.png, sw.js (kill-switch, §3.6), .well-known/assetlinks.json
+public/                   robots.txt, og/*.png, sw.js (kill-switch, §3.6), .well-known/assetlinks.json
+integrations/rootFavicons.ts  /favicon.svg (from @chipin/tokens) and /favicon.ico (from apps/app/public) at the dist root, no copies (a change of `apps/app/public/favicon.ico` alone does not trigger a site build: redeploy the site by hand)
 ```
 
 The site `vercel.json` has no `cleanUrls` (04-3d, ChipIn-one/chipin-frontend#814). Vercel puts the `cleanUrls` redirects first, as permanent `308`s: `/index.html` would get a cacheable permanent redirect, against the `302` rule of §4.2/§4.5, and `/app.html` would get a `308` to `/app`, which is a 404. It is not needed: Astro `build.format: 'directory'` makes every page `<dir>/index.html`, and Vercel serves `/<dir>` and `/<dir>/` without `cleanUrls`.
