@@ -54,11 +54,11 @@ import {
 } from '../model/toExpenseWire';
 import {
     isOlderLedgerEntry,
-    type LedgerEntry,
     optimisticCreatedEntry,
     optimisticUpdatedEntry,
     readLedgerEntry,
 } from '../model/toLedgerEntry';
+import type { LedgerEntry } from '../model/types';
 
 import { noticeLedgerConflict } from './conflictDrafts';
 import type {

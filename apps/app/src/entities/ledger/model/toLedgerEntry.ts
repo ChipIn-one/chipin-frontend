@@ -3,42 +3,9 @@
 // `BroadcastChannel`. Every amount becomes `Money` through `moneyFromWire`.
 import { z } from 'zod';
 
-import {
-    currencyCode,
-    isWireAmount,
-    type Money,
-    moneyFromWire,
-    type WireAmount,
-} from 'shared/money';
+import { currencyCode, isWireAmount, moneyFromWire, type WireAmount } from 'shared/money';
 
-import type { ExpenseDraft, ExpensePatch } from './types';
-
-/** The fields of an expense that this app reads from the cached entry. */
-export interface LedgerEntryExpense {
-    readonly description: string | null;
-    readonly amount: Money;
-    readonly category: string | null;
-    /** Unix seconds: the business date. */
-    readonly date: number;
-    readonly payerId: string;
-    readonly participantIds: readonly string[];
-}
-
-/** `ledger.entry(id)`: the entry's type and version decide the outbox path and its `If-Match`. */
-export interface LedgerEntry {
-    readonly id: string;
-    readonly type: 'EXPENSE' | 'SETTLEMENT';
-    /** Null only for an optimistic create the server has not answered yet. */
-    readonly version: string | null;
-    /**
-     * Unix seconds of the entry's last event (the server's `updatedAt`); null for an optimistic
-     * create. Versions are opaque (equality only): this orders two answers (§2.6 stale guard).
-     */
-    readonly updatedAt: number | null;
-    readonly groupId: string | null;
-    /** Null for a settlement, and when the answer carried no expense. */
-    readonly expense: LedgerEntryExpense | null;
-}
+import type { ExpenseDraft, ExpensePatch, LedgerEntry } from './types';
 
 const ExpenseWireSchema = z.object({
     amount: z.custom<WireAmount>(isWireAmount),

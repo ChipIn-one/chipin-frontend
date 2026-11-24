@@ -235,8 +235,13 @@ is silently lost. Therefore:
 - Buster — the **single** definition (C2-07, C3-14, C3-30): `${QUERY_CACHE_EPOCH}:${MODEL_SHAPE_HASH}`. What is persisted is
   the domain model (the result of the mappers), so the buster depends on its shape, not on the OpenAPI spec:
   `MODEL_SHAPE_HASH` is written by `scripts/offline/write-model-hash.mjs` (called from `api:gen`, drift is caught by `api:check`):
-  the first 12 hex of sha256 over `entities/*/model/types.ts` (paths sorted, each file re-printed with the TypeScript printer with
-  `removeComments: true` — comments and formatting do not change the hash) → `shared/offline/modelHash.generated.ts`.
+  the first 12 hex of sha256 over `entities/*/model/types.ts` plus every type declaration reachable from them (imports, barrels,
+  `typeof`; resolved by the TypeScript checker, without function bodies and initializers of annotated values, the default lib and npm
+  packages; a reached type inferred from a value fails: annotate it) (paths sorted, each file
+  and declaration re-printed with the TypeScript printer with `removeComments: true` — comments and formatting do not change the
+  hash) → `shared/offline/modelHash.generated.ts`.
+  The data type of every persisted query is declared in, or reachable from, its slice's `model/types.ts`; a type declared
+  elsewhere (for example next to its mapper) is outside the hash.
   A change in the shape of a domain type resets the cache automatically (nothing to bump by hand); an OpenAPI sync without a change to
   domain types does not reset the cache. `QUERY_CACHE_EPOCH` (`shared/offline/constants.ts`, an integer) is bumped by hand
   only when the **meaning** of a field changes without a type change (for example seconds → ms; a checklist item of the PR touching
