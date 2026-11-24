@@ -6,6 +6,7 @@ import {
     type ExpenseSubmitBlocker,
     MIN_GROUP_EXPENSE_PARTICIPANTS,
 } from 'constants/chipin';
+import { legacyAmountFromMoney } from 'entities/balance';
 import type { ExpenseDraft, ExpenseDraftSharingMode } from 'entities/ledger';
 import { canonicalDecimal } from 'entities/ledger';
 import {
@@ -146,7 +147,10 @@ const isBlank = (text: string | undefined): boolean => (text ?? '').trim() === '
 const scaledOrZero = (text: string | undefined, scale: number): bigint =>
     parseScaled(text, scale) ?? 0n;
 
-/** An integer at `scale` as the decimal text `split` takes as a weight (3333n, 2 → "33.33"). */
+/**
+ * Not money: a percent or weight split value, an integer at `scale`, as the decimal text `split`
+ * takes as a weight and the payload carries (3333n, 2 → "33.33").
+ */
 const scaledToText = (value: bigint, scale: number): string => {
     const unit = 10n ** BigInt(scale);
 
@@ -156,11 +160,12 @@ const scaledToText = (value: bigint, scale: number): string => {
 };
 
 /**
- * A display number from the decimal text (the legacy `Amount`, the step size, the validation
- * feedback): one rounding to a double. Never on the write path: the payload is `Money` and decimal
- * text (`selectExpensePayload`).
+ * Not money: a percent or weight split value (an integer at `scale`) as a display number for the
+ * validation feedback, one rounding from its plain decimal text (spec 03 §4.3). Money goes
+ * through `legacyAmountFromMoney` (entities/balance). Never on the write path: the payload is
+ * `Money` and decimal text (`selectExpensePayload`).
  */
-const scaledToNumber = (value: bigint, scale: number = LEDGER_SCALE): number =>
+const splitValueToNumber = (value: bigint, scale: number): number =>
     Number(scaledToText(value, scale));
 
 const percentTotal = (scale: number): bigint => 100n * 10n ** BigInt(scale);
@@ -177,7 +182,7 @@ const absValue = (value: bigint): bigint => (value < 0n ? -value : value);
 const toDisplayNumber = (money: Money): number => {
     const rounded = roundToMinor(money);
 
-    return scaledToNumber(toUnits(isZero(rounded) ? money : rounded));
+    return legacyAmountFromMoney(isZero(rounded) ? money : rounded);
 };
 
 /** The expense currency; before one is chosen, 'XXX' (shares do not depend on it, only rounding). */
@@ -209,7 +214,7 @@ export const selectAmountShare = (state: ExpenseModalState, userId: string): Mon
 const getTotalMoney = (state: ExpenseModalState): Money =>
     fromUnits(scaledOrZero(state.amount, LEDGER_SCALE), selectCurrencyCode(state));
 
-const getTotalAmount = (state: ExpenseModalState) => scaledToNumber(toUnits(getTotalMoney(state)));
+const getTotalAmount = (state: ExpenseModalState) => legacyAmountFromMoney(getTotalMoney(state));
 
 /** The per-user values of the split mode as integers at one `scale`, and their sum. */
 interface SplitValues {
@@ -409,7 +414,7 @@ const calculateSplit = (state: ExpenseModalState) => {
         : zero;
     const yourShare =
         isDirectExpenseReady && currentUserId ? (shares.get(currentUserId) ?? zero) : zero;
-    const totalAmount = scaledToNumber(toUnits(total));
+    const totalAmount = legacyAmountFromMoney(total);
 
     return {
         includedUsers,
@@ -421,7 +426,7 @@ const calculateSplit = (state: ExpenseModalState) => {
         values,
         status: getSplitStatus(assigned, total),
         progressPercent:
-            sign(total) > 0 ? (scaledToNumber(toUnits(assigned)) / totalAmount) * 100 : 0,
+            sign(total) > 0 ? (legacyAmountFromMoney(assigned) / totalAmount) * 100 : 0,
         isValid: isSplitValid(state, total, values),
         includedUserIds,
         directFriend,
@@ -668,9 +673,9 @@ export const selectExpenseSubmitFeedback = (
                     total < percentTotal(scale)
                         ? EXPENSE_SUBMIT_BLOCKERS.PERCENT_UNDER
                         : EXPENSE_SUBMIT_BLOCKERS.PERCENT_OVER,
-                current: scaledToNumber(total, scale),
+                current: splitValueToNumber(total, scale),
                 required: 100,
-                difference: scaledToNumber(absValue(total - percentTotal(scale)), scale),
+                difference: splitValueToNumber(absValue(total - percentTotal(scale)), scale),
             };
         }
 
@@ -682,13 +687,16 @@ export const selectExpenseSubmitFeedback = (
                     compare(assigned, split.total) < 0
                         ? EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_UNDER
                         : EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_OVER,
-                current: scaledToNumber(total),
+                current: legacyAmountFromMoney(assigned),
                 required: split.totalAmount,
-                difference: scaledToNumber(toUnits(abs(sub(assigned, split.total)))),
+                difference: legacyAmountFromMoney(abs(sub(assigned, split.total))),
             };
         }
 
-        return { reason: EXPENSE_SUBMIT_BLOCKERS.SHARES, current: scaledToNumber(total) };
+        return {
+            reason: EXPENSE_SUBMIT_BLOCKERS.SHARES,
+            current: splitValueToNumber(total, scale),
+        };
     }
 
     if (!hasValidCurrency) {
