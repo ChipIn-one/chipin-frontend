@@ -7,7 +7,8 @@ import { queryOptions, useQuery } from '@tanstack/react-query';
 import { api, ApiError, publicApi } from 'shared/api/client';
 import { ledgerEntryKey } from 'shared/offline/outboxRegistry';
 
-import { type LedgerEntry, toLedgerEntry } from '../model/toLedgerEntry';
+import { toLedgerEntry } from '../model/toLedgerEntry';
+import type { LedgerEntry } from '../model/types';
 
 import { dropDeletedConflictDraft } from './conflictDrafts';
 
