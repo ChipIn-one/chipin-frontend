@@ -77,8 +77,13 @@ export {
     toCreateLedgerEntryWire,
     toExpensePatchWire,
 } from './model/toExpenseWire';
-export type { LedgerEntry, LedgerEntryExpense } from './model/toLedgerEntry';
 export { toLedgerEntry } from './model/toLedgerEntry';
 export type { CreateSettlementWire, SettlementDraft } from './model/toSettleUpWire';
 export { toSettleUpWire } from './model/toSettleUpWire';
-export type { ExpenseDraft, ExpenseDraftSharingMode, ExpensePatch } from './model/types';
+export type {
+    ExpenseDraft,
+    ExpenseDraftSharingMode,
+    ExpensePatch,
+    LedgerEntry,
+    LedgerEntryExpense,
+} from './model/types';
