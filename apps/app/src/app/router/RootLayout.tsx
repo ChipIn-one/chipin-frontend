@@ -4,7 +4,6 @@ import { Outlet, ScrollRestoration } from 'react-router-dom';
 
 import { RestoreGate } from 'app/providers/RestoreGate';
 import { ServiceWorkerSafePoints } from 'app/pwa/ServiceWorkerSafePoints';
-import { UpdateRequiredScreen } from 'app/pwa/UpdateRequiredScreen';
 import { AddExpenseModal } from 'features/add-expense';
 import { GlobalHooks } from 'pages/GlobalHooks';
 
@@ -53,7 +52,6 @@ const RootLayout = () => {
             </BackendUnavailableGate>
             <TopLayer />
             <EarlySupporterPromoModal />
-            <UpdateRequiredScreen />
         </BackgroundBox>
     );
 };

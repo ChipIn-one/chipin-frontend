@@ -1,6 +1,7 @@
 .root {
     position: fixed;
-    bottom: calc(var(--cp-space-3) + env(safe-area-inset-bottom));
+    /* At the top: at the bottom it covers the sheet footer (Save) and the mobile nav bar. */
+    top: calc(env(safe-area-inset-top) + var(--cp-space-2));
     left: 50%;
     /* Above Radix dialogs and sheets: their overlays add no z-index, their content is 1 inside it. */
     z-index: var(--cp-z-floating);

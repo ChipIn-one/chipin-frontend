@@ -3,10 +3,13 @@ import { Spinner, Theme } from '@radix-ui/themes';
 import { CircleCheckIcon, CircleXIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
 import { Toaster } from 'sonner';
 
+import { UpdateRequiredScreen } from 'app/pwa/UpdateRequiredScreen';
 import { useIsMobile } from 'hooks/common';
 import { selectResolvedAppearance, useAppearanceStore } from 'store/ui-prefs';
 
 import { OfflineStatus } from 'components/offline-status';
+
+import styles from './TopLayer.module.css';
 
 const ToastSuccessIcon = () => <CircleCheckIcon size={20} />;
 const ToastInfoIcon = () => <InfoIcon size={20} />;
@@ -15,7 +18,8 @@ const ToastErrorIcon = () => <CircleXIcon size={20} />;
 const ToastLoadingIcon = () => <Spinner size="2" />;
 
 /**
- * Notices above every dialog, sheet and the unavailable screen (NET-003, NET-004). The root Radix
+ * Notices above every dialog, sheet and the unavailable screen (NET-003, NET-004), and the
+ * blocking update screen above them all. The root Radix
  * theme is a `z-index: 0` stacking context and the dialogs are portaled after it, so the layer is
  * portaled out of it: into the app root container (a sibling of the root theme, which the session
  * expiry of `AuthLayout` does not hide), or `<body>` when there is none. It is also outside the
@@ -30,6 +34,7 @@ const TopLayer = () => {
         <Theme>
             <Toaster
                 theme={appearance}
+                className={styles.toaster}
                 richColors
                 closeButton
                 position={isMobile ? 'top-center' : 'bottom-left'}
@@ -44,6 +49,8 @@ const TopLayer = () => {
                 }}
             />
             <OfflineStatus />
+            {/* Last and at z 2147483000: the blocking update screen covers the toasts too. */}
+            <UpdateRequiredScreen />
         </Theme>,
         document.getElementById('root') ?? document.body,
     );

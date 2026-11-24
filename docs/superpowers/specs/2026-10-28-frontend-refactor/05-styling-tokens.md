@@ -106,7 +106,7 @@ Rules for `tokens.css`:
 
 The scales come before `base.css`, as in Radix's own `tokens/index.css`: the olive gray mapping in `base.css` (`.radix-themes:where([data-gray-color=olive])`) has the same specificity as the `.light`/`.dark` rules of the scale files, so it must come later to win.
 
-`<Theme>` is configured in exactly one place: `apps/app/src/design-system/AppTheme.tsx`. It is `<Theme {...RADIX_THEME} appearance={appearance} hasBackground>`; `appearance` comes as a prop (the caller reads the store), so `design-system/` is a `basics` level in the layer graph (spec 02 D5). It is used by `main.tsx` and ds-gallery. `PublicApp.tsx` uses `RADIX_THEME` until its removal in spec 04.
+`<Theme>` is configured in exactly one place: `apps/app/src/design-system/AppTheme.tsx`. It is `<Theme {...RADIX_THEME} appearance={appearance} hasBackground>`; `appearance` comes as a prop (the caller reads the store), so `design-system/` is a `basics` level in the layer graph (spec 02 D5). It is used by `main.tsx` and ds-gallery. `PublicApp.tsx` uses `RADIX_THEME` until its removal in spec 04. A pass-through nested `<Theme>` (no props) is allowed for a top-level portal layer (`app/router/TopLayer.tsx`, #714), so the Radix variables apply outside the root theme.
 
 **Wiring into Astro** (`apps/site`, spec 04): in the base layout
 
