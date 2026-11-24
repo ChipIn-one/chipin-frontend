@@ -109,7 +109,7 @@ test('NET-003 portals the layer into the app root container, next to the root th
     expect(appRoot.querySelector(':scope > [data-is-root-theme="true"]')).not.toBeNull();
 });
 
-test('NET-003 a pointerdown on a toast does not close an open modal', async () => {
+test('NET-003 a pointerdown on a toast or the update screen does not close an open modal', async () => {
     const setIsOpened = vi.fn();
     render(
         <Theme>
@@ -140,6 +140,12 @@ test('NET-003 a pointerdown on a toast does not close an open modal', async () =
     }
     expect(setIsOpened).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: DIALOG_TITLE })).toBeTruthy();
+
+    act(() => {
+        showUpdateRequired();
+    });
+    fireEvent.pointerDown(screen.getByRole('alertdialog'));
+    expect(setIsOpened).not.toHaveBeenCalled();
 
     // Control: a pointerdown elsewhere outside the modal still closes it.
     fireEvent.pointerDown(document.body);

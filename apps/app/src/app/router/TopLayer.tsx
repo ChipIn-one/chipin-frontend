@@ -31,7 +31,7 @@ const TopLayer = () => {
     const isMobile = useIsMobile();
 
     return createPortal(
-        <Theme>
+        <Theme data-top-layer="">
             <Toaster
                 theme={appearance}
                 className={styles.toaster}
