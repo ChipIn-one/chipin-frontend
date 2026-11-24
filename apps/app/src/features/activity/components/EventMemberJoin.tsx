@@ -8,7 +8,7 @@ import { useUserSetting } from 'hooks/useSelfUser';
 
 import { RelativeTime } from 'basics';
 
-import { EventActorInlineAvatar, EventIcon } from './activity-event';
+import { EventActorInlineAvatar, EventIcon } from './activity-event/EventIcon';
 
 interface EventMemberJoinProps {
     event: GroupActivityEvent;
@@ -57,4 +57,4 @@ const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
     );
 };
 
-export default EventMemberJoin;
+export { EventMemberJoin };

@@ -9,7 +9,7 @@
         // No ambient @types: browser code must not see the Node globals of @types/node.
         "types": [],
 
-        // Aliases: the only list. ESLint (config/eslint/aliases.js) and Vite (vite-tsconfig-paths) read it.
+        // Aliases: the only list. ESLint (config/eslint/aliases.js) and Vite (resolve.tsconfigPaths) read it.
         "paths": {
             "main": ["./src/main.tsx"],
             "app/*": ["./src/app/*"],

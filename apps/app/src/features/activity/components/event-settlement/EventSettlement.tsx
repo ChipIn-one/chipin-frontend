@@ -9,7 +9,7 @@ import { useSelfUser } from 'hooks/useSelfUser';
 
 import { Amount, LedgerScopeBadge } from 'basics';
 
-import { EventIcon } from '../activity-event';
+import { EventIcon } from '../activity-event/EventIcon';
 
 import { SettlementParticipants } from './components';
 import { AmountText } from './styled';
