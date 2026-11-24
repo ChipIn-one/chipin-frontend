@@ -7,7 +7,7 @@ import { legacyActivityEvent } from 'entities/balance';
 import { type SelfUser, usersKeys } from 'entities/users';
 import { signInWithSelf } from 'test/selfUser';
 
-import EventUnknown from './EventUnknown';
+import { EventUnknown } from './EventUnknown';
 
 import 'i18n/index';
 

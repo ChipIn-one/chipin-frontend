@@ -8,7 +8,7 @@ import { useUserSetting } from 'hooks/useSelfUser';
 
 import { RelativeTime } from 'basics';
 
-import { EventActorInlineAvatar, EventIcon } from './activity-event';
+import { EventActorInlineAvatar, EventIcon } from './activity-event/EventIcon';
 
 interface Props {
     event: GroupActivityEvent;
@@ -53,4 +53,4 @@ const EventGroupCreated = ({ event }: Props) => {
     );
 };
 
-export default EventGroupCreated;
+export { EventGroupCreated };
