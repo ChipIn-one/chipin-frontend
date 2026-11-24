@@ -95,7 +95,6 @@
     },
     "allowScripts": {
         "@sentry/cli": true,
-        "@swc/core": true,
         "fsevents": false,
         "msw": false,
         "sharp": false

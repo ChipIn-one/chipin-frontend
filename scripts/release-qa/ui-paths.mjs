@@ -50,7 +50,7 @@ const TSCONFIG = /^(?:apps\/app\/)?tsconfig[^/]*\.json$/; // module resolution a
 // Every package vite.config.ts and pwa-assets.config.ts import (ui-paths.test.mjs parses both files to
 // keep this complete), plus workbox-* which vite-plugin-pwa uses to build the service worker.
 const TOOLCHAIN =
-    /^(?:vite|vite-plugin-.+|vite-tsconfig-paths|workbox-.+|@vitejs\/.+|@vite-pwa\/.+|@sentry\/vite-plugin)$/;
+    /^(?:vite|vite-plugin-.+|workbox-.+|@vitejs\/.+|@vite-pwa\/.+|@sentry\/vite-plugin)$/;
 const PACKAGE_JSON = 'package.json';
 // The app workspace manifest (04-0a): its dependencies are read together with the root ones.
 export const APP_PACKAGE_JSON = 'apps/app/package.json';
@@ -132,7 +132,7 @@ function lockEdges(entry) {
     return names;
 }
 
-// Lock paths a build toolchain package pulls in (rolldown, @swc/core, lightningcss, @svgr/*, ...).
+// Lock paths a build toolchain package pulls in (rolldown, @rolldown/pluginutils, lightningcss, @svgr/*, ...).
 function toolchainReachable(packages) {
     const reached = new Set();
     const queue = [];

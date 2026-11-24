@@ -8,7 +8,7 @@ import { useUserSetting } from 'hooks/useSelfUser';
 
 import { RelativeTime } from 'basics';
 
-import { EventIcon } from './activity-event';
+import { EventIcon } from './activity-event/EventIcon';
 
 interface EventUnknownProps {
     event: ActivityEvent;
@@ -47,4 +47,4 @@ const EventUnknown = ({ event }: EventUnknownProps) => {
     );
 };
 
-export default EventUnknown;
+export { EventUnknown };

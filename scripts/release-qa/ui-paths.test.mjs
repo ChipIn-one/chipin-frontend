@@ -125,7 +125,7 @@ describe('build-affecting changes', () => {
             pkg: pkg(basePkg.dependencies, {
                 ...basePkg.devDependencies,
                 vite: '^7.2.0',
-                '@vitejs/plugin-react-swc': '^4.0.0',
+                '@vitejs/plugin-react': '^4.0.0',
             }),
             lock: baseLock,
         };
@@ -137,7 +137,7 @@ describe('build-affecting changes', () => {
             }),
         ).toEqual([
             'package.json devDependencies: vite',
-            'package.json devDependencies: @vitejs/plugin-react-swc',
+            'package.json devDependencies: @vitejs/plugin-react',
         ]);
         const workbox = {
             pkg: basePkg,
@@ -246,9 +246,8 @@ describe('build-affecting changes', () => {
                 'vite',
                 'vite-plugin-pwa',
                 'vite-plugin-svgr',
-                'vite-tsconfig-paths',
                 '@sentry/vite-plugin',
-                '@vitejs/plugin-react-swc',
+                '@vitejs/plugin-react',
                 '@vite-pwa/assets-generator',
             ]),
         );

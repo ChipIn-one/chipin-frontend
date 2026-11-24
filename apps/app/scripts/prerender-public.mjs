@@ -2,9 +2,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { createServer } from 'vite';
 
 const escapeHtml = value =>
@@ -49,7 +48,8 @@ const main = () =>
     createServer({
         configFile: false,
         root: process.cwd(),
-        plugins: [svgr(), react(), tsconfigPaths()],
+        plugins: [svgr(), react()],
+        resolve: { tsconfigPaths: true },
         // styled-components' CJS default export is not callable under the external SSR loader.
         // Transform its ESM entry in Vite's server pipeline, matching the browser build.
         ssr: { noExternal: ['styled-components'] },
