@@ -54,6 +54,7 @@
     "network": {
         "offline": "No internet connection",
         "offlineBanner": "No network. Saved data is shown",
+        "offlineStatus": "Offline",
         "retry": "Retry",
         "retryFailed": "Still no network. Saved data is shown"
     },

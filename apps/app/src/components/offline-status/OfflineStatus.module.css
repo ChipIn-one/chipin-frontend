@@ -1,0 +1,10 @@
+.root {
+    position: fixed;
+    bottom: calc(var(--cp-space-3) + env(safe-area-inset-bottom));
+    left: 50%;
+    /* Above Radix dialogs and sheets: their overlays add no z-index, their content is 1 inside it. */
+    z-index: var(--cp-z-floating);
+    transform: translateX(-50%);
+    pointer-events: none;
+    user-select: none;
+}
