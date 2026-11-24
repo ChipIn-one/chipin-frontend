@@ -744,11 +744,6 @@
       "count": 1
     }
   },
-  "apps/app/src/helpers/decimalDisplay.ts": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "apps/app/src/helpers/expenseTargets.test.ts": {
     "boundaries/dependencies": {
       "count": 1

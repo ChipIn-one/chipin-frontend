@@ -70,6 +70,7 @@ export const toPlainDecimal = (value: number): string | null => {
         return PLAIN_DECIMAL_RESULT.test(plain) ? plain : null;
     }
 
+    // eslint-disable-next-line no-restricted-syntax -- not money: percent display, exact plain decimal of a double
     const fixed = value.toFixed(20);
 
     if (!/[eE]/.test(fixed)) {

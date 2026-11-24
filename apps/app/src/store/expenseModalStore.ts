@@ -565,6 +565,8 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
 
         let currentValue: number;
 
+        // Not money: the stepper reads the percent/weight text (display input, not the
+        // write path; spec 03 §4.3, the 03-14b deviation).
         if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
             currentValue = Number(state.percentShares[participantId]) || 0;
         } else if (state.splitMode === EXPENSE_SPLIT_MODES.SHARES) {
