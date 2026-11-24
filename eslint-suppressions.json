@@ -483,79 +483,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/activity/components/EventGroupCreated.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/EventGroupDeleted.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/EventGroupUpdated.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/EventMemberJoin.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/EventMemberLeft.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/EventUnknown.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    },
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/activity-event/ActivityEvent.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/activity-event/index.ts": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/event-expense-transferred/EventExpenseTransferred.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/event-expense-transferred/index.ts": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/event-expense/EventExpense.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/activity/components/event-expense/components/expense-icon/ExpenseIcon.tsx": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
@@ -567,31 +494,6 @@
     },
     "@typescript-eslint/no-unsafe-member-access": {
       "count": 2
-    }
-  },
-  "apps/app/src/features/activity/components/event-expense/index.ts": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/event-member-kicked/EventMemberKicked.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/event-member-kicked/index.ts": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/event-settlement/EventSettlement.tsx": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/activity/components/event-settlement/index.ts": {
-    "import-x/no-cycle": {
-      "count": 1
     }
   },
   "apps/app/src/features/add-expense/components/expense-buttons/ExpenseButtons.tsx": {

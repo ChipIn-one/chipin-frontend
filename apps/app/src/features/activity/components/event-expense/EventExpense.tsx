@@ -9,7 +9,7 @@ import { abs, fromUnits, isZero, negate, sign, sub } from 'shared/money';
 
 import { LedgerScopeBadge } from 'basics';
 
-import { EventIcon } from '../activity-event';
+import { EventIcon } from '../activity-event/EventIcon';
 
 import { ExpenseIcon } from './components';
 import {

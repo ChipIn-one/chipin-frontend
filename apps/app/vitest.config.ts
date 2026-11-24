@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
-import react from '@vitejs/plugin-react-swc';
-import tsconfigPaths from 'vite-tsconfig-paths';
+import react from '@vitejs/plugin-react';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 import { resolveAppVersion } from '../../scripts/version-resolver.mjs';
@@ -12,8 +11,9 @@ export default defineConfig({
     define: {
         __APP_VERSION__: JSON.stringify(appVersion),
     },
-    plugins: [react(), tsconfigPaths()],
+    plugins: [react()],
     resolve: {
+        tsconfigPaths: true,
         alias: {
             // Only a build with VitePWA provides it (spec 04 §2.11, `ServiceWorkerManager`).
             'virtual:pwa-register/react': fileURLToPath(
