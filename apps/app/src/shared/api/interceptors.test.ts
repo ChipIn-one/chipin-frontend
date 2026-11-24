@@ -36,6 +36,7 @@ const authSession: ApiAuthSession = {
     hasAuthAccessTokenRotated: authSessionMocks.hasAuthAccessTokenRotated,
     isAuthSessionCurrent: (version: number) => version === authSessionMocks.currentVersion,
     isAuthSessionSignedOut: () => authSessionMocks.signedOut,
+    isAuthSessionSwitchedSince: () => false,
     prepareAuthRequest: authSessionMocks.prepareAuthRequest,
     refreshAuthSession: authSessionMocks.refreshAuthSession,
 };

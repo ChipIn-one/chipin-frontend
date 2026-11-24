@@ -8,8 +8,11 @@ import { exchangeApiGoogleOAuthCode, refreshApiAuthTokens } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { ledgerKeys } from 'entities/ledger';
+import { fetchSelfUser } from 'entities/users';
 import {
     establishAuthSession,
+    getAuthSessionVersion,
+    isAuthSessionCurrent,
     markAuthSessionSignedOut,
     setAccessTokenRefreshListener,
     startAuthLogout,
@@ -39,6 +42,11 @@ vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.
 vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
     refreshApiAuthTokens: vi.fn(),
+}));
+// The self user request of the real session load (a late response of X).
+vi.mock('entities/users', async importOriginal => ({
+    ...(await importOriginal<typeof import('entities/users')>()),
+    fetchSelfUser: vi.fn(),
 }));
 vi.mock('./sessionUser', async importOriginal => ({
     ...(await importOriginal<typeof import('./sessionUser')>()),
@@ -300,6 +308,37 @@ describe('flag on: the session changes while the question is open (M1), X as ask
         expect(loadKnownUsersForSession).not.toHaveBeenCalled();
     });
 
+    // #641: a refresh-found switch during the question ends no session; the answer applies.
+    test('M1: a refresh switch during the question does not abort the confirmed sign-in', async () => {
+        await signInX(1);
+        const signIn = signInY();
+
+        await waitForQuestion();
+        onAccessTokenRefreshed(fakeAccessToken(USER_Y));
+        useAccountSwitchConfirmStore.getState().answer(true);
+        await signIn;
+        await settleIdb();
+
+        expect(establishAuthSession).toHaveBeenCalledOnce();
+        expect(startAuthLogout).not.toHaveBeenCalled();
+        expect(useAuthStore.getState().status).toBe('authenticated');
+        expect(getLocalUser()?.id).toBe(USER_Y);
+    });
+
+    test('M1: a session end after a refresh switch during the question still aborts it', async () => {
+        await signInX(1);
+        const signIn = signInY();
+
+        await waitForQuestion();
+        onAccessTokenRefreshed(fakeAccessToken(USER_Y));
+        markAuthSessionSignedOut();
+        useAccountSwitchConfirmStore.getState().answer(true);
+        await signIn;
+
+        expect(establishAuthSession).not.toHaveBeenCalled();
+        expect(startAuthLogout).toHaveBeenCalledWith({ broadcast: false });
+    });
+
     test('an expiry answers it Cancel', async () => {
         await signInX(1);
         const signIn = signInY();
@@ -517,6 +556,72 @@ describe('another tab: a refreshed token of Y', () => {
 
         expect(await storedXKeys()).toEqual([]);
         expect(getKeptOutboxUsers()).toEqual([]);
+    });
+
+    // #641: the switch changes the session version before the stores are reset and reloaded, so
+    // X's loads and writes still in flight are stale and Y's reload is current.
+    describe.each([
+        ['flag off', 'false'],
+        ['flag on', 'true'],
+    ])('§1.5 %s: the switch makes X stale before Y reloads', (_name, flag) => {
+        beforeEach(() => {
+            vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', flag);
+        });
+
+        test('the switch changes the version once; a later refresh of Y keeps it', async () => {
+            await signInX(0);
+            const versionOfX = getAuthSessionVersion();
+
+            await refreshToY();
+            const versionOfY = getAuthSessionVersion();
+            await refreshToY();
+
+            expect(isAuthSessionCurrent(versionOfX)).toBe(false);
+            expect(versionOfY).toBe(versionOfX + 1);
+            expect(isAuthSessionCurrent(versionOfY)).toBe(true);
+        });
+
+        // The gap of #641 is the `LocalUser.id` write (the version check of the session load);
+        // the session self load is kept apart by the store reset already.
+        test('a late self-user response of X does not write LocalUser.id', async () => {
+            await signInX(0);
+            useAuthStore.setState({ sessionMode: 'online' });
+            const actual = await vi.importActual<typeof import('./sessionUser')>('./sessionUser');
+            let answerX: () => void = () => undefined;
+            vi.mocked(fetchSelfUser).mockReturnValue(
+                new Promise<SelfUser>(resolve => {
+                    answerX = () => resolve(selfUser(USER_X));
+                }),
+            );
+            const versionOfX = getAuthSessionVersion();
+            let reloadIsCurrent: boolean | null = null;
+            let reloadVersion: number | null = null;
+            const xLoad = actual.loadSelfUserForSession();
+
+            LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+            vi.mocked(refreshApiAuthTokens).mockResolvedValue({
+                token: fakeAccessToken(USER_Y),
+            });
+            vi.mocked(loadKnownUsersForSession).mockResolvedValue();
+            vi.mocked(loadSelfUserForSession).mockImplementation(() => {
+                reloadIsCurrent = !isAuthSessionCurrent(versionOfX);
+                reloadVersion = getAuthSessionVersion();
+                saveLocalUser({ id: USER_Y, role: 'USER', settings });
+                return Promise.resolve(selfUser(USER_Y));
+            });
+            await useAuthStore.getState().refreshAuthTokens();
+            answerX();
+            await xLoad;
+            await settleIdb();
+
+            // Y's reload ran after the bump (in Y's version).
+            expect(reloadIsCurrent).toBe(true);
+            expect(reloadVersion).not.toBeNull();
+            expect(isAuthSessionCurrent(reloadVersion ?? -1)).toBe(true);
+            expect(getLocalUser()?.id).toBe(USER_Y);
+            expect(getTabUserId()).toBe(USER_Y);
+            expect(actual.getSessionSelfLoad().user?.id).not.toBe(USER_X);
+        });
     });
 
     test('flag off = master: X is cleared even with unsent ops', async () => {
