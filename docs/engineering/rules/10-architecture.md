@@ -115,7 +115,7 @@ The example shows the available locations, not a required complete file set.
   outside `apps/app/src/<layer>/<slice>/` and on a new `useConnect.ts`; the existing ones are listed in
   `config/file-layout-baseline.json`, which only shrinks.
 - Bare imports such as `store/groupsStore` are aliases from `compilerOptions.paths` in `apps/app/tsconfig.app.json`
-  (no `baseUrl`); that is the only alias list. Vite reads it through `vite-tsconfig-paths`, and the
+  (no `baseUrl`); that is the only alias list. Vite reads it through `resolve.tsconfigPaths`, and the
   `simple-import-sort` groups are built from it in `config/eslint/aliases.js`. A new top-level `src`
   directory gets an entry there, nowhere else.
 

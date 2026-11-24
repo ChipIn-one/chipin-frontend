@@ -41,8 +41,8 @@ UI-affecting paths are maintained in `scripts/release-qa/ui-paths.mjs`: `apps/ap
 Build-affecting changes are maintained in the same module. They change the shipped bundle or service worker without a UI path:
 
 - `tsconfig*.json` (root and `apps/app/`) and `scripts/version-resolver.mjs`;
-- in `package.json`, any change in `dependencies`, or a `devDependencies` change of the build/PWA toolchain. The toolchain is every package `apps/app/vite.config.ts` and `apps/app/pwa-assets.config.ts` import (`vite`, `vite-plugin-*`, `vite-tsconfig-paths`, `@vitejs/*`, `@vite-pwa/*`, `@sentry/vite-plugin`) plus `workbox-*`. A test parses both config files, so a new plugin cannot be missed;
-- in `package-lock.json`, a changed package that ships in the production tree (no `dev` or `devOptional` flag), or one the toolchain pulls in through lockfile `dependencies`, `optionalDependencies` or non-optional `peerDependencies` (for example `rolldown`, `@swc/core`, `lightningcss`, `@svgr/*`). `@types/*` never counts. The project's own entry is ignored, so a change to its `version` alone changes nothing.
+- in `package.json`, any change in `dependencies`, or a `devDependencies` change of the build/PWA toolchain. The toolchain is every package `apps/app/vite.config.ts` and `apps/app/pwa-assets.config.ts` import (`vite`, `vite-plugin-*`, `@vitejs/*`, `@vite-pwa/*`, `@sentry/vite-plugin`) plus `workbox-*`. A test parses both config files, so a new plugin cannot be missed;
+- in `package-lock.json`, a changed package that ships in the production tree (no `dev` or `devOptional` flag), or one the toolchain pulls in through lockfile `dependencies`, `optionalDependencies` or non-optional `peerDependencies` (for example `rolldown`, `@rolldown/pluginutils`, `lightningcss`, `@svgr/*`). `@types/*` never counts. The project's own entry is ignored, so a change to its `version` alone changes nothing.
 
 Lint, test and types devDependency bumps are not build-affecting. If the two package files cannot be read at both SHAs, the change is treated as build-affecting.
 

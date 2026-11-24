@@ -180,7 +180,7 @@ No paid custom Vercel environment is required.
   `package.json`, the Vercel setting and the workflows together.
 - npm install scripts: `allowScripts` in `package.json` is the reviewed policy.
   Allowed: `@sentry/cli` (fetches the `sentry-cli` binary used for source-map
-  upload) and `@swc/core` (checks the native binding, falls back to wasm).
+  upload).
   Denied: `sharp` (prebuilt `@img/sharp-*` binaries cover supported platforms;
   the script only builds from source) and `fsevents` (macOS-only, ships a
   prebuilt binary). Review any new entry from

@@ -1,9 +1,8 @@
 import { sentryVitePlugin } from '@sentry/vite-plugin';
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import svgr from 'vite-plugin-svgr';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 import { resolveAppVersionInfo } from '../../scripts/version-resolver.mjs';
 
@@ -139,10 +138,13 @@ export default defineConfig(({ command, mode }) => {
                 generateScopedName: command === 'serve' ? '[name]__[local]' : '[hash:base64:6]',
             },
         },
+        // Aliases come from tsconfig.app.json `paths` (Vite 8 native resolution).
+        resolve: {
+            tsconfigPaths: true,
+        },
         plugins: [
             svgr(),
             react(),
-            tsconfigPaths(),
             // favicon.svg from @chipin/tokens at /favicon.svg, <meta name="theme-color"> (05-2b).
             brandPlugin(),
             VitePWA(buildPwaOptions({ appName: pwaAppName })),
