@@ -9,7 +9,7 @@ import { useUserSetting } from 'hooks/useSelfUser';
 
 import { RelativeTime } from 'basics';
 
-import { EventIcon } from '../activity-event';
+import { EventIcon } from '../activity-event/EventIcon';
 
 interface Props {
     event: ExpenseTransferActivityEvent;
