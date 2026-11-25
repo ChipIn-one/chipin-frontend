@@ -7,6 +7,14 @@ import { OverlayHeader } from '../components';
 
 import { MODAL_SIZES, type ModalSize } from './constants';
 
+// NET-003: the top layer (toasts, the update-required screen) is above the modal and operable;
+// pressing it is not a click outside the modal (closing would drop the expense draft of a reload).
+const keepOpenOnTopLayer = (event: Event): void => {
+    if (event.target instanceof Element && event.target.closest('[data-top-layer]')) {
+        event.preventDefault();
+    }
+};
+
 interface Props {
     triggerElement?: ReactNode;
     content: ReactNode;
@@ -44,6 +52,7 @@ const BaseModal = ({
                 maxWidth={maxWidth}
                 size={{ initial: '2', sm: '4' }}
                 className="modal-overlay-content"
+                onInteractOutside={keepOpenOnTopLayer}
             >
                 <OverlayHeader
                     backControl={

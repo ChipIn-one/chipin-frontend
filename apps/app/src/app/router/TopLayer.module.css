@@ -1,0 +1,5 @@
+/* A modal Radix layer sets `pointer-events: none` on <body> and sonner never sets `auto`: without
+   this the toasts above an open dialog are visible but their close and action buttons are dead. */
+.toaster {
+    pointer-events: auto;
+}

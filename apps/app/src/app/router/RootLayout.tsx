@@ -1,16 +1,11 @@
 import { Suspense } from 'react';
-import { Box, Spinner } from '@radix-ui/themes';
-import { CircleCheckIcon, CircleXIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
+import { Box } from '@radix-ui/themes';
 import { Outlet, ScrollRestoration } from 'react-router-dom';
-import { Toaster } from 'sonner';
 
 import { RestoreGate } from 'app/providers/RestoreGate';
 import { ServiceWorkerSafePoints } from 'app/pwa/ServiceWorkerSafePoints';
-import { UpdateRequiredScreen } from 'app/pwa/UpdateRequiredScreen';
 import { AddExpenseModal } from 'features/add-expense';
-import { useIsMobile } from 'hooks/common';
 import { GlobalHooks } from 'pages/GlobalHooks';
-import { selectResolvedAppearance, useAppearanceStore } from 'store/ui-prefs';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PageLoader from 'basics/PageLoader';
@@ -19,6 +14,7 @@ import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import { Header } from 'components/Header';
 import { EarlySupporterPromoModal } from 'components/modals/early-supporter-promo-modal';
 
+import { TopLayer } from './TopLayer';
 import { useDocumentTitle } from './useDocumentTitle';
 
 // Inside `RestoreGate`, so the group query of the title waits for the restored cache (spec 03 §1.6),
@@ -29,21 +25,12 @@ const DocumentTitle = () => {
     return null;
 };
 
-const ToastSuccessIcon = () => <CircleCheckIcon size={20} />;
-const ToastInfoIcon = () => <InfoIcon size={20} />;
-const ToastWarningIcon = () => <TriangleAlertIcon size={20} />;
-const ToastErrorIcon = () => <CircleXIcon size={20} />;
-const ToastLoadingIcon = () => <Spinner size="2" />;
-
 /**
  * The root route element (spec 04 §2.3): the shell that was inside `<BrowserRouter>`, in the same
  * order, with the matched route in place of `<AppRouter/>`. The `Suspense` keeps the former
  * fallback for anything that suspends while a page renders.
  */
 const RootLayout = () => {
-    const appearance = useAppearanceStore(selectResolvedAppearance);
-    const isMobile = useIsMobile();
-
     return (
         <BackgroundBox>
             <BackendUnavailableGate>
@@ -62,25 +49,9 @@ const RootLayout = () => {
                 {/* The SW registration itself is in root.tsx: once per page, not per user. */}
                 <ServiceWorkerSafePoints />
                 <ScrollRestoration />
-
-                <Toaster
-                    theme={appearance}
-                    richColors
-                    closeButton
-                    position={isMobile ? 'top-center' : 'bottom-left'}
-                    offset={isMobile ? 12 : 16}
-                    mobileOffset={isMobile ? 12 : 16}
-                    icons={{
-                        success: <ToastSuccessIcon />,
-                        info: <ToastInfoIcon />,
-                        warning: <ToastWarningIcon />,
-                        error: <ToastErrorIcon />,
-                        loading: <ToastLoadingIcon />,
-                    }}
-                />
             </BackendUnavailableGate>
+            <TopLayer />
             <EarlySupporterPromoModal />
-            <UpdateRequiredScreen />
         </BackgroundBox>
     );
 };

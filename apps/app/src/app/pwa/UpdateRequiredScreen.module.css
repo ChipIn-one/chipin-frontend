@@ -1,6 +1,9 @@
 .root {
-    /* Above every app layer, Radix portals included. */
-    z-index: 2147483000;
+    /* In the TopLayer portal, outside the root theme's `z-index: 0` context: the top step of the
+       scale, above the toasts, the offline status and the Radix dialog portals. */
+    z-index: var(--cp-z-blocking);
+    /* An open modal dialog sets `pointer-events: none` on <body>; the update button stays usable. */
+    pointer-events: auto;
     /* stylelint-disable-next-line declaration-property-value-disallowed-list, csstools/value-no-unknown-custom-properties -- the Radix page background (white in light, gray-1 in dark) has no --cp-* token, and a token on :root cannot reference it */
     background: var(--color-background);
 }

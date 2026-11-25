@@ -253,3 +253,21 @@ describe('3. brand colors', () => {
         ).toEqual(['--cp-accent-solid']);
     });
 });
+
+describe('4. z-index scale', () => {
+    // #714: the top layer (offline status, toasts, the update-required screen) sits above Radix
+    // dialog content (1) on small steps of this scale, so the order must hold.
+    test('content < raised < floating < toast < blocking, all small integers', () => {
+        const steps = ['content', 'raised', 'floating', 'toast', 'blocking'].map(name => {
+            const match = new RegExp(`--cp-z-${name}:\\s*(\\d+);`).exec(TOKENS_CSS);
+
+            expect(match, `--cp-z-${name}`).not.toBeNull();
+            return Number(match?.[1]);
+        });
+
+        expect(steps).toEqual([...steps].sort((a, b) => a - b));
+        expect(new Set(steps).size).toBe(steps.length);
+        expect(steps[1]).toBe(1);
+        expect(Math.max(...steps)).toBeLessThan(10);
+    });
+});
