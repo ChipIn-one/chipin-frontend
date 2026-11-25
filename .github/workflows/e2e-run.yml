@@ -1,0 +1,438 @@
+name: E2E run
+
+# The e2e steps shared by the PR smoke (e2e-smoke.yml, target `dev-server`) and the release browser
+# matrix (prepare-release-qa.yml, target `preview`), docs/e2e-tests.md. A reusable workflow, not a
+# composite action: a caller's `uses: ./.github/workflows/e2e-run.yml` resolves at the caller's
+# commit, while `ref` is the code under test. For the release that is the trusted master SHA; for the
+# smoke it is github.sha: the pull request's merge commit on `pull_request`, the pushed SHA on `push`
+# (the smoke still checks out and tests the pull request head). The callers show this job as `<caller job name> / run`.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Full source SHA to check out and test
+        required: true
+        type: string
+      project:
+        description: Playwright project to run
+        required: true
+        type: string
+      target:
+        description: "`dev-server` (the commit's code on the Vite dev server) or `preview` (base_url)"
+        required: true
+        type: string
+      base_url:
+        description: The resolved Preview URL; only for target `preview`
+        required: false
+        default: ''
+        type: string
+      report_artifact_name:
+        description: Name of the Playwright report and traces artifact
+        required: true
+        type: string
+      test_timeout_minutes:
+        description: Limit of the test step
+        required: true
+        type: number
+      all_projects:
+        description: Space-separated projects of the matrix; only for target `preview`
+        required: false
+        default: ''
+        type: string
+    secrets:
+      # Not required by GitHub, so a caller without them (the smoke's `check` job skips those) gets a
+      # clear failure from "Check the inputs" instead of a startup error.
+      CHIPIN_CONTRACT_SWAGGER_USER:
+        required: false
+      CHIPIN_CONTRACT_SWAGGER_PASSWORD:
+        required: false
+      VERCEL_AUTOMATION_BYPASS_SECRET:
+        required: false
+
+permissions: {}
+
+jobs:
+  # Trust boundary (docs/e2e-tests.md): the checked-out code, including its own playwright.config.ts
+  # and the install scripts of its lockfile, runs in this job with the staging Basic secrets (and,
+  # for a Preview, the optional Vercel bypass secret) in the test-run, artifact-scan and final purge
+  # steps only.
+  run:
+    name: run
+    runs-on: ubuntu-24.04
+    # A hard cap, not the wall-time target: it leaves room for the purge after a test step cut at
+    # its own limit.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # Created before anything else, so the final purge step can delete the run's users even when
+      # the test step is cancelled, times out or crashes. Unique per job. Same format as createRunId().
+      - name: Create run id
+        id: run
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id="fe-e2e-$(date +%s%3N)-$(openssl rand -hex 6)"
+          if [[ ! "$run_id" =~ ^fe-e2e-[0-9]{13}-[0-9a-f]{12}$ ]]; then
+            echo "::error::Could not create a valid e2e run id"
+            exit 1
+          fi
+          echo "id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "E2E run id: $run_id"
+      # Also fails when the staging Basic secrets are empty; only whether they are set is checked,
+      # never printed.
+      - name: Check the inputs
+        env:
+          HAS_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER != '' }}
+          HAS_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD != '' }}
+          TARGET: ${{ inputs.target }}
+          PROFILE: ${{ inputs.project }}
+          ALL_PROJECTS: ${{ inputs.all_projects }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          name='^[a-z0-9][a-z0-9-]*$'
+          if [[ "$HAS_SWAGGER_USER" != "true" || "$HAS_SWAGGER_PASSWORD" != "true" ]]; then
+            echo "::error::The staging Basic secrets (CHIPIN_CONTRACT_SWAGGER_USER, CHIPIN_CONTRACT_SWAGGER_PASSWORD) are empty; the e2e run needs both."
+            exit 1
+          fi
+          if [[ "$TARGET" != "dev-server" && "$TARGET" != "preview" ]]; then
+            echo "::error::Unknown e2e target '$TARGET' (expected dev-server or preview)"
+            exit 1
+          fi
+          if [[ ! "$PROFILE" =~ $name ]]; then
+            echo "::error::Invalid Playwright project '$PROFILE'"
+            exit 1
+          fi
+          if [[ "$TARGET" == "preview" ]]; then
+            read -r -a projects <<<"$ALL_PROJECTS"
+            found=false
+            for project in "${projects[@]}"; do
+              if [[ ! "$project" =~ $name ]]; then
+                echo "::error::Invalid Playwright project '$project' in all_projects"
+                exit 1
+              fi
+              if [[ "$project" == "$PROFILE" ]]; then found=true; fi
+            done
+            if [[ "$found" != "true" ]]; then
+              echo "::error::all_projects does not list the project '$PROFILE'"
+              exit 1
+            fi
+          fi
+      - name: Checkout the tested source SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      # No npm cache: every workflow of this repository sets package-manager-cache: false.
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm ci
+      - name: Resolve Playwright version
+        id: playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./apps/app/package.json').devDependencies['@playwright/test']")"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::@playwright/test must be pinned to an exact version, got '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # A candidate from before the matrix has only the `chromium` project, with the old config and no
+      # JSON report: Playwright then names the other projects not found and lists exactly "chromium"
+      # as available. No profile runs on it and every one reports `unsupported`, this one included.
+      # Any other failure to list the tests, another not-found (a renamed project) included, fails
+      # the job.
+      - name: Check the candidate has this profile
+        id: project
+        if: inputs.target == 'preview'
+        working-directory: apps/app
+        env:
+          ALL_PROJECTS: ${{ inputs.all_projects }}
+          CHIPIN_E2E_BASE_URL: ${{ inputs.base_url }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          read -r -a projects <<<"$ALL_PROJECTS"
+          args=()
+          for project in "${projects[@]}"; do args+=("--project=$project"); done
+          if output="$(npx playwright test --list "${args[@]}" 2>&1)"; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          elif grep -qE 'Project\(s\) "[^"]+"(, "[^"]+")* not found\. Available projects: "chromium"$' <<<"$output"; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Profile not in this candidate::The candidate's playwright.config.ts has only the 'chromium' project of the browser matrix ($ALL_PROJECTS): it predates the matrix, so no profile runs on it."
+          else
+            printf '%s\n' "$output" | tail -20
+            exit 1
+          fi
+      # The browsers and their system libraries come in the official Playwright image of the pinned
+      # @playwright/test version (docs/e2e-tests.md): no apt and no browser download on the runner,
+      # no cache. Pulled apart from the tests, so a slow pull shows here.
+      - name: Pull the Playwright image
+        if: inputs.target == 'dev-server' || steps.project.outputs.available == 'true'
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          docker pull "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
+      - name: Check staging API
+        if: inputs.target == 'dev-server' || steps.project.outputs.available == 'true'
+        shell: bash
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 https://api-dev.chipin.one/users/self || true)"
+          if [[ "$status" != "401" ]]; then
+            echo "::error title=Staging API unavailable::Staging API https://api-dev.chipin.one is unavailable (GET /users/self answered '${status:-no response}', expected 401). The e2e run needs it; this is not a test failure."
+            exit 1
+          fi
+      # `dev-server`: the commit's code on the Vite dev server (it runs in the image too), which
+      # proxies `/api` to the staging API; from the repository root. `preview`: the resolved
+      # immutable Preview; playwright.config.ts rejects anything outside its allowlist (production is
+      # forbidden), and the optional Vercel bypass secret is sent only to the Preview origin.
+      # The run's purge is the global teardown inside this step, so it has finished, after a pass or
+      # a failure, before any artifact step below.
+      # Only this command runs in the image, on the host's npm ci tree and under the runner's Node,
+      # mounted read-only: as the runner user (results stay runner-owned), with the workspace and
+      # RUNNER_TEMP at their own paths, and with exactly the variables of its target, passed by name.
+      - name: Run ${{ inputs.project }} e2e (smoke + money flows)
+        id: e2e
+        if: inputs.target == 'dev-server' || steps.project.outputs.available == 'true'
+        timeout-minutes: ${{ inputs.test_timeout_minutes }}
+        working-directory: ${{ inputs.target == 'preview' && 'apps/app' || '.' }}
+        env:
+          CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          CHIPIN_CONTRACT_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CHIPIN_E2E_RUN_ID: ${{ steps.run.outputs.id }}
+          CHIPIN_E2E_BASE_URL: ${{ inputs.base_url }}
+          CHIPIN_E2E_JSON_REPORT: ${{ runner.temp }}/playwright-results.json
+          TARGET: ${{ inputs.target }}
+          PROFILE: ${{ inputs.project }}
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
+            exit 1
+          fi
+          case "$TARGET" in
+            preview)
+              # Without a target the suite would start the local dev server; the matrix tests only the
+              # resolved Preview.
+              if [[ -z "$CHIPIN_E2E_BASE_URL" ]]; then
+                echo "::error::The resolved Preview URL (CHIPIN_E2E_BASE_URL) is empty; the matrix does not run without it."
+                exit 1
+              fi
+              target_env=(
+                -e PROFILE
+                -e CHIPIN_CONTRACT_SWAGGER_USER
+                -e CHIPIN_CONTRACT_SWAGGER_PASSWORD
+                -e VERCEL_AUTOMATION_BYPASS_SECRET
+                -e CHIPIN_E2E_RUN_ID
+                -e CHIPIN_E2E_BASE_URL
+                -e CHIPIN_E2E_JSON_REPORT
+              )
+              # Expanded inside the container, from its own PROFILE.
+              # shellcheck disable=SC2016
+              command='exec npx playwright test --project="$PROFILE"'
+              ;;
+            dev-server)
+              target_env=(
+                -e CHIPIN_CONTRACT_SWAGGER_USER
+                -e CHIPIN_CONTRACT_SWAGGER_PASSWORD
+                -e CHIPIN_E2E_RUN_ID
+              )
+              # PROFILE is a checked project name (Check the inputs), so it is safe in the command.
+              command="exec npm run test:e2e -- --project=$PROFILE"
+              ;;
+            *)
+              echo "::error::Unknown e2e target '$TARGET'"
+              exit 1
+              ;;
+          esac
+          # The repository's Node (setup-node, engines 24.x), not the image's own, runs the tests.
+          node_home="$(dirname "$(dirname "$(command -v node)")")"
+          docker run --rm --ipc=host --init \
+            --name "$CHIPIN_E2E_RUN_ID" \
+            --user "$(id -u):$(id -g)" \
+            -v "$node_home:/opt/host-node:ro" \
+            -e PATH=/opt/host-node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -e HOME=/tmp \
+            -e CI \
+            "${target_env[@]}" \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+            -v "$RUNNER_TEMP:$RUNNER_TEMP" \
+            -w "$PWD" \
+            "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble" \
+            bash -c "node --version && $command"
+      # A cancel or timeout can kill the docker client and leave the container running: it is
+      # removed before the result, artifact and purge steps, so nothing writes to the workspace or
+      # registers users on staging after this point. The container is named after the run id.
+      - name: Stop the test container
+        if: always() && steps.run.outputs.id != ''
+        timeout-minutes: 1
+        env:
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: docker rm -f "$RUN_ID" >/dev/null 2>&1 || true
+      # A fixed-shape summary for `prepare` of the release matrix: counts from the JSON report, status
+      # from the step outcome, `error` when the suite produced no report. It holds no secret or
+      # session material.
+      - name: Write profile result
+        if: always() && inputs.target == 'preview'
+        env:
+          PROFILE: ${{ inputs.project }}
+          OUTCOME: ${{ steps.e2e.outcome }}
+          AVAILABLE: ${{ steps.project.outputs.available }}
+          REPORT: ${{ runner.temp }}/playwright-results.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=error passed=0 failed=0 flaky=0 skipped=0
+          if [[ "$AVAILABLE" == "false" ]]; then
+            status=unsupported
+          elif [[ -s "$REPORT" ]] && jq -e '.stats | [.expected, .unexpected, .flaky, .skipped] | all(type == "number" and . >= 0 and . == floor)' "$REPORT" >/dev/null; then
+            read -r passed failed flaky skipped < <(jq -r '.stats | "\(.expected) \(.unexpected) \(.flaky) \(.skipped)"' "$REPORT")
+            if [[ "$OUTCOME" == "success" ]]; then status=passed; else status=failed; fi
+          fi
+          mkdir -p "$RUNNER_TEMP/e2e-result"
+          jq -n --arg profile "$PROFILE" --arg status "$status" \
+            --argjson passed "$passed" --argjson failed "$failed" --argjson flaky "$flaky" --argjson skipped "$skipped" \
+            '{version: 1, profile: $profile, status: $status, passed: $passed, failed: $failed, flaky: $flaky, skipped: $skipped}' \
+            > "$RUNNER_TEMP/e2e-result/result.json"
+          cat "$RUNNER_TEMP/e2e-result/result.json"
+      - name: Upload profile result
+        if: always() && inputs.target == 'preview'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-result-${{ inputs.project }}
+          path: ${{ runner.temp }}/e2e-result/result.json
+          retention-days: 3
+          if-no-files-found: ignore
+          # "Re-run failed jobs" replaces the earlier attempt's result of this profile.
+          overwrite: true
+      # The teardown writes the marker, holding the run id, only after its second purge found no
+      # user of the run left. Without it nothing is scanned or uploaded.
+      - name: Check verified purge
+        id: purge-marker
+        if: failure() && steps.e2e.outcome == 'failure'
+        env:
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: |
+          marker="apps/app/test-results/.purge-verified"
+          if [[ -f "$marker" && "$(cat "$marker")" == "$RUN_ID" ]]; then
+            echo "verified=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "verified=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Artifacts not uploaded::The run's purge was not verified, so the report and traces (they hold the run users' sessions) are not uploaded."
+          fi
+      # The repository is public: the report and traces are uploaded only after a verified purge
+      # (they can hold the session cookie and access tokens of the run's users, deleted by then) and
+      # only when they contain neither the Basic password, the Basic token nor the Vercel bypass
+      # secret when one is set (the PR smoke never gets it), also inside zip files and the HTML
+      # report's embedded data. Only file names are printed, never a value.
+      - name: Scan artifacts for credentials
+        id: scan
+        if: failure() && steps.purge-marker.outputs.verified == 'true'
+        env:
+          SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
+          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, io, os, re, sys, zipfile
+
+          user = os.environ["SWAGGER_USER"].encode()
+          password = os.environ["SWAGGER_PASSWORD"].encode()
+          needles = [password, base64.b64encode(user + b":" + password)]
+          if os.environ.get("VERCEL_BYPASS"):
+              needles.append(os.environ["VERCEL_BYPASS"].encode())
+          embedded = re.compile(rb"data:application/zip;base64,([A-Za-z0-9+/=]+)")
+          hits = []
+
+          def scan(label, data):
+              if any(needle in data for needle in needles):
+                  hits.append(label)
+              if data[:4] == b"PK\x03\x04":
+                  try:
+                      with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                          for name in archive.namelist():
+                              scan(f"{label}!{name}", archive.read(name))
+                  except zipfile.BadZipFile:
+                      hits.append(f"{label} (unreadable zip)")
+              for match in embedded.finditer(data):
+                  scan(f"{label}#embedded", base64.b64decode(match.group(1)))
+
+          for root in ("apps/app/playwright-report", "apps/app/test-results"):
+              for directory, _, files in os.walk(root):
+                  for file in files:
+                      path = os.path.join(directory, file)
+                      with open(path, "rb") as handle:
+                          scan(path, handle.read())
+
+          if hits:
+              for hit in hits:
+                  print(f"::error::Credential material found in {hit}; the artifacts are not uploaded.")
+              sys.exit(1)
+          print("No credentials found in the Playwright report or test results.")
+          PY
+      - name: Upload Playwright report and traces
+        if: failure() && steps.purge-marker.outputs.verified == 'true' && steps.scan.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.report_artifact_name }}
+          path: |
+            apps/app/playwright-report
+            apps/app/test-results
+          retention-days: 3
+          if-no-files-found: ignore
+      # Also after a cancel, a timeout or a crash of the test step: deletes whatever the run left on
+      # staging and logs the counts. Idempotent: after the teardown's purge it deletes nothing. The
+      # credentials reach curl only through its stdin config, never its arguments or the log.
+      - name: Purge the run on staging
+        if: always() && steps.run.outputs.id != '' && contains(fromJSON('["success","failure","cancelled"]'), steps.e2e.outcome)
+        timeout-minutes: 2
+        env:
+          SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$(printf '%s:%s' "$SWAGGER_USER" "$SWAGGER_PASSWORD" | base64 -w0)"
+          echo "::add-mask::$token"
+          body="$(mktemp)"
+          purge() {
+            local status
+            status="$(printf 'header = "Authorization: Basic %s"\n' "$token" \
+              | curl --silent --config - --request DELETE --output "$body" --write-out '%{http_code}' \
+                --max-time 30 --retry 2 --retry-all-errors \
+                "https://api-dev.chipin.one/auth/test-runs/$RUN_ID" || true)"
+            if [[ "$status" != "200" ]]; then
+              echo "::error title=Run purge failed::DELETE /auth/test-runs/$RUN_ID answered '${status:-no response}'; users of this run may remain on staging."
+              exit 1
+            fi
+            jq -er --arg run "$RUN_ID" \
+              'select(.runId == $run and (.deletedUsers | type) == "number") | "Purged run \(.runId): users=\(.deletedUsers) groups=\(.deletedGroups) expenses=\(.deletedExpenses) settlements=\(.deletedSettlements) activityEvents=\(.deletedActivityEvents)"' \
+              "$body" || { echo "::error title=Run purge failed::The purge response for $RUN_ID is not the expected counts."; exit 1; }
+          }
+          purge
+          # Verify: a second purge must find no user left (after a cancel this step is the only purge).
+          purge
+          if [[ "$(jq -r '.deletedUsers' "$body")" != "0" ]]; then
+            echo "::error title=Run purge not verified::Users of run $RUN_ID were still present on the second purge."
+            exit 1
+          fi

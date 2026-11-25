@@ -1491,7 +1491,7 @@ describe('release browser matrix', () => {
         ]);
         const text = body(matrix);
         expect(text.split('\n')[2]).toBe(
-            `> **The automated browser matrix did not pass.** The candidate predates the browser matrix (no Playwright project): Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit). See the [run](${RUN_URL}).`,
+            `> **The automated browser matrix did not pass.** The candidate predates the browser matrix (its Playwright config has no five-profile matrix): Desktop Firefox, Desktop WebKit, Pixel 7 (Chromium), iPhone 15 (WebKit). See the [run](${RUN_URL}).`,
         );
         expect(text).toContain('| Desktop Firefox | **not in this candidate** | 0 | 0 | 0 | 0 |');
         expect(text).not.toMatch(/Failed:|No result:/);

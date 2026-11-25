@@ -45,232 +45,24 @@ jobs:
 
   # Trust boundary (docs/e2e-tests.md): same-repository pull request code, including its own
   # playwright.config.ts and the install scripts of its lockfile, runs in this job with the staging
-  # Basic secrets in the test-run, artifact-scan and final purge steps.
+  # Basic secrets in the test-run, artifact-scan and final purge steps (e2e-run.yml). Only the two
+  # Basic secrets are passed, never `secrets: inherit` or the Vercel bypass secret.
+  # The steps live in the reusable e2e-run.yml, so GitHub shows the check as `e2e-smoke / run`.
   e2e-smoke:
     name: e2e-smoke
     needs: check
     if: needs.check.outputs.available == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      # Created before anything else, so the final purge step can delete the run's users even when
-      # the test step is cancelled, times out or crashes. Same format as createRunId().
-      - name: Create run id
-        id: run
-        shell: bash
-        run: |
-          set -euo pipefail
-          run_id="fe-e2e-$(date +%s%3N)-$(openssl rand -hex 6)"
-          if [[ ! "$run_id" =~ ^fe-e2e-[0-9]{13}-[0-9a-f]{12}$ ]]; then
-            echo "::error::Could not create a valid e2e run id"
-            exit 1
-          fi
-          echo "id=$run_id" >> "$GITHUB_OUTPUT"
-          echo "E2E run id: $run_id"
-      - name: Checkout verified source SHA
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      # No npm cache: every workflow of this repository sets package-manager-cache: false.
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: 24.21.0
-          package-manager-cache: false
-      - name: Install dependencies
-        run: npm ci
-      - name: Resolve Playwright version
-        id: playwright
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(node -p "require('./apps/app/package.json').devDependencies['@playwright/test']")"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::@playwright/test must be pinned to an exact version, got '$version'"
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      # The browsers and their system libraries come in the official Playwright image of the pinned
-      # @playwright/test version (docs/e2e-tests.md): no apt and no browser download on the runner,
-      # no cache. Pulled apart from the tests, so a slow pull shows here.
-      - name: Pull the Playwright image
-        timeout-minutes: 5
-        env:
-          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
-            exit 1
-          fi
-          docker pull "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
-      - name: Check staging API
-        shell: bash
-        run: |
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 https://api-dev.chipin.one/users/self || true)"
-          if [[ "$status" != "401" ]]; then
-            echo "::error title=Staging API unavailable::Staging API https://api-dev.chipin.one is unavailable (GET /users/self answered '${status:-no response}', expected 401). The e2e smoke needs it; this is not a test failure."
-            exit 1
-          fi
-      # The run's purge is the global teardown inside this step, so it has finished, after a pass
-      # or a failure, before any artifact step below.
-      # Only this command runs in the image (the Vite dev server included), on the host's npm ci
-      # tree and under the runner's Node, mounted read-only: as the runner user (results stay
-      # runner-owned), with the workspace and RUNNER_TEMP at their own paths, and with exactly this
-      # step's variables, passed by name.
-      - name: Run Chromium e2e (smoke + money flows)
-        id: smoke
-        timeout-minutes: 10
-        env:
-          CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
-          CHIPIN_CONTRACT_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
-          CHIPIN_E2E_RUN_ID: ${{ steps.run.outputs.id }}
-          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
-        shell: bash
-        # Only the desktop Chromium project; the other profiles run on release candidates
-        # (prepare-release-qa.yml).
-        run: |
-          set -euo pipefail
-          if [[ ! "$PLAYWRIGHT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid Playwright version '$PLAYWRIGHT_VERSION'"
-            exit 1
-          fi
-          # The repository's Node (setup-node, engines 24.x), not the image's own, runs the tests.
-          node_home="$(dirname "$(dirname "$(command -v node)")")"
-          docker run --rm --ipc=host --init \
-            --name "$CHIPIN_E2E_RUN_ID" \
-            --user "$(id -u):$(id -g)" \
-            -v "$node_home:/opt/host-node:ro" \
-            -e PATH=/opt/host-node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-            -e HOME=/tmp \
-            -e CI \
-            -e CHIPIN_CONTRACT_SWAGGER_USER \
-            -e CHIPIN_CONTRACT_SWAGGER_PASSWORD \
-            -e CHIPIN_E2E_RUN_ID \
-            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
-            -v "$RUNNER_TEMP:$RUNNER_TEMP" \
-            -w "$PWD" \
-            "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble" \
-            bash -c 'node --version && exec npm run test:e2e -- --project=chromium'
-      # A cancel or timeout can kill the docker client and leave the container running: it is
-      # removed before the result, artifact and purge steps, so nothing writes to the workspace or
-      # registers users on staging after this point. The container is named after the run id.
-      - name: Stop the test container
-        if: always() && steps.run.outputs.id != ''
-        timeout-minutes: 1
-        env:
-          RUN_ID: ${{ steps.run.outputs.id }}
-        shell: bash
-        run: docker rm -f "$RUN_ID" >/dev/null 2>&1 || true
-      # The teardown writes the marker, holding the run id, only after its second purge found no
-      # user of the run left. Without it nothing is scanned or uploaded.
-      - name: Check verified purge
-        id: purge-marker
-        if: failure() && steps.smoke.outcome == 'failure'
-        env:
-          RUN_ID: ${{ steps.run.outputs.id }}
-        shell: bash
-        run: |
-          marker="apps/app/test-results/.purge-verified"
-          if [[ -f "$marker" && "$(cat "$marker")" == "$RUN_ID" ]]; then
-            echo "verified=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "verified=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Artifacts not uploaded::The run's purge was not verified, so the report and traces (they hold the run users' sessions) are not uploaded."
-          fi
-      # The repository is public: the report and traces are uploaded only after a verified purge
-      # (they can hold the session cookie and access tokens of the run's users, deleted by then)
-      # and only when they contain neither the Basic password nor the Basic token, also inside zip
-      # files and the HTML report's embedded data. Only file names are printed, never a value.
-      - name: Scan artifacts for credentials
-        id: scan
-        if: failure() && steps.purge-marker.outputs.verified == 'true'
-        env:
-          SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
-          SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import base64, io, os, re, sys, zipfile
-
-          user = os.environ["SWAGGER_USER"].encode()
-          password = os.environ["SWAGGER_PASSWORD"].encode()
-          needles = [password, base64.b64encode(user + b":" + password)]
-          embedded = re.compile(rb"data:application/zip;base64,([A-Za-z0-9+/=]+)")
-          hits = []
-
-          def scan(label, data):
-              if any(needle in data for needle in needles):
-                  hits.append(label)
-              if data[:4] == b"PK\x03\x04":
-                  try:
-                      with zipfile.ZipFile(io.BytesIO(data)) as archive:
-                          for name in archive.namelist():
-                              scan(f"{label}!{name}", archive.read(name))
-                  except zipfile.BadZipFile:
-                      hits.append(f"{label} (unreadable zip)")
-              for match in embedded.finditer(data):
-                  scan(f"{label}#embedded", base64.b64decode(match.group(1)))
-
-          for root in ("apps/app/playwright-report", "apps/app/test-results"):
-              for directory, _, files in os.walk(root):
-                  for file in files:
-                      path = os.path.join(directory, file)
-                      with open(path, "rb") as handle:
-                          scan(path, handle.read())
-
-          if hits:
-              for hit in hits:
-                  print(f"::error::Credential material found in {hit}; the artifacts are not uploaded.")
-              sys.exit(1)
-          print("No Basic credentials found in the Playwright report or test results.")
-          PY
-      - name: Upload Playwright report and traces
-        if: failure() && steps.purge-marker.outputs.verified == 'true' && steps.scan.outcome == 'success'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: e2e-smoke-report-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            apps/app/playwright-report
-            apps/app/test-results
-          retention-days: 3
-          if-no-files-found: ignore
-      # Also after a cancel, a timeout or a crash of the test step: deletes whatever the run left on
-      # staging and logs the counts. Idempotent: after the teardown's purge it deletes nothing. The
-      # credentials reach curl only through its stdin config, never its arguments or the log.
-      - name: Purge the run on staging
-        if: always() && steps.run.outputs.id != '' && contains(fromJSON('["success","failure","cancelled"]'), steps.smoke.outcome)
-        timeout-minutes: 2
-        env:
-          SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
-          SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
-          RUN_ID: ${{ steps.run.outputs.id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          token="$(printf '%s:%s' "$SWAGGER_USER" "$SWAGGER_PASSWORD" | base64 -w0)"
-          echo "::add-mask::$token"
-          body="$(mktemp)"
-          purge() {
-            local status
-            status="$(printf 'header = "Authorization: Basic %s"\n' "$token" \
-              | curl --silent --config - --request DELETE --output "$body" --write-out '%{http_code}' \
-                --max-time 30 --retry 2 --retry-all-errors \
-                "https://api-dev.chipin.one/auth/test-runs/$RUN_ID" || true)"
-            if [[ "$status" != "200" ]]; then
-              echo "::error title=Run purge failed::DELETE /auth/test-runs/$RUN_ID answered '${status:-no response}'; users of this run may remain on staging."
-              exit 1
-            fi
-            jq -er --arg run "$RUN_ID" \
-              'select(.runId == $run and (.deletedUsers | type) == "number") | "Purged run \(.runId): users=\(.deletedUsers) groups=\(.deletedGroups) expenses=\(.deletedExpenses) settlements=\(.deletedSettlements) activityEvents=\(.deletedActivityEvents)"' \
-              "$body" || { echo "::error title=Run purge failed::The purge response for $RUN_ID is not the expected counts."; exit 1; }
-          }
-          purge
-          # Verify: a second purge must find no user left (after a cancel this step is the only purge).
-          purge
-          if [[ "$(jq -r '.deletedUsers' "$body")" != "0" ]]; then
-            echo "::error title=Run purge not verified::Users of run $RUN_ID were still present on the second purge."
-            exit 1
-          fi
+    permissions:
+      contents: read
+    uses: ./.github/workflows/e2e-run.yml
+    with:
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      # Only the desktop Chromium project; the other profiles run on release candidates
+      # (prepare-release-qa.yml).
+      project: chromium
+      target: dev-server
+      report_artifact_name: e2e-smoke-report-${{ github.run_id }}-${{ github.run_attempt }}
+      test_timeout_minutes: 10
+    secrets:
+      CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+      CHIPIN_CONTRACT_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}

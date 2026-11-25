@@ -24,8 +24,8 @@ export const MATRIX_PROFILES = Object.freeze([
     { id: 'iphone', label: 'iPhone 15 (WebKit)' },
 ]);
 const MATRIX_RESULT_KEYS = ['failed', 'flaky', 'passed', 'profile', 'skipped', 'status', 'version'];
-// `unsupported`: the candidate's playwright.config.ts has no project of this profile (it predates
-// the matrix), so nothing ran.
+// `unsupported`: the candidate's Playwright config predates the five-profile matrix (it has only the
+// old `chromium` project), so no profile ran on it, Chromium included.
 const MATRIX_RESULT_STATUSES = new Set(['passed', 'failed', 'error', 'unsupported']);
 const MATRIX_COUNTS = ['passed', 'failed', 'flaky', 'skipped'];
 const MAX_MATRIX_COUNT = 10000;
@@ -64,7 +64,7 @@ export function matrixRunUrl(runId) {
 
 // A profile passed only when its job concluded `success` (read from the GitHub API, trusted) and its
 // result file reports passed tests and no failure. A failure in either is `failed`; a candidate
-// without the profile's project is `predates`; no valid result, or an unverified pass, is `not_run`.
+// whose Playwright config predates the five-profile matrix is `predates` (every profile); no valid result, or an unverified pass, is `not_run`.
 export function summarizeMatrix({ results = {}, conclusions = {}, runId }) {
     const runUrl = matrixRunUrl(runId);
     const profiles = MATRIX_PROFILES.map(({ id, label }) => {
@@ -117,7 +117,7 @@ export function renderMatrixBanner(matrix) {
         failed.length ? `Failed: ${failed.join(', ')}.` : '',
         missing.length ? `No result: ${missing.join(', ')}.` : '',
         predates.length
-            ? `The candidate predates the browser matrix (no Playwright project): ${predates.join(', ')}.`
+            ? `The candidate predates the browser matrix (its Playwright config has no five-profile matrix): ${predates.join(', ')}.`
             : '',
     ].filter(Boolean);
     return `> [!CAUTION]\n> **The automated browser matrix did not pass.** ${parts.join(' ')} See the ${run}.\n> The SMOKE-SHORT checks it covers stay in the manual list.`;
