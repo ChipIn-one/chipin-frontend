@@ -538,22 +538,30 @@ const serveThreeActivityPages = (): { count: number } => {
 const activityPageCount = (client: QueryClient): number | undefined =>
     client.getQueryData<GroupActivityData>(groupsKeys.activity('a'))?.pages.length;
 
-// A group page's activity on `client`, three pages loaded. Returns its unmount.
-const readThreeActivityPages = async (client: QueryClient): Promise<() => void> => {
+// The trim runs a microtask after the cleanup of the group page's activity.
+const afterCleanup = (): Promise<void> => Promise.resolve();
+
+// A group page's activity on `client`, three pages of group `a` loaded.
+const mountThreeActivityPages = async (client: QueryClient) => {
     const wrapper = ({ children }: { children: ReactNode }) =>
         createElement(QueryClientProvider, { client }, children);
-    const { result, unmount } = renderHook(() => useGroupActivityQuery('a', { enabled: true }), {
-        wrapper,
-    });
+    const view = renderHook(
+        ({ groupId }: { groupId: string }) => useGroupActivityQuery(groupId, { enabled: true }),
+        { wrapper, initialProps: { groupId: 'a' } },
+    );
 
     await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
+        expect(view.result.current.isSuccess).toBe(true);
     });
-    await act(() => result.current.fetchNextPage());
-    await act(() => result.current.fetchNextPage());
+    await act(() => view.result.current.fetchNextPage());
+    await act(() => view.result.current.fetchNextPage());
     expect(activityPageCount(client)).toBe(3);
-    return unmount;
+    return view;
 };
+
+// As `mountThreeActivityPages`; returns its unmount.
+const readThreeActivityPages = async (client: QueryClient): Promise<() => void> =>
+    (await mountThreeActivityPages(client)).unmount;
 
 test('a mount refetch of a stale multi-page group activity loads one page', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -565,6 +573,7 @@ test('a mount refetch of a stale multi-page group activity loads one page', asyn
         const loadedAt = client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt;
 
         unmount();
+        await afterCleanup();
         // Cut when the last reader left, keeping its age.
         expect(activityPageCount(client)).toBe(1);
         expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(loadedAt);
@@ -594,6 +603,7 @@ test('a group activity left offline keeps its loaded pages', async () => {
 
         onlineManager.setOnline(false);
         unmount();
+        await afterCleanup();
 
         expect(activityPageCount(client)).toBe(3);
     } finally {
@@ -613,6 +623,7 @@ test('a group activity left while another reader still shows it keeps its pages'
         const unsubscribe = other.subscribe(() => undefined);
 
         unmount();
+        await afterCleanup();
 
         expect(activityPageCount(client)).toBe(3);
         unsubscribe();
@@ -643,10 +654,35 @@ test('a next page loading when the group activity is left is cancelled, and the 
         // pages from before it, so the cut sees an idle feed.
         unsubscribe();
         unmount();
+        await afterCleanup();
         await nextPage;
 
         expect(client.getQueryState(groupsKeys.activity('a'))?.fetchStatus).toBe('idle');
         expect(activityPageCount(client)).toBe(1);
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('a group page moving to another group cuts the activity it left', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        server.use(
+            http.get('*/groups/b/activity-previews', () =>
+                HttpResponse.json({ items: [wirePreview('b1')], nextCursor: null }),
+            ),
+        );
+        const client = createQueryClient();
+        const { rerender, unmount } = await mountThreeActivityPages(client);
+
+        // The page stays mounted: a group card link opens group `b`.
+        rerender({ groupId: 'b' });
+        await afterCleanup();
+
+        expect(activityPageCount(client)).toBe(1);
+        unmount();
     } finally {
         vi.useRealTimers();
     }

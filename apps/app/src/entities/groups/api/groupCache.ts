@@ -139,8 +139,8 @@ const pendingRemovals = new WeakMap<QueryCache, Map<string, () => void>>();
  * away). A success of the detail meanwhile (a rejoin's write, a read) keeps both: the group is the
  * user's again, and its fresh entry must survive the unmount. Known limitation: any other write of
  * the detail landing meanwhile (an update or a cover upload finishing after the leave) keeps them
- * too, as this cannot tell it from a rejoin; once the join path ends the removal itself (#873),
- * only that should.
+ * too, as this cannot tell it from a rejoin. A follow-up: the join path should end the pending
+ * removal itself, and then only it should.
  */
 const removeGroupWhenUnobserved = (client: QueryClient, groupId: string): void => {
     const cache = client.getQueryCache();

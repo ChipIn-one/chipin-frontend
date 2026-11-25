@@ -486,7 +486,7 @@ test('known limitation: an update finishing after a leave keeps the left group w
 
     forgetGroup(userCache.client, 'a');
     // An update (or a cover upload) answered after the leave writes the detail as a rejoin does:
-    // the removal cannot tell them apart until the join path ends it itself (#873).
+    // the removal cannot tell them apart (a follow-up: the join path should end it itself).
     await writeGroupDetail(userCache.client, group('a', 'Renamed before the leave'));
     unmount();
 

@@ -3,9 +3,14 @@
 // (the infinite ones as their first page only, `trimmingPersister`). All come through `api()` as
 // domain models (`toGroup`, `toActivityItems`: amounts as `Money`).
 import { useEffect } from 'react';
-import type { Query, QueryClient, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
+import type {
+    Query,
+    QueryClient,
+    QueryKey,
+    UseQueryOptions,
+    UseQueryResult,
+} from '@tanstack/react-query';
 import {
-    hashKey,
     infiniteQueryOptions,
     queryOptions,
     useInfiniteQuery,
@@ -219,7 +224,9 @@ type ActivityQuery = Query<
 
 // Cuts a feed to its first page, keeping the data's age and invalidation (whether it refetches
 // does not change). `manual`: a paused fetch keeps its status.
-const cutToFirstPage = (query: ActivityQuery): void => {
+const cutToFirstPage = <K extends QueryKey>(
+    query: Query<GroupActivityPage, Error, GroupActivityData, K>,
+): void => {
     const { data, dataUpdatedAt, isInvalidated } = query.state;
 
     if (data && data.pages.length > 1) {
@@ -243,13 +250,14 @@ const trimBeforeRefetch = (query: ActivityQuery): boolean => {
 // A refetch on mount is decided during render, where the cache must not change: a group's feed
 // is cut back to its first page when its last reader unmounts instead, so the next mount's
 // refetch is one request. Not while a load runs (its answer would replace the cut) and not
-// offline (the pages stay readable).
+// offline (the pages stay readable). Checked on TanStack Query 5.105–5.107.1: when the last
+// observer leaves, a running load that read its signal is cancelled and its state reverted
+// synchronously, so the feed is idle here (re-check on a TanStack upgrade).
 const trimGroupActivityIfUnobserved = (client: QueryClient, groupId: string): void => {
-    const feed = client
-        .getQueryCache()
-        .get<GroupActivityPage, Error, GroupActivityData, ReturnType<typeof groupsKeys.activity>>(
-            hashKey(groupsKeys.activity(groupId)),
-        );
+    const feed = client.getQueryCache().find<GroupActivityPage, Error, GroupActivityData>({
+        queryKey: groupsKeys.activity(groupId),
+        exact: true,
+    });
 
     if (
         feed &&
@@ -290,10 +298,13 @@ export const useGroupActivityQuery = (groupId: string, { enabled }: EnabledParam
         enabled: enabled ? isReadable : false,
     });
 
-    // After `useInfiniteQuery`: its observer has left when this cleanup runs.
+    // Checked a microtask later, whatever the order of React's effects: by then the observer has
+    // left this feed, on unmount and when the page moves to another group (`setOptions`).
     useEffect(
         () => () => {
-            trimGroupActivityIfUnobserved(client, groupId);
+            queueMicrotask(() => {
+                trimGroupActivityIfUnobserved(client, groupId);
+            });
         },
         [client, groupId],
     );
