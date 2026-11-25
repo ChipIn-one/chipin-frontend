@@ -1,0 +1,8 @@
+/* KB NET-007: blocked, the OnlineOnly span is the footer grid cell's child, so the Save fills it
+   itself below sm (767px = constants/breakpoints RADIX_BREAKPOINTS.sm - 1), like unblocked. */
+@media (max-width: 767px) {
+    .save {
+        width: 100%;
+        min-width: 0;
+    }
+}

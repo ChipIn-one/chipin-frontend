@@ -15,6 +15,8 @@ import { useExpenseModalSubmit } from '../../internal/hooks';
 
 import { ExpenseSubmitFeedbackMessage } from './internal/ExpenseSubmitFeedbackMessage';
 
+import styles from './ExpenseButtons.module.css';
+
 interface Props {
     onClose: () => void;
 }
@@ -72,6 +74,7 @@ const ExpenseButtons = ({ onClose }: Props) => {
                         canQueueOffline={canQueueOffline}
                     >
                         <Button
+                            className={styles.save}
                             size="3"
                             variant="solid"
                             disabled={isSubmitDisabled || isSubmitting}

@@ -1,5 +1,7 @@
-import { type CSSProperties, type ReactNode, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { DropdownMenu, Flex, Text } from '@radix-ui/themes';
+
+import styles from './Dropdown.module.css';
 
 type ContentProps = React.ComponentProps<typeof DropdownMenu.Content>;
 type ItemColor = React.ComponentProps<typeof DropdownMenu.Item>['color'];
@@ -14,9 +16,6 @@ export interface DropdownMenuItem {
     /** A small grey caption under the label (why the item is disabled, for example). */
     hint?: ReactNode;
 }
-
-// An item with a hint grows past the menu's fixed item height.
-const WITH_HINT: CSSProperties = { height: 'auto' };
 
 const itemLabel = ({ label, hint }: DropdownMenuItem): ReactNode =>
     hint === undefined ? (
@@ -78,7 +77,7 @@ const Dropdown = ({
                 key={item.value}
                 disabled={item.isDisabled}
                 color={isActive ? 'green' : item.color}
-                style={item.hint === undefined ? undefined : WITH_HINT}
+                className={item.hint === undefined ? undefined : styles.withHint}
                 onSelect={() => {
                     item.onSelect?.();
                     if (isSelectable) {
@@ -98,7 +97,7 @@ const Dropdown = ({
             value={item.value}
             disabled={item.isDisabled}
             color={selectedValue === item.value ? 'green' : item.color}
-            style={item.hint === undefined ? undefined : WITH_HINT}
+            className={item.hint === undefined ? undefined : styles.withHint}
             onSelect={item.onSelect}
         >
             {item.icon}

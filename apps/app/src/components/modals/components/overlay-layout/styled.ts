@@ -130,12 +130,6 @@ const Footer = styled.div`
             min-width: 0;
         }
 
-        /* A blocked online-only action (OnlineOnly): its button fills the cell like unblocked. */
-        & > [data-online-only] > * {
-            width: 100%;
-            min-width: 0;
-        }
-
         & > :only-child {
             grid-column: 1 / -1;
         }

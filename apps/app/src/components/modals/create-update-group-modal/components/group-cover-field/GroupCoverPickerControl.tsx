@@ -28,6 +28,8 @@ const GroupCoverPickerControl = ({ isOverlay = false, isSaving, onCoverChange }:
                 $isOverlay={isOverlay}
                 // KB NET-006: blocked, the tooltip says why (no native title next to it).
                 title={isBlocked ? undefined : t('modal.cover.action')}
+                // Blocked, the file input is disabled: the label takes focus for the tooltip.
+                tabIndex={isBlocked ? 0 : undefined}
                 data-online-only={isBlocked ? ONLINE_ONLY_ACTIONS.groupCover : undefined}
             >
                 <ImageUpIcon size={20} aria-hidden />
