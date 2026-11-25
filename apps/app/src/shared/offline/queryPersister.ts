@@ -149,8 +149,8 @@ export const deserializePersistedClient = (text: string): PersistedClient =>
     PersistedClientSchema.parse(persistCodec.parse(text));
 
 // The statuses by which the server rejects the data (a group detail 403/404 wins over the cached
-// group, spec 03 §6 row 4, 03-10b): such an entry is not brought back on a reload. A transient 4xx
-// (408, 429, a 409 `SYSTEM.CONFLICT`, see `queryRetry`) keeps the data, as a 5xx does.
+// group, spec 03 §6 row 4, 03-10b): such an entry is not brought back on a reload. Any other 4xx
+// (408, 429, 409, ...) keeps the data, as a 5xx does.
 const DATA_REJECTED_STATUSES: ReadonlySet<number> = new Set([401, 403, 404, 410]);
 
 const isDataRejected = (error: unknown): boolean =>

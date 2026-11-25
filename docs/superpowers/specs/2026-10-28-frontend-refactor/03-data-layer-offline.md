@@ -213,7 +213,7 @@ export const persistOptions = (userId: string) => ({
 });
 ```
 
-An entry that kept its data after a failed refetch or next page (a network error, a 5xx, a timeout, a 408/409/429) is
+An entry that kept its data after a failed refetch or next page (a network error, a 5xx, a timeout, any 4xx but 401/403/404/410) is
 persisted as its last success: `trimmingPersister` rewrites its copy to `status: 'success'`, keeping `data`, `dataUpdatedAt`
 and `isInvalidated` (`dehydrateOptions` has no data hook, and `hydrate` restores the state as dehydrated, checked on
 `5.107`: an `error` would come back as an error and block an offline reload, #646). Every persisted copy, a success too,
