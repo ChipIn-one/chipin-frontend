@@ -111,13 +111,15 @@ const reloadKnownUsers = (client: QueryClient): Promise<void> =>
 const reloadDashboard = (client: QueryClient): Promise<void> =>
     client.invalidateQueries({ queryKey: dashboardKeys.all });
 
-// The successful joins and leaves of each group on each client: a leave that a rejoin overtook
-// does not forget the group (the join is newer), and an update or a cover upload that a leave
-// overtook writes nothing (the group is gone, whether its page is still mounted or not).
+// The successful joins of each group on each client, and its successful leaves and removals (the
+// ends of the user's membership): a leave that a rejoin overtook does not forget the group (the
+// join is newer), and an update or a cover upload that any membership change overtook writes
+// nothing: after a leave or a removal the group is gone (whether its page is still mounted or
+// not), and after a rejoin the join's group is newer.
 type GroupCounts = WeakMap<QueryClient, Map<string, number>>;
 
 const joinCounts: GroupCounts = new WeakMap();
-const leaveCounts: GroupCounts = new WeakMap();
+const goneCounts: GroupCounts = new WeakMap();
 
 const countOf = (counts: GroupCounts, client: QueryClient, groupId: string): number =>
     counts.get(client)?.get(groupId) ?? 0;
@@ -139,20 +141,25 @@ const countJoin = (client: QueryClient, groupId: string): void => {
 interface MembershipContext {
     /** The successful joins of the group when the write was sent. */
     joinCount: number;
-    /** The successful leaves of the group when the write was sent. */
-    leaveCount: number;
+    /** The successful leaves and removals of the group when the write was sent. */
+    goneCount: number;
 }
 
 const membershipOf = (client: QueryClient, groupId: string): MembershipContext => ({
     joinCount: joinCountOf(client, groupId),
-    leaveCount: countOf(leaveCounts, client, groupId),
+    goneCount: countOf(goneCounts, client, groupId),
 });
 
-// Whether the user left the group since the write was sent, without rejoining it since.
-const isLeftSince = (client: QueryClient, groupId: string, sent: MembershipContext): boolean => {
+// Whether the user's membership of the group changed (a leave, a removal or a join) since the
+// write was sent: its answer is then older than what the change left.
+const isMembershipChangedSince = (
+    client: QueryClient,
+    groupId: string,
+    sent: MembershipContext,
+): boolean => {
     const now = membershipOf(client, groupId);
 
-    return now.leaveCount !== sent.leaveCount && now.joinCount === sent.joinCount;
+    return now.goneCount !== sent.goneCount || now.joinCount !== sent.joinCount;
 };
 
 // The group is gone for this user: its cached detail and activity, and what showed it.
@@ -170,14 +177,30 @@ const afterGroupGone = (
     ]).then(() => undefined);
 };
 
-// A group a write returned (update, cover, join): its detail at once, then the list reloads with it.
+// A group a write returned (update, cover, join): its detail at once, then the list reloads with
+// it, kept in the reloaded list only while `isStillCurrent` holds.
 const afterGroupWritten = (
     client: QueryClient,
     group: Group,
-    variables: SessionBound,
+    isStillCurrent: () => boolean,
 ): Promise<void> => {
     void writeGroupDetail(client, group);
-    return putGroupAndReloadList(client, group, () => isCurrent(client, variables));
+    return putGroupAndReloadList(client, group, isStillCurrent);
+};
+
+// An update or a cover upload: written while its session is current and the membership of the
+// group has not changed since it was sent, checked again once the list has reloaded (a removal
+// or a leave during that reload must not put the group back).
+const afterGroupEdited = (
+    client: QueryClient,
+    group: Group,
+    variables: SessionBound,
+    sent: MembershipContext,
+): Promise<void> | undefined => {
+    const isStillCurrent = (): boolean =>
+        isCurrent(client, variables) && !isMembershipChangedSince(client, group.id, sent);
+
+    return isStillCurrent() ? afterGroupWritten(client, group, isStillCurrent) : undefined;
 };
 
 // Whole percent, 0–100 (a progress bar, not an amount).
@@ -220,9 +243,7 @@ export const updateGroupMutationOptions = () =>
                 },
             }).then(toGroup),
         onSuccess: (group, variables, context, { client }) =>
-            isCurrent(client, variables) && !isLeftSince(client, group.id, context)
-                ? afterGroupWritten(client, group, variables)
-                : undefined,
+            afterGroupEdited(client, group, variables, context),
     });
 
 /** `PUT /groups/{id}/cover` (multipart, with upload progress); as an update. */
@@ -246,9 +267,7 @@ export const uploadGroupCoverMutationOptions = () =>
             }).then(toGroup);
         },
         onSuccess: (group, variables, context, { client }) =>
-            isCurrent(client, variables) && !isLeftSince(client, group.id, context)
-                ? afterGroupWritten(client, group, variables)
-                : undefined,
+            afterGroupEdited(client, group, variables, context),
     });
 
 /**
@@ -268,7 +287,7 @@ export const joinGroupMutationOptions = () =>
             }
             countJoin(client, group.id);
             keepRejoinedGroup(client, group.id);
-            return afterGroupWritten(client, group, variables);
+            return afterGroupWritten(client, group, () => isCurrent(client, variables));
         },
     });
 
@@ -298,7 +317,7 @@ export const leaveGroupMutationOptions = (effects: GroupWriteEffects) =>
             ) {
                 return undefined;
             }
-            bump(leaveCounts, client, variables.groupId);
+            bump(goneCounts, client, variables.groupId);
             return afterGroupGone(client, variables.groupId, effects);
         },
     });
@@ -325,15 +344,21 @@ export const kickGroupMemberMutationOptions = (effects: GroupWriteEffects) =>
         },
     });
 
-/** `DELETE /groups/{id}`; settles once what showed the group has reloaded. */
+/**
+ * `DELETE /groups/{id}`; settles once what showed the group has reloaded. As a leave, it ends the
+ * group: an update or a cover upload answered after it writes nothing.
+ */
 export const removeGroupMutationOptions = (effects: GroupWriteEffects) =>
     mutationOptions<void, Error, RemoveGroupVariables>({
         ...ONLINE_WRITE,
         mutationKey: groupsMutationKeys.remove,
         mutationFn: ({ groupId }) =>
             api('delete', '/groups/{id}', { params: { id: groupId } }).then(() => undefined),
-        onSuccess: (_data, variables, _context, { client }) =>
-            isCurrent(client, variables)
-                ? afterGroupGone(client, variables.groupId, effects)
-                : undefined,
+        onSuccess: (_data, variables, _context, { client }) => {
+            if (!isCurrent(client, variables)) {
+                return undefined;
+            }
+            bump(goneCounts, client, variables.groupId);
+            return afterGroupGone(client, variables.groupId, effects);
+        },
     });

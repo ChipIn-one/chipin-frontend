@@ -62,9 +62,9 @@ const pendingRemovals = new WeakMap<QueryCache, Map<string, () => void>>();
  * Cached or loading activity wins. The list is the caller's. A group the user just left, while a
  * page still shows it (`forgetGroup`), is not written: its page keeps what it shows until it
  * unmounts, then the group is removed; a rejoin ends the leave first (`keepRejoinedGroup`). An
- * update or a cover upload that a leave overtook does not call this at all, whether the left
- * group's page is still mounted or has unmounted (the mutations' leave count); this check is the
- * cache-side guard for the mounted case.
+ * update or a cover upload that a leave, a removal or a join overtook does not call this at all,
+ * whether the group's page is still mounted or has unmounted (the mutations' membership counts);
+ * this check is the cache-side guard for the mounted case.
  */
 export const writeGroupDetail = (client: QueryClient, group: Group): Promise<void> => {
     const writtenAt = Date.now();
@@ -82,7 +82,8 @@ export const writeGroupDetail = (client: QueryClient, group: Group): Promise<voi
 /**
  * A group a write just returned goes into the cached list at once, then the list reloads, and the
  * written group stays in it whatever the reload read, unless the write is no longer current (a
- * sign-out, an account switch).
+ * sign-out, an account switch, or, for an update or a cover upload, a change of the group's
+ * membership: a leave, a removal or a join).
  */
 export const putGroupAndReloadList = (
     client: QueryClient,
