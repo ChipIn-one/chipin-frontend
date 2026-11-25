@@ -37,7 +37,7 @@ vi.mock('helpers/authSession', async importOriginal => {
     return { ...actual, validateAuthSession: vi.fn(actual.validateAuthSession) };
 });
 
-// The `/health` probe sent alongside a refresh without a saved user (NET-007); no real request.
+// The `/health` probe sent alongside a refresh without a saved user (NET-008); no real request.
 vi.mock('shared/api/health', async importOriginal => ({
     ...(await importOriginal<typeof import('shared/api/health')>()),
     probeBackendHealth: vi.fn(() => Promise.resolve('ok')),
@@ -416,7 +416,7 @@ test('without a cached user id an offline cold start keeps waiting', () => {
     expect(useAuthStore.getState().status).toBe('unknown');
 });
 
-test('NET-007 a hanging startup refresh without a saved user: no /health answer marks the network unusable within 5 s', async () => {
+test('NET-008 a hanging startup refresh without a saved user: no /health answer marks the network unusable within 5 s', async () => {
     markRestorableAuthSession();
     // A network the browser calls online that answers nothing: the refresh never settles (in the
     // browser it fails 20-50 s later), the probe times out (5 s) as unreachable.
@@ -436,7 +436,7 @@ test('NET-007 a hanging startup refresh without a saved user: no /health answer 
     expect(useAuthStore.getState().status).toBe('unknown');
 });
 
-test('NET-007 a reachable /health leaves the network as it is', async () => {
+test('NET-008 a reachable /health leaves the network as it is', async () => {
     markRestorableAuthSession();
     useAuthStore.setState({ refreshAuthTokens: vi.fn(() => new Promise<string>(() => undefined)) });
     vi.mocked(probeBackendHealth).mockResolvedValueOnce('ok');
@@ -462,7 +462,7 @@ const deferProbe = () => {
     return (health: 'unreachable') => answer(health);
 };
 
-test('NET-007 the probe is sent for this attempt only: never joins a probe sent before it', async () => {
+test('NET-008 the probe is sent for this attempt only: never joins a probe sent before it', async () => {
     markRestorableAuthSession();
     const startedBefore = performance.now();
     useAuthStore.setState({ refreshAuthTokens: vi.fn(() => new Promise<string>(() => undefined)) });
@@ -476,7 +476,7 @@ test('NET-007 the probe is sent for this attempt only: never joins a probe sent 
     expect(sentAfter).toBeGreaterThanOrEqual(startedBefore);
 });
 
-test('NET-007 a stale shared /health probe from before the attempt answering unreachable leaves the network online', async () => {
+test('NET-008 a stale shared /health probe from before the attempt answering unreachable leaves the network online', async () => {
     const health = await vi.importActual<typeof import('shared/api/health')>('shared/api/health');
     const { publicApiInstance } = await import('shared/api/instance');
     let failOldProbe: (error: Error) => void = () => undefined;
@@ -508,7 +508,7 @@ test('NET-007 a stale shared /health probe from before the attempt answering unr
     expect(onlineManager.isOnline()).toBe(true);
 });
 
-test('NET-007 a refresh that succeeded before an unreachable probe answers: no offline marking', async () => {
+test('NET-008 a refresh that succeeded before an unreachable probe answers: no offline marking', async () => {
     markRestorableAuthSession();
     const answerProbe = deferProbe();
     useAuthStore.setState({ refreshAuthTokens: vi.fn(() => Promise.resolve('access-token')) });
@@ -528,7 +528,7 @@ test('NET-007 a refresh that succeeded before an unreachable probe answers: no o
     expect(onlineManager.isOnline()).toBe(true);
 });
 
-test('NET-007 a refresh rejected with 401 before an unreachable probe answers: no offline marking', async () => {
+test('NET-008 a refresh rejected with 401 before an unreachable probe answers: no offline marking', async () => {
     markRestorableAuthSession();
     const answerProbe = deferProbe();
     // The store's own refresh over a 401 cookie refresh (`null`): the session expires.
@@ -552,7 +552,7 @@ test('NET-007 a refresh rejected with 401 before an unreachable probe answers: n
     expect(onlineManager.isOnline()).toBe(true);
 });
 
-test('NET-007 an attempt replaced by an auth change before the probe answers: no offline marking', async () => {
+test('NET-008 an attempt replaced by an auth change before the probe answers: no offline marking', async () => {
     markRestorableAuthSession();
     const answerProbe = deferProbe();
     useAuthStore.setState({ refreshAuthTokens: vi.fn(() => new Promise<string>(() => undefined)) });
@@ -575,7 +575,7 @@ test('NET-007 an attempt replaced by an auth change before the probe answers: no
     expect(onlineManager.isOnline()).toBe(true);
 });
 
-test('NET-007 with a saved user the startup refresh sends no extra /health probe', async () => {
+test('NET-008 with a saved user the startup refresh sends no extra /health probe', async () => {
     cacheSignedInUser();
     const refreshAuthTokens = vi.fn(() => new Promise<string>(() => undefined));
     useAuthStore.setState({ refreshAuthTokens });

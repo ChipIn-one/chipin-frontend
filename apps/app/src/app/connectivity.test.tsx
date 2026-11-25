@@ -260,7 +260,7 @@ describe('offline cold start through /auth/refresh', () => {
     };
 
     beforeEach(() => {
-        // No user saved on the device: nothing to show offline (NET-007).
+        // No user saved on the device: nothing to show offline (NET-008).
         LocalStorage.remove(LS_KEY_USER);
         resetTabUserId();
         invalidateAuthSession();
@@ -279,7 +279,7 @@ describe('offline cold start through /auth/refresh', () => {
         LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
     });
 
-    test('NET-007 the catch of the session check sees offline: no sign-out, the offline load error instead of the page', async () => {
+    test('NET-008 the catch of the session check sees offline: no sign-out, the offline load error instead of the page', async () => {
         answerRefresh(
             () => HttpResponse.error(),
             () => HttpResponse.error(),
@@ -299,7 +299,7 @@ describe('offline cold start through /auth/refresh', () => {
         expect(screen.queryByText(PAGE_CONTENT)).toBeNull();
     });
 
-    test('NET-007 the browser says online, the refresh and /health never answer: the load error with Retry by 5 s, through the loader', async () => {
+    test('NET-008 the browser says online, the refresh and /health never answer: the load error with Retry by 5 s, through the loader', async () => {
         // `performance.now()` stays real: the connectivity marks (`getLastOfflineAt`) must not
         // land in the future of the next test.
         vi.useFakeTimers({
