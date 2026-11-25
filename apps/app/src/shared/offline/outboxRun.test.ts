@@ -94,6 +94,10 @@ const OWNER = 'user-1';
 const apiError = (status: number, code?: string): ApiError =>
     new ApiError({ status, payload: code ? { code } : undefined, cause: null });
 
+// An Axios error shape without `request` or `response` (this layer does not import axios).
+const axiosError = (code: string): Error =>
+    Object.assign(new Error('Axios error'), { isAxiosError: true, code });
+
 // What Axios rejects with when no response came (`isAxiosError`, no `response`).
 const networkError = (): Error =>
     Object.assign(new Error('Network Error'), { isAxiosError: true, code: 'ERR_NETWORK' });
@@ -391,6 +395,25 @@ describe('03 §2.4 order and gate', () => {
 describe('03 §2.5 error classes', () => {
     test.each<[string, unknown, OutboxKind, OutboxErrorClass]>([
         ['network error', networkError(), 'createExpense', { kind: 'network' }],
+        [
+            'ERR_NETWORK without a request object',
+            axiosError('ERR_NETWORK'),
+            'createExpense',
+            { kind: 'network' },
+        ],
+        // A request never sent (a client misconfiguration): the queued write is kept, not lost.
+        ...[
+            'ERR_BAD_REQUEST',
+            'ERR_BAD_OPTION',
+            'ERR_BAD_OPTION_VALUE',
+            'ERR_INVALID_URL',
+            'ERR_NOT_SUPPORT',
+        ].map((code): [string, unknown, OutboxKind, OutboxErrorClass] => [
+            `setup error ${code} stays queued`,
+            axiosError(code),
+            'createExpense',
+            { kind: 'network' },
+        ]),
         ['500', apiError(500), 'updateExpense', { kind: 'transient' }],
         [
             '409 SYSTEM.CONFLICT',

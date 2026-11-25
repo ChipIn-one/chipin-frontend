@@ -20,8 +20,35 @@ test('lists only the operations with an empty security requirement, sorted', () 
     });
 });
 
-test('an operation without security is public when the document has no default', () => {
-    expect(publicOperations({ paths: { '/open': { get: {} } } })).toEqual({ '/open': ['get'] });
+test('fails closed when the document has no top-level security array', () => {
+    expect(() => publicOperations({ paths: { '/open': { get: {} } } })).toThrow(
+        /top-level `security`/,
+    );
+    expect(() =>
+        publicOperations({ security: { bearerAuth: [] }, paths: { '/open': { get: {} } } }),
+    ).toThrow(/top-level `security`/);
+});
+
+test('an operation is public only with an empty security array', () => {
+    expect(
+        publicOperations({
+            security: [],
+            paths: {
+                '/inherits': { get: {} },
+                '/object': { get: { security: {} } },
+                '/auth': { get: { security: [{ bearerAuth: [] }] } },
+            },
+        }),
+    ).toEqual({ '/inherits': ['get'] });
+});
+
+test('a path item that is an unresolved $ref fails generation', () => {
+    expect(() =>
+        publicOperations({
+            ...spec,
+            paths: { '/ref': { $ref: '#/components/pathItems/Open' } },
+        }),
+    ).toThrow(/\/ref.*\$ref/);
 });
 
 test('renders the PublicOperations interface', () => {
