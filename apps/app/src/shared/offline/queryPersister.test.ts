@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react';
-import { QueryClient } from '@tanstack/react-query';
+import { InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
 import {
     persistQueryClientRestore,
     persistQueryClientSave,
@@ -7,6 +7,7 @@ import {
 import { get, set } from 'idb-keyval';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { ApiError } from 'shared/lib/apiError';
 import { currencyCode, fromUnits } from 'shared/money';
 
 import { queryCacheKey } from './constants';
@@ -15,6 +16,13 @@ import { persistOptions, QUERY_CACHE_BUSTER, resetPersistFailureReport } from '.
 import 'fake-indexeddb/auto';
 
 vi.mock('@sentry/react', () => ({ captureMessage: vi.fn() }));
+// The keys a test marks as having an unsent outbox operation.
+const pendingOpKeys = vi.hoisted(() => new Set<string>());
+
+vi.mock('./pendingOps', () => ({
+    isEntryWithPendingOp: (queryKey: readonly unknown[]) =>
+        pendingOpKeys.has(JSON.stringify(queryKey)),
+}));
 vi.mock('idb-keyval', async importOriginal => {
     const actual = await importOriginal<typeof import('idb-keyval')>();
 
@@ -56,6 +64,7 @@ const restore = (userId: string, client: QueryClient): Promise<void> => {
 };
 
 beforeEach(() => {
+    pendingOpKeys.clear();
     vi.mocked(Sentry.captureMessage).mockClear();
     // Once per session: every test starts as a new session, independent of the order.
     resetPersistFailureReport();
@@ -189,5 +198,137 @@ describe('query cache persister', () => {
             tags: { 'offline.error': 'QuotaExceededError' },
         });
         vi.mocked(set).mockReset();
+    });
+});
+
+interface StoredQuery {
+    queryKey: unknown;
+    state: Record<string, unknown>;
+}
+
+const storedQueries = async (userId: string): Promise<StoredQuery[]> => {
+    const stored = await get<string>(queryCacheKey(userId));
+    const parsed = JSON.parse(stored ?? '{}') as { clientState: { queries: StoredQuery[] } };
+
+    return parsed.clientState.queries;
+};
+
+const rejectWith = (error: Error) => () => Promise.reject(error);
+
+/** A query that had data and whose refetch then failed with `error`: `status: 'error'` with data. */
+const failRefetch = async (client: QueryClient, queryKey: string[], error: Error) => {
+    client.setQueryData(queryKey, { ok: true }, { updatedAt: 1000 });
+    await client
+        .fetchQuery({ queryKey, queryFn: rejectWith(error), retry: false })
+        .catch(() => undefined);
+};
+
+const networkError = () => new Error('Network Error');
+const apiError = (status: number) => new ApiError({ status, payload: undefined, cause: null });
+
+describe('a query kept with data after a failed fetch', () => {
+    test('NET-001: an infinite feed whose next page failed is persisted as its last success, first page only', async () => {
+        const userId = nextUser();
+        const source = newClient();
+        let failNext = false;
+        const options = {
+            queryKey: ACTIVITY_KEY,
+            queryFn: ({ pageParam }: { pageParam: number }) =>
+                failNext ? Promise.reject(networkError()) : Promise.resolve([pageParam]),
+            initialPageParam: 0,
+            getNextPageParam: (_last: number[], pages: number[][]) => pages.length,
+            retry: false,
+        };
+        const observer = new InfiniteQueryObserver(source, options);
+        const unsubscribe = observer.subscribe(() => undefined);
+
+        try {
+            await observer.refetch();
+            await observer.fetchNextPage();
+            await observer.fetchNextPage();
+            failNext = true;
+            await observer.fetchNextPage();
+        } finally {
+            unsubscribe();
+        }
+        const before = source.getQueryState(ACTIVITY_KEY);
+        expect(before?.status).toBe('error');
+        expect(before?.fetchMeta).not.toBeNull();
+
+        await save(userId, source);
+        const [stored] = await storedQueries(userId);
+
+        expect(stored?.state).toMatchObject({
+            status: 'success',
+            error: null,
+            fetchFailureCount: 0,
+            fetchFailureReason: null,
+            fetchMeta: null,
+            dataUpdatedAt: before?.dataUpdatedAt,
+            data: { pages: [[0]], pageParams: [0] },
+        });
+
+        const target = newClient();
+        await restore(userId, target);
+
+        expect(target.getQueryState(ACTIVITY_KEY)).toMatchObject({
+            status: 'success',
+            error: null,
+            dataUpdatedAt: before?.dataUpdatedAt,
+        });
+        expect(target.getQueryData(ACTIVITY_KEY)).toEqual({ pages: [[0]], pageParams: [0] });
+    });
+
+    test('NET-001: a refetch that failed on the network or with a 5xx persists the data as success, keeping its age and invalidation', async () => {
+        const userId = nextUser();
+        const source = newClient();
+        await failRefetch(source, DASHBOARD_KEY, networkError());
+        await failRefetch(source, GROUPS_KEY, apiError(503));
+
+        await save(userId, source);
+        const target = newClient();
+        await restore(userId, target);
+
+        // A failed fetch marks the entry invalidated: restored, it still refetches when shown.
+        expect(target.getQueryState(DASHBOARD_KEY)).toMatchObject({
+            status: 'success',
+            data: { ok: true },
+            dataUpdatedAt: 1000,
+            isInvalidated: true,
+        });
+        expect(target.getQueryState(GROUPS_KEY)).toMatchObject({
+            status: 'success',
+            data: { ok: true },
+            dataUpdatedAt: 1000,
+            isInvalidated: true,
+        });
+    });
+
+    test('NET-001: an error without data, a 4xx ApiError, meta.persist=false and a pending op are not persisted', async () => {
+        const userId = nextUser();
+        const source = newClient();
+        const pendingKey = ['ledger', 'entry', 'entry-1'];
+        await source.prefetchQuery({
+            queryKey: STATS_KEY,
+            queryFn: () => Promise.reject(networkError()),
+            retry: false,
+        });
+        await failRefetch(source, ['groups', 'detail', 'g-404'], apiError(404));
+        await failRefetch(source, ['groups', 'detail', 'g-403'], apiError(403));
+        source.setQueryData(DASHBOARD_KEY, { ok: true });
+        await source
+            .fetchQuery({
+                queryKey: DASHBOARD_KEY,
+                queryFn: () => Promise.reject(networkError()),
+                retry: false,
+                meta: { persist: false },
+            })
+            .catch(() => undefined);
+        await failRefetch(source, pendingKey, networkError());
+        pendingOpKeys.add(JSON.stringify(pendingKey));
+
+        await save(userId, source);
+
+        expect(await storedQueries(userId)).toEqual([]);
     });
 });

@@ -12,6 +12,7 @@ import { del, get, set } from 'idb-keyval';
 import { z } from 'zod';
 
 import { PERSIST_MAX_AGE } from 'shared/api/queryClient';
+import { ApiError } from 'shared/lib/apiError';
 
 import { QUERY_CACHE_EPOCH, queryCacheKey } from './constants';
 import { MODEL_SHAPE_HASH } from './modelHash.generated';
@@ -91,10 +92,41 @@ export const trimInfinitePages = (client: PersistedClient): PersistedClient => (
     },
 });
 
-/** `dehydrateOptions` has no data hook, so the trimming wraps the persister. */
+type DehydratedQueryState = DehydratedState['queries'][number]['state'];
+
+/**
+ * An entry kept with data after a failed refetch or next page is persisted as its last success:
+ * `hydrate` restores the state as dehydrated, and an `error` status would come back as an error.
+ * The data keeps its age and invalidation; the fetch-more direction (`fetchMeta`) is dropped.
+ */
+const asLastSuccess = (state: DehydratedQueryState): DehydratedQueryState =>
+    state.status === 'error'
+        ? {
+              ...state,
+              status: 'success',
+              error: null,
+              fetchFailureCount: 0,
+              fetchFailureReason: null,
+              fetchMeta: null,
+          }
+        : state;
+
+const persistErroredAsLastSuccess = (client: PersistedClient): PersistedClient => ({
+    ...client,
+    clientState: {
+        ...client.clientState,
+        queries: client.clientState.queries.map(query => ({
+            ...query,
+            state: asLastSuccess(query.state),
+        })),
+    },
+});
+
+/** `dehydrateOptions` has no data hook, so the trimming and the error rewrite wrap the persister. */
 export const trimmingPersister = (base: Persister): Persister => ({
     ...base,
-    persistClient: client => base.persistClient(trimInfinitePages(client)),
+    persistClient: client =>
+        base.persistClient(trimInfinitePages(persistErroredAsLastSuccess(client))),
 });
 
 // The persisted envelope is checked on read (invariant 6); the dehydrated entries themselves are
@@ -117,9 +149,20 @@ const PersistedClientSchema = z.object({
 export const deserializePersistedClient = (text: string): PersistedClient =>
     PersistedClientSchema.parse(persistCodec.parse(text));
 
+// A 4xx `ApiError` is final (`queryRetry`): the server rejected the data (a group detail 403/404
+// wins over the cached group, spec 03 §6 row 4, 03-10b), so it is not brought back on a reload.
+const isFinalClientError = (error: unknown): boolean =>
+    error instanceof ApiError && error.status >= 400 && error.status < 500;
+
+// A success, or an error that kept data (a failed refetch or next page: a network error, a 5xx, a
+// timeout), which `trimmingPersister` writes as the last success; a final client error drops it.
+const hasPersistableData = (state: { status: string; data: unknown; error: unknown }): boolean =>
+    state.status === 'success' ||
+    (state.status === 'error' && state.data !== undefined && !isFinalClientError(state.error));
+
 export const dehydrateOptions: DehydrateOptions = {
     shouldDehydrateQuery: query =>
-        query.state.status === 'success' &&
+        hasPersistableData(query.state) &&
         query.meta?.persist !== false &&
         // An optimistic entry is not persisted (§2.2).
         !isEntryWithPendingOp(query.queryKey),

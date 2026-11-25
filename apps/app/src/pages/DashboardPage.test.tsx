@@ -22,6 +22,7 @@ import { groupBalances } from 'test/groupFixtures';
 import { groupsListData } from 'test/groupsList';
 import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
+import { reloadThroughPersister } from 'test/persistedReload';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
@@ -732,6 +733,37 @@ test('DSH-007 an offline session shows the cached dashboard and feed without a l
         expect(screen.getByTestId('groups-cards')).toBeTruthy();
         // Only the OfflineBanner (in the layout) says that the data may be old.
         expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByText('errors.loadTitle')).toBeNull();
+        expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
+test('NET-001 after a failed feed refetch, an offline reload shows the cached dashboard and feed, not the load error', async () => {
+    resolveDashboardOnboardingData();
+    seedGroups([singleMemberGroup]);
+    seedDashboard({ items: [activityItem], nextCursor: 40 });
+    countRequests(ACTIVITY_URL, () => HttpResponse.json({}, { status: 503 }));
+    await client.refetchQueries({ queryKey: FEED_KEY });
+    expect(client.getQueryState(FEED_KEY)?.status).toBe('error');
+
+    // The reload: a new client restored from the persisted cache, with no network.
+    const source = client;
+    client = createTestQueryClient();
+    mountAsUserClient('user-1', client);
+    await reloadThroughPersister(source, client);
+    onlineManager.setOnline(false);
+
+    try {
+        renderPage();
+
+        await waitFor(() => {
+            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+        });
+        expect(client.getQueryState(FEED_KEY)?.status).toBe('success');
+        expect(screen.getByTestId('activity-list')).toBeTruthy();
+        expect(screen.getByTestId('groups-cards')).toBeTruthy();
         expect(screen.queryByText('errors.loadTitle')).toBeNull();
         expect(screen.queryByTestId('activity-skeleton')).toBeNull();
     } finally {

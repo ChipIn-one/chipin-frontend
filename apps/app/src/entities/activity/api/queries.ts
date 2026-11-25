@@ -1,6 +1,7 @@
 // The user's own activity (spec 03 §1.2, §6 row 5) under `['activity','self',filters]`: the
 // previews of the dashboard feed and the flat log of the Activity page, 30 s fresh, infinite,
-// persisted as their first page only (`trimmingPersister`). Both come through `api()` as domain
+// persisted as their first page only (`trimmingPersister`), cut to it on unmount and before a
+// focus/reconnect refetch only while the network is usable. Both come through `api()` as domain
 // items (amounts as `Money`). `activityKeys.self()` invalidates every feed of the user. The history
 // of one activity chain (the expense history page) is `['activity','children',parentId]`, 60 s.
 import { useEffect } from 'react';
@@ -93,8 +94,9 @@ const fetchChildrenPage = (
 // A refetch of an infinite query reloads every loaded page in turn. A stale feed is cut back to
 // its first page before a focus/reconnect refetch, so the refetch is one request. The cut keeps
 // the data's age and invalidation, so whether it refetches does not change. Offline nothing is
-// cut: the loaded pages stay readable until the network is back (except after a ledger write
-// that failed on a network drop: `invalidateSelfActivity` cuts at once).
+// cut, neither here nor on unmount (`useTrimOnUnmount`): the loaded pages stay readable until the
+// network is back (except after a ledger write that failed on a network drop:
+// `invalidateSelfActivity` cuts at once).
 type FeedQuery<P> = Query<P, Error, InfiniteData<P, number | null>, SelfFeedKey>;
 
 const trimBeforeRefetch = <P>(query: FeedQuery<P>): boolean => {
@@ -216,13 +218,16 @@ export const invalidateActivityChildren = (
 
 // When a feed's page unmounts, the feed is cut to its first page: the stale refetch of the next
 // mount (`refetchOnMount` runs during render, it cannot cut) is then one request, not one per page
-// loaded before.
+// loaded before. Offline it is not cut: the pages loaded before stay readable on the way back,
+// as for a focus/reconnect (`trimBeforeRefetch`).
 const useTrimOnUnmount = (): void => {
     const client = useQueryClient();
 
     useEffect(
         () => () => {
-            trimSelfActivity(client);
+            if (isNetworkUsable()) {
+                trimSelfActivity(client);
+            }
         },
         [client],
     );

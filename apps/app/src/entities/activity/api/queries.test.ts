@@ -1,3 +1,4 @@
+import { createElement, type ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
 import {
     dehydrate,
@@ -5,7 +6,9 @@ import {
     InfiniteQueryObserver,
     onlineManager,
     QueryClient,
+    QueryClientProvider,
 } from '@tanstack/react-query';
+import { renderHook } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { expect, test, vi } from 'vitest';
 
@@ -25,6 +28,7 @@ import {
     invalidateSelfActivity,
     selfActivityEventsQueryOptions,
     selfActivityPreviewsQueryOptions,
+    useSelfActivityPreviewsQuery,
 } from './queries';
 
 vi.mock('@sentry/react', async importOriginal => ({
@@ -342,6 +346,39 @@ test('offline, a focus keeps every loaded page of a stale feed', async () => {
         client.unmount();
         onlineManager.setOnline(true);
         focusManager.setFocused(undefined);
+    }
+});
+
+/** Mounts the dashboard feed over a fresh feed of three pages (no request) and unmounts it. */
+const mountAndUnmountPreviews = (client: QueryClient) => {
+    const { queryKey } = selfActivityPreviewsQueryOptions();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children);
+
+    client.setQueryData<SelfActivityPreviewsData>(queryKey, threePages(previewsPage));
+    renderHook(() => useSelfActivityPreviewsQuery(), { wrapper }).unmount();
+    return client.getQueryData<SelfActivityPreviewsData>(queryKey)?.pages;
+};
+
+test('NET-001: offline, leaving the dashboard keeps every loaded page of its feed', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    onlineManager.setOnline(false);
+    try {
+        expect(mountAndUnmountPreviews(client)).toHaveLength(3);
+    } finally {
+        onlineManager.setOnline(true);
+        client.clear();
+    }
+});
+
+test('NET-001: online, leaving the dashboard cuts its feed to the first page', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    try {
+        expect(mountAndUnmountPreviews(client)).toEqual([previewsPage('a', 40)]);
+    } finally {
+        client.clear();
     }
 });
 
