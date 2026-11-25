@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group as WireGroup } from 'api/chipin.types';
 import { invalidateSelfActivity } from 'entities/activity';
-import { groupsKeys } from 'entities/groups';
+import { groupsKeys, groupsMutationKeys } from 'entities/groups';
 import {
     getAuthSessionVersion,
     invalidateAuthSession,
@@ -161,7 +161,7 @@ test('a failed group write shows the fallback message without a backend one', ()
     expect(toast.error).toHaveBeenNthCalledWith(2, 'other fallback');
 });
 
-test('a second update of the same group joins the running one; another group sends its own', async () => {
+test('a second update of the same group with the same values joins the running one; another group sends its own', async () => {
     signIn();
     const gate = deferred();
     const bodies = servePatch(gate);
@@ -175,7 +175,7 @@ test('a second update of the same group joins the running one; another group sen
     let other: Promise<unknown> = Promise.resolve();
     act(() => {
         first = result.current.update.updateGroup({ groupId: group.id, simplifyDebts: false });
-        duplicate = result.current.update.updateGroup({ groupId: group.id, simplifyDebts: true });
+        duplicate = result.current.update.updateGroup({ groupId: group.id, simplifyDebts: false });
         other = result.current.update.updateGroup({ groupId: 'group-2', groupName: 'Other' });
     });
 
@@ -239,13 +239,250 @@ test('an update after the session changed sends its own request and stays the ru
     await act(() => first);
     let third: Promise<unknown> = Promise.resolve();
     act(() => {
-        third = update('Third');
+        third = update('Second');
     });
     expect(third).toBe(second);
 
     gates[1]?.resolve();
     await act(() => second);
     expect(bodies).toEqual([{ name: 'First' }, { name: 'Second' }]);
+});
+
+// `PATCH /groups/{id}` answering each request with the group named by its body; request `i` waits
+// for `gates[i]` and fails with 500 when `failing` has `i`.
+const serveChainedPatches = (gates: Deferred[], failing: readonly number[] = []) => {
+    const bodies: unknown[] = [];
+
+    server.use(
+        http.patch('*/groups/:groupId', async ({ request }) => {
+            const body: unknown = await request.json();
+            const name =
+                typeof body === 'object' && body !== null && 'name' in body ? body.name : undefined;
+            const index = bodies.length;
+
+            bodies.push(body);
+            await gates[index]?.promise;
+            return failing.includes(index)
+                ? HttpResponse.json({}, { status: 500 })
+                : HttpResponse.json(
+                      wireGroup(group.id, { name: typeof name === 'string' ? name : group.name }),
+                  );
+        }),
+        http.get('*/groups', () => HttpResponse.json({ items: [group], nextCursor: null })),
+    );
+    return bodies;
+};
+
+// #893: a second edit with other values while one runs is not lost.
+test('an update of the same group with other values waits for the running one, then sends its own', async () => {
+    signIn();
+    const gates = [deferred(), deferred()];
+    const bodies = serveChainedPatches(gates);
+    const { result } = renderHook(() => ({
+        update: useUpdateGroup(),
+        saving: useIsGroupFormSaving(),
+    }));
+
+    let first: Promise<unknown> = Promise.resolve();
+    let second: Promise<unknown> = Promise.resolve();
+    act(() => {
+        first = result.current.update.updateGroup({ groupId: group.id, groupName: 'First' });
+        second = result.current.update.updateGroup({ groupId: group.id, groupName: 'Second' });
+    });
+
+    expect(second).not.toBe(first);
+    await waitFor(() => {
+        expect(bodies).toEqual([{ name: 'First' }]);
+    });
+    gates[0]?.resolve();
+    await expect(first).resolves.toMatchObject({ name: 'First' });
+    await waitFor(() => {
+        expect(bodies).toEqual([{ name: 'First' }, { name: 'Second' }]);
+    });
+    expect(result.current.update.isPending).toBe(true);
+    expect(result.current.saving).toBe(true);
+    gates[1]?.resolve();
+    await expect(second).resolves.toMatchObject({ name: 'Second' });
+    await waitFor(() => {
+        expect(result.current.update.isPending).toBe(false);
+    });
+});
+
+test('an update with the values of an earlier, not last, update of the group is sent after the last one', async () => {
+    signIn();
+    const gates = [deferred(), deferred(), deferred()];
+    const bodies = serveChainedPatches(gates);
+    const { result } = renderHook(() => useUpdateGroup());
+    const update = (groupName: string): Promise<unknown> =>
+        result.current.updateGroup({ groupId: group.id, groupName });
+
+    let calls: Promise<unknown>[] = [];
+    act(() => {
+        calls = [update('A'), update('B'), update('A')];
+    });
+
+    expect(calls[2]).not.toBe(calls[0]);
+    for (const gate of gates) {
+        gate.resolve();
+    }
+    await act(() => Promise.all(calls));
+    expect(bodies).toEqual([{ name: 'A' }, { name: 'B' }, { name: 'A' }]);
+    await expect(calls[1]).resolves.toMatchObject({ name: 'B' });
+    await expect(calls[2]).resolves.toMatchObject({ name: 'A' });
+});
+
+test('a queued update is still sent after the one before it fails', async () => {
+    signIn();
+    const gates = [deferred(), deferred()];
+    const bodies = serveChainedPatches(gates, [0]);
+    const { result } = renderHook(() => useUpdateGroup());
+
+    let first: Promise<unknown> = Promise.resolve();
+    let second: Promise<unknown> = Promise.resolve();
+    act(() => {
+        first = result.current.updateGroup({ groupId: group.id, groupName: 'First' });
+        second = result.current.updateGroup({ groupId: group.id, groupName: 'Second' });
+    });
+    gates[0]?.resolve();
+    gates[1]?.resolve();
+
+    await expect(first).rejects.toBeInstanceOf(ApiError);
+    await expect(second).resolves.toMatchObject({ name: 'Second' });
+    expect(bodies).toEqual([{ name: 'First' }, { name: 'Second' }]);
+});
+
+test('a queued update whose session ended before its turn is refused and sends nothing', async () => {
+    signIn();
+    const gates = [deferred()];
+    const bodies = serveChainedPatches(gates);
+    const { result } = renderHook(() => useUpdateGroup());
+
+    let first: Promise<unknown> = Promise.resolve();
+    let second: Promise<unknown> = Promise.resolve();
+    act(() => {
+        first = result.current.updateGroup({ groupId: group.id, groupName: 'First' });
+        second = result.current.updateGroup({ groupId: group.id, groupName: 'Second' });
+    });
+    await waitFor(() => {
+        expect(bodies).toEqual([{ name: 'First' }]);
+    });
+    invalidateAuthSession();
+    gates[0]?.resolve();
+
+    await expect(second).rejects.toEqual(new GroupWriteRefusedError('session'));
+    await first.catch(() => undefined);
+    expect(bodies).toEqual([{ name: 'First' }]);
+});
+
+test('a queued update whose turn comes offline is refused and sends nothing', async () => {
+    signIn();
+    const gates = [deferred()];
+    const bodies = serveChainedPatches(gates);
+    const { result } = renderHook(() => useUpdateGroup());
+
+    let first: Promise<unknown> = Promise.resolve();
+    let second: Promise<unknown> = Promise.resolve();
+    act(() => {
+        first = result.current.updateGroup({ groupId: group.id, groupName: 'First' });
+        second = result.current.updateGroup({ groupId: group.id, groupName: 'Second' });
+    });
+    await waitFor(() => {
+        expect(bodies).toEqual([{ name: 'First' }]);
+    });
+    onlineManager.setOnline(false);
+    gates[0]?.resolve();
+
+    await expect(second).rejects.toEqual(new GroupWriteRefusedError('offline'));
+    await first.catch(() => undefined);
+    expect(bodies).toEqual([{ name: 'First' }]);
+});
+
+test('a queued update of a group removed before its turn is refused and sends nothing', async () => {
+    signIn();
+    const gates = [deferred()];
+    const bodies = serveChainedPatches(gates);
+    server.use(http.delete('*/groups/:groupId', () => new HttpResponse(null, { status: 204 })));
+    const { result } = renderHook(() => ({ update: useUpdateGroup(), remove: useRemoveGroup() }));
+
+    let first: Promise<unknown> = Promise.resolve();
+    let second: Promise<unknown> = Promise.resolve();
+    act(() => {
+        first = result.current.update.updateGroup({ groupId: group.id, groupName: 'First' });
+        second = result.current.update.updateGroup({ groupId: group.id, groupName: 'Second' });
+    });
+    await waitFor(() => {
+        expect(bodies).toEqual([{ name: 'First' }]);
+    });
+    await act(() => result.current.remove.removeGroup(group.id));
+    gates[0]?.resolve();
+
+    await expect(second).rejects.toEqual(new GroupWriteRefusedError('session'));
+    await first.catch(() => undefined);
+    expect(bodies).toEqual([{ name: 'First' }]);
+});
+
+test('a queued update is refused when a removal of the group was still running at its call', async () => {
+    signIn();
+    const gates = [deferred()];
+    const removal = deferred();
+    const bodies = serveChainedPatches(gates);
+    server.use(
+        http.delete('*/groups/:groupId', async () => {
+            await removal.promise;
+            return new HttpResponse(null, { status: 204 });
+        }),
+    );
+    const { result } = renderHook(() => ({ update: useUpdateGroup(), remove: useRemoveGroup() }));
+
+    let first: Promise<unknown> = Promise.resolve();
+    let removed: Promise<unknown> = Promise.resolve();
+    act(() => {
+        first = result.current.update.updateGroup({ groupId: group.id, groupName: 'First' });
+        removed = result.current.remove.removeGroup(group.id);
+    });
+    let second: Promise<unknown> = Promise.resolve();
+    act(() => {
+        second = result.current.update.updateGroup({ groupId: group.id, groupName: 'Second' });
+    });
+    removal.resolve();
+    await act(() => removed);
+    gates[0]?.resolve();
+
+    await expect(second).rejects.toEqual(new GroupWriteRefusedError('session'));
+    await first.catch(() => undefined);
+    expect(bodies).toEqual([{ name: 'First' }]);
+});
+
+test('a queued update is sent after its component unmounted, and its pending state shows', async () => {
+    const client = signIn();
+    client.setMutationDefaults(groupsMutationKeys.update, { gcTime: 0 });
+    const gates = [deferred(), deferred()];
+    const bodies = serveChainedPatches(gates);
+    const { result, unmount } = renderHook(() => useUpdateGroup());
+    const saving = renderHook(() => useIsGroupFormSaving());
+
+    let first: Promise<unknown> = Promise.resolve();
+    let second: Promise<unknown> = Promise.resolve();
+    act(() => {
+        first = result.current.updateGroup({ groupId: group.id, groupName: 'First' });
+        second = result.current.updateGroup({ groupId: group.id, groupName: 'Second' });
+    });
+    unmount();
+    gates[0]?.resolve();
+    await act(() => first);
+    await waitFor(() => {
+        expect(bodies).toEqual([{ name: 'First' }, { name: 'Second' }]);
+    });
+    expect(saving.result.current).toBe(true);
+    gates[1]?.resolve();
+
+    await expect(second).resolves.toMatchObject({ name: 'Second' });
+    // Nothing holds the settled writes: the cache collects them.
+    await waitFor(() => {
+        expect(
+            client.getMutationCache().findAll({ mutationKey: groupsMutationKeys.update }),
+        ).toEqual([]);
+    });
 });
 
 test("a removed group resets the last-group default and marks the user's activity feeds stale on its client", async () => {
