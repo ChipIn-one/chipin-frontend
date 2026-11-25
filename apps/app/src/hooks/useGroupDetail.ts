@@ -9,6 +9,7 @@ import {
     flattenGroupActivity,
     type Group,
     type GroupActivityPage,
+    isGroupActivityLeaving,
     isGroupDeniedError,
     useGroupActivityQuery,
     useGroupDetailQuery,
@@ -99,17 +100,19 @@ export const useGroupActivity = (
     hasDetail: boolean,
     recent?: GroupActivityPage,
 ): GroupActivityResult => {
+    const client = useQueryClient();
     const isEnabled = useIsGroupQueryEnabled() && hasDetail;
     const embedded = useMemo(() => recent && embeddedPreviews(recent), [recent]);
     const query = useGroupActivityQuery(groupId, { enabled: isEnabled });
     const { fetchNextPage } = query;
     // A paused load counts: starting another would cancel it, again and again while offline.
     const isFetching = query.fetchStatus !== 'idle';
+    // A group just left reads nothing more: its page is about to unmount.
     const loadMore = useCallback(() => {
-        if (isEnabled && !isFetching) {
+        if (isEnabled && !isFetching && !isGroupActivityLeaving(client, groupId)) {
             void fetchNextPage();
         }
-    }, [fetchNextPage, isEnabled, isFetching]);
+    }, [client, fetchNextPage, groupId, isEnabled, isFetching]);
     const data = isEnabled ? query.data : undefined;
     const items = data?.items;
 

@@ -7,6 +7,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { Group as LegacyGroup, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { type GroupActivityData, groupsKeys } from 'entities/groups';
+import { forgetGroup } from 'entities/groups/api/groupCache';
 import { useAuthStore } from 'store/authStore';
 import { domainPreview, legacyPreview, wirePreview } from 'test/activityFixtures';
 import { toTestGroup } from 'test/groupFixtures';
@@ -471,4 +472,30 @@ test('a next page paused offline is requested once while offline, then appended 
         onlineManager.setOnline(true);
         vi.unstubAllGlobals();
     }
+});
+
+test('a scroll trigger on the page of a group just left loads nothing more', () => {
+    const cursors: (string | null)[] = [];
+    server.use(
+        http.get('*/groups/group-1/activity-previews', ({ request }) => {
+            cursors.push(new URL(request.url).searchParams.get('cursor'));
+            return HttpResponse.json({ items: [wirePreview('p2')], nextCursor: null });
+        }),
+    );
+    getDefaultTestQueryClient().setQueryData<GroupActivityData>(activityKey, {
+        pages: [{ items: [domainPreview('p1')], nextCursor: 5 }],
+        pageParams: [null],
+    });
+    const { result, unmount } = renderHook(() => useGroupActivity(group.id, true));
+    expect(result.current.hasMore).toBe(true);
+
+    forgetGroup(getDefaultTestQueryClient(), group.id);
+    act(() => {
+        result.current.loadMore();
+    });
+
+    expect(result.current.isNextPageLoading).toBe(false);
+    expect(cursors).toEqual([]);
+    unmount();
+    expect(getDefaultTestQueryClient().getQueryState(activityKey)).toBeUndefined();
 });

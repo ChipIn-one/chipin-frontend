@@ -7,7 +7,7 @@ import {
     type Group,
     groupsKeys,
     type GroupsListData,
-    refreshGroup,
+    startGroupRefresh,
 } from 'entities/groups';
 
 import { tabUserClient } from './sessionUser';
@@ -37,12 +37,14 @@ export const getCachedGroups = (): Group[] | undefined => {
 
 /**
  * After a legacy change of a group (an expense, a settlement), on any page: its detail is read
- * again and its activity loads again (`refreshGroup`). Never rejects.
+ * again and its activity loads again (`startGroupRefresh`). Settles once the activity has, not
+ * waiting for the detail read: offline it waits for the reconnect, and the write's loading flag
+ * waits for this. Never rejects.
  */
-// TODO: the ledger write hooks (`hooks/useLedgerMutations.ts`) call `refreshGroup` on the write's
-// own client instead (the activity store that also used it went with 03-12).
+// TODO: the ledger write hooks (`hooks/useLedgerMutations.ts`) call `startGroupRefresh` on the
+// write's own client instead (the activity store that also used it went with 03-12).
 export const invalidateGroup = (groupId: string): Promise<void> => {
     const client = tabUserClient();
 
-    return client ? refreshGroup(client, groupId) : Promise.resolve();
+    return client ? startGroupRefresh(client, groupId) : Promise.resolve();
 };

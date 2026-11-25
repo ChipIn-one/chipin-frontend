@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { activityKeys, selfActivityPreviewsQueryOptions } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
+import { groupsKeys } from 'entities/groups';
 import {
     capabilitiesQueryOptions,
     type ExpenseDraft,
@@ -271,7 +272,7 @@ test('a double submit sends one request: the repeated write is refused as busy w
     expect(sentWrites(sent)).toHaveLength(2);
 });
 
-test('the saving flag comes from the mutation: on from the submit until the views have reloaded', async () => {
+test('the saving flag comes from the mutation: on from the submit until the views have reloaded, not waiting for the group detail read', async () => {
     const client = signIn();
     const gate = deferred();
     const reload = deferred();
@@ -301,14 +302,17 @@ test('the saving flag comes from the mutation: on from the submit until the view
         expect(sent).toContain('GET /groups/group-1');
     });
     expect(isFeedStale(client)).toBe(true);
-    expect(result.current.watcher.isPending).toBe(true);
 
+    // The group detail read is still held (offline it would wait for the reconnect).
     await act(async () => {
-        reload.resolve();
         await write;
     });
     await waitFor(() => {
         expect(result.current.watcher.isPending).toBe(false);
+    });
+    reload.resolve();
+    await waitFor(() => {
+        expect(client.getQueryState(groupsKeys.detail('group-1'))?.fetchStatus).toBe('idle');
     });
 });
 
