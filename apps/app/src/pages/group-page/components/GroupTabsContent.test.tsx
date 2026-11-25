@@ -71,7 +71,7 @@ vi.mock('features/activity', () => ({
 }));
 
 vi.mock('./GroupBalancesTab', () => ({ default: () => null }));
-vi.mock('./GroupSettingsTab', () => ({ default: () => null }));
+vi.mock('./GroupSettingsTab', () => ({ GroupSettingsTab: () => null }));
 
 const creator = {
     id: 'user-1',

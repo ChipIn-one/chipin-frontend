@@ -6,7 +6,7 @@
 // appends an op (the registry checks it is an expense) and the drain tab's adoption creates the
 // op's mutation with the outbox key and its defaults. A settlement and
 // settle-up never take this path (§2.9).
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { notifyManager, type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -295,6 +295,36 @@ export const chooseLedgerWritePath = (
     (target.kind === 'create' || cachedEntryType(client, target.entryId) === 'EXPENSE')
         ? 'outbox'
         : 'online';
+
+const subscribeNothing = (): (() => void) => () => undefined;
+
+/**
+ * Whether the outbox can take this write now (`chooseLedgerWritePath` is `outbox`), for a
+ * component: read again on every query cache change while offline writes are available (an edit or
+ * a delete needs its entry cached as an `EXPENSE`). Flag off: false, nothing is subscribed. Feeds
+ * `canQueueOffline` of `<OnlineOnly>` / `useRequiresOnline` (KB NET-007, #866).
+ */
+export const useCanQueueLedgerWrite = (target: LedgerWriteTarget): boolean => {
+    const client = useQueryClient();
+    const isAvailable = useIsOfflineWriteAvailable();
+    const entryId = target.kind === 'create' ? undefined : target.entryId;
+    const subscribe = useCallback(
+        (listener: () => void) =>
+            client.getQueryCache().subscribe(notifyManager.batchCalls(listener)),
+        [client],
+    );
+    const isTargetQueueable = useCallback(
+        (): boolean => entryId === undefined || cachedEntryType(client, entryId) === 'EXPENSE',
+        [client, entryId],
+    );
+    const isQueueable = useSyncExternalStore(
+        isAvailable ? subscribe : subscribeNothing,
+        isTargetQueueable,
+        isTargetQueueable,
+    );
+
+    return isAvailable && isQueueable;
+};
 
 /** Also checked on adoption (C2-02): an expense op, and not an entry cached as a settlement. */
 const isAcceptableLedgerOp = (client: QueryClient, op: OutboxOpBase): boolean => {

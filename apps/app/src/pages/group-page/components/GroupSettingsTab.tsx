@@ -147,6 +147,11 @@ const GroupSettingsTab = ({ group }: Props) => {
                                 <Text size="1" color="gray">
                                     {t('group:page.settings.simplifyDebtsOwnerOnly')}
                                 </Text>
+                            ) : isGroupUpdateBlocked ? (
+                                // KB NET-006: the disabled switch says why.
+                                <Text size="1" color="gray">
+                                    {t('common:outbox.onlineRequired')}
+                                </Text>
                             ) : null}
                         </Flex>
                         <Flex align="center" gap="2" flexShrink="0">
@@ -211,4 +216,4 @@ const GroupSettingsTab = ({ group }: Props) => {
     );
 };
 
-export default GroupSettingsTab;
+export { GroupSettingsTab };

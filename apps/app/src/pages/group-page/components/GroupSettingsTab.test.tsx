@@ -1,4 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { Theme } from '@radix-ui/themes';
+import { onlineManager } from '@tanstack/react-query';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
@@ -11,7 +13,7 @@ import { toTestGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
-import GroupSettingsTab from './GroupSettingsTab';
+import { GroupSettingsTab } from './GroupSettingsTab';
 
 const translations: Record<string, string> = {
     'common:buttons.invitePeople': 'Invite people',
@@ -20,6 +22,7 @@ const translations: Record<string, string> = {
     'common:buttons.removeGroup': 'Remove group',
     'common:copy.copied': 'Copied',
     'common:copy.shared': 'Shared',
+    'common:outbox.onlineRequired': 'An internet connection is required',
     'group:page.membersTab.you': 'You',
     'group:page.settings.copyLinkTitle': 'Copy invite link',
     'group:page.settings.inviteSection': 'INVITE',
@@ -154,7 +157,28 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    act(() => {
+        onlineManager.setOnline(true);
+    });
     useAuthStore.setState({ status: 'unknown' });
+});
+
+test('NET-006: flag off, offline: the simplify-debts switch is disabled with the hint; back online: enabled', () => {
+    act(() => {
+        onlineManager.setOnline(false);
+    });
+    // The app root's `Theme` provides the tooltips of the wrapped danger actions.
+    render(<GroupSettingsTab group={toTestGroup(group)} />, { wrapper: Theme });
+    const simplifyDebts = () => screen.getByRole('switch', { name: 'Simplify group debts' });
+
+    expect(simplifyDebts()).toHaveProperty('disabled', true);
+    expect(screen.getByText('An internet connection is required')).toBeTruthy();
+
+    act(() => {
+        onlineManager.setOnline(true);
+    });
+    expect(simplifyDebts()).toHaveProperty('disabled', false);
+    expect(screen.queryByText('An internet connection is required')).toBeNull();
 });
 
 test('lets the owner toggle simplify debts through the group update', () => {

@@ -10,6 +10,7 @@ import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { type ActivityEvent, activityKeys } from 'entities/activity';
 import {
     dropDeletedConflictDraft,
+    useCanQueueLedgerWrite,
     useIsOfflineWriteAvailable,
     useLedgerEntryObserver,
     useOutboxOverlay,
@@ -100,6 +101,9 @@ const ActivitySubeventsButtons = ({
         currentEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
     const isOfflineWritable = useIsOfflineWriteAvailable();
+    // KB NET-007: the expense Delete stays enabled offline only while the outbox can take it (no
+    // entry id: nothing is cached under '', so never).
+    const canQueueDelete = useCanQueueLedgerWrite({ kind: 'delete', entryId: parentEntryId ?? '' });
     // 03-16a A review N5: a queued delete of the entry is its last word; no edit or second delete.
     const { pendingDeletes, conflictDraftEntryIds } = useOutboxOverlay();
     const isDeleteQueued = parentEntryId !== undefined && pendingDeletes.has(parentEntryId);
@@ -224,7 +228,9 @@ const ActivitySubeventsButtons = ({
         </Button>
     );
 
-    // §2.9 C2-02: a settlement is changed only online (an expense may go through the outbox).
+    // §2.9 C2-02: a settlement is changed only online. An expense is deleted offline only through
+    // the outbox (KB NET-007: blocked offline unless the outbox can take it); its edit opens the
+    // form, whose save is gated the same way.
     return (
         <Flex align="center" gap="2" wrap="wrap">
             {observedEntryId ? <LedgerEntryObserver entryId={observedEntryId} /> : null}
@@ -236,7 +242,12 @@ const ActivitySubeventsButtons = ({
 
             <RemoveLedgerEntryAlertDialog isActionLoading={isRemoving} onAction={onRemove}>
                 {isExpense ? (
-                    deleteButton
+                    <OnlineOnly
+                        action={ONLINE_ONLY_ACTIONS.expenseDelete}
+                        canQueueOffline={canQueueDelete}
+                    >
+                        {deleteButton}
+                    </OnlineOnly>
                 ) : (
                     <OnlineOnly action={ONLINE_ONLY_ACTIONS.settlementDelete}>
                         {deleteButton}

@@ -3,26 +3,39 @@ import { Box, Button, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
+import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
+import { type LedgerWriteTarget, useCanQueueLedgerWrite } from 'entities/ledger';
 import { selectExpenseSubmitFeedback } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { OverlayFooter } from 'components/modals/components';
+import { OnlineOnly } from 'components/online-only';
 
 import { useExpenseModalSubmit } from '../../internal/hooks';
 
 import { ExpenseSubmitFeedbackMessage } from './internal/ExpenseSubmitFeedbackMessage';
 
+import styles from './ExpenseButtons.module.css';
+
 interface Props {
     onClose: () => void;
 }
 
+const CREATE: LedgerWriteTarget = { kind: 'create' };
+
 const ExpenseButtons = ({ onClose }: Props) => {
     const { t } = useTranslation('group');
-    const { mode, currency } = useExpenseModalStore(
+    const { mode, currency, editedEntryId } = useExpenseModalStore(
         useShallow(state => ({
             mode: state.mode,
             currency: state.currency,
+            editedEntryId: state.editContext?.entryId,
         })),
+    );
+    const canQueueOffline = useCanQueueLedgerWrite(
+        mode === 'edit' && editedEntryId !== undefined
+            ? { kind: 'update', entryId: editedEntryId }
+            : CREATE,
     );
     const feedback = useExpenseModalStore(useShallow(selectExpenseSubmitFeedback));
     const feedbackId = useId();
@@ -54,20 +67,32 @@ const ExpenseButtons = ({ onClose }: Props) => {
                     </Button>
                 }
                 primaryAction={
-                    <Button
-                        size="3"
-                        variant="solid"
-                        disabled={isSubmitDisabled || isSubmitting}
-                        loading={isSubmitting}
-                        aria-describedby={!isSubmitting && feedback ? feedbackId : undefined}
-                        onClick={onSubmit}
+                    // KB NET-007: offline the save is disabled with the hint (the form stays
+                    // readable) unless the outbox can take it.
+                    <OnlineOnly
+                        action={ONLINE_ONLY_ACTIONS.expenseSave}
+                        canQueueOffline={canQueueOffline}
                     >
-                        {t(mode === 'edit' ? 'common:buttons.save' : 'common:buttons.addExpense')}
-                    </Button>
+                        <Button
+                            className={styles.save}
+                            size="3"
+                            variant="solid"
+                            disabled={isSubmitDisabled || isSubmitting}
+                            loading={isSubmitting}
+                            aria-describedby={!isSubmitting && feedback ? feedbackId : undefined}
+                            onClick={onSubmit}
+                        >
+                            {t(
+                                mode === 'edit'
+                                    ? 'common:buttons.save'
+                                    : 'common:buttons.addExpense',
+                            )}
+                        </Button>
+                    </OnlineOnly>
                 }
             />
         </Flex>
     );
 };
 
-export default ExpenseButtons;
+export { ExpenseButtons };

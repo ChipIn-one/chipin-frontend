@@ -1,0 +1,4 @@
+/* An item with a hint grows past the menu's fixed item height. */
+.withHint {
+    height: auto;
+}

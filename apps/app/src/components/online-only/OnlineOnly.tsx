@@ -22,6 +22,8 @@ type Props = Omit<ComponentPropsWithRef<typeof Slot>, 'children'> & {
     children: ReactElement<BlockableProps>;
     /** The blocked wrapper takes the full width (a full-width child). */
     isFullWidth?: boolean;
+    /** An expense write the outbox can take now: not blocked offline (`useRequiresOnline`). */
+    canQueueOffline?: boolean;
 };
 
 const INLINE: CSSProperties = { display: 'inline-flex' };
@@ -29,15 +31,22 @@ const FULL_WIDTH: CSSProperties = { display: 'flex', width: '100%' };
 
 /**
  * `<OnlineOnly>` of spec 03 §2.9 (03-16a part C) around the button of an online-only action. Not
- * blocked (online, or offline writes off): the child as it is; the props of a Radix trigger
+ * blocked (online with a confirmed sign-in, or an expense write the outbox can take: NET-006,
+ * NET-007): the child as it is; the props of a Radix trigger
  * (`asChild`) that renders this wrapper reach the child through `Slot`. Blocked: the child is
  * disabled (`disabled`, `aria-disabled`) and the trigger's props are dropped, so it opens nothing;
  * the tooltip "An internet connection is required" sits on a focusable span, because a disabled
  * button gets no pointer events.
  */
-export const OnlineOnly = ({ action, children, isFullWidth = false, ...slotProps }: Props) => {
+export const OnlineOnly = ({
+    action,
+    children,
+    isFullWidth = false,
+    canQueueOffline = false,
+    ...slotProps
+}: Props) => {
     const { t } = useTranslation('common');
-    const isBlocked = useRequiresOnline(action);
+    const isBlocked = useRequiresOnline(action, { canQueueOffline });
 
     if (!isBlocked) {
         return Object.keys(slotProps).length === 0 ? (

@@ -6,7 +6,7 @@ import type { KnownUser } from 'entities/users';
 import DebtAmount from 'basics/DebtAmount';
 import UserAvatar from 'basics/UserAvatar';
 
-import FriendActionsDropdown from './FriendActionsDropdown';
+import { FriendActionsDropdown } from './FriendActionsDropdown';
 
 interface Props {
     friend: KnownUser;

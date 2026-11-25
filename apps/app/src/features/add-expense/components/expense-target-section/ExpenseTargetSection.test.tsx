@@ -9,7 +9,7 @@ import { currencyCode, fromUnits } from 'shared/money';
 import type { ExpenseModalEditInitialization, ExpenseParticipant } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import ExpenseButtons from '../expense-buttons/ExpenseButtons';
+import { ExpenseButtons } from '../expense-buttons/ExpenseButtons';
 
 import ExpenseTargetSection from './ExpenseTargetSection';
 

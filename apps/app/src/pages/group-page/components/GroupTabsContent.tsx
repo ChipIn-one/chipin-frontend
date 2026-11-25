@@ -17,7 +17,7 @@ import UsersRow from 'components/UsersRow';
 
 import GroupBalancesTab from './GroupBalancesTab';
 import GroupInviteEmptyState from './GroupInviteEmptyState';
-import GroupSettingsTab from './GroupSettingsTab';
+import { GroupSettingsTab } from './GroupSettingsTab';
 
 interface Props {
     group: Group;

@@ -141,9 +141,10 @@ export const startUserLedgerOutbox = (client: QueryClient, userId: string): Prom
 
 type LedgerMutationKey = (typeof ledgerOnlineMutationKeys)[keyof typeof ledgerOnlineMutationKeys];
 
-// Spec 03 §2.9: with offline writes on, `<OnlineOnly>` / `useRequiresOnline()` disable the
-// controls offline (03-16a part C). Off, or for a control used as the network went,
-// an offline write is refused here and the caller's toast shows it.
+// Spec 03 §2.9: `<OnlineOnly>` / `useRequiresOnline()` disable the controls offline (03-16a part
+// C); the expense writes (save and delete) unless the outbox can take them (KB NET-007, #866). For
+// a control used as the network went, an offline write is refused here as the last guard and the
+// caller's toast shows it.
 const refusalBeforeMutate = (
     client: QueryClient,
     isEnabled: boolean,

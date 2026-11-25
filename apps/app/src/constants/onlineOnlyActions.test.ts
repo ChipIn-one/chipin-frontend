@@ -228,4 +228,33 @@ describe('every entry point of an online-only action is wrapped (§2.9)', () => 
         expect(callers.length).toBeGreaterThan(0);
         expect(callers.filter(path => !isCovered(path, new Set()))).toEqual([]);
     });
+
+    // KB NET-007 (#866): the expense writes are reasoned explicitly, not by `isCovered`. Their callers
+    // render other controls too (the expense history wraps its settlement actions; the form's hooks
+    // file serves the whole modal), so a guard anywhere in the file would cover them by accident.
+    test('NET-007: create and edit run only through the form submit, wrapped in expenseSave', () => {
+        const submitHooks = callersOf('useCreateExpense');
+
+        expect(submitHooks.map(nameOf)).toEqual(['hooks']);
+        expect(callersOf('useUpdateExpense')).toEqual(submitHooks);
+        const submitters = callersOf('useExpenseModalSubmit');
+
+        expect(submitters.map(nameOf)).toEqual(['ExpenseButtons']);
+        submitters.forEach(path => {
+            expect(sourceOf(path)).toMatch(
+                /<OnlineOnly\s+action=\{ONLINE_ONLY_ACTIONS\.expenseSave\}/,
+            );
+        });
+    });
+
+    test('NET-007: the expense delete is wrapped in expenseDelete wherever it is called', () => {
+        const callers = callersOf('useDeleteLedgerEntry');
+
+        expect(callers.length).toBeGreaterThan(0);
+        callers.forEach(path => {
+            expect(sourceOf(path)).toMatch(
+                /<OnlineOnly\s+action=\{ONLINE_ONLY_ACTIONS\.expenseDelete\}/,
+            );
+        });
+    });
 });

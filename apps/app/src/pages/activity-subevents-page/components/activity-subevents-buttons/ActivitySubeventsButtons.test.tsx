@@ -582,28 +582,125 @@ describe.each<[string, () => void]>([
     );
 });
 
-test('an offline delete is refused with a toast and nothing is sent after the reconnect', async () => {
-    signIn();
-    const sent = serveDelete();
-
-    onlineManager.setOnline(false);
-    render(
-        <ActivitySubeventsButtons
-            parentEvent={parentEvent}
-            parentActivityId={parentEvent.id}
-            childEvents={[]}
-        />,
-    );
-    await confirmDelete();
-
-    await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('No internet connection');
+describe('NET-006, NET-007: offline, without an outbox that can take the write', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
     });
-    act(() => {
-        onlineManager.setOnline(true);
+
+    const renderBoth = () =>
+        render(
+            <>
+                <section aria-label="expense">
+                    <ActivitySubeventsButtons
+                        parentEvent={parentEvent}
+                        parentActivityId={parentEvent.id}
+                        childEvents={[]}
+                    />
+                </section>
+                <section aria-label="settlement">
+                    <ActivitySubeventsButtons
+                        parentEvent={settlementEvent(true)}
+                        parentActivityId="settlement-activity-id"
+                        childEvents={[]}
+                    />
+                </section>
+            </>,
+            { wrapper: Theme },
+        );
+
+    test('NET-007: flag off, offline: the expense Delete is disabled with the hint (the settlement too, NET-006); Update still opens the form; online again: enabled', async () => {
+        signIn();
+        const sent = serveDelete();
+
+        act(() => {
+            onlineManager.setOnline(false);
+        });
+        renderBoth();
+        const expense = within(screen.getByRole('region', { name: 'expense' }));
+        const settlement = within(screen.getByRole('region', { name: 'settlement' }));
+        const expenseDelete = expense.getByRole('button', { name: 'Delete' });
+        const user = userEvent.setup();
+
+        expect(expenseDelete).toHaveProperty('disabled', true);
+        expect(expenseDelete.getAttribute('aria-disabled')).toBe('true');
+        expect(expenseDelete.closest('[data-online-only]')?.getAttribute('data-online-only')).toBe(
+            'expense.delete',
+        );
+        expect(settlement.getByRole('button', { name: 'Delete' })).toHaveProperty('disabled', true);
+        await user.hover(expenseDelete.parentElement ?? expenseDelete);
+        expect((await screen.findByRole('tooltip')).textContent).toContain(
+            'An internet connection is required',
+        );
+        await user.click(expenseDelete.parentElement ?? expenseDelete);
+        expect(screen.queryByRole('button', { name: 'Delete entry' })).toBeNull();
+        // The edit opens the form (readable offline); its save is gated (ExpenseButtons).
+        expect(expense.getByRole('button', { name: 'Update' })).toHaveProperty('disabled', false);
+
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        expect(expense.getByRole('button', { name: 'Delete' })).toHaveProperty('disabled', false);
+        expect(settlement.getByRole('button', { name: 'Delete' })).toHaveProperty(
+            'disabled',
+            false,
+        );
+        expect(sent).toEqual([]);
     });
-    await new Promise(resolve => setTimeout(resolve, 50));
-    expect(sent).toEqual([]);
+
+    test('NET-007: flag on, offline, outbox unavailable (no capabilities): the expense Delete is disabled with the hint', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        signIn();
+        const sent = serveDelete();
+
+        act(() => {
+            onlineManager.setOnline(false);
+        });
+        renderBoth();
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+        const expenseDelete = within(screen.getByRole('region', { name: 'expense' })).getByRole(
+            'button',
+            { name: 'Delete' },
+        );
+
+        expect(expenseDelete).toHaveProperty('disabled', true);
+        expect(expenseDelete.closest('[data-online-only]')?.getAttribute('data-online-only')).toBe(
+            'expense.delete',
+        );
+        await userEvent.setup().hover(expenseDelete.parentElement ?? expenseDelete);
+        expect((await screen.findByRole('tooltip')).textContent).toContain(
+            'An internet connection is required',
+        );
+        expect(sent).toEqual([]);
+    });
+
+    test('NET-007: flag off, the network drops with the dialog open: the delete is refused with a toast and nothing is sent after the reconnect', async () => {
+        signIn();
+        const sent = serveDelete();
+        const user = userEvent.setup();
+
+        render(
+            <ActivitySubeventsButtons
+                parentEvent={parentEvent}
+                parentActivityId={parentEvent.id}
+                childEvents={[]}
+            />,
+            { wrapper: Theme },
+        );
+        await user.click(screen.getByRole('button', { name: 'Delete' }));
+        act(() => {
+            onlineManager.setOnline(false);
+        });
+        await user.click(await screen.findByRole('button', { name: 'Delete entry' }));
+
+        await waitFor(() => {
+            expect(toast.error).toHaveBeenCalledWith('No internet connection');
+        });
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(sent).toEqual([]);
+    });
 });
 
 describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2-33)', () => {
@@ -1055,7 +1152,7 @@ describe('03-16a ledger.entry(id): what an outbox edit or delete needs (§2.9 C2
                 { wrapper: Theme },
             );
 
-        test('flag on, offline: the settlement Delete and Update are disabled, 0 outbox ops; the expense Delete is queued', async () => {
+        test('NET-006, NET-007: flag on, offline: the settlement Delete and Update are disabled, 0 outbox ops; the expense Delete is queued', async () => {
             const client = signIn();
             const sent = serveDelete();
 

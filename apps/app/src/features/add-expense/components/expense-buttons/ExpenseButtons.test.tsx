@@ -1,16 +1,25 @@
-import { MutationObserver } from '@tanstack/react-query';
+import { Theme } from '@radix-ui/themes';
+import { MutationObserver, onlineManager, type QueryClient } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { clear } from 'idb-keyval';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
-import { ledgerOnlineMutationKeys } from 'entities/ledger';
+import { capabilitiesQueryOptions, ledgerKeys, ledgerOnlineMutationKeys } from 'entities/ledger';
+import { startUserLedgerOutbox } from 'hooks/useLedgerMutations';
 import { i18n } from 'i18n';
 import { currencyCode, fromUnits } from 'shared/money';
+import { useAuthStore } from 'store/authStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+import { resetOutbox } from 'test/outbox';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
 
-import ExpenseButtons from './ExpenseButtons';
+import { ExpenseButtons } from './ExpenseButtons';
+
+import 'fake-indexeddb/auto';
 
 const currentUser = { id: 'self', displayName: 'You', picture: null };
 const friend = { id: 'friend', displayName: 'Friend', picture: null };
@@ -29,7 +38,14 @@ beforeEach(() => {
     });
 });
 
-afterEach(() => i18n.changeLanguage('en'));
+afterEach(() => {
+    vi.unstubAllEnvs();
+    act(() => {
+        onlineManager.setOnline(true);
+    });
+    useConnectivityStore.setState({ mode: 'online' });
+    return i18n.changeLanguage('en');
+});
 
 test('EXP-064 describes the first blocking amount with a polite atomic status', () => {
     render(<ExpenseButtons onClose={vi.fn()} />);
@@ -345,4 +361,154 @@ test('EXP-064 names a split value the backend cannot read', async () => {
     const russian = i18n.t('group:expenses.modal.submitFeedback.invalidValue');
     expect(russian).not.toBe('A split value is not a valid number. Correct it to continue.');
     expect(screen.getByRole('status').textContent).toBe(russian);
+});
+
+describe('KB NET-007: the expense save offline', () => {
+    const goOffline = (): void => {
+        act(() => {
+            onlineManager.setOnline(false);
+        });
+    };
+    const saveButton = (name = 'Add expense') => screen.getByRole('button', { name });
+    const editOriginal = {
+        description: null,
+        amount: fromUnits(100_000n, currencyCode('USD')),
+        payerId: currentUser.id,
+        participantIds: [currentUser.id, friend.id],
+        currency: 'USD',
+        category: 'food',
+        subcategory: null,
+        sharingMode: { type: 'AUTO' as const },
+    };
+    // An edit with a change to save (amount 10 → description added).
+    const editMode = (): void => {
+        useExpenseModalStore.setState({
+            amount: '10',
+            mode: 'edit',
+            editContext: { entryId: 'entry', original: editOriginal },
+        });
+        useExpenseModalStore.getState().setDescription('Lunch');
+    };
+    // Offline writes available: the flag, the outbox of the user restored, the capabilities.
+    const withOutbox = async (): Promise<QueryClient> => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        const client = mountAsUserClient(currentUser.id);
+
+        await clear();
+        await startUserLedgerOutbox(client, currentUser.id);
+        client.setQueryData(capabilitiesQueryOptions().queryKey, [
+            'ledger.clientEntryId',
+            'ledger.entryVersion',
+            'client.minVersion',
+        ]);
+        return client;
+    };
+
+    beforeEach(() => {
+        useExpenseModalStore.getState().setAmount('10');
+    });
+
+    afterEach(() => {
+        resetOutbox();
+        useAuthStore.setState({ sessionMode: 'online' });
+    });
+
+    test('NET-007: flag off, offline: the save is disabled with the hint and submits nothing; online: enabled', async () => {
+        const onClose = vi.fn();
+        const user = userEvent.setup();
+
+        goOffline();
+        const { container } = render(<ExpenseButtons onClose={onClose} />, { wrapper: Theme });
+
+        expect(saveButton()).toHaveProperty('disabled', true);
+        expect(saveButton().getAttribute('aria-disabled')).toBe('true');
+        expect(container.querySelector('[data-online-only="expense.save"]')).not.toBeNull();
+        await user.hover(saveButton().parentElement ?? saveButton());
+        expect((await screen.findByRole('tooltip')).textContent).toContain(
+            'An internet connection is required',
+        );
+        await user.click(saveButton().parentElement ?? saveButton());
+        expect(onClose).not.toHaveBeenCalled();
+        expect(getDefaultTestQueryClient().isMutating()).toBe(0);
+
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        expect(saveButton()).toHaveProperty('disabled', false);
+        expect(container.querySelector('[data-online-only]')).toBeNull();
+    });
+
+    test('NET-007: flag off, offline, edit mode: the Save is disabled; online: enabled', () => {
+        editMode();
+        goOffline();
+        const { container } = render(<ExpenseButtons onClose={vi.fn()} />, { wrapper: Theme });
+
+        expect(saveButton('Save')).toHaveProperty('disabled', true);
+        expect(container.querySelector('[data-online-only="expense.save"]')).not.toBeNull();
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        expect(saveButton('Save')).toHaveProperty('disabled', false);
+    });
+
+    test('NET-007: flag off, an offline-cached session: the save is disabled even with the network', () => {
+        useAuthStore.setState({ sessionMode: 'offline-cached' });
+        render(<ExpenseButtons onClose={vi.fn()} />, { wrapper: Theme });
+
+        expect(saveButton()).toHaveProperty('disabled', true);
+    });
+
+    test('NET-007: flag on, offline, the outbox can take it: the save is not blocked', async () => {
+        await withOutbox();
+        goOffline();
+        const { container } = render(<ExpenseButtons onClose={vi.fn()} />, { wrapper: Theme });
+
+        await waitFor(() => {
+            expect(saveButton()).toHaveProperty('disabled', false);
+        });
+        expect(container.querySelector('[data-online-only]')).toBeNull();
+    });
+
+    test('NET-007: flag on, offline, outbox unavailable (no capabilities): the save is disabled with the hint', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        goOffline();
+        const { container } = render(<ExpenseButtons onClose={vi.fn()} />, { wrapper: Theme });
+
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+        expect(saveButton()).toHaveProperty('disabled', true);
+        expect(container.querySelector('[data-online-only="expense.save"]')).not.toBeNull();
+    });
+
+    test('NET-007: flag on, offline, an edit of an entry not cached as an expense: the Save is disabled; cached: enabled', async () => {
+        const client = await withOutbox();
+
+        editMode();
+        goOffline();
+        render(<ExpenseButtons onClose={vi.fn()} />, { wrapper: Theme });
+
+        await act(() => new Promise(resolve => setTimeout(resolve, 20)));
+        expect(saveButton('Save')).toHaveProperty('disabled', true);
+        act(() => {
+            client.setQueryData(ledgerKeys.entry('entry'), {
+                id: 'entry',
+                type: 'EXPENSE',
+                version: '1',
+            });
+        });
+        await waitFor(() => {
+            expect(saveButton('Save')).toHaveProperty('disabled', false);
+        });
+    });
+
+    test('NET-002: flag off, backend down with a usable network: nothing is blocked', () => {
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        useAuthStore.setState({ sessionMode: 'online' });
+        useConnectivityStore.setState({ mode: 'backend-down' });
+        const { container } = render(<ExpenseButtons onClose={vi.fn()} />, { wrapper: Theme });
+
+        expect(container.querySelector('[data-online-only]')).toBeNull();
+        expect(saveButton()).toHaveProperty('disabled', false);
+    });
 });

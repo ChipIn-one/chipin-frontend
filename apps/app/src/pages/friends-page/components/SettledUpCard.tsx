@@ -6,7 +6,7 @@ import type { KnownUser } from 'entities/users';
 
 import { UserAvatar } from 'basics/index';
 
-import FriendActionsDropdown from './FriendActionsDropdown';
+import { FriendActionsDropdown } from './FriendActionsDropdown';
 
 interface Props {
     friends: readonly KnownUser[];

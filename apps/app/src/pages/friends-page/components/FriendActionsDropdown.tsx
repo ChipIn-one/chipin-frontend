@@ -35,6 +35,8 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const isSettleUpBlocked = useRequiresOnline(ONLINE_ONLY_ACTIONS.settleUp);
     const isRemoveBlocked = useRequiresOnline(ONLINE_ONLY_ACTIONS.friendDelete);
     const isRemoveDisabled = hasOutstandingDebt(friend) || isRemoveBlocked;
+    // KB NET-006: a blocked item says why.
+    const onlineRequired = t('common:outbox.onlineRequired');
 
     const actions = useMemo(
         () => [
@@ -66,6 +68,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                           icon: <ArrowLeftRightIcon size={16} />,
                           color: 'green' as const,
                           isDisabled: isSettleUpBlocked,
+                          hint: isSettleUpBlocked ? onlineRequired : undefined,
                           onSelect: () => {
                               setIsSettleUpOpened(true);
                           },
@@ -78,12 +81,22 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 icon: <UserXIcon size={16} />,
                 color: 'red' as const,
                 isDisabled: isRemoveDisabled,
+                hint: isRemoveBlocked ? onlineRequired : undefined,
                 onSelect: () => {
                     setIsRemoveFriendOpened(true);
                 },
             },
         ],
-        [balance, friend.user.id, isRemoveDisabled, isSettleUpBlocked, openAddExpenseModal, t],
+        [
+            balance,
+            friend.user.id,
+            isRemoveBlocked,
+            isRemoveDisabled,
+            isSettleUpBlocked,
+            onlineRequired,
+            openAddExpenseModal,
+            t,
+        ],
     );
 
     return (
@@ -119,4 +132,4 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
     );
 };
 
-export default FriendActionsDropdown;
+export { FriendActionsDropdown };
