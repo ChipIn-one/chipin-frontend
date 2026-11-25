@@ -2,12 +2,20 @@
 // detail with its balances (30 s) and a group's activity previews (30 s, infinite), all persisted
 // (the infinite ones as their first page only, `trimmingPersister`). All come through `api()` as
 // domain models (`toGroup`, `toActivityItems`: amounts as `Money`).
-import type { Query, QueryClient, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import type {
+    Query,
+    QueryClient,
+    QueryKey,
+    UseQueryOptions,
+    UseQueryResult,
+} from '@tanstack/react-query';
 import {
     infiniteQueryOptions,
     queryOptions,
     useInfiniteQuery,
     useQueries,
+    useQueryClient,
 } from '@tanstack/react-query';
 
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
@@ -67,6 +75,26 @@ interface EnabledParams {
 /** The groups of all loaded pages as one list without duplicates. */
 export const useGroupsListQuery = ({ enabled }: EnabledParams) =>
     useInfiniteQuery({ ...groupsListQueryOptions(), select: selectGroups, enabled });
+
+// The detail and activity queries of a group the user just removed or left, until the page still
+// showing them unmounts (`forgetGroup`): their observers are disabled meanwhile, so a focus, a
+// reconnect or an invalidation does not read a group that is gone (a 404 flash). Per query object,
+// so another client's queries (an account switch) are never affected.
+const leavingQueries = new WeakSet<object>();
+
+/** Marks (or unmarks) a cached group query as leaving: no observer reads it while marked. */
+export const setGroupQueryLeaving = (query: object, isLeaving: boolean): void => {
+    if (isLeaving) {
+        leavingQueries.add(query);
+    } else {
+        leavingQueries.delete(query);
+    }
+};
+
+export const isGroupQueryLeaving = (query: object): boolean => leavingQueries.has(query);
+
+// The `enabled` of every group detail and activity observer.
+const isReadable = (query: object): boolean => !leavingQueries.has(query);
 
 /** Whether a failed detail read means the user may not read the group (not a member, removed). */
 export const isGroupDeniedError = (error: unknown): boolean =>
@@ -135,6 +163,7 @@ export const groupDetailQueryOptions = (groupId: string) =>
         queryKey: groupsKeys.detail(groupId),
         staleTime: GROUP_DETAIL_STALE_TIME,
         refetchOnMount: refetchIfRestored,
+        enabled: isReadable,
         queryFn: ({ client, signal }) => fetchGroupDetail(client, groupId, signal),
     });
 
@@ -163,7 +192,13 @@ export const useGroupDetailQuery = (
     const queries: GroupDetailOptions[] =
         groupId === undefined
             ? []
-            : [{ ...groupDetailQueryOptions(groupId), enabled, placeholderData: placeholder }];
+            : [
+                  {
+                      ...groupDetailQueryOptions(groupId),
+                      enabled: enabled ? isReadable : false,
+                      placeholderData: placeholder,
+                  },
+              ];
 
     return useQueries({ queries, combine: selectFirst });
 };
@@ -187,25 +222,51 @@ type ActivityQuery = Query<
     ReturnType<typeof groupsKeys.activity>
 >;
 
-// As the dashboard feed: a focus/reconnect refetch of a stale feed is cut back to its first page
-// first, so it is one request (the cut keeps the data's age and invalidation). Offline nothing is
-// cut: the loaded pages stay readable until the network is back.
-const trimBeforeRefetch = (query: ActivityQuery): boolean => {
+// Cuts a feed to its first page, keeping the data's age and invalidation (whether it refetches
+// does not change). `manual`: a paused fetch keeps its status.
+const cutToFirstPage = <K extends QueryKey>(
+    query: Query<GroupActivityPage, Error, GroupActivityData, K>,
+): void => {
     const { data, dataUpdatedAt, isInvalidated } = query.state;
 
-    if (
-        isNetworkUsable() &&
-        data &&
-        data.pages.length > 1 &&
-        query.isStaleByTime(GROUP_DETAIL_STALE_TIME)
-    ) {
-        // `manual`: a paused fetch keeps its status.
+    if (data && data.pages.length > 1) {
         query.setData(firstGroupActivityPage(data), { updatedAt: dataUpdatedAt, manual: true });
         if (isInvalidated) {
             query.invalidate();
         }
     }
+};
+
+// As the dashboard feed: a focus/reconnect refetch of a stale feed is cut back to its first page
+// first, so it is one request. Offline nothing is cut: the loaded pages stay readable until the
+// network is back.
+const trimBeforeRefetch = (query: ActivityQuery): boolean => {
+    if (isNetworkUsable() && query.isStaleByTime(GROUP_DETAIL_STALE_TIME)) {
+        cutToFirstPage(query);
+    }
     return true;
+};
+
+// A refetch on mount is decided during render, where the cache must not change: a group's feed
+// is cut back to its first page when its last reader unmounts instead, so the next mount's
+// refetch is one request. Not while a load runs (its answer would replace the cut) and not
+// offline (the pages stay readable). Checked on TanStack Query 5.105–5.107.1: when the last
+// observer leaves, a running load that read its signal is cancelled and its state reverted
+// synchronously, so the feed is idle here (re-check on a TanStack upgrade).
+const trimGroupActivityIfUnobserved = (client: QueryClient, groupId: string): void => {
+    const feed = client.getQueryCache().find<GroupActivityPage, Error, GroupActivityData>({
+        queryKey: groupsKeys.activity(groupId),
+        exact: true,
+    });
+
+    if (
+        feed &&
+        isNetworkUsable() &&
+        feed.getObserversCount() === 0 &&
+        feed.state.fetchStatus === 'idle'
+    ) {
+        cutToFirstPage(feed);
+    }
 };
 
 /** A group's activity previews, newest first, by `nextCursor` until null. */
@@ -215,10 +276,12 @@ export const groupActivityQueryOptions = (groupId: string) =>
         staleTime: GROUP_DETAIL_STALE_TIME,
         refetchOnMount: refetchIfRestored,
         initialPageParam: firstActivityPageParam(),
+        enabled: isReadable,
         queryFn: ({ pageParam, signal }) => fetchGroupActivityPage(groupId, pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,
-        // Pinned to TanStack Query 5.105: these callbacks run only in `onFocus`/`onOnline`, never
-        // during render, so they may cut the cache (re-check on a TanStack upgrade).
+        // Checked on TanStack Query 5.105–5.107.1: these callbacks run only in
+        // `onFocus`/`onOnline`, never during render, so they may cut the cache (re-check on a
+        // TanStack upgrade).
         refetchOnWindowFocus: trimBeforeRefetch,
         refetchOnReconnect: trimBeforeRefetch,
     });
@@ -227,9 +290,33 @@ export const groupActivityQueryOptions = (groupId: string) =>
  * The previews of all loaded pages, each parent once, with the page count. Enable it once the detail is loaded: the
  * detail then has seeded the first page, and no second request is sent for it.
  */
-export const useGroupActivityQuery = (groupId: string, { enabled }: EnabledParams) =>
-    useInfiniteQuery({
+export const useGroupActivityQuery = (groupId: string, { enabled }: EnabledParams) => {
+    const client = useQueryClient();
+    const query = useInfiniteQuery({
         ...groupActivityQueryOptions(groupId),
         select: selectGroupActivity,
-        enabled,
+        enabled: enabled ? isReadable : false,
     });
+
+    // Checked a microtask later, whatever the order of React's effects: by then the observer has
+    // left this feed, on unmount and when the page moves to another group (`setOptions`).
+    useEffect(
+        () => () => {
+            queueMicrotask(() => {
+                trimGroupActivityIfUnobserved(client, groupId);
+            });
+        },
+        [client, groupId],
+    );
+    return query;
+};
+
+/** Whether the group's activity belongs to a group just left (nothing loads it until unmount). */
+export const isGroupActivityLeaving = (client: QueryClient, groupId: string): boolean => {
+    const query = client.getQueryCache().find({
+        queryKey: groupsKeys.activity(groupId),
+        exact: true,
+    });
+
+    return query !== undefined && leavingQueries.has(query);
+};

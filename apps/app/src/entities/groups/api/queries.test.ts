@@ -1,10 +1,14 @@
+import { createElement, type ReactNode } from 'react';
 import {
     dehydrate,
     hydrate,
     InfiniteQueryObserver,
+    onlineManager,
     QueryClient,
+    QueryClientProvider,
     QueryObserver,
 } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { expect, test, vi } from 'vitest';
 
@@ -31,6 +35,7 @@ import {
     groupsListQueryOptions,
     isGroupDeniedError,
     seedGroupActivity,
+    useGroupActivityQuery,
 } from './queries';
 
 const server = setupMswServer();
@@ -510,4 +515,175 @@ test('#724 a detail read in this page stays fresh for its stale time: a mount re
 test('#724 the list balances and the group activity restored from before the reload are read again on mount', () => {
     expect(groupsListQueryOptions().refetchOnMount).toBe(refetchIfRestored);
     expect(groupActivityQueryOptions('a').refetchOnMount).toBe(refetchIfRestored);
+});
+
+/** Activity pages by cursor: none → cursor 1 → cursor 2 → the end, counted. */
+const serveThreeActivityPages = (): { count: number } => {
+    const counter = { count: 0 };
+
+    server.use(
+        http.get('*/groups/a/activity-previews', ({ request }) => {
+            counter.count += 1;
+            const cursor = Number(new URL(request.url).searchParams.get('cursor') ?? 0);
+
+            return HttpResponse.json({
+                items: [wirePreview(`p${String(cursor)}`)],
+                nextCursor: cursor < 2 ? cursor + 1 : null,
+            });
+        }),
+    );
+    return counter;
+};
+
+const activityPageCount = (client: QueryClient): number | undefined =>
+    client.getQueryData<GroupActivityData>(groupsKeys.activity('a'))?.pages.length;
+
+// The trim runs a microtask after the cleanup of the group page's activity.
+const afterCleanup = (): Promise<void> => Promise.resolve();
+
+// A group page's activity on `client`, three pages of group `a` loaded.
+const mountThreeActivityPages = async (client: QueryClient) => {
+    const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children);
+    const view = renderHook(
+        ({ groupId }: { groupId: string }) => useGroupActivityQuery(groupId, { enabled: true }),
+        { wrapper, initialProps: { groupId: 'a' } },
+    );
+
+    await waitFor(() => {
+        expect(view.result.current.isSuccess).toBe(true);
+    });
+    await act(() => view.result.current.fetchNextPage());
+    await act(() => view.result.current.fetchNextPage());
+    expect(activityPageCount(client)).toBe(3);
+    return view;
+};
+
+// As `mountThreeActivityPages`; returns its unmount.
+const readThreeActivityPages = async (client: QueryClient): Promise<() => void> =>
+    (await mountThreeActivityPages(client)).unmount;
+
+test('a mount refetch of a stale multi-page group activity loads one page', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        const requests = serveThreeActivityPages();
+        const client = createQueryClient();
+        const unmount = await readThreeActivityPages(client);
+        const loadedAt = client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt;
+
+        unmount();
+        await afterCleanup();
+        // Cut when the last reader left, keeping its age.
+        expect(activityPageCount(client)).toBe(1);
+        expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(loadedAt);
+
+        vi.setSystemTime(PAGE_LOADED_AT + 120_000);
+        const remount = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const unsubscribe = remount.subscribe(() => undefined);
+
+        expect(remount.getCurrentResult().isFetching).toBe(true);
+        await vi.waitFor(() => {
+            expect(remount.getCurrentResult().isFetching).toBe(false);
+        });
+        unsubscribe();
+        expect(requests.count).toBe(4);
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('a group activity left offline keeps its loaded pages', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        const client = createQueryClient();
+        const unmount = await readThreeActivityPages(client);
+
+        onlineManager.setOnline(false);
+        unmount();
+        await afterCleanup();
+
+        expect(activityPageCount(client)).toBe(3);
+    } finally {
+        onlineManager.setOnline(true);
+        vi.useRealTimers();
+    }
+});
+
+test('a group activity left while another reader still shows it keeps its pages', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        const client = createQueryClient();
+        const unmount = await readThreeActivityPages(client);
+        const other = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const unsubscribe = other.subscribe(() => undefined);
+
+        unmount();
+        await afterCleanup();
+
+        expect(activityPageCount(client)).toBe(3);
+        unsubscribe();
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('a next page loading when the group activity is left is cancelled, and the feed is cut', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        const client = createQueryClient();
+        const unmount = await readThreeActivityPages(client);
+        // The last page has no next cursor: load the first two again, then one more.
+        client.setQueryData<GroupActivityData>(
+            groupsKeys.activity('a'),
+            data =>
+                data && { pages: data.pages.slice(0, 2), pageParams: data.pageParams.slice(0, 2) },
+        );
+        const observer = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const unsubscribe = observer.subscribe(() => undefined);
+        const nextPage = observer.fetchNextPage();
+
+        expect(client.getQueryState(groupsKeys.activity('a'))?.fetchStatus).toBe('fetching');
+        // TanStack cancels the load of the last reader (its signal is read) and restores the
+        // pages from before it, so the cut sees an idle feed.
+        unsubscribe();
+        unmount();
+        await afterCleanup();
+        await nextPage;
+
+        expect(client.getQueryState(groupsKeys.activity('a'))?.fetchStatus).toBe('idle');
+        expect(activityPageCount(client)).toBe(1);
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('a group page moving to another group cuts the activity it left', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        server.use(
+            http.get('*/groups/b/activity-previews', () =>
+                HttpResponse.json({ items: [wirePreview('b1')], nextCursor: null }),
+            ),
+        );
+        const client = createQueryClient();
+        const { rerender, unmount } = await mountThreeActivityPages(client);
+
+        // The page stays mounted: a group card link opens group `b`.
+        rerender({ groupId: 'b' });
+        await afterCleanup();
+
+        expect(activityPageCount(client)).toBe(1);
+        unmount();
+    } finally {
+        vi.useRealTimers();
+    }
 });

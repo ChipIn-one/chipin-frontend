@@ -179,9 +179,11 @@ test('a changed group is read again on any page: no group page needed, its list 
     // No observer of the detail (the dashboard, the friends page).
     await invalidateGroup('a');
 
+    await vi.waitFor(() => {
+        expect(listed()).toEqual([group('a', 'New balances'), group('b')]);
+    });
     expect(detailReads).toBe(1);
     expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'New balances'));
-    expect(listed()).toEqual([group('a', 'New balances'), group('b')]);
     expect(userCache.client.getQueryState(activityKey)?.isInvalidated).toBe(true);
     expect(userCache.client.getQueryData<{ pages: unknown[] }>(activityKey)?.pages).toHaveLength(1);
 });
@@ -192,4 +194,37 @@ test('a failed read after a change keeps the list and never rejects', async () =
 
     await expect(invalidateGroup('a')).resolves.toBeUndefined();
     expect(listed()).toEqual([group('a')]);
+});
+
+test('offline after a write, the refresh settles without waiting for the detail read', async () => {
+    let answerRead: (() => void) | undefined;
+    server.use(
+        http.get(
+            '*/groups/a',
+            () =>
+                new Promise<Response>(resolve => {
+                    answerRead = () => {
+                        resolve(HttpResponse.json(wire('a', 'After the reconnect')));
+                    };
+                }),
+        ),
+    );
+    seed([group('a')], Date.now() - 1_000);
+    // Network events reach the cache of a mounted client only.
+    userCache.client.mount();
+    onlineManager.setOnline(false);
+
+    // The write's loading flag waits for this, not for the detail read.
+    await expect(invalidateGroup('a')).resolves.toBeUndefined();
+    expect(userCache.client.getQueryState(detailKey)?.fetchStatus).not.toBe('idle');
+
+    onlineManager.setOnline(true);
+    await vi.waitFor(() => {
+        expect(answerRead).toBeDefined();
+    });
+    answerRead?.();
+    await vi.waitFor(() => {
+        expect(listed()).toEqual([group('a', 'After the reconnect')]);
+    });
+    userCache.client.unmount();
 });

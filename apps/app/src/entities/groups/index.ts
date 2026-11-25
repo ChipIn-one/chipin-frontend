@@ -1,6 +1,6 @@
 // Public entry of entities/groups: the domain group, the groups list, group detail and group
 // activity queries, the group mutations, and the edits of their cached data.
-export { refreshGroup } from './api/groupCache';
+export { startGroupRefresh } from './api/groupCache';
 export type {
     CreateGroupParams,
     GroupWriteEffects,
@@ -26,6 +26,7 @@ export {
     GROUPS_LIST_STALE_TIME,
     groupsKeys,
     groupsListQueryOptions,
+    isGroupActivityLeaving,
     isGroupDeniedError,
     useGroupActivityQuery,
     useGroupDetailQuery,

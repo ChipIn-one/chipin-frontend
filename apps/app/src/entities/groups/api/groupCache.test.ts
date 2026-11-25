@@ -1,4 +1,9 @@
-import { InfiniteQueryObserver, onlineManager, QueryObserver } from '@tanstack/react-query';
+import {
+    focusManager,
+    InfiniteQueryObserver,
+    onlineManager,
+    QueryObserver,
+} from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -18,7 +23,12 @@ import {
     writeGroupDetail,
 } from './groupCache';
 import { dropGroupFromCachedList, putGroupInCachedList } from './listCache';
-import { groupDetailQueryOptions, groupsKeys, groupsListQueryOptions } from './queries';
+import {
+    groupActivityQueryOptions,
+    groupDetailQueryOptions,
+    groupsKeys,
+    groupsListQueryOptions,
+} from './queries';
 
 const server = setupMswServer();
 
@@ -112,6 +122,7 @@ afterEach(() => {
     stopWatching = undefined;
     userCache.dispose();
     onlineManager.setOnline(true);
+    focusManager.setFocused(undefined);
     vi.useRealTimers();
 });
 
@@ -331,4 +342,155 @@ test('a group page still showing a removed group keeps it, unread, until it unmo
     unmount();
     expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
     expect(detailReads).toBe(0);
+});
+
+interface GroupServer {
+    detailReads: number;
+    activityReads: number;
+}
+
+/** A group the server no longer lets the user read (left, removed): every read is a 404. */
+const serveGoneGroup = (): GroupServer => {
+    const reads: GroupServer = { detailReads: 0, activityReads: 0 };
+
+    server.use(
+        http.get('*/groups/a/activity-previews', () => {
+            reads.activityReads += 1;
+            return HttpResponse.json({}, { status: 404 });
+        }),
+        http.get('*/groups/a', () => {
+            reads.detailReads += 1;
+            return HttpResponse.json({}, { status: 404 });
+        }),
+    );
+    return reads;
+};
+
+/** A group page showing group `a`: its detail and its activity observed. Returns its unmount. */
+const mountGroupPage = (): (() => void) => {
+    const detail = new QueryObserver(userCache.client, groupDetailQueryOptions('a'));
+    const activity = new InfiniteQueryObserver(userCache.client, groupActivityQueryOptions('a'));
+    const stopDetail = detail.subscribe(() => undefined);
+    const stopActivity = activity.subscribe(() => undefined);
+
+    return () => {
+        stopActivity();
+        stopDetail();
+    };
+};
+
+test('a page still showing a left group reads neither its detail nor its activity on focus or reconnect', async () => {
+    runAMinuteAfterPageLoad();
+    const reads = serveGoneGroup();
+    userCache.client.setQueryData(detailKey, group('a'));
+    seedActivity(1);
+    // Focus and network events reach the cache of a mounted client only.
+    userCache.client.mount();
+    const unmount = mountGroupPage();
+
+    forgetGroup(userCache.client, 'a');
+    // Both are stale now: an enabled observer would read them on focus and on reconnect.
+    vi.setSystemTime(Date.now() + 60_000);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    onlineManager.setOnline(false);
+    onlineManager.setOnline(true);
+    await userCache.client.invalidateQueries({ queryKey: groupsKeys.all });
+
+    expect(reads).toEqual({ detailReads: 0, activityReads: 0 });
+    expect(userCache.client.getQueryState(detailKey)?.status).toBe('success');
+    unmount();
+    userCache.client.unmount();
+    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
+    expect(userCache.client.getQueryState(activityKey)).toBeUndefined();
+});
+
+test('a rejoin while the page of a left group is mounted keeps the fresh detail after it unmounts', async () => {
+    runAMinuteAfterPageLoad();
+    server.use(
+        http.get('*/groups/a/activity-previews', () =>
+            HttpResponse.json({ items: [], nextCursor: null }),
+        ),
+    );
+    userCache.client.setQueryData(detailKey, group('a'));
+    seedActivity(1);
+    const unmount = mountGroupPage();
+
+    forgetGroup(userCache.client, 'a');
+    await writeGroupDetail(userCache.client, group('a', 'Rejoined'));
+    unmount();
+
+    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'Rejoined'));
+    expect(userCache.client.getQueryState(activityKey)?.data).toBeDefined();
+});
+
+test('a detail read running when the group is left is cancelled: its late answer keeps nothing', async () => {
+    runAMinuteAfterPageLoad();
+    let answerRead: (() => void) | undefined;
+    server.use(
+        http.get(
+            '*/groups/a',
+            () =>
+                new Promise<Response>(resolve => {
+                    answerRead = () => {
+                        resolve(HttpResponse.json(wire('a', 'Before the leave')));
+                    };
+                }),
+        ),
+    );
+    userCache.client.setQueryData(detailKey, group('a'));
+    const page = new QueryObserver(userCache.client, groupDetailQueryOptions('a'));
+    const unmount = page.subscribe(() => undefined);
+    void userCache.client.refetchQueries({ queryKey: detailKey });
+    await vi.waitFor(() => {
+        expect(answerRead).toBeDefined();
+    });
+
+    forgetGroup(userCache.client, 'a');
+    answerRead?.();
+    await vi.waitFor(() => {
+        expect(userCache.client.getQueryState(detailKey)?.fetchStatus).toBe('idle');
+    });
+
+    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a'));
+    unmount();
+    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
+});
+
+test('a group left twice is still removed once its page unmounts', () => {
+    runAMinuteAfterPageLoad();
+    const reads = serveGoneGroup();
+    userCache.client.setQueryData(detailKey, group('a'));
+    seedActivity(1);
+    const unmount = mountGroupPage();
+
+    forgetGroup(userCache.client, 'a');
+    forgetGroup(userCache.client, 'a');
+    unmount();
+
+    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
+    expect(userCache.client.getQueryState(activityKey)).toBeUndefined();
+    expect(reads).toEqual({ detailReads: 0, activityReads: 0 });
+});
+
+test('known limitation: an update finishing after a leave keeps the left group while its page is mounted', async () => {
+    runAMinuteAfterPageLoad();
+    server.use(
+        http.get('*/groups/a/activity-previews', () =>
+            HttpResponse.json({ items: [], nextCursor: null }),
+        ),
+    );
+    userCache.client.setQueryData(detailKey, group('a'));
+    seedActivity(1);
+    const unmount = mountGroupPage();
+
+    forgetGroup(userCache.client, 'a');
+    // An update (or a cover upload) answered after the leave writes the detail as a rejoin does:
+    // the removal cannot tell them apart (a follow-up: the join path should end it itself).
+    await writeGroupDetail(userCache.client, group('a', 'Renamed before the leave'));
+    unmount();
+
+    expect(userCache.client.getQueryData(detailKey)).toEqual(
+        group('a', 'Renamed before the leave'),
+    );
 });
