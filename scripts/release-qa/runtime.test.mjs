@@ -2113,7 +2113,7 @@ const matrixResult = (profile, overrides = {}) =>
 const PROFILE_IDS = ['chromium', 'firefox', 'webkit', 'pixel', 'iphone'];
 const matrixJobs = (conclusions = {}) =>
     PROFILE_IDS.map(id => ({
-        name: `e2e ${id}`,
+        name: `e2e ${id} / run`,
         status: 'completed',
         conclusion: conclusions[id] ?? 'success',
     }));
@@ -2184,10 +2184,13 @@ test('job conclusions come from the latest attempt of each job of this run; dupl
     const api = jobs => withJobs({}, jobs);
     return readMatrixConclusions(
         api([
-            ...matrixJobs({ firefox: 'failure' }).filter(job => job.name !== 'e2e iphone'),
-            { name: 'e2e webkit', status: 'completed', conclusion: 'success' },
-            { name: 'e2e pixel', status: 'in_progress', conclusion: null },
+            ...matrixJobs({ firefox: 'failure' }).filter(job => job.name !== 'e2e iphone / run'),
+            { name: 'e2e webkit / run', status: 'completed', conclusion: 'success' },
+            { name: 'e2e pixel / run', status: 'in_progress', conclusion: null },
             { name: 'prepare', status: 'completed', conclusion: 'success' },
+            // The bare caller name (before e2e-run.yml) or a loose prefix never counts.
+            { name: 'e2e chromium', status: 'completed', conclusion: 'failure' },
+            { name: 'e2e chromium / run extra', status: 'completed', conclusion: 'failure' },
         ]),
         777,
     )
@@ -2228,7 +2231,9 @@ test('after "Re-run failed jobs" the jobs list with filter=latest is read over a
             conclusion: 'success',
         })),
         2: matrixJobs({ firefox: 'failure' }).map(job =>
-            job.name === 'e2e webkit' ? { ...job, run_attempt: 2 } : { ...job, run_attempt: 1 },
+            job.name === 'e2e webkit / run'
+                ? { ...job, run_attempt: 2 }
+                : { ...job, run_attempt: 1 },
         ),
     };
     const fetchImpl = url => {

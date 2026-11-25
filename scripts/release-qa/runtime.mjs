@@ -699,7 +699,8 @@ export function readMatrixResults(dir, { lstatImpl = lstat, readImpl = readFile 
     ).then(Object.fromEntries);
 }
 
-// The latest conclusion of each matrix job (`e2e <profile>`) of this run, from the GitHub API, all
+// The latest conclusion of each matrix job (`e2e <profile> / run`: the caller job `e2e <profile>`
+// and the job `run` of the reusable e2e-run.yml it calls) of this run, from the GitHub API, all
 // pages. `filter=latest` keeps, after "Re-run failed jobs", the newest attempt of every job, so a job
 // that was not re-run keeps its earlier conclusion. An unreadable list leaves every conclusion
 // unknown, so no profile counts as passed.
@@ -709,7 +710,7 @@ export function readMatrixConclusions(api, runId) {
         .then(jobs => {
             const conclusions = {};
             for (const { id } of MATRIX_PROFILES) {
-                const named = jobs.filter(job => job?.name === `e2e ${id}`);
+                const named = jobs.filter(job => job?.name === `e2e ${id} / run`);
                 conclusions[id] =
                     named.length === 1 && named[0].status === 'completed'
                         ? named[0].conclusion
