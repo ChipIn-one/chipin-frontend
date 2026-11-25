@@ -13,6 +13,7 @@ import {
     validateAuthSession,
 } from 'helpers/authSession';
 import * as localStorageHelpers from 'helpers/localStorage';
+import { probeBackendHealth } from 'shared/api/health';
 import { outboxStateKey, queryCacheKey } from 'shared/offline/constants';
 import { persistCodec } from 'shared/offline/persistCodec';
 import { cachesByUser, isCacheWriteAllowed } from 'shared/offline/userCaches';
@@ -35,6 +36,12 @@ vi.mock('helpers/authSession', async importOriginal => {
 
     return { ...actual, validateAuthSession: vi.fn(actual.validateAuthSession) };
 });
+
+// The `/health` probe sent alongside a refresh without a saved user (NET-007); no real request.
+vi.mock('shared/api/health', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared/api/health')>()),
+    probeBackendHealth: vi.fn(() => Promise.resolve('ok')),
+}));
 
 vi.mock('store/groupsList', async importOriginal => ({
     ...(await importOriginal<typeof import('store/groupsList')>()),
@@ -407,6 +414,178 @@ test('without a cached user id an offline cold start keeps waiting', () => {
     renderHook();
 
     expect(useAuthStore.getState().status).toBe('unknown');
+});
+
+test('NET-007 a hanging startup refresh without a saved user: no /health answer marks the network unusable within 5 s', async () => {
+    markRestorableAuthSession();
+    // A network the browser calls online that answers nothing: the refresh never settles (in the
+    // browser it fails 20-50 s later), the probe times out (5 s) as unreachable.
+    const refreshAuthTokens = vi.fn(() => new Promise<string>(() => undefined));
+    useAuthStore.setState({ refreshAuthTokens });
+    vi.mocked(probeBackendHealth).mockResolvedValueOnce('unreachable');
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(useConnectivityStore.getState().mode).toBe('offline');
+    });
+    expect(onlineManager.isOnline()).toBe(false);
+    expect(refreshAuthTokens).toHaveBeenCalledOnce();
+    expect(probeBackendHealth).toHaveBeenCalledOnce();
+    // Still unknown: `AuthLayout` shows the offline load error, the refresh still decides.
+    expect(useAuthStore.getState().status).toBe('unknown');
+});
+
+test('NET-007 a reachable /health leaves the network as it is', async () => {
+    markRestorableAuthSession();
+    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => new Promise<string>(() => undefined)) });
+    vi.mocked(probeBackendHealth).mockResolvedValueOnce('ok');
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(probeBackendHealth).toHaveBeenCalledOnce();
+    });
+    await act(() => Promise.resolve());
+    expect(useConnectivityStore.getState().mode).toBe('online');
+    expect(onlineManager.isOnline()).toBe(true);
+});
+
+/** A `/health` probe answered by the test, after the refresh has settled. */
+const deferProbe = () => {
+    let answer: (health: 'unreachable') => void = () => undefined;
+    vi.mocked(probeBackendHealth).mockReturnValueOnce(
+        new Promise(resolve => {
+            answer = resolve;
+        }),
+    );
+    return (health: 'unreachable') => answer(health);
+};
+
+test('NET-007 the probe is sent for this attempt only: never joins a probe sent before it', async () => {
+    markRestorableAuthSession();
+    const startedBefore = performance.now();
+    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => new Promise<string>(() => undefined)) });
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(probeBackendHealth).toHaveBeenCalledOnce();
+    });
+    const [sentAfter] = vi.mocked(probeBackendHealth).mock.calls[0] ?? [];
+    expect(sentAfter).toBeGreaterThanOrEqual(startedBefore);
+});
+
+test('NET-007 a stale shared /health probe from before the attempt answering unreachable leaves the network online', async () => {
+    const health = await vi.importActual<typeof import('shared/api/health')>('shared/api/health');
+    const { publicApiInstance } = await import('shared/api/instance');
+    let failOldProbe: (error: Error) => void = () => undefined;
+    const get = vi
+        .spyOn(publicApiInstance, 'get')
+        // The 15 s re-check's probe, sent before the attempt: no answer yet, then unreachable.
+        .mockReturnValueOnce(
+            new Promise((_resolve, reject) => {
+                failOldProbe = reject;
+            }),
+        )
+        // The attempt's own probe: `/health` answers.
+        .mockResolvedValueOnce({ status: 200, data: {} });
+    vi.mocked(probeBackendHealth).mockImplementation(health.probeBackendHealth);
+    const oldProbe = health.probeBackendHealth();
+    markRestorableAuthSession();
+    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => new Promise<string>(() => undefined)) });
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(get).toHaveBeenCalledTimes(2);
+    });
+    failOldProbe(new Error('Network Error'));
+    await expect(oldProbe).resolves.toBe('unreachable');
+    await act(() => Promise.resolve());
+
+    expect(useConnectivityStore.getState().mode).toBe('online');
+    expect(onlineManager.isOnline()).toBe(true);
+});
+
+test('NET-007 a refresh that succeeded before an unreachable probe answers: no offline marking', async () => {
+    markRestorableAuthSession();
+    const answerProbe = deferProbe();
+    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => Promise.resolve('access-token')) });
+    mockAuthenticatedDataFetches();
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(useAuthStore.getState().status).toBe('authenticated');
+    });
+    await act(async () => {
+        answerProbe('unreachable');
+        await Promise.resolve();
+    });
+
+    expect(useConnectivityStore.getState().mode).toBe('online');
+    expect(onlineManager.isOnline()).toBe(true);
+});
+
+test('NET-007 a refresh rejected with 401 before an unreachable probe answers: no offline marking', async () => {
+    markRestorableAuthSession();
+    const answerProbe = deferProbe();
+    // The store's own refresh over a 401 cookie refresh (`null`): the session expires.
+    useAuthStore.setState({ refreshAuthTokens: storeRefreshAuthTokens });
+    vi.mocked(validateAuthSession).mockResolvedValueOnce(null);
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'unauthenticated',
+            unauthReason: 'expired',
+        });
+    });
+    await act(async () => {
+        answerProbe('unreachable');
+        await Promise.resolve();
+    });
+
+    expect(useConnectivityStore.getState().mode).toBe('online');
+    expect(onlineManager.isOnline()).toBe(true);
+});
+
+test('NET-007 an attempt replaced by an auth change before the probe answers: no offline marking', async () => {
+    markRestorableAuthSession();
+    const answerProbe = deferProbe();
+    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => new Promise<string>(() => undefined)) });
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(probeBackendHealth).toHaveBeenCalledOnce();
+    });
+    // Any auth change ends the attempt's dedupe (the attempt is no longer the one in flight).
+    act(() => {
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+    });
+    await act(async () => {
+        answerProbe('unreachable');
+        await Promise.resolve();
+    });
+
+    expect(useConnectivityStore.getState().mode).toBe('online');
+    expect(onlineManager.isOnline()).toBe(true);
+});
+
+test('NET-007 with a saved user the startup refresh sends no extra /health probe', async () => {
+    cacheSignedInUser();
+    const refreshAuthTokens = vi.fn(() => new Promise<string>(() => undefined));
+    useAuthStore.setState({ refreshAuthTokens });
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+    });
+    expect(probeBackendHealth).not.toHaveBeenCalled();
 });
 
 test('an offline cold start after expiry (hint false) shows the sign-in, not the cache', () => {

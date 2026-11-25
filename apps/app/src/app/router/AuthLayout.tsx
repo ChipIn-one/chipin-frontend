@@ -6,8 +6,9 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { readSessionEnvironment, sessionAccess } from 'app/auth/requireSession';
 import { readSession } from 'app/auth/session';
-import { GuardLoader } from 'features/routing';
+import { GuardLoader, OfflineLoadError } from 'features/routing';
 import { loginPathFor } from 'helpers/url';
+import { useTabUserId } from 'hooks/useTabUserId';
 import { isNetworkUsable } from 'shared/offline/network';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
@@ -102,20 +103,25 @@ const AuthLayout = () => {
     );
     // Re-rendered on a network change: the offline rows depend on it.
     useSyncExternalStore(subscribeNetwork, isNetworkUsable);
+    // Re-rendered when this tab's saved user changes: the offline rows depend on it (NET-007).
+    useTabUserId();
     const [wasPageShown, setWasPageShown] = useState(false);
     const pageRef = useRef<HTMLDivElement>(null);
-    const isPageHidden =
-        status !== AUTH_STATUS.UNKNOWN &&
-        sessionAccess(readSession(), readSessionEnvironment()) !== 'pass';
+    const access = sessionAccess(readSession(), readSessionEnvironment());
+    const isPageHidden = status !== AUTH_STATUS.UNKNOWN && access !== 'pass';
 
     useHidePagePortals(isPageHidden, pageRef);
 
+    // NET-007: offline with nothing saved on this device there is no page to show, whether the
+    // check is still unanswered or ended in an error: the load error with Retry, never the page.
+    // When the network is usable again this falls back to the loader and the check goes on.
+    if (access === 'offlineNoData') {
+        return <OfflineLoadError />;
+    }
     // Still unknown after the loader's timeout: the loader as before, until the check answers.
     if (status === AUTH_STATUS.UNKNOWN) {
         return <GuardLoader />;
     }
-
-    const access = sessionAccess(readSession(), readSessionEnvironment());
 
     if (access === 'pass' && !wasPageShown) {
         setWasPageShown(true);

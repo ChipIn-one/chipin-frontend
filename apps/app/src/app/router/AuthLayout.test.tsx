@@ -5,12 +5,13 @@ import { useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
+import { createMemoryRouter, MemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { AUTH_READY_TIMEOUT_MS } from 'app/auth/session';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { getLocalUser, LocalStorage } from 'helpers/localStorage';
+import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { startCacheRestore } from 'shared/offline/restore';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
@@ -21,6 +22,12 @@ import { buildAppRoutes } from './createAppRouter';
 
 vi.mock('basics/PageLoader', () => ({
     default: () => <div data-testid="page-loader" />,
+}));
+
+// No real `/health` request from jsdom (the session check probes it alongside a refresh, NET-007).
+vi.mock('shared/api/health', async importOriginal => ({
+    ...(await importOriginal<typeof import('shared/api/health')>()),
+    probeBackendHealth: vi.fn(() => Promise.resolve('ok')),
 }));
 
 vi.mock('store/groupsList', async importOriginal => ({
@@ -97,6 +104,11 @@ const CurrentRoute = () => {
 
 const DRAFT_LABEL = 'Draft';
 
+const CheckSignIn = () => {
+    useCheckSignIn();
+    return null;
+};
+
 /** The last account's cached settings (no session) with `language`. */
 const cacheUserWithLanguage = (language: string) => {
     LocalStorage.set(LS_KEY_USER, {
@@ -114,6 +126,16 @@ const cacheUserWithLanguage = (language: string) => {
             sex: 'male',
         },
     });
+};
+
+/** A user saved on this device (`LocalUser` with an id): there is a cache to show offline. */
+const saveUser = () => {
+    cacheUserWithLanguage('en');
+    const cached = getLocalUser();
+
+    if (cached) {
+        LocalStorage.set(LS_KEY_USER, { ...cached, id: 'user-1' });
+    }
 };
 
 /** A page with state of its own: a draft typed into it must survive an expiry. */
@@ -313,6 +335,7 @@ describe('the live session', () => {
     });
 
     test('a session error with a hint offline shows the cached page; online the sign-in', async () => {
+        saveUser();
         LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
         onlineManager.setOnline(false);
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'error' });
@@ -326,6 +349,54 @@ describe('the live session', () => {
             onlineManager.setOnline(true);
         });
         expect(screen.getByTestId('auth-modal')).toBeTruthy();
+    });
+
+    test.each(['error', 'persistence_error'] as const)(
+        'NET-007 a session %s with a hint offline and no saved user: the offline load error, never the page',
+        async reason => {
+            LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+            onlineManager.setOnline(false);
+            useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+
+            renderLayout('/dashboard');
+
+            expect((await screen.findByRole('alert')).textContent).toContain(
+                'The data cannot be loaded without a network.',
+            );
+            expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+            // One Retry: not the inline offline banner too.
+            expect(screen.queryByRole('status')).toBeNull();
+            expect(screen.queryByLabelText('Draft')).toBeNull();
+            expect(screen.queryByTestId('auth-modal')).toBeNull();
+
+            // The network is back: the sign-in, as for any session error online.
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            expect(screen.queryByRole('alert')).toBeNull();
+            expect(screen.getByTestId('auth-modal')).toBeTruthy();
+        },
+    );
+
+    test('NET-007 Retry checks /health: a failed check keeps the error and says there is still no network', async () => {
+        const interaction = userEvent.setup();
+        const retryBackendHealth = vi.fn(() => Promise.reject(new Error('unreachable')));
+        const original = useConnectivityStore.getState().retryBackendHealth;
+        useConnectivityStore.setState({ retryBackendHealth });
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        onlineManager.setOnline(false);
+        useAuthStore.setState({ status: 'unknown' });
+
+        try {
+            renderLayout('/dashboard');
+            await interaction.click(await screen.findByRole('button', { name: 'Retry' }));
+
+            expect(retryBackendHealth).toHaveBeenCalledOnce();
+            expect((await screen.findByRole('alert')).textContent).toContain('Still no network');
+            expect(screen.queryByLabelText('Draft')).toBeNull();
+        } finally {
+            useConnectivityStore.setState({ retryBackendHealth: original });
+        }
     });
 
     // Signed out earlier (or in another tab): whatever the cached locale, a protected page leads to
@@ -423,6 +494,64 @@ describe('with the loader (the whole tree)', () => {
         expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
         expect(screen.queryByTestId('page-loader')).toBeNull();
         expect(screen.queryByText('dashboard')).toBeNull();
+        expect(refreshAuthTokens).not.toHaveBeenCalled();
+    });
+
+    test('NET-007 offline cold start, hint, no saved user, no answer: the load error within 5 s; the network back continues the start', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        onlineManager.setOnline(false);
+        const refreshAuthTokens = vi.fn(() => Promise.resolve('access-token'));
+        useAuthStore.setState({ status: 'unknown', refreshAuthTokens });
+
+        try {
+            renderApp('/dashboard');
+            // The session hook of the shell (mocked out of the tree above).
+            render(
+                <MemoryRouter initialEntries={['/dashboard']}>
+                    <CheckSignIn />
+                </MemoryRouter>,
+            );
+
+            await act(() => vi.advanceTimersByTimeAsync(AUTH_READY_TIMEOUT_MS));
+
+            expect(screen.getByRole('alert').textContent).toContain(
+                'The data cannot be loaded without a network.',
+            );
+            expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+            expect(screen.queryByTestId('page-loader')).toBeNull();
+            expect(screen.queryByText('dashboard')).toBeNull();
+            expect(useAuthStore.getState().status).toBe('unknown');
+            expect(refreshAuthTokens).not.toHaveBeenCalled();
+
+            // The network is back: the session check runs, then the page, without a reload.
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            expect(screen.queryByRole('alert')).toBeNull();
+            await act(() => vi.advanceTimersByTimeAsync(0));
+            expect(refreshAuthTokens).toHaveBeenCalledOnce();
+            expect(await screen.findByText('dashboard')).toBeTruthy();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    test('NET-007 offline cold start with a saved user: the cached page, as before', async () => {
+        saveUser();
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        onlineManager.setOnline(false);
+        const refreshAuthTokens = vi.fn(() => Promise.resolve('access-token'));
+        useAuthStore.setState({ status: 'unknown', refreshAuthTokens });
+
+        renderApp('/dashboard');
+
+        expect(await screen.findByText('dashboard')).toBeTruthy();
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'authenticated',
+            sessionMode: 'offline-cached',
+        });
         expect(refreshAuthTokens).not.toHaveBeenCalled();
     });
 

@@ -10,41 +10,70 @@ import { startCacheRestore } from 'shared/offline/restore';
 import { UNAUTH_REASON, type UnauthReason } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 
-import { requireSession, type SessionAccess, sessionAccess } from './requireSession';
-import { type Session, UNKNOWN_OFFLINE } from './session';
+import {
+    readSessionEnvironment,
+    requireSession,
+    type SessionAccess,
+    sessionAccess,
+} from './requireSession';
+import { AUTH_READY_TIMEOUT_MS, readSession, type Session, UNKNOWN_OFFLINE } from './session';
 
 vi.mock('shared/offline/clearUserData', async importOriginal => ({
     ...(await importOriginal<typeof import('shared/offline/clearUserData')>()),
     clearUserData: vi.fn(() => Promise.resolve()),
 }));
 
+const SETTINGS = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    timeFormat: '24h',
+    language: 'en',
+    theme: 'light',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} as const;
+
 const loaderArgs = (path: string) => ({ request: new Request(`http://localhost${path}`) });
 
 const unauth = (reason: UnauthReason): Session => ({ status: 'unauthenticated', reason });
-const ENVIRONMENTS = [
-    { hasSessionHint: true, isNetworkUsable: true, isLeavingAfterSignOut: false },
-    { hasSessionHint: true, isNetworkUsable: false, isLeavingAfterSignOut: false },
-    { hasSessionHint: false, isNetworkUsable: true, isLeavingAfterSignOut: false },
-    { hasSessionHint: false, isNetworkUsable: false, isLeavingAfterSignOut: false },
-] as const;
+const ENVIRONMENTS = [true, false].flatMap(hasSavedUser =>
+    [
+        { hasSessionHint: true, isNetworkUsable: true },
+        { hasSessionHint: true, isNetworkUsable: false },
+        { hasSessionHint: false, isNetworkUsable: true },
+        { hasSessionHint: false, isNetworkUsable: false },
+    ].map(env => ({ ...env, isLeavingAfterSignOut: false, hasSavedUser })),
+);
 
-// Every row of the table, in every environment: [session, online access, hint+offline access].
-const ROWS: [string, Session, SessionAccess, SessionAccess][] = [
-    ['authenticated', { status: 'authenticated' }, 'pass', 'pass'],
-    ['signed_out', unauth(UNAUTH_REASON.SIGNED_OUT), 'login', 'login'],
-    ['missing', unauth(UNAUTH_REASON.MISSING), 'login', 'login'],
-    ['expired', unauth(UNAUTH_REASON.EXPIRED), 'modalOverPage', 'modalOverPage'],
-    ['invalid', unauth(UNAUTH_REASON.INVALID), 'modalOverPage', 'modalOverPage'],
-    ['error', unauth(UNAUTH_REASON.ERROR), 'modal', 'pass'],
-    ['persistence_error', unauth(UNAUTH_REASON.PERSISTENCE_ERROR), 'modal', 'pass'],
-    [UNKNOWN_OFFLINE, { status: UNKNOWN_OFFLINE }, 'modal', 'pass'],
+// Every row of the table, in every environment: [session, online access, hint+offline access with
+// a saved user, hint+offline access with no user saved on the device].
+const ROWS: [string, Session, SessionAccess, SessionAccess, SessionAccess][] = [
+    ['authenticated', { status: 'authenticated' }, 'pass', 'pass', 'pass'],
+    ['signed_out', unauth(UNAUTH_REASON.SIGNED_OUT), 'login', 'login', 'login'],
+    ['missing', unauth(UNAUTH_REASON.MISSING), 'login', 'login', 'login'],
+    ['expired', unauth(UNAUTH_REASON.EXPIRED), 'modalOverPage', 'modalOverPage', 'modalOverPage'],
+    ['invalid', unauth(UNAUTH_REASON.INVALID), 'modalOverPage', 'modalOverPage', 'modalOverPage'],
+    ['error', unauth(UNAUTH_REASON.ERROR), 'modal', 'pass', 'offlineNoData'],
+    [
+        'persistence_error',
+        unauth(UNAUTH_REASON.PERSISTENCE_ERROR),
+        'modal',
+        'pass',
+        'offlineNoData',
+    ],
+    [UNKNOWN_OFFLINE, { status: UNKNOWN_OFFLINE }, 'modal', 'pass', 'offlineNoData'],
+    ['no reason', { status: 'unauthenticated', reason: undefined }, 'modal', 'modal', 'modal'],
 ];
 
 describe('sessionAccess', () => {
     test.each(ROWS)(
-        'AUTH-071 %s: redirect, sign-in over the page, or the cached page offline with a hint',
-        (_name, session, otherwise, hintOffline) => {
+        'AUTH-071 NET-007 %s: redirect, sign-in, the cached page offline with a hint and a saved user, the offline load error without one',
+        (_name, session, otherwise, hintOfflineSaved, hintOfflineNoData) => {
             ENVIRONMENTS.forEach(env => {
+                const hintOffline = env.hasSavedUser ? hintOfflineSaved : hintOfflineNoData;
                 const expected =
                     env.hasSessionHint && !env.isNetworkUsable ? hintOffline : otherwise;
 
@@ -144,6 +173,68 @@ describe('requireSession', () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'error' });
 
         await expect(requireSession(loaderArgs('/dashboard'))).resolves.toBeNull();
+    });
+
+    test('NET-007 hint, offline, no saved user: the loader resolves at once without a redirect, no 5 s wait', async () => {
+        vi.useFakeTimers();
+        try {
+            onlineManager.setOnline(false);
+            useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+            const decision = requireSession(loaderArgs('/dashboard'));
+            let isDecided = false;
+            void decision.then(() => {
+                isDecided = true;
+            });
+
+            // No timer runs: only the pending promise callbacks.
+            await vi.advanceTimersByTimeAsync(0);
+
+            expect(isDecided).toBe(true);
+            await expect(decision).resolves.toBeNull();
+            expect(readSessionEnvironment()).toMatchObject({
+                hasSessionHint: true,
+                isNetworkUsable: false,
+                hasSavedUser: false,
+            });
+            expect(sessionAccess(readSession(), readSessionEnvironment())).toBe('offlineNoData');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    test('NET-007 online with a hint and no saved user the loader still waits for the check (up to 5 s)', async () => {
+        vi.useFakeTimers();
+        try {
+            const refreshAuthTokens = vi.fn(() => new Promise<string>(() => undefined));
+            useAuthStore.setState({
+                status: 'unknown',
+                unauthReason: undefined,
+                refreshAuthTokens,
+            });
+            const decision = requireSession(loaderArgs('/dashboard'));
+            let isDecided = false;
+            void decision.then(() => {
+                isDecided = true;
+            });
+
+            await vi.advanceTimersByTimeAsync(AUTH_READY_TIMEOUT_MS - 1);
+            expect(isDecided).toBe(false);
+
+            await vi.advanceTimersByTimeAsync(1);
+            expect(isDecided).toBe(true);
+            await expect(decision).resolves.toBeNull();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    test('NET-007 a saved user on the device: the environment has it, offline the cached page', () => {
+        onlineManager.setOnline(false);
+        LocalStorage.set(LS_KEY_USER, { id: 'user-1', role: 'USER', settings: SETTINGS });
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+
+        expect(readSessionEnvironment().hasSavedUser).toBe(true);
+        expect(sessionAccess(readSession(), readSessionEnvironment())).toBe('pass');
     });
 
     test('leaving the OAuth callback: the check runs for the URL being loaded', async () => {

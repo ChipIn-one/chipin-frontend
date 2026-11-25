@@ -54,9 +54,13 @@
     "network": {
         "offline": "Нет подключения к интернету",
         "offlineBanner": "Нет сети. Показаны сохранённые данные",
+        "offlineBannerNoData": "Нет сети",
+        "offlineLoadErrorDescription": "Данные нельзя загрузить без сети.",
+        "offlineLoadErrorTitle": "Нет сети",
         "offlineStatus": "Нет сети",
         "retry": "Повторить",
-        "retryFailed": "Сети всё ещё нет. Показаны сохранённые данные"
+        "retryFailed": "Сети всё ещё нет. Показаны сохранённые данные",
+        "retryFailedNoData": "Сети всё ещё нет"
     },
     "oauth": {
         "missing_code": "Не удалось завершить вход через Google. Попробуйте ещё раз."
