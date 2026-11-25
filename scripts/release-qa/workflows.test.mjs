@@ -72,7 +72,7 @@ const expectSharedSlackSteps = (steps, scriptStep) => {
         'continue-on-error': true,
         uses: SLACK_ACTION,
         with: {
-            'webhook-url': '${{ secrets.SLACK_WEBHOOK_CI }}',
+            'webhook-url': '${{ secrets.SLACK_WEBHOOK_FE_RELEASES }}',
             text: `\${{ steps.${scriptStep}.outputs.slack_text }}`,
             'timeout-seconds': '10',
         },
@@ -85,7 +85,7 @@ const expectSharedSlackSteps = (steps, scriptStep) => {
         FAILURE: `\${{ steps.${scriptStep}.outputs.slack_failure }}`,
     });
     expect(warn.run).toContain(
-        'echo "::warning::SLACK_WEBHOOK_CI is not configured; nothing was posted."',
+        'echo "::warning::SLACK_WEBHOOK_FE_RELEASES is not configured; nothing was posted."',
     );
     expect(warn.run).toContain('echo "::warning::$FAILURE"');
     expect(steps.at(-1)).toBe(warn);
@@ -96,21 +96,29 @@ test('both QA workflows post the script text through the shared Slack action and
     expectSharedSlackSteps(result.jobs['read-result'].steps, 'result');
 });
 
-test('SLACK_WEBHOOK_CI is only the webhook-url input of the shared action, and nothing curls Slack', () => {
+// #882: release QA posts to #fe-releases, red master CI to #ci; each workflow holds only its own webhook.
+test('each Slack webhook is only the webhook-url input of the shared action, and nothing curls Slack', () => {
     const notify = frontendCi.jobs['notify-master-failure'];
-    for (const workflow of [prepare, result, frontendCi]) {
+    for (const [workflow, own, other] of [
+        [prepare, 'SLACK_WEBHOOK_FE_RELEASES', 'SLACK_WEBHOOK_CI'],
+        [result, 'SLACK_WEBHOOK_FE_RELEASES', 'SLACK_WEBHOOK_CI'],
+        [frontendCi, 'SLACK_WEBHOOK_CI', 'SLACK_WEBHOOK_FE_RELEASES'],
+    ]) {
+        expect(JSON.stringify(workflow)).toContain(`secrets.${own} }}`);
+        expect(JSON.stringify(workflow)).not.toContain(other);
         for (const job of Object.values(workflow.jobs)) {
             for (const step of job.steps ?? []) {
                 const { with: inputs = {}, ...rest } = step;
-                expect(JSON.stringify(rest), step.name).not.toContain('secrets.SLACK_WEBHOOK_CI');
+                expect(JSON.stringify(rest), step.name).not.toContain(`secrets.${own}`);
                 expect(JSON.stringify(step), step.name).not.toMatch(/hooks\.slack\.com|curl /);
-                if (JSON.stringify(inputs).includes('SLACK_WEBHOOK_CI')) {
+                if (JSON.stringify(inputs).includes(own)) {
                     expect(step.uses, step.name).toBe(SLACK_ACTION);
-                    expect(inputs['webhook-url']).toBe('${{ secrets.SLACK_WEBHOOK_CI }}');
+                    expect(inputs['webhook-url']).toBe(`\${{ secrets.${own} }}`);
                 }
             }
         }
     }
+    expect(notify.name).toBe('Notify #ci on master failure');
     expect(notify.permissions).toEqual({});
     expect(notify.steps.map(step => step.uses ?? 'run')).toEqual(['run', SLACK_ACTION]);
     const [build, post] = notify.steps;
@@ -358,12 +366,12 @@ test('only prepare holds the Issue, Slack and dev-read secrets; the e2e job hold
         new Set([
             'CHIPIN_DEV_READ_TOKEN',
             'CHIPIN_ISSUE_WRITE_TOKEN',
-            'SLACK_WEBHOOK_CI',
+            'SLACK_WEBHOOK_FE_RELEASES',
             'VERCEL_AUTOMATION_BYPASS_SECRET',
         ]),
     );
     // The webhook never shares a step env with the Issue write or dev-read token.
-    expect(JSON.stringify(prepareRunOf(job).env)).not.toContain('SLACK_WEBHOOK_CI');
+    expect(JSON.stringify(prepareRunOf(job).env)).not.toContain('SLACK_WEBHOOK_FE_RELEASES');
     // Trusted jobs install nothing and run only this master SHA's code.
     for (const trusted of [resolve, job]) {
         expect(JSON.stringify(trusted.steps)).not.toMatch(/npm (ci|install)|npx /);

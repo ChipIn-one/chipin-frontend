@@ -11,7 +11,7 @@ const RESULT_LINE = /^qa\s+(pass|fail|blocked)$/i;
 const LEADING_MARKUP = /^[\s*_#>`~-]+/;
 export const SLACK_USER_ID = /^U[A-Z0-9]{8,}$/;
 export const RELEASE_OWNER = 'syllik';
-// Russian tester guide on master, linked from every new QA Issue and the #chipin-ci handoff.
+// Russian tester guide on master, linked from every new QA Issue and the #fe-releases handoff.
 export const TESTER_GUIDE_URL = `https://github.com/${REPOSITORY}/blob/master/docs/qa/README.md`;
 
 // Release browser matrix (docs/e2e-tests.md#release-browser-matrix). An id is the Playwright project

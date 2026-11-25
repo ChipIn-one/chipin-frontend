@@ -31,7 +31,7 @@
 # Remaining window: a Promote or rollback made while the redeploy builds (a few minutes) is overwritten when the
 # redeploy finishes; Promote that deployment again. A RELEASE_MISSING repaired by the engine also reports RELEASED and
 # triggers one extra, harmless redeploy of the already tagged deployment.
-# The notify job posts one Slack message per Promote to #chipin-fe-releases (#484) after guard, release and redeploy,
+# The notify job posts one Slack message per Promote to #fe-releases (#484) after guard, release and redeploy,
 # whatever their result, once the guard ran (not on a cancelled run): scripts/release-notify.mjs applies the rule
 # table (RELEASED with the Included Issues of the Release, rollback, not released, other outcomes; ALREADY_RELEASED of
 # the newest tag is silent) and the shared org Slack action posts it (secret SLACK_WEBHOOK_FE_RELEASES; 10 s timeout;

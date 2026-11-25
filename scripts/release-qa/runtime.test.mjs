@@ -1059,6 +1059,7 @@ test('the no-QA line never reads the webhook, so a Slack outcome cannot change t
         PREVIEW_DEPLOYMENT_ID: '42',
         QA_PRIORITY: 'P2',
         SLACK_WEBHOOK_CI: 'not a webhook',
+        SLACK_WEBHOOK_FE_RELEASES: 'not a webhook',
     };
     return prepareAndRecord({
         env,

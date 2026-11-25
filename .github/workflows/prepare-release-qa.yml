@@ -43,7 +43,7 @@ concurrency:
 # trusted workflow code of this master SHA and install nothing. `e2e` (its steps in e2e-run.yml)
 # runs the candidate's npm install and test code with the staging Basic secrets and the optional
 # Vercel bypass secret only; it never holds CHIPIN_DEV_READ_TOKEN, CHIPIN_ISSUE_WRITE_TOKEN or
-# SLACK_WEBHOOK_CI, and its result files are untrusted input of `prepare`.
+# SLACK_WEBHOOK_FE_RELEASES, and its result files are untrusted input of `prepare`.
 jobs:
   resolve:
     if: github.actor == 'syllik' && github.triggering_actor == 'syllik' && github.ref == 'refs/heads/master'
@@ -177,7 +177,7 @@ jobs:
         continue-on-error: true
         uses: ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
         with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK_CI }}
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_FE_RELEASES }}
           text: ${{ steps.prepare.outputs.slack_text }}
           timeout-seconds: '10'
       - name: Warn when Slack was not posted
@@ -187,7 +187,7 @@ jobs:
           FAILURE: ${{ steps.prepare.outputs.slack_failure }}
         run: |
           if [ "$RESULT" = "skipped" ]; then
-            echo "::warning::SLACK_WEBHOOK_CI is not configured; nothing was posted."
+            echo "::warning::SLACK_WEBHOOK_FE_RELEASES is not configured; nothing was posted."
           else
             echo "::warning::$FAILURE"
           fi

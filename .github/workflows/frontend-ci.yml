@@ -125,7 +125,7 @@ jobs:
         run: npm run api:check
       - name: Verify frontend
         if: steps.gate.outputs.mode == 'app' || steps.gate.outputs.mode == 'full'
-        # Step timeout (not only the job's) so a hang counts as a failure and notifies #chipin-ci.
+        # Step timeout (not only the job's) so a hang counts as a failure and notifies #ci.
         timeout-minutes: 18
         env:
           CHIPIN_TASK_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -191,7 +191,7 @@ jobs:
 
   notify-master-failure:
     # Separate job: the Slack webhook never shares a runner with npm install scripts.
-    name: Notify #chipin-ci on master failure
+    name: 'Notify #ci on master failure'
     needs: frontend-ci
     if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04

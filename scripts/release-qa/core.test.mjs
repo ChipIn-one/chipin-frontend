@@ -1244,7 +1244,12 @@ describe('authorized QA result', () => {
         );
         expect(
             assertConfiguration(
-                { ...full, SLACK_WEBHOOK_CI: 'not a webhook', SLACK_USER_MAP: '{}' },
+                {
+                    ...full,
+                    SLACK_WEBHOOK_CI: 'not a webhook',
+                    SLACK_WEBHOOK_FE_RELEASES: 'not a webhook',
+                    SLACK_USER_MAP: '{}',
+                },
                 'syllik',
             ),
         ).toEqual({ slackId: null });
