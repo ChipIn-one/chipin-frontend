@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { Spinner, Theme } from '@radix-ui/themes';
 import { CircleCheckIcon, CircleXIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { Toaster } from 'sonner';
 
 import { UpdateRequiredScreen } from 'app/pwa/UpdateRequiredScreen';
@@ -10,6 +11,10 @@ import { selectResolvedAppearance, useAppearanceStore } from 'store/ui-prefs';
 import { OfflineStatus } from 'components/offline-status';
 
 import styles from './TopLayer.module.css';
+
+// Sonner's own runtime stylesheet gives the toaster a huge z-index of its own; an inline style
+// (spread onto the toaster list) wins over it and puts the toaster on the token scale (NET-003).
+const TOASTER_STYLE: CSSProperties = { zIndex: 'var(--cp-z-toast)' };
 
 const ToastSuccessIcon = () => <CircleCheckIcon size={20} />;
 const ToastInfoIcon = () => <InfoIcon size={20} />;
@@ -35,6 +40,7 @@ const TopLayer = () => {
             <Toaster
                 theme={appearance}
                 className={styles.toaster}
+                style={TOASTER_STYLE}
                 richColors
                 closeButton
                 position={isMobile ? 'top-center' : 'bottom-left'}
@@ -49,7 +55,7 @@ const TopLayer = () => {
                 }}
             />
             <OfflineStatus />
-            {/* Last and at z 2147483000: the blocking update screen covers the toasts too. */}
+            {/* Last and at `--cp-z-blocking`: the blocking update screen covers the toasts too. */}
             <UpdateRequiredScreen />
         </Theme>,
         document.getElementById('root') ?? document.body,

@@ -64,6 +64,10 @@
     --cp-z-content: 0;
     --cp-z-raised: 1;
     --cp-z-floating: 2;
+    /* Toasts: above dialogs (their content is 1) and the offline status (floating) */
+    --cp-z-toast: 3;
+    /* Blocking full-screen states (update required): above everything, toasts included */
+    --cp-z-blocking: 4;
 
     /* Motion: 120/150/160 ms in the code today, 150 folded into 160 */
     --cp-duration-fast: 120ms;
