@@ -31,6 +31,11 @@
 # Remaining window: a Promote or rollback made while the redeploy builds (a few minutes) is overwritten when the
 # redeploy finishes; Promote that deployment again. A RELEASE_MISSING repaired by the engine also reports RELEASED and
 # triggers one extra, harmless redeploy of the already tagged deployment.
+# The notify job posts one Slack message per Promote to #chipin-fe-releases (#484) after guard, release and redeploy,
+# whatever their result, once the guard ran (not on a cancelled run): scripts/release-notify.mjs applies the rule
+# table (RELEASED with the Included Issues of the Release, rollback, not released, other outcomes; ALREADY_RELEASED of
+# the newest tag is silent) and the shared org Slack action posts it (secret SLACK_WEBHOOK_FE_RELEASES; 10 s timeout;
+# never fails the run).
 # Event fields reach `run:` only through env. Version from the tag and the redeploy: ChipIn-one/.github#172, #680.
 name: Release on Production deployment
 
@@ -45,6 +50,7 @@ permissions: {}
 # gets its own. GitHub keeps one pending run per group: a third Production success (a quick Promote, or Vercel
 # re-posting success on an older deployment) cancels the pending run; re-run the cancelled run to tag its SHA. The
 # redeploy job's own Production status also joins this group, so it can cancel a pending Promote run the same way.
+# The notify job runs inside the same run, so it holds the group too (about 30-60 s after redeploy, at most 3 min).
 concurrency:
   group: ${{ (github.repository_owner == 'ChipIn-one' && contains(fromJSON('["Production","Production – chipin-frontend"]'), github.event.deployment.environment) && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
   cancel-in-progress: false
@@ -64,6 +70,8 @@ jobs:
     outputs:
       release: ${{ steps.guard.outputs.release }}
       sha: ${{ steps.guard.outputs.sha }}
+      skip_reason: ${{ steps.guard.outputs.skip_reason }}
+      newest_tag: ${{ steps.guard.outputs.newest_tag }}
     steps:
       - name: Checkout master history and tags
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -78,14 +86,15 @@ jobs:
           DEPLOYED_SHA: ${{ github.event.deployment.sha }}
         run: |
           set -euo pipefail
-          skip() { echo "::warning::No release for $DEPLOYED_SHA: $1"; echo "release=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          skip() { echo "::warning::No release for $DEPLOYED_SHA: $2"; { echo "skip_reason=$1"; echo "release=false"; } >> "$GITHUB_OUTPUT"; exit 0; }
           if [[ ! "$DEPLOYED_SHA" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::deployment SHA '$DEPLOYED_SHA' is not a full commit SHA"; exit 1; fi
-          git cat-file -e "$DEPLOYED_SHA^{commit}" 2>/dev/null || skip "the commit is not in this repository's fetched history"
-          git merge-base --is-ancestor "$DEPLOYED_SHA" origin/master || skip "the commit is not on master"
-          tagged="$(git tag --points-at "$DEPLOYED_SHA" | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || true)"
           newest="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' | head -n 1 || true)"
+          echo "newest_tag=$newest" >> "$GITHUB_OUTPUT"
+          git cat-file -e "$DEPLOYED_SHA^{commit}" 2>/dev/null || skip not-in-history "the commit is not in this repository's fetched history"
+          git merge-base --is-ancestor "$DEPLOYED_SHA" origin/master || skip not-on-master "the commit is not on master"
+          tagged="$(git tag --points-at "$DEPLOYED_SHA" | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || true)"
           if [[ -z "$tagged" && -n "$newest" ]]; then
-            git merge-base --is-ancestor "$newest" "$DEPLOYED_SHA" || skip "rollback to a commit behind the newest tag $newest"
+            git merge-base --is-ancestor "$newest" "$DEPLOYED_SHA" || skip rollback-untagged "rollback to a commit behind the newest tag $newest"
           fi
           if [[ -z "$tagged" ]]; then
             # Tree OIDs only: no blob is fetched lazily in the blob:none clone. Exit 1 = differs, other non-zero = error.
@@ -145,3 +154,40 @@ jobs:
           VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: node scripts/redeploy-tagged-production.mjs
+
+  notify:
+    needs: [guard, release, redeploy]
+    if: ${{ !cancelled() && needs.guard.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read            # checkout of the script and GET of the GitHub Release; nothing is written
+    steps:
+      - name: Checkout the workflow commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Build the Slack release message
+        id: message
+        env:
+          GUARD_RELEASE: ${{ needs.guard.outputs.release }}
+          GUARD_SKIP_REASON: ${{ needs.guard.outputs.skip_reason }}
+          NEWEST_TAG: ${{ needs.guard.outputs.newest_tag }}
+          DEPLOYED_SHA: ${{ github.event.deployment.sha }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+          RELEASE_OUTCOME: ${{ needs.release.outputs.outcome }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          REDEPLOY_RESULT: ${{ needs.redeploy.result }}
+          DEPLOYMENT_ENVIRONMENT_URL: ${{ github.event.deployment_status.environment_url }}
+          DEPLOYMENT_TARGET_URL: ${{ github.event.deployment_status.target_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release-notify.mjs
+      - name: Post to Slack
+        if: steps.message.outputs.post == 'true'
+        continue-on-error: true
+        uses: ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_FE_RELEASES }}
+          text: ${{ steps.message.outputs.text }}
+          timeout-seconds: '10'
