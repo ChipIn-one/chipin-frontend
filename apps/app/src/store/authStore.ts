@@ -12,7 +12,10 @@ import {
     getAccessTokenSubject,
     getAuthSessionVersion,
     invalidateAuthSession,
+    isAuthSessionCurrent,
+    isAuthSessionSwitchedSince,
     logoutOtherDevicesSession,
+    markAuthSessionAccountSwitched,
     startAuthLogout,
     validateAuthSession,
 } from 'helpers/authSession';
@@ -174,13 +177,15 @@ const settledWithin = (work: Promise<unknown>, ms: number): Promise<void> =>
 
 // The session now belongs to `nextUserId` (null: the token has no readable `sub`, treated as
 // another user). After a sign-in it runs right after the new session is established, so the
-// requests of the previous user are stale (`authSessionVersion`). A refreshed token of another user
-// (`onAccessTokenRefreshed`) does not change `authSessionVersion`, and no store reset aborts a
-// request: a write still in flight tells that it is stale by its client, which `clearUserData`
-// drops (`isUserCacheClient`). The previous user's data goes (§1.5 account switch) and
-// `LS_KEY_USER` = `{ id: Y, settings }`; a draft of another user is reset. Returns whether it
-// switched. With offline writes on, the sign-in asks first (`askAccountSwitch`) and a refresh may
-// keep X's data (`onAccessTokenRefreshed`).
+// requests of the previous user are stale (`authSessionVersion`). A refreshed token of another
+// user (`onAccessTokenRefreshed`) changes `authSessionVersion` too, before this runs
+// (`markAuthSessionAccountSwitched`): a late response of the previous user is rejected as stale
+// and fills no store, and its 401 retry does not expire the new session. No store reset aborts a
+// request: a write still in flight also tells that it is stale by its client, which
+// `clearUserData` drops (`isUserCacheClient`). The previous user's data goes (§1.5 account
+// switch) and `LS_KEY_USER` = `{ id: Y, settings }`; a draft of another user is reset. Returns
+// whether it switched. With offline writes on, the sign-in asks first (`askAccountSwitch`) and a
+// refresh may keep X's data (`onAccessTokenRefreshed`).
 const dropOtherUserData = (
     nextUserId: string | null,
     previousUserId: string | undefined = cachedUserId(),
@@ -368,12 +373,17 @@ export const useAuthStore = create<AuthStore>(set => ({
                 if (question === null) {
                     return signIn();
                 }
-                // M1: an answer after the session changed (a remote logout, an expiry; they also
-                // dismiss the question) signs nothing in; the state those transitions set stays.
+                // M1: an answer after the session started or ended (a remote logout, an expiry;
+                // they also dismiss the question) signs nothing in; the state those transitions
+                // set stays. A refresh-found account switch meanwhile (#641) ends no session: the
+                // answer still applies to the sign-in of Y the user started.
                 const sessionVersion = getAuthSessionVersion();
 
                 return question.then(({ isConfirmed, previousUserId }) => {
-                    if (getAuthSessionVersion() !== sessionVersion) {
+                    if (
+                        !isAuthSessionCurrent(sessionVersion) &&
+                        !isAuthSessionSwitchedSince(sessionVersion)
+                    ) {
                         return startAuthLogout({ broadcast: false });
                     }
                     return isConfirmed ? signIn(previousUserId) : keepPreviousUser(previousUserId);
@@ -554,8 +564,14 @@ export const onAccessTokenRefreshed = (token: string): void => {
         return;
     }
     const previousUserId = cachedUserId();
+    const switched = previousUserId !== undefined && previousUserId !== nextUserId;
 
-    if (isOfflineWritesFlagOn() && previousUserId !== undefined && previousUserId !== nextUserId) {
+    // Before the stores are reset and reloaded: the previous user's requests become stale, the
+    // reload runs in the new version.
+    if (switched) {
+        markAuthSessionAccountSwitched();
+    }
+    if (isOfflineWritesFlagOn() && switched) {
         moveLocalUser(nextUserId);
         removeKeptOutboxUsers([nextUserId]);
         detachUserData(previousUserId, resetUserStores);
@@ -563,7 +579,7 @@ export const onAccessTokenRefreshed = (token: string): void => {
         reloadOnlineSession();
         return;
     }
-    if (dropOtherUserData(nextUserId)) {
+    if (dropOtherUserData(nextUserId, previousUserId)) {
         reloadOnlineSession();
     }
 };

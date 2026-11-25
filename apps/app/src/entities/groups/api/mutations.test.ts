@@ -927,8 +927,8 @@ describe('group mutations', () => {
         expect(readList).not.toHaveBeenCalled();
     });
 
-    // Another tab switched the account and this tab's token refresh found it: the session version
-    // stays, the previous user's client is dropped (`clearUserData`).
+    // The user client is dropped (`clearUserData`) without a session version change: defence in
+    // depth, since #641 a refresh switch also moves the version.
     test.each([
         ['leave', () => write.leave({ groupId: group.id })],
         ['kick', () => write.kick({ groupId: group.id, userId: 'user-2' })],
