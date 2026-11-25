@@ -16,6 +16,7 @@ const map = values => ({ type: 'object', additionalProperties: values });
 const spec = (extra = {}) => ({
     openapi: '3.1.1',
     info: { title: 't', version: '1' },
+    security: [{ bearerAuth: [] }],
     paths: {},
     components: {
         schemas: {
@@ -121,6 +122,154 @@ describe('checkWireFields', () => {
         );
 
         expect(errors).toEqual([expect.stringContaining('(a) #/components/schemas/Decimal:')]);
+    });
+
+    test('(a) a non-property number names the remedy the allowlist cannot give', () => {
+        const document = {
+            ...spec({ Decimal: { type: 'number' } }),
+            paths: {
+                '/fees': {
+                    get: {
+                        parameters: [{ name: 'rate', in: 'query', schema: { type: 'number' } }],
+                    },
+                },
+            },
+        };
+        const errors = checkWireFields(document);
+        const nonProperty = [
+            '#/paths/~1fees/get/parameters/0/schema',
+            '#/components/schemas/Decimal',
+        ];
+
+        expect(errors).toEqual(nonProperty.map(path => expect.stringContaining(`(a) ${path}: `)));
+        for (const error of errors) {
+            expect(error).toMatch(/not an object property/);
+            expect(error).toMatch(/change the parameter type or extend the registry/);
+        }
+        // A property keeps the allowlist remedy.
+        const [property] = checkWireFields(
+            spec({ Fee: { type: 'object', properties: { fee: { type: 'number' } } } }),
+        );
+
+        expect(property).toMatch(/add the field to NON_MONEY_NUMBER_FIELDS/);
+        expect(property).not.toMatch(/not an object property/);
+    });
+
+    test('(a) example, examples, default, enum and x-* values are not schemas and are not walked', () => {
+        const number = { type: 'number', multipleOf: 0.0001 };
+        const errors = checkWireFields(
+            spec({
+                Documented: {
+                    type: 'object',
+                    properties: {
+                        note: {
+                            type: 'string',
+                            example: number,
+                            examples: [number],
+                            default: number,
+                            enum: [number],
+                            'x-shape': number,
+                        },
+                    },
+                    example: { fee: number, properties: { fee: number } },
+                    'x-internal': { properties: { fee: { type: 'number' } } },
+                },
+            }),
+        );
+
+        expect(errors).toEqual([]);
+    });
+
+    test('(a) a property, schema or response named like a keyword is still walked', () => {
+        const fee = { type: 'number' };
+        const document = {
+            ...spec({
+                default: fee,
+                Named: {
+                    type: 'object',
+                    properties: { example: fee, default: fee, enum: fee, 'x-rate': fee },
+                },
+            }),
+            paths: {
+                '/fees': {
+                    get: {
+                        responses: {
+                            default: { content: { 'application/json': { schema: fee } } },
+                        },
+                    },
+                },
+            },
+        };
+        const paths = checkWireFields(document).map(error => error.split(': ')[0]);
+
+        expect(paths.sort()).toEqual(
+            [
+                '(a) #/components/schemas/Named/properties/default',
+                '(a) #/components/schemas/Named/properties/enum',
+                '(a) #/components/schemas/Named/properties/example',
+                '(a) #/components/schemas/Named/properties/x-rate',
+                '(a) #/components/schemas/default',
+                '(a) #/paths/~1fees/get/responses/default/content/application~1json/schema',
+            ].sort(),
+        );
+    });
+
+    test('(a) each unclassified number names the remedy for its place', () => {
+        const errors = checkWireFields(
+            spec({
+                Fee: {
+                    type: 'object',
+                    properties: {
+                        fee: { type: 'number' },
+                        fees: map({ type: 'number' }),
+                        weights: { type: 'array', items: { type: 'number' } },
+                    },
+                },
+            }),
+        );
+        const at = suffix =>
+            errors.find(error =>
+                error.startsWith(`(a) #/components/schemas/Fee/properties/${suffix}:`),
+            );
+
+        expect(at('fee')).toMatch(/NON_MONEY_NUMBER_FIELDS/);
+        expect(at('fees/additionalProperties')).toMatch(/MONEY_MAP_FIELDS or DECIMAL_MAP_FIELDS/);
+        expect(at('fees/additionalProperties')).not.toMatch(/NON_MONEY_NUMBER_FIELDS/);
+        expect(at('weights/items')).toMatch(/an array item or nested number cannot be classified/);
+        expect(at('weights/items')).not.toMatch(/add the field to NON_MONEY_NUMBER_FIELDS/);
+    });
+
+    test('(a) const values are data and are not walked', () => {
+        const errors = checkWireFields(
+            spec({
+                Fixed: {
+                    type: 'object',
+                    properties: { kind: { type: 'string', const: { type: 'number' } } },
+                    const: { properties: { fee: { type: 'number', multipleOf: 0.0001 } } },
+                },
+            }),
+        );
+
+        expect(errors).toEqual([]);
+    });
+
+    test('a name map is not read as a schema (a property named `properties`)', () => {
+        const registry = { ...REGISTRY, money: [...REGISTRY.money, 'description'] };
+        const errors = checkWireFields(
+            spec({
+                Nested: {
+                    type: 'object',
+                    properties: {
+                        properties: { type: 'object', description: 'nested', properties: {} },
+                    },
+                },
+            }),
+            registry,
+        );
+
+        expect(errors).not.toContainEqual(
+            expect.stringContaining('/Nested/properties/properties/description'),
+        );
     });
 
     test('(a) a field on the non-money allowlist stays a number', () => {
@@ -247,6 +396,26 @@ describe('gen-types', () => {
 
         expect(result.status).toBe(1);
         expect(result.stderr).toContain('/Fee/properties/fee');
+        expect(existsSync(out)).toBe(false);
+    });
+
+    test('the generator exits 1 when the document has no top-level security (fail-closed)', () => {
+        const { security: _, ...unsecured } = spec();
+        const out = join(directory, 'unsecured-out');
+        const result = spawnSync(
+            process.execPath,
+            [
+                resolve(import.meta.dirname, 'gen-types.mjs'),
+                '--spec',
+                write('unsecured.yaml', unsecured),
+                '--out',
+                out,
+            ],
+            { encoding: 'utf8' },
+        );
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toMatch(/gen-types: public operations: .*top-level `security`/);
         expect(existsSync(out)).toBe(false);
     });
 

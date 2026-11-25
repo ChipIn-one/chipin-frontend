@@ -3,7 +3,7 @@
 // the lossless transport (wireJson.ts); the instance's global defaults are not changed, so the
 // legacy `src/api/*` modules keep `JSON.parse`. `api()` never converts money to `Money`: the
 // `entities/*/model` mappers do that.
-import type { AxiosInstance, AxiosProgressEvent, AxiosRequestConfig } from 'axios';
+import type { AxiosError, AxiosInstance, AxiosProgressEvent, AxiosRequestConfig } from 'axios';
 import { isAxiosError, isCancel } from 'axios';
 
 import type { PublicOperations } from 'shared/api/generated/publicOperations';
@@ -224,12 +224,55 @@ export function publicApi<P extends PublicPath, M extends PublicMethodOf<P>>(
     return request(publicApiInstance, method, path, args);
 }
 
+// Axios codes of a request that was never sent: option validation, URL building, an unsupported
+// protocol or adapter, a body refused before sending (axios 1.x `AxiosError`).
+const NOT_SENT_CODES: ReadonlySet<string> = new Set([
+    'ERR_BAD_OPTION',
+    'ERR_BAD_OPTION_VALUE',
+    'ERR_INVALID_URL',
+    'ERR_NOT_SUPPORT',
+    'ERR_DEPRECATED',
+    'ERR_FORM_DATA_DEPTH_EXCEEDED',
+    // Without a response only a client-side refusal (unsupported protocol, body too large).
+    'ERR_BAD_REQUEST',
+]);
+
+// Transport failures; the fetch adapter may raise them without a request object.
+const TRANSPORT_CODES: ReadonlySet<string> = new Set(['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT']);
+
+/** An Axios error without a response that is not a cancellation (network or never sent). */
+const isUnansweredAxiosError = (error: unknown): error is AxiosError =>
+    isAxiosError(error) && error.response === undefined && !isCancel(error);
+
 /**
- * A request that got no HTTP response (offline, DNS, CORS, timeout); a cancellation is not one.
+ * A sent request that got no HTTP response (offline, DNS, CORS, timeout); a cancellation is not
+ * one, nor an Axios error raised before sending (a setup error: it has a code but no `request`,
+ * or a {@link NOT_SENT_CODES} code), which a query retry cannot fix. A setup error without a code
+ * (e.g. axios' "Unknown adapter") still counts as network: the safe direction, it is retried.
  * Only `api()`/`publicApi()` errors are classified: an `ApiError` has a response.
  */
-export const isNetworkError = (error: unknown): boolean =>
-    isAxiosError(error) && error.response === undefined && !isCancel(error);
+export const isNetworkError = (error: unknown): boolean => {
+    if (!isUnansweredAxiosError(error)) {
+        return false;
+    }
+    const { code } = error;
+
+    if (code === undefined) {
+        return true;
+    }
+    if (NOT_SENT_CODES.has(code)) {
+        return false;
+    }
+    return error.request !== undefined || TRANSPORT_CODES.has(code);
+};
+
+/**
+ * An Axios error of a request that was never sent (a setup error: bad option, invalid URL, an
+ * unsupported protocol or adapter), e.g. a misconfigured API URL. Not a network error, yet the
+ * outbox keeps such a queued write rather than rejecting it (spec 03 §2.5).
+ */
+export const isRequestNotSent = (error: unknown): boolean =>
+    isUnansweredAxiosError(error) && !isNetworkError(error);
 
 /** A request cancelled through its `AbortSignal` (Axios `CanceledError`). */
 export const isRequestCancelled = (error: unknown): boolean => isCancel(error);

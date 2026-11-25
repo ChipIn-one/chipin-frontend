@@ -1,5 +1,6 @@
 // Generates `src/shared/api/generated/schema.d.ts`, `wireFields.ts` and `publicOperations.ts` from openapi/chipin.yaml
-// (spec 03 §4.3, §5). Exit 1 when a wire field check fails; nothing is written then.
+// (spec 03 §4.3, §5). Exit 1 when a wire field check or the fail-closed public operations check
+// fails; nothing is written then.
 //
 // Usage: node scripts/api/gen-types.mjs [--spec <yaml>] [--out <dir>]
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';

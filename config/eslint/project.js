@@ -265,43 +265,34 @@ const STORE_HOOK = `:matches(${NAMED_STORE_HOOK}, ${ZUSTAND_USE_STORE})`;
 // A selector function passed straight to a store hook (not wrapped in `useShallow(...)`).
 const STORE_SELECTOR = `${STORE_HOOK} > :matches(ArrowFunctionExpression, FunctionExpression)`;
 // A new object/array on every call: a literal, or an expression that may evaluate to one through
-// up to three levels of conditional branches and `??`/`||` fallbacks (`s.list ?? []`,
-// `c ? (d ? s.a : {}) : s.b`). esquery has no recursion, so the paths are enumerated.
+// conditional branches, `??`/`||`/`&&` and type assertions (`s.list ?? []`, `s.a && { … }`,
+// `c ? (d ? s.a : {}) : s.b`, `s.list ?? ([] as unknown as Item[])`, `({}) as unknown as T`), up
+// to MAX_VALUE_DEPTH such nodes from the returned value down to the literal. esquery has no
+// recursion, so the hops are nested `:has()` up to the depth; the returned value is the reported
+// node (one report per selector). The chain does not tell a branch from a condition
+// (`{} ? a : b` also matches): only nonsense code differs.
 const LITERAL = 'ObjectExpression, ArrayExpression';
-const LITERAL_TYPE = '/^(?:ObjectExpression|ArrayExpression)$/';
-const FALLBACK_OPERATOR = '/^(?:\\?\\?|\\|\\|)$/';
-const VALUE_STEPS = [
-    { type: 'ConditionalExpression', field: 'consequent' },
-    { type: 'ConditionalExpression', field: 'alternate' },
-    { type: 'LogicalExpression', field: 'right', operator: FALLBACK_OPERATOR },
-];
-const MAX_VALUE_DEPTH = 3;
+const VALUE_NODE =
+    ':matches(ConditionalExpression, LogicalExpression, TSAsExpression, TSSatisfiesExpression)';
+const MAX_VALUE_DEPTH = 6;
+// esquery 1.7 parses `:has(> a > b)` as `> (a > b)`, not a two-hop chain, so each hop is its own
+// `:has(> …)`. esquery evaluates the inner selector of `:has(> X)` on every descendant of the
+// subject, so an unguarded nested `:has` restarts on each of them: super-polynomial on a long
+// `||`/ternary chain. Ancestry inside `:has` is relative to its subject, so the guard
+// `:not(* > * > *)` stops an inner hop from starting below a direct child: linear again.
+const newValue = (depth, guard = '') =>
+    depth === 0
+        ? `:matches(${LITERAL})`
+        : `:matches(${LITERAL}, ${VALUE_NODE}${guard}:has(> ${newValue(depth - 1, ':not(* > * > *)')}))`;
+const NEW_VALUE = newValue(MAX_VALUE_DEPTH);
 const TYPE_ASSERTION = '/^(?:TSAsExpression|TSSatisfiesExpression)$/';
-// Attribute chains `[a.type=X][a.operator=Y][a.b.type=...]` from the root node to a literal.
-const valuePaths = (depth, prefix = '') =>
-    VALUE_STEPS.flatMap(({ type, field, operator }) => {
-        const self = `${prefix ? `[${prefix}type='${type}']` : ''}${operator ? `[${prefix}operator=${operator}]` : ''}`;
-        const path = `${prefix}${field}.`;
-        // The literal, bare or under a type assertion (`s.list ?? ([] as Item[])`).
-        const leaves = [
-            `[${path}type=${LITERAL_TYPE}]`,
-            `[${path}type=${TYPE_ASSERTION}][${path}expression.type=${LITERAL_TYPE}]`,
-        ].map(leaf => ({ root: prefix ? undefined : type, attrs: `${self}${leaf}` }));
-        const deeper =
-            depth > 1
-                ? valuePaths(depth - 1, path).map(({ attrs }) => ({
-                      root: prefix ? undefined : type,
-                      attrs: `${self}${attrs}`,
-                  }))
-                : [];
-
-        return [...leaves, ...deeper];
-    });
-const NEW_VALUE = `:matches(${[
-    LITERAL,
-    ...valuePaths(MAX_VALUE_DEPTH).map(({ root, attrs }) => `${root}${attrs}`),
-].join(', ')})`;
-const ASSERTED = ':matches(TSAsExpression, TSSatisfiesExpression) > ';
+// A conditional branch that is an array literal, bare or asserted (`c ? (['a'] as const) : k`).
+const LITERAL_KEY_BRANCH = ['consequent', 'alternate']
+    .flatMap(field => [
+        `[${field}.type='ArrayExpression']`,
+        `[${field}.type=${TYPE_ASSERTION}][${field}.expression.type='ArrayExpression']`,
+    ])
+    .join(', ');
 // Where a function body returns: directly, or inside `if`/`else` (with or without braces).
 const RETURN_CONTAINERS = [
     '',
@@ -363,12 +354,16 @@ export const projectRules = ({ appDir }) => [
         // Its ignore glob is the 6th of MAX_SCOPES (6/6) of `no-restricted-syntax`: a new scoped
         // entry must reuse an existing glob.
         id: 'query-key-literal',
-        // `queryKey: [...]` (also `as const` / `satisfies`), and a literal key as the first
-        // argument of the QueryClient methods that take a key: `getQueryData([...])`, ...
+        // `queryKey: [...]` (also `as const` / `satisfies`), `queryKey: c ? [...] : k` (a literal
+        // in either branch), and a literal key as the first argument of the QueryClient methods
+        // that take a key: `getQueryData([...])`, ... Limit: only a single-level conditional
+        // directly on the property; `queryKey: k ?? [...]`, nested conditionals and a conditional
+        // first argument (`getQueryData(c ? [...] : k)`) are not covered.
         selector: [
-            ...['', 'TSAsExpression > ', 'TSSatisfiesExpression > '].map(
-                wrapper => `Property[key.name='queryKey'] > ${wrapper}ArrayExpression`,
-            ),
+            ...['', 'TSAsExpression > ', 'TSSatisfiesExpression > '].flatMap(wrapper => [
+                `Property[key.name='queryKey'] > ${wrapper}ArrayExpression`,
+                `Property[key.name='queryKey'] > ${wrapper}ConditionalExpression:matches(${LITERAL_KEY_BRANCH})`,
+            ]),
             // `:first-child` must be on the argument itself (the wrapper when there is one).
             ...['ArrayExpression', 'TSAsExpression', 'TSSatisfiesExpression'].map(
                 argument =>
@@ -411,19 +406,17 @@ export const projectRules = ({ appDir }) => [
     {
         id: 'store-object-without-shallow',
         // `useXStore(s => ({ … }))`, `s => [a, b]`, `s => (c ? { … } : { … })`,
-        // `s => s.list ?? []`, `s => s.x || {}`, `c ? (d ? s.a : {}) : s.b` (NEW_VALUE),
+        // `s => s.list ?? []`, `s => s.x || {}`, `s => s.a && { … }`, `c ? (d ? s.a : {}) : s.b` (NEW_VALUE),
         // `useXStore(s => { return { … }; })` (also inside `if`/`else`), `useXStore({ … })`; the
         // same for `useStore(store, s => …)`.
         // A function's other children are params (patterns, never these expressions).
         selector: [
-            // The whole returned value may itself be asserted: `(s.list ?? []) as Item[]`.
-            ...['', ASSERTED].flatMap(asserted => [
-                `${STORE_SELECTOR} > ${asserted}${NEW_VALUE}`,
-                ...RETURN_CONTAINERS.map(
-                    container =>
-                        `${STORE_SELECTOR} > BlockStatement > ${container}ReturnStatement > ${asserted}${NEW_VALUE}`,
-                ),
-            ]),
+            // The returned value may itself be asserted (`(s.list ?? []) as Item[]`, NEW_VALUE).
+            `${STORE_SELECTOR} > ${NEW_VALUE}`,
+            ...RETURN_CONTAINERS.map(
+                container =>
+                    `${STORE_SELECTOR} > BlockStatement > ${container}ReturnStatement > ${NEW_VALUE}`,
+            ),
             `${STORE_HOOK} > :matches(${LITERAL})`,
         ].join(', '),
         message:
