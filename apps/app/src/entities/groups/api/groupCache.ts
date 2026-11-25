@@ -1,7 +1,7 @@
 // The cached group queries after a change of a group, on a given client: a write that returned the
 // group (create, update, cover, join), a change of its members or its ledger (a kicked member, an
 // expense, a settlement), a group the user lost (removed, left). Never rejects.
-import { hashKey, type Query, type QueryCache, type QueryClient } from '@tanstack/react-query';
+import type { Query, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { firstGroupActivityPage, type GroupActivityData } from '../model/groupActivity';
 import { type GroupsListData, upsertGroupInList } from '../model/groupsList';
@@ -50,16 +50,28 @@ const reloadGroupActivity = (client: QueryClient, groupId: string): Promise<void
     });
 };
 
+// The pending removal of each forgotten group, per cache, while a page still shows it
+// (`forgetGroup`): a second forget replaces the first.
+const pendingRemovals = new WeakMap<QueryCache, Map<string, () => void>>();
+
 /**
  * A group a write just returned (confirmed by the server) becomes its detail at once (a running
  * detail read may predate the write: it is cancelled first), and its activity loads again, or,
  * with none cached, is seeded from the page the group carries: a fresh detail is not read again,
  * so the seed is what a read would do, and opening the group then sends no activity request.
- * Cached or loading activity wins. The list is the caller's.
+ * Cached or loading activity wins. The list is the caller's. A group the user just left, while a
+ * page still shows it (`forgetGroup`), is not written: its page keeps what it shows until it
+ * unmounts, then the group is removed; a rejoin ends the leave first (`keepRejoinedGroup`). An
+ * update or a cover upload that a leave overtook does not call this at all, whether the left
+ * group's page is still mounted or has unmounted (the mutations' leave count); this check is the
+ * cache-side guard for the mounted case.
  */
 export const writeGroupDetail = (client: QueryClient, group: Group): Promise<void> => {
     const writtenAt = Date.now();
 
+    if (pendingRemovals.get(client.getQueryCache())?.has(group.id)) {
+        return Promise.resolve();
+    }
     void client.cancelQueries({ queryKey: groupsKeys.detail(group.id) });
     client.setQueryData<Group>(groupsKeys.detail(group.id), group, { updatedAt: writtenAt });
     return reloadGroupActivity(client, group.id).then(() => {
@@ -129,23 +141,18 @@ export const startGroupRefresh = (client: QueryClient, groupId: string): Promise
     return reloadGroupActivity(client, groupId);
 };
 
-// The pending removal of each forgotten group, per cache: a second forget replaces the first.
-const pendingRemovals = new WeakMap<QueryCache, Map<string, () => void>>();
-
 /**
  * Removes a group's cached detail and activity once nothing shows them. A group page still
  * mounted keeps them meanwhile, but its observers are disabled (`setGroupQueryLeaving`), so a
  * focus or a reconnect does not read a group that is gone (a 404 flash before the page navigates
- * away). A success of the detail meanwhile (a rejoin's write, a read) keeps both: the group is the
- * user's again, and its fresh entry must survive the unmount. Known limitation: any other write of
- * the detail landing meanwhile (an update or a cover upload finishing after the leave) keeps them
- * too, as this cannot tell it from a rejoin. A follow-up: the join path should end the pending
- * removal itself, and then only it should.
+ * away), and no write lands in them (`writeGroupDetail`). Only a rejoin ends this
+ * (`keepRejoinedGroup`): the group is the user's again, and its fresh entry must survive the
+ * unmount. Any other write landing meanwhile (an update or a cover upload finishing after the
+ * leave) keeps nothing.
  */
 const removeGroupWhenUnobserved = (client: QueryClient, groupId: string): void => {
     const cache = client.getQueryCache();
     const removals = pendingRemovals.get(cache) ?? new Map<string, () => void>();
-    const detailHash = hashKey(groupsKeys.detail(groupId));
     // The shown queries, by hash, until each is unobserved.
     const pending = new Map<string, Query>();
 
@@ -192,16 +199,6 @@ const removeGroupWhenUnobserved = (client: QueryClient, groupId: string): void =
         const { queryHash } = event.query;
         const query = pending.get(queryHash);
 
-        // A cancelled read never succeeds: this is a write or a read after the forget, taken for
-        // a rejoin (a late non-join write too: the limitation above).
-        if (
-            event.type === 'updated' &&
-            event.action.type === 'success' &&
-            queryHash === detailHash
-        ) {
-            cancel();
-            return;
-        }
         if (query === event.query) {
             if (event.type === 'removed') {
                 release(queryHash);
@@ -216,6 +213,15 @@ const removeGroupWhenUnobserved = (client: QueryClient, groupId: string): void =
     });
 
     removals.set(groupId, cancel);
+};
+
+/**
+ * After the user rejoined a group (a join confirmed by the server): a pending removal of it (a
+ * leave while its page is mounted) ends, so what the page shows stays cached and readable again
+ * and the joined group can be written. Call it before the join's `writeGroupDetail`.
+ */
+export const keepRejoinedGroup = (client: QueryClient, groupId: string): void => {
+    pendingRemovals.get(client.getQueryCache())?.get(groupId)?.();
 };
 
 /**

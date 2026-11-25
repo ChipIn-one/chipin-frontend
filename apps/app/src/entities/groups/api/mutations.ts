@@ -18,6 +18,7 @@ import type { Group } from '../model/types';
 
 import {
     forgetGroup,
+    keepRejoinedGroup,
     putGroupAndReloadList,
     refreshGroup,
     reloadGroupsList,
@@ -110,18 +111,48 @@ const reloadKnownUsers = (client: QueryClient): Promise<void> =>
 const reloadDashboard = (client: QueryClient): Promise<void> =>
     client.invalidateQueries({ queryKey: dashboardKeys.all });
 
-// The successful joins of each group on each client: a leave that a rejoin overtook does not
-// forget the group (the join is newer).
-const joinCounts = new WeakMap<QueryClient, Map<string, number>>();
+// The successful joins and leaves of each group on each client: a leave that a rejoin overtook
+// does not forget the group (the join is newer), and an update or a cover upload that a leave
+// overtook writes nothing (the group is gone, whether its page is still mounted or not).
+type GroupCounts = WeakMap<QueryClient, Map<string, number>>;
+
+const joinCounts: GroupCounts = new WeakMap();
+const leaveCounts: GroupCounts = new WeakMap();
+
+const countOf = (counts: GroupCounts, client: QueryClient, groupId: string): number =>
+    counts.get(client)?.get(groupId) ?? 0;
+
+const bump = (counts: GroupCounts, client: QueryClient, groupId: string): void => {
+    const byGroup = counts.get(client) ?? new Map<string, number>();
+
+    byGroup.set(groupId, (byGroup.get(groupId) ?? 0) + 1);
+    counts.set(client, byGroup);
+};
 
 const joinCountOf = (client: QueryClient, groupId: string): number =>
-    joinCounts.get(client)?.get(groupId) ?? 0;
+    countOf(joinCounts, client, groupId);
 
 const countJoin = (client: QueryClient, groupId: string): void => {
-    const counts = joinCounts.get(client) ?? new Map<string, number>();
+    bump(joinCounts, client, groupId);
+};
 
-    counts.set(groupId, (counts.get(groupId) ?? 0) + 1);
-    joinCounts.set(client, counts);
+interface MembershipContext {
+    /** The successful joins of the group when the write was sent. */
+    joinCount: number;
+    /** The successful leaves of the group when the write was sent. */
+    leaveCount: number;
+}
+
+const membershipOf = (client: QueryClient, groupId: string): MembershipContext => ({
+    joinCount: joinCountOf(client, groupId),
+    leaveCount: countOf(leaveCounts, client, groupId),
+});
+
+// Whether the user left the group since the write was sent, without rejoining it since.
+const isLeftSince = (client: QueryClient, groupId: string, sent: MembershipContext): boolean => {
+    const now = membershipOf(client, groupId);
+
+    return now.leaveCount !== sent.leaveCount && now.joinCount === sent.joinCount;
 };
 
 // The group is gone for this user: its cached detail and activity, and what showed it.
@@ -175,9 +206,10 @@ export const createGroupMutationOptions = () =>
 
 /** `PATCH /groups/{id}`; settles once the list has reloaded with the updated group. */
 export const updateGroupMutationOptions = () =>
-    mutationOptions<Group, Error, UpdateGroupVariables>({
+    mutationOptions<Group, Error, UpdateGroupVariables, MembershipContext>({
         ...ONLINE_WRITE,
         mutationKey: groupsMutationKeys.update,
+        onMutate: ({ groupId }, { client }) => membershipOf(client, groupId),
         mutationFn: ({ groupId, groupName, groupDescription, simplifyDebts }) =>
             api('patch', '/groups/{id}', {
                 params: { id: groupId },
@@ -187,15 +219,18 @@ export const updateGroupMutationOptions = () =>
                     ...(simplifyDebts !== undefined && { simplifyDebts }),
                 },
             }).then(toGroup),
-        onSuccess: (group, variables, _context, { client }) =>
-            isCurrent(client, variables) ? afterGroupWritten(client, group, variables) : undefined,
+        onSuccess: (group, variables, context, { client }) =>
+            isCurrent(client, variables) && !isLeftSince(client, group.id, context)
+                ? afterGroupWritten(client, group, variables)
+                : undefined,
     });
 
 /** `PUT /groups/{id}/cover` (multipart, with upload progress); as an update. */
 export const uploadGroupCoverMutationOptions = () =>
-    mutationOptions<Group, Error, UploadGroupCoverVariables>({
+    mutationOptions<Group, Error, UploadGroupCoverVariables, MembershipContext>({
         ...ONLINE_WRITE,
         mutationKey: groupsMutationKeys.uploadCover,
+        onMutate: ({ groupId }, { client }) => membershipOf(client, groupId),
         mutationFn: ({ groupId, file, onProgress }) => {
             const body = new FormData();
 
@@ -210,11 +245,17 @@ export const uploadGroupCoverMutationOptions = () =>
                 },
             }).then(toGroup);
         },
-        onSuccess: (group, variables, _context, { client }) =>
-            isCurrent(client, variables) ? afterGroupWritten(client, group, variables) : undefined,
+        onSuccess: (group, variables, context, { client }) =>
+            isCurrent(client, variables) && !isLeftSince(client, group.id, context)
+                ? afterGroupWritten(client, group, variables)
+                : undefined,
     });
 
-/** `POST /groups/invite/{inviteToken}`; as an update, and a leave running meanwhile keeps it. */
+/**
+ * `POST /groups/invite/{inviteToken}`; as an update, and a leave running meanwhile keeps it. A
+ * rejoin of a group left while its page is still mounted keeps that page's entries
+ * (`keepRejoinedGroup`): only a join does, a late update or cover upload does not.
+ */
 export const joinGroupMutationOptions = () =>
     mutationOptions<Group, Error, JoinGroupVariables>({
         ...ONLINE_WRITE,
@@ -226,6 +267,7 @@ export const joinGroupMutationOptions = () =>
                 return undefined;
             }
             countJoin(client, group.id);
+            keepRejoinedGroup(client, group.id);
             return afterGroupWritten(client, group, variables);
         },
     });
@@ -256,6 +298,7 @@ export const leaveGroupMutationOptions = (effects: GroupWriteEffects) =>
             ) {
                 return undefined;
             }
+            bump(leaveCounts, client, variables.groupId);
             return afterGroupGone(client, variables.groupId, effects);
         },
     });

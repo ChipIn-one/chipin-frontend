@@ -2,6 +2,7 @@ import {
     InfiniteQueryObserver,
     MutationObserver,
     type MutationObserverOptions,
+    QueryObserver,
 } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -991,6 +992,129 @@ describe('group mutations', () => {
         expect(detailOf(group.id)).toEqual(toTestGroup(rejoined));
         expect(listGroups()).toEqual(cached([rejoined]));
         expect(effects.onGroupGone).not.toHaveBeenCalled();
+    });
+
+    // A group page showing `shown`: its detail and its activity observed, both settled.
+    const mountGroupPage = async (shown: WireGroup): Promise<() => void> => {
+        const detail = new QueryObserver(userCache.client, groupDetailQueryOptions(shown.id));
+        const activity = new InfiniteQueryObserver(
+            userCache.client,
+            groupActivityQueryOptions(shown.id),
+        );
+        const stopDetail = detail.subscribe(() => undefined);
+        const stopActivity = activity.subscribe(() => undefined);
+
+        await vi.waitFor(() => {
+            expect(userCache.client.isFetching()).toBe(0);
+        });
+        return () => {
+            stopActivity();
+            stopDetail();
+        };
+    };
+
+    test('#879 a rejoin while the page of a left group is mounted keeps the joined group after it unmounts', async () => {
+        const rejoined = { ...group, role: 'MEMBER', name: 'Rejoined group' } satisfies WireGroup;
+        joinWrite.mockResolvedValue(rejoined);
+        seedDetail(group);
+        const unmount = await mountGroupPage(group);
+
+        readList.mockResolvedValue({ items: [], nextCursor: null });
+        await write.leave({ groupId: group.id });
+        readList.mockResolvedValue({ items: [rejoined], nextCursor: null });
+        await write.join(group.inviteToken);
+        unmount();
+
+        expect(detailOf(group.id)).toEqual(toTestGroup(rejoined));
+        expect(activityOf(group.id)).toBeDefined();
+    });
+
+    test.each([
+        ['an update', () => write.update({ groupId: group.id, groupName: 'Renamed' })],
+        ['a cover upload', () => write.cover({ groupId: group.id, file: coverFile() })],
+    ])(
+        '#879 %s answered after a leave keeps nothing of the left group once its page unmounts',
+        async (_name, send) => {
+            let answerWrite: (() => void) | undefined;
+            const held = () =>
+                new Promise<WireGroup>(resolve => {
+                    answerWrite = () => {
+                        resolve({ ...group, name: 'Renamed' });
+                    };
+                });
+            updateWrite.mockImplementation(held);
+            coverWrite.mockImplementation(held);
+            seedDetail(group);
+            const unmount = await mountGroupPage(group);
+
+            const late = send();
+            await vi.waitFor(() => {
+                expect(answerWrite).toBeDefined();
+            });
+            readList.mockResolvedValue({ items: [], nextCursor: null });
+            await write.leave({ groupId: group.id });
+            answerWrite?.();
+            await late;
+
+            expect(detailOf(group.id)).toEqual(toTestGroup(group));
+            unmount();
+            expect(detailOf(group.id)).toBeUndefined();
+            expect(activityOf(group.id)).toBeUndefined();
+        },
+    );
+
+    test.each([
+        ['an update', () => write.update({ groupId: group.id, groupName: 'Renamed' })],
+        ['a cover upload', () => write.cover({ groupId: group.id, file: coverFile() })],
+    ])(
+        '#879 %s answered after a leave and after the page unmounted writes nothing back',
+        async (_name, send) => {
+            let answerWrite: (() => void) | undefined;
+            const held = () =>
+                new Promise<WireGroup>(resolve => {
+                    answerWrite = () => {
+                        resolve({ ...group, name: 'Renamed' });
+                    };
+                });
+            updateWrite.mockImplementation(held);
+            coverWrite.mockImplementation(held);
+            seedDetail(group);
+            const unmount = await mountGroupPage(group);
+
+            const late = send();
+            await vi.waitFor(() => {
+                expect(answerWrite).toBeDefined();
+            });
+            readList.mockResolvedValue({ items: [], nextCursor: null });
+            await write.leave({ groupId: group.id });
+            unmount();
+            expect(detailOf(group.id)).toBeUndefined();
+            answerWrite?.();
+            await late;
+            await vi.waitFor(() => {
+                expect(userCache.client.isFetching()).toBe(0);
+            });
+
+            expect(detailOf(group.id)).toBeUndefined();
+            expect(activityOf(group.id)).toBeUndefined();
+            expect(listGroups()).toEqual(cached([]));
+        },
+    );
+
+    test('#879 an update sent after a rejoin of a left group is written', async () => {
+        const rejoined = { ...group, role: 'MEMBER' } satisfies WireGroup;
+        const renamed = { ...rejoined, name: 'Renamed' } satisfies WireGroup;
+        joinWrite.mockResolvedValue(rejoined);
+        updateWrite.mockResolvedValue(renamed);
+        readList.mockResolvedValue({ items: [], nextCursor: null });
+        await write.leave({ groupId: group.id });
+        readList.mockResolvedValue({ items: [renamed], nextCursor: null });
+
+        await write.join(group.inviteToken);
+        await write.update({ groupId: group.id, groupName: 'Renamed' });
+
+        expect(detailOf(group.id)).toEqual(toTestGroup(renamed));
+        expect(listGroups()).toEqual(cached([renamed]));
     });
 
     test('forgets group A after unrelated group B joins while leave A is pending', async () => {

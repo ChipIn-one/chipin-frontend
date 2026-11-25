@@ -18,6 +18,7 @@ import type { Group } from '../model/types';
 
 import {
     forgetGroup,
+    keepRejoinedGroup,
     putGroupAndReloadList,
     reloadGroupsList,
     writeGroupDetail,
@@ -417,6 +418,8 @@ test('a rejoin while the page of a left group is mounted keeps the fresh detail 
     const unmount = mountGroupPage();
 
     forgetGroup(userCache.client, 'a');
+    // The join path: the rejoin ends the pending removal, then writes the joined group.
+    keepRejoinedGroup(userCache.client, 'a');
     await writeGroupDetail(userCache.client, group('a', 'Rejoined'));
     unmount();
 
@@ -473,24 +476,38 @@ test('a group left twice is still removed once its page unmounts', () => {
     expect(reads).toEqual({ detailReads: 0, activityReads: 0 });
 });
 
-test('known limitation: an update finishing after a leave keeps the left group while its page is mounted', async () => {
+test('#879 an update or a cover upload finishing after a leave keeps nothing once the page unmounts', async () => {
     runAMinuteAfterPageLoad();
-    server.use(
-        http.get('*/groups/a/activity-previews', () =>
-            HttpResponse.json({ items: [], nextCursor: null }),
-        ),
-    );
+    const reads = serveGoneGroup();
     userCache.client.setQueryData(detailKey, group('a'));
     seedActivity(1);
     const unmount = mountGroupPage();
 
     forgetGroup(userCache.client, 'a');
-    // An update (or a cover upload) answered after the leave writes the detail as a rejoin does:
-    // the removal cannot tell them apart (a follow-up: the join path should end it itself).
+    // An update (or a cover upload) answered after the leave is not a rejoin: it writes nothing
+    // into the left group, and its page keeps what it shows until it unmounts.
     await writeGroupDetail(userCache.client, group('a', 'Renamed before the leave'));
+
+    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a'));
+    unmount();
+    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
+    expect(userCache.client.getQueryState(activityKey)).toBeUndefined();
+    expect(reads).toEqual({ detailReads: 0, activityReads: 0 });
+});
+
+test('#879 a success of the detail after a leave, other than a rejoin, does not keep the left group', () => {
+    runAMinuteAfterPageLoad();
+    const reads = serveGoneGroup();
+    userCache.client.setQueryData(detailKey, group('a'));
+    seedActivity(1);
+    const unmount = mountGroupPage();
+
+    forgetGroup(userCache.client, 'a');
+    // A success of the detail that is not the join path (a write by hand, as a late read would).
+    userCache.client.setQueryData(detailKey, group('a', 'Late write'));
     unmount();
 
-    expect(userCache.client.getQueryData(detailKey)).toEqual(
-        group('a', 'Renamed before the leave'),
-    );
+    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
+    expect(userCache.client.getQueryState(activityKey)).toBeUndefined();
+    expect(reads).toEqual({ detailReads: 0, activityReads: 0 });
 });

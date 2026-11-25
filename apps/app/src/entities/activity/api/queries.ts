@@ -12,7 +12,7 @@ import { infiniteQueryOptions, useInfiniteQuery, useQueryClient } from '@tanstac
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { api } from 'shared/api/client';
 import { refetchIfRestored } from 'shared/api/queryClient';
-import { isNetworkUsable, waitForOnline } from 'shared/offline/network';
+import { isNetworkUsable, runWhenOnline } from 'shared/offline/network';
 
 import { firstPageOnly } from '../model/selfActivity';
 import {
@@ -219,18 +219,11 @@ export const invalidateActivityChildren = (
         .then(() => client.invalidateQueries({ queryKey }, { cancelRefetch: true }));
 };
 
-// The clients with a cut pending until the network is back: one waiter per client.
-const clientsAwaitingOnline = new WeakSet<QueryClient>();
-
 // Once the network is back, every feed of the user's activity that no page shows is cut to its
-// first page (a feed mounted again meanwhile keeps its pages: its page reads them).
+// first page (a feed mounted again meanwhile keeps its pages: its page reads them). The one
+// online waiter of the client is shared with the group feeds (`runWhenOnline`).
 const trimUnobservedWhenOnline = (client: QueryClient): void => {
-    if (clientsAwaitingOnline.has(client)) {
-        return;
-    }
-    clientsAwaitingOnline.add(client);
-    void waitForOnline().then(() => {
-        clientsAwaitingOnline.delete(client);
+    runWhenOnline(client, 'activity.self.trim', () => {
         // Every entry under `['activity','self']` is an infinite feed.
         const feeds = client
             .getQueryCache()
