@@ -1,6 +1,7 @@
 // The single source of "the network is usable" (spec 03 §1.7): TanStack `onlineManager`.
 // `navigator.onLine` is read only here (lint `no-restricted-properties` outside shared/offline).
-import { onlineManager } from '@tanstack/react-query';
+import * as Sentry from '@sentry/react';
+import { onlineManager, type QueryClient } from '@tanstack/react-query';
 
 import { probeBackendHealth } from 'shared/api/health';
 
@@ -23,6 +24,39 @@ export const waitForOnline = (): Promise<void> =>
             }
         });
     });
+
+// The work each client waits to run once the network is back, by name: one waiter per client,
+// keyed by the client object, so another client (an account switch) never runs or keeps it.
+const tasksAwaitingOnline = new WeakMap<QueryClient, Map<string, () => void>>();
+
+/**
+ * Runs `task` once the network is usable (in a microtask when it already is), with every other
+ * task of `client` waiting for it: one online waiter per client. A task added again under the
+ * same `name` while it waits runs once; one that throws is reported (Sentry) and the others still
+ * run. A task reads the cache when it runs: after a `client.clear()` it finds nothing.
+ */
+export const runWhenOnline = (client: QueryClient, name: string, task: () => void): void => {
+    const waiting = tasksAwaitingOnline.get(client);
+
+    if (waiting) {
+        waiting.set(name, task);
+        return;
+    }
+    const tasks = new Map([[name, task]]);
+
+    tasksAwaitingOnline.set(client, tasks);
+    void waitForOnline().then(() => {
+        tasksAwaitingOnline.delete(client);
+        tasks.forEach(run => {
+            // A task that throws is reported and does not stop the others.
+            try {
+                run();
+            } catch (error: unknown) {
+                Sentry.captureException(error);
+            }
+        });
+    });
+};
 
 // `performance.now()` of the last online-to-offline transition of `onlineManager` (the `offline`
 // window event, an `offline` classification, an offline cold start; it notifies only on a change).

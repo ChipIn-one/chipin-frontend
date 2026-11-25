@@ -4,6 +4,7 @@
 // domain models (`toGroup`, `toActivityItems`: amounts as `Money`).
 import { useEffect } from 'react';
 import type {
+    FetchStatus,
     Query,
     QueryClient,
     QueryKey,
@@ -22,7 +23,7 @@ import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { toActivityItems } from 'entities/activity';
 import { api, ApiError, toApiError } from 'shared/api/client';
 import { refetchIfRestored } from 'shared/api/queryClient';
-import { isNetworkUsable } from 'shared/offline/network';
+import { isNetworkUsable, runWhenOnline } from 'shared/offline/network';
 
 import {
     firstGroupActivityPage,
@@ -247,24 +248,50 @@ const trimBeforeRefetch = (query: ActivityQuery): boolean => {
     return true;
 };
 
+// Whether a group feed may be cut now: no reader shows it and no load runs (its answer would
+// replace the cut).
+const isIdleAndUnobserved = (feed: {
+    getObserversCount: () => number;
+    state: { fetchStatus: FetchStatus };
+}): boolean => feed.getObserversCount() === 0 && feed.state.fetchStatus === 'idle';
+
+// Once the network is back, every group feed that no page shows by then is cut to its first page,
+// keeping its age (a feed mounted again meanwhile keeps its pages: its page reads them; one with a
+// load running is left to it). The one online waiter of the client is shared with the user's own
+// feeds (`runWhenOnline`).
+const trimUnobservedGroupActivityWhenOnline = (client: QueryClient): void => {
+    runWhenOnline(client, 'groups.activity.trim', () => {
+        const feeds = client.getQueryCache().findAll({ queryKey: [...groupsKeys.all, 'activity'] });
+
+        for (const feed of feeds) {
+            // A load resumed by the reconnect is fetching here: it is skipped, not cut.
+            if (isIdleAndUnobserved(feed)) {
+                // Every entry under `['groups','activity']` is a group's infinite feed.
+                cutToFirstPage(feed as unknown as ActivityQuery);
+            }
+        }
+    });
+};
+
 // A refetch on mount is decided during render, where the cache must not change: a group's feed
 // is cut back to its first page when its last reader unmounts instead, so the next mount's
-// refetch is one request. Not while a load runs (its answer would replace the cut) and not
-// offline (the pages stay readable). Checked on TanStack Query 5.105–5.107.1: when the last
-// observer leaves, a running load that read its signal is cancelled and its state reverted
-// synchronously, so the feed is idle here (re-check on a TanStack upgrade).
+// refetch is one request. Not while a load runs (its answer would replace the cut). Offline the
+// pages stay readable: the feed is cut once the network is back, if no page shows it by then.
+// Checked on TanStack Query 5.105–5.107.1: when the last observer leaves, a running load that
+// read its signal is cancelled and its state reverted synchronously, so the feed is idle here
+// (re-check on a TanStack upgrade).
 const trimGroupActivityIfUnobserved = (client: QueryClient, groupId: string): void => {
     const feed = client.getQueryCache().find<GroupActivityPage, Error, GroupActivityData>({
         queryKey: groupsKeys.activity(groupId),
         exact: true,
     });
 
-    if (
-        feed &&
-        isNetworkUsable() &&
-        feed.getObserversCount() === 0 &&
-        feed.state.fetchStatus === 'idle'
-    ) {
+    if (!feed || feed.getObserversCount() > 0) {
+        return;
+    }
+    if (!isNetworkUsable()) {
+        trimUnobservedGroupActivityWhenOnline(client);
+    } else if (isIdleAndUnobserved(feed)) {
         cutToFirstPage(feed);
     }
 };

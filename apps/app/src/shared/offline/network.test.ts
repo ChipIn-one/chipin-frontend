@@ -1,4 +1,4 @@
-import { onlineManager } from '@tanstack/react-query';
+import { onlineManager, QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import {
@@ -6,6 +6,7 @@ import {
     getLastOfflineAt,
     isNetworkUsable,
     OFFLINE_RECHECK_MS,
+    runWhenOnline,
     waitForOnline,
 } from './network';
 
@@ -14,6 +15,10 @@ const health = vi.hoisted(() => ({
 }));
 
 vi.mock('shared/api/health', () => ({ probeBackendHealth: health.probeBackendHealth }));
+
+const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
+
+vi.mock('@sentry/react', () => ({ captureException: sentry.captureException }));
 
 const setNavigatorOnLine = (value: boolean): void => {
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(value);
@@ -127,5 +132,86 @@ describe('waitForOnline', () => {
         onlineManager.setOnline(true);
         await vi.advanceTimersByTimeAsync(0);
         expect(settled).toHaveBeenCalledOnce();
+    });
+});
+
+describe('runWhenOnline', () => {
+    test('#881 runs the tasks of a client once the network is back, through one online waiter', async () => {
+        const client = new QueryClient();
+        const self = vi.fn();
+        const groups = vi.fn();
+        const listeners = vi.spyOn(onlineManager, 'subscribe');
+
+        onlineManager.setOnline(false);
+        runWhenOnline(client, 'self', self);
+        runWhenOnline(client, 'groups', groups);
+        runWhenOnline(client, 'self', self);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(listeners).toHaveBeenCalledOnce();
+        expect(self).not.toHaveBeenCalled();
+
+        onlineManager.setOnline(true);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(self).toHaveBeenCalledOnce();
+        expect(groups).toHaveBeenCalledOnce();
+    });
+
+    test('#881 each client waits on its own: another client neither runs nor keeps its tasks', async () => {
+        const first = new QueryClient();
+        const second = new QueryClient();
+        const firstTask = vi.fn();
+        const secondTask = vi.fn();
+
+        onlineManager.setOnline(false);
+        runWhenOnline(first, 'trim', firstTask);
+        runWhenOnline(second, 'trim', secondTask);
+        onlineManager.setOnline(true);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(firstTask).toHaveBeenCalledOnce();
+        expect(secondTask).toHaveBeenCalledOnce();
+
+        // Once run, a new task waits again.
+        onlineManager.setOnline(false);
+        runWhenOnline(first, 'trim', firstTask);
+        onlineManager.setOnline(true);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(firstTask).toHaveBeenCalledTimes(2);
+        expect(secondTask).toHaveBeenCalledOnce();
+    });
+
+    test('#881 a task that throws is reported and the other tasks still run', async () => {
+        const client = new QueryClient();
+        const failure = new Error('cut failed');
+        const after = vi.fn();
+
+        onlineManager.setOnline(false);
+        runWhenOnline(client, 'throws', () => {
+            throw failure;
+        });
+        runWhenOnline(client, 'after', after);
+        onlineManager.setOnline(true);
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(sentry.captureException).toHaveBeenCalledWith(failure);
+        expect(after).toHaveBeenCalledOnce();
+    });
+
+    // Any key: this module knows no entity.
+    const feedKey = ['feed'];
+
+    test('#881 a task waiting on a client cleared meanwhile runs and finds nothing', async () => {
+        const client = new QueryClient();
+        client.getQueryCache().build(client, { queryKey: feedKey }).setData('cached');
+        const found = vi.fn();
+
+        onlineManager.setOnline(false);
+        runWhenOnline(client, 'trim', () => {
+            found(client.getQueryCache().getAll().length);
+        });
+        client.clear();
+        onlineManager.setOnline(true);
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(found).toHaveBeenCalledWith(0);
     });
 });

@@ -612,6 +612,81 @@ test('a group activity left offline keeps its loaded pages', async () => {
     }
 });
 
+test('#881 a group activity left offline is cut to its first page once the network is back, keeping its age', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        const client = createQueryClient();
+        const unmount = await readThreeActivityPages(client);
+        const loadedAt = client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt;
+
+        onlineManager.setOnline(false);
+        unmount();
+        await afterCleanup();
+        expect(activityPageCount(client)).toBe(3);
+
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => {
+            expect(activityPageCount(client)).toBe(1);
+        });
+        expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(loadedAt);
+        client.clear();
+    } finally {
+        onlineManager.setOnline(true);
+        vi.useRealTimers();
+    }
+});
+
+test('#881 a group activity left offline and shown again before the network is back keeps its pages', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        const client = createQueryClient();
+        const unmount = await readThreeActivityPages(client);
+
+        onlineManager.setOnline(false);
+        unmount();
+        await afterCleanup();
+        const shown = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const unsubscribe = shown.subscribe(() => undefined);
+
+        onlineManager.setOnline(true);
+        // The waiter runs in a microtask after the online notification.
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(activityPageCount(client)).toBe(3);
+        unsubscribe();
+        client.clear();
+    } finally {
+        onlineManager.setOnline(true);
+        vi.useRealTimers();
+    }
+});
+
+test('#881 a group activity left offline on a client cleared before the network is back: the cut finds nothing', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+        serveThreeActivityPages();
+        const client = createQueryClient();
+        const unmount = await readThreeActivityPages(client);
+
+        onlineManager.setOnline(false);
+        unmount();
+        await afterCleanup();
+        // A sign-out meanwhile: the cache is emptied while the cut waits for the network.
+        client.clear();
+
+        onlineManager.setOnline(true);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(client.getQueryCache().getAll()).toEqual([]);
+    } finally {
+        onlineManager.setOnline(true);
+        vi.useRealTimers();
+    }
+});
+
 test('a group activity left while another reader still shows it keeps its pages', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     try {
