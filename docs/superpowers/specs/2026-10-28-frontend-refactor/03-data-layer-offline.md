@@ -293,6 +293,15 @@ The "reason → what is deleted" table (C3-08; real constants `store/authConstan
 | sign-in of Y when `LocalUser.id === X ≠ Y` or the token `sub` ≠ the outbox owner (§2.3) | — (after sign-in) | `clearUserData(X)` | delete; non-empty → dialog (N as in the `signOut()` row) "This device has N unsent operations of account X. Delete and sign in?"; "Cancel" → `signOut()` Y, X's data stays | reset | `{ id: Y, settings }` |
 | token of Y by a refresh in another tab while X's outbox is non-empty or unreadable (03-16a part C, offline writes on) | — (stays authenticated, now Y) | X detached at once (writes blocked, client cleared and forgotten, outbox stopped in this tab); X's key deleted only if X's outbox is empty, otherwise kept | kept; X recorded in `LS_KEY_KEPT_OUTBOX_USERS`; the next sign-out or account switch counts and deletes them (a sign-in of X takes X off the list, its queue continues) | reset | `{ id: Y, settings }` |
 
+- **Account switch by a refresh** (#641; another tab signed Y in, offline writes on or off): a refreshed token
+  whose `sub` ≠ the cached user bumps `authSessionVersion` (`markAuthSessionAccountSwitched`) **before** the stores are
+  reset and Y's data is reloaded, so the reload runs in the new version and every request, load and write started for X
+  is stale: a late X response is rejected (`AuthRequestCancelledError(true)`), fills no store and writes no
+  `LocalUser.id`. A switch is not a session end: `isAuthSessionSwitchedSince(v)` is true when every version change after
+  `v` was such a switch (a session start, expiry or sign-out resets it), and the 401 retry of an X request then rejects
+  it as stale instead of expiring Y's session; any other version change during the retry expires the session as before.
+  A late successful response to an X mutation or outbox op after the switch is stale too: the op may stay pending, is
+  counted for X (kept users) and is resent idempotently by its client UUID when X's queue runs again.
 - **Session expiry ≠ logout** (finding 11, `02-routing-state-pwa.md:22`): the cache, outbox and draft are kept,
   `AuthModal` is shown, after sign-in with the same `userId` the queue continues (the `auth` gate is opened only by the
   owner check, §2.3). Legacy stores are reset (see above) and reloaded after sign-in.
@@ -329,7 +338,10 @@ The "reason → what is deleted" table (C3-08; real constants `store/authConstan
 - Offline cold start (PR 03-7b): `useCheckSignIn` (`hooks/useCheckSignIn.tsx:55-91`), on a network error during refresh and
   when `LocalUser.id` + session hint `=== true` are present (the hint is stored as JSON `true`/`false`, `helpers/localStorage.ts`),
   sets `AUTHENTICATED` + a new field `sessionMode = 'offline-cached'`; guards (spec 04 §2.3, `requireSession`) let the user through to
-  the cache. On reconnect `refreshAuthSession()`: 401 → `expireSession()`; success → `sessionMode = 'online'`. The outbox `auth` gate
+  the cache. On reconnect `refreshAuthSession()`: 401 → `expireSession()`; success → `sessionMode = 'online'`; a network
+  error keeps the cached session until the next connectivity change. One reconnect refresh runs at a time (a connectivity
+  flap during it starts no second one); when it fails otherwise (a request error, still online), it is retried **once**
+  if the session is still offline-cached and online (#641), a second failure waits for the next change. The outbox `auth` gate
   is opened **not** by a successful refresh but by the owner check (§2.3: `sub` of the new access token === outbox `userId`).
   Until 03-15a `outboxGate` is a no-op stub from `shared/offline/outboxGate.ts` (same path); 03-15a changes its interface (global
   `close/open(reason)` + `block/unblock(entryId)` + `whenTurn(op)`, §2.4) and updates the `store`/`app` callers in the same PR.

@@ -146,6 +146,17 @@ const startSessionCheck = (pathname: string): void => {
         });
 };
 
+// The conditions of the reconnect effect, read at the time of the call (spec 03 §1.6).
+const isReconnectDue = (): boolean => {
+    const { status, sessionMode } = useAuthStore.getState();
+
+    return (
+        status === AUTH_STATUS.AUTHENTICATED &&
+        sessionMode === SESSION_MODE.OFFLINE_CACHED &&
+        useConnectivityStore.getState().mode === 'online'
+    );
+};
+
 /**
  * The reactive parts of the session check: the remote logout of another tab, a retry of the initial
  * check when connectivity returns, and the reconnect of an offline-cached session.
@@ -182,8 +193,18 @@ export const useCheckSignIn = () => {
 
     // Reconnect of an offline-cached session: a 401 refresh expires the session (inside
     // `refreshAuthTokens`), a success makes it `online` and loads the data the cold start skipped.
-    // A connectivity flap during the refresh must not start a second one (and load twice).
+    // A connectivity flap during the refresh must not start a second one (and load twice). The
+    // flap's re-run is skipped then, so a failed refresh (a request error, still online) retries
+    // once while the reconnect is still due and the hook mounted; a second failure waits for the
+    // next change.
     const isReconnecting = useRef(false);
+    const isMounted = useRef(true);
+    useEffect(() => {
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
     useEffect(() => {
         if (
             status !== AUTH_STATUS.AUTHENTICATED ||
@@ -194,24 +215,32 @@ export const useCheckSignIn = () => {
             return;
         }
 
+        const reconnect = (canRetry: boolean): Promise<void> => {
+            const since = Date.now();
+            const cachedIdBefore = getTabUserId();
+
+            return refreshAuthTokens()
+                .then(() =>
+                    loadSessionData({
+                        since,
+                        hadCachedUser: true,
+                        switchedUser: getTabUserId() !== cachedIdBefore,
+                    }),
+                )
+                .catch(() => {
+                    // A 401 has already expired the session; a network error keeps the cached
+                    // session, and the next reconnect (a connectivity change) tries again.
+                    if (canRetry && isMounted.current && isReconnectDue()) {
+                        return reconnect(false);
+                    }
+                    return undefined;
+                });
+        };
+
         isReconnecting.current = true;
-        const since = Date.now();
-        const cachedIdBefore = getTabUserId();
-        refreshAuthTokens()
-            .then(() =>
-                loadSessionData({
-                    since,
-                    hadCachedUser: true,
-                    switchedUser: getTabUserId() !== cachedIdBefore,
-                }),
-            )
-            .catch(() => {
-                // A 401 has already expired the session; a network error keeps the cached
-                // session, and the next reconnect (a connectivity change) tries again.
-            })
-            .finally(() => {
-                isReconnecting.current = false;
-            });
+        void reconnect(true).finally(() => {
+            isReconnecting.current = false;
+        });
     }, [isDisconnected, refreshAuthTokens, sessionMode, status]);
 };
 

@@ -2,9 +2,14 @@ import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 
 import {
     establishAuthSession,
+    getAccessTokenSubject,
     getFreshAccessToken,
     invalidateAuthSession,
     logoutOtherDevicesSession,
+    markAuthSessionAccountSwitched,
+    refreshAuthSession,
+    setAccessTokenRefreshListener,
+    startAuthLogout,
 } from 'helpers/authSession';
 import { hasAuthSessionHint } from 'helpers/localStorage';
 
@@ -76,6 +81,7 @@ beforeEach(() => {
 
 afterEach(() => {
     apiInstance.defaults.adapter = defaultAdapter;
+    setAccessTokenRefreshListener(null);
     invalidateAuthSession();
 });
 
@@ -383,4 +389,205 @@ test('a request expecting another token subject is not sent and does not expire 
     await expect(ledgerRequest('user-y')).resolves.toMatchObject({ status: 200 });
     await expect(ledgerRequest()).resolves.toMatchObject({ status: 200 });
     expect(sentAuthorizations).toEqual([`Bearer ${tokenOfY}`, `Bearer ${tokenOfY}`]);
+});
+
+// Spec 03 §1.5 (#641): another tab switched the account, a refresh here returns Y's token. The
+// refresh listener (`onAccessTokenRefreshed` in the app) marks the switch before anything else;
+// `afterSwitch` runs right after it (a session end in the same turn).
+const USER_X = 'user-x';
+const USER_Y = 'user-y';
+
+const switchOnTokenOf = (userId: string, afterSwitch: () => void = () => undefined): void => {
+    setAccessTokenRefreshListener(token => {
+        if (getAccessTokenSubject(token) === userId) {
+            markAuthSessionAccountSwitched();
+            afterSwitch();
+        }
+    });
+};
+
+const cancelledError = (request: Promise<unknown>): Promise<unknown> =>
+    request.then(
+        () => Promise.reject(new Error('Expected the request to be cancelled')),
+        (error: unknown) => error,
+    );
+
+test('§1.5 refresh switch: an X request whose 401 retry finds Y is cancelled as stale; Y stays signed in', async () => {
+    const tokenOfX = createAccessToken(USER_X);
+    const tokenOfY = createAccessToken(USER_Y);
+    const sentAuthorizations: (string | undefined)[] = [];
+
+    establishAuthSession(tokenOfX);
+    switchOnTokenOf(USER_Y);
+    apiInstance.defaults.adapter = config => {
+        if (config.url === '/auth/refresh') {
+            return Promise.resolve(successResponse(config, { token: tokenOfY }));
+        }
+        sentAuthorizations.push(getAuthorizationHeader(config));
+        return getAuthorizationHeader(config) === `Bearer ${tokenOfX}`
+            ? Promise.reject(unauthorizedResponse(config))
+            : Promise.resolve(successResponse(config));
+    };
+
+    const error = await cancelledError(apiInstance.get('/dashboard?request=x'));
+
+    expect(error).toBeInstanceOf(AuthRequestCancelledError);
+    expect(error).toMatchObject({ isStaleSession: true });
+    expect(onUnauthorizedSession).not.toHaveBeenCalled();
+    expect(await getFreshAccessToken()).toBe(tokenOfY);
+    await expect(apiInstance.get('/dashboard?request=y')).resolves.toMatchObject({ status: 200 });
+    // X's request is not resent with Y's token.
+    expect(sentAuthorizations).toEqual([`Bearer ${tokenOfX}`, `Bearer ${tokenOfY}`]);
+    expect(hasAuthSessionHint()).toBe(true);
+});
+
+test('§1.5 refresh switch: a late X response after the switch is rejected as stale, not delivered', async () => {
+    const tokenOfX = createAccessToken(USER_X);
+    let answerX: () => void = () => undefined;
+    let markXSent: () => void = () => undefined;
+    const xSent = new Promise<void>(resolve => {
+        markXSent = resolve;
+    });
+
+    establishAuthSession(tokenOfX);
+    switchOnTokenOf(USER_Y);
+    apiInstance.defaults.adapter = config => {
+        if (config.url === '/auth/refresh') {
+            return Promise.resolve(successResponse(config, { token: createAccessToken(USER_Y) }));
+        }
+        return new Promise(resolve => {
+            answerX = () => resolve(successResponse(config, { id: USER_X }));
+            markXSent();
+        });
+    };
+
+    const xRequest = cancelledError(apiInstance.get('/users/me'));
+
+    await xSent;
+    await refreshAuthSession();
+    answerX();
+    const error = await xRequest;
+
+    expect(error).toBeInstanceOf(AuthRequestCancelledError);
+    expect(error).toMatchObject({ isStaleSession: true });
+    expect(onUnauthorizedSession).not.toHaveBeenCalled();
+});
+
+test('§1.5: a session end after the switch during the 401 retry still expires the session', async () => {
+    const tokenOfX = createAccessToken(USER_X);
+
+    establishAuthSession(tokenOfX);
+    switchOnTokenOf(USER_Y, invalidateAuthSession);
+    apiInstance.defaults.adapter = config => {
+        if (config.url === '/auth/refresh') {
+            return Promise.resolve(successResponse(config, { token: createAccessToken(USER_Y) }));
+        }
+        return Promise.reject(unauthorizedResponse(config));
+    };
+
+    await expect(apiInstance.get('/dashboard')).rejects.toMatchObject({
+        response: { status: 401 },
+    });
+    expect(onUnauthorizedSession).toHaveBeenCalledOnce();
+});
+
+test('§1.5: a sign-out during the 401 retry refresh rejects the request without a retry, as before', async () => {
+    const tokenOfX = createAccessToken(USER_X);
+    let answerRefresh: () => void = () => undefined;
+    let markRefreshStarted: () => void = () => undefined;
+    const refreshStarted = new Promise<void>(resolve => {
+        markRefreshStarted = resolve;
+    });
+    let dashboardRequests = 0;
+
+    establishAuthSession(tokenOfX);
+    switchOnTokenOf(USER_Y);
+    apiInstance.defaults.adapter = config => {
+        if (config.url === '/auth/refresh') {
+            return new Promise(resolve => {
+                answerRefresh = () =>
+                    resolve(successResponse(config, { token: createAccessToken(USER_Y) }));
+                markRefreshStarted();
+            });
+        }
+        if (config.url === '/auth/logout') {
+            return Promise.resolve(successResponse(config));
+        }
+        dashboardRequests += 1;
+        return Promise.reject(unauthorizedResponse(config));
+    };
+
+    const request = apiInstance.get('/dashboard').then(
+        () => null,
+        (error: unknown) => error,
+    );
+
+    await refreshStarted;
+    await startAuthLogout({ broadcast: false });
+    answerRefresh();
+    const error = await request;
+
+    // The refresh of the ended session is dropped: no Y token, no retry, the sign-out stays.
+    expect(error).toBeInstanceOf(Error);
+    expect(dashboardRequests).toBe(1);
+    expect(onUnauthorizedSession).not.toHaveBeenCalled();
+    expect(await getFreshAccessToken()).toBeNull();
+});
+
+test('§1.5 refresh switch: an X request parked on the refresh that finds Y is cancelled, never sent', async () => {
+    // X's token is expiring: the request waits in the request interceptor for the refresh.
+    const tokenOfX = `header.${btoa(JSON.stringify({ exp: 1, sub: USER_X }))}.signature`;
+    const sentAuthorizations: (string | undefined)[] = [];
+
+    establishAuthSession(tokenOfX);
+    switchOnTokenOf(USER_Y);
+    apiInstance.defaults.adapter = config => {
+        if (config.url === '/auth/refresh') {
+            return Promise.resolve(successResponse(config, { token: createAccessToken(USER_Y) }));
+        }
+        sentAuthorizations.push(getAuthorizationHeader(config));
+        return Promise.resolve(successResponse(config));
+    };
+
+    const error = await cancelledError(apiInstance.get('/dashboard'));
+
+    expect(error).toBeInstanceOf(AuthRequestCancelledError);
+    expect(error).toMatchObject({ isStaleSession: true });
+    expect(sentAuthorizations).toEqual([]);
+    expect(onUnauthorizedSession).not.toHaveBeenCalled();
+});
+
+test('§1.5 refresh switch: a 401 of an X request arriving after the switch is cancelled as stale', async () => {
+    const tokenOfX = createAccessToken(USER_X);
+    let rejectX: () => void = () => undefined;
+    let markXSent: () => void = () => undefined;
+    const xSent = new Promise<void>(resolve => {
+        markXSent = resolve;
+    });
+    let refreshCalls = 0;
+
+    establishAuthSession(tokenOfX);
+    switchOnTokenOf(USER_Y);
+    apiInstance.defaults.adapter = config => {
+        if (config.url === '/auth/refresh') {
+            refreshCalls += 1;
+            return Promise.resolve(successResponse(config, { token: createAccessToken(USER_Y) }));
+        }
+        return new Promise((_resolve, reject) => {
+            rejectX = () => reject(unauthorizedResponse(config));
+            markXSent();
+        });
+    };
+
+    const xRequest = cancelledError(apiInstance.get('/dashboard'));
+
+    await xSent;
+    await refreshAuthSession();
+    rejectX();
+    const error = await xRequest;
+
+    expect(error).toBeInstanceOf(AuthRequestCancelledError);
+    expect(error).toMatchObject({ isStaleSession: true });
+    expect(refreshCalls).toBe(1);
+    expect(onUnauthorizedSession).not.toHaveBeenCalled();
 });

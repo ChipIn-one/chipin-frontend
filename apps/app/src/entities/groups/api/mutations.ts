@@ -93,8 +93,8 @@ export interface GroupWriteEffects {
 const ONLINE_WRITE = { networkMode: 'online', retry: false } as const;
 
 // A write is current while its auth session is, and while its client is still a signed-in user's:
-// a refreshed token of another user (another tab switched the account) keeps the session version,
-// but the previous user's client is dropped (`clearUserData`), so its writes are stale too.
+// a dropped client (`clearUserData`) makes its writes stale even without a version change. Since
+// #641 a refreshed token of another user also moves the version; the client check is defence in depth.
 const isCurrent = (client: QueryClient, { sessionVersion }: SessionBound): boolean =>
     isAuthSessionCurrent(sessionVersion) && isUserCacheClient(client);
 

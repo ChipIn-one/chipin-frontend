@@ -23,6 +23,8 @@ export interface ApiAuthSession {
     hasAuthAccessTokenRotated: (previousAccessToken: string) => boolean;
     isAuthSessionCurrent: (version: number) => boolean;
     isAuthSessionSignedOut: () => boolean;
+    /** The session changed since `version` only by refresh-found account switches (§1.5). */
+    isAuthSessionSwitchedSince: (version: number) => boolean;
     prepareAuthRequest: (url?: string) => Promise<string | null | undefined>;
     refreshAuthSession: () => Promise<string | null>;
 }
@@ -196,7 +198,12 @@ const processApiResponseError = (error: unknown) => {
             requestSessionVersion !== undefined &&
             !getAuthSession().isAuthSessionCurrent(requestSessionVersion)
         ) {
-            return Promise.reject(error);
+            // The previous user's request after a refresh-found account switch (§1.5): stale.
+            return Promise.reject(
+                getAuthSession().isAuthSessionSwitchedSince(requestSessionVersion)
+                    ? new AuthRequestCancelledError(true)
+                    : error,
+            );
         }
 
         if (!requestConfig) {
@@ -234,6 +241,15 @@ const processApiResponseError = (error: unknown) => {
         return getAuthSession()
             .refreshAuthSession()
             .then(nextAccessToken => {
+                // The refresh found another user (another tab switched the account, spec 03
+                // §1.5): this request was the previous user's, so it is stale, and the new user's
+                // session must not expire.
+                if (
+                    nextAccessToken &&
+                    getAuthSession().isAuthSessionSwitchedSince(refreshSessionVersion)
+                ) {
+                    return Promise.reject(new AuthRequestCancelledError(true));
+                }
                 if (
                     !nextAccessToken ||
                     !getAuthSession().isAuthSessionCurrent(refreshSessionVersion)

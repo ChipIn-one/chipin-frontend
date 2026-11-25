@@ -20,6 +20,10 @@ let isLogoutInProgress = false;
 let isSessionRestorationBlocked = false;
 let isSessionExplicitlySignedOut = false;
 let authSessionVersion = 0;
+// The version the last session start or end set (`establishAuthSession`, an invalidation, a
+// sign-out). Every version above it was set by an account switch a token refresh found
+// (`markAuthSessionAccountSwitched`): the session itself still holds, for another user.
+let authSessionBoundaryVersion = 0;
 
 export class AuthSessionExpiredError extends Error {
     constructor() {
@@ -45,8 +49,29 @@ export const isAuthSessionCurrent = (version: number): boolean => {
     return version === authSessionVersion;
 };
 
+/**
+ * Whether the session changed since `version` only by account switches a token refresh found
+ * (spec 03 §1.5): the requests of that version belong to the previous user and are stale, but the
+ * session (of the new user) is valid, so they must not expire it. False when nothing changed, or
+ * when a session start, expiry or sign-out came after `version`.
+ */
+export const isAuthSessionSwitchedSince = (version: number): boolean => {
+    return version !== authSessionVersion && version >= authSessionBoundaryVersion;
+};
+
+/**
+ * A token refresh returned a token of another user (another tab switched the account, §1.5): the
+ * requests, loads and writes started for the previous user become stale, the session and its new
+ * token stay. Called by the refresh listener before it resets and reloads the stores, so the
+ * reload runs in the new version.
+ */
+export const markAuthSessionAccountSwitched = (): void => {
+    authSessionVersion += 1;
+};
+
 const invalidateAuthSessionState = (isSignedOut: boolean): void => {
     authSessionVersion += 1;
+    authSessionBoundaryVersion = authSessionVersion;
     accessToken = null;
     isSessionExplicitlySignedOut = isSignedOut;
     isSessionRestorationBlocked = !setAuthSessionHint(false);
@@ -117,6 +142,7 @@ export const hasAuthAccessTokenRotated = (previousAccessToken: string): boolean 
 
 export const establishAuthSession = (nextAccessToken: string): void => {
     authSessionVersion += 1;
+    authSessionBoundaryVersion = authSessionVersion;
     accessToken = null;
 
     if (!setAuthSessionHint(true)) {
@@ -379,6 +405,9 @@ export const logoutOtherDevicesSession = (): Promise<void> => {
             if (!currentAccessToken) {
                 return Promise.reject(new AuthSessionExpiredError());
             }
+            // The session changed while the token was fetched (a refresh found another user,
+            // §1.5): what the previous user asked is not sent with the new user's token.
+            assertCurrentAuthSession(version);
 
             return authApi.logoutOtherDevices();
         })

@@ -49,6 +49,7 @@ const authSession: ApiAuthSession = {
     hasAuthAccessTokenRotated: () => false,
     isAuthSessionCurrent: () => true,
     isAuthSessionSignedOut: () => false,
+    isAuthSessionSwitchedSince: () => false,
     prepareAuthRequest: auth.prepareAuthRequest,
     refreshAuthSession: auth.refreshAuthSession,
 };
