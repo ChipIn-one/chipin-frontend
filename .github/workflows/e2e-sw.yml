@@ -153,7 +153,7 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      # The browsers come in the official Playwright image of the pinned version, as in e2e-smoke.yml.
+      # The browsers come in the official Playwright image of the pinned version, as in e2e-run.yml.
       - name: Pull the Playwright image
         timeout-minutes: 5
         env:

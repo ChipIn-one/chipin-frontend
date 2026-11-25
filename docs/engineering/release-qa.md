@@ -67,7 +67,7 @@ What goes into the QA Issue:
 
 What the QA Issue shows, from the top:
 
-1. The matrix verdict, right below the hidden marker. Passed: `> [!NOTE]` "The automated browser matrix passed on all 5 profiles (run)". Otherwise: `> [!CAUTION]` "**The automated browser matrix did not pass.** Failed: … No result: … See the run." A profile is "failed" when its tests failed or its job failed, "no result" when its job produced no valid result (setup failure, staging down, timeout, cancel, unreadable job list), and "not in this candidate" when the candidate predates the browser matrix (its `playwright.config.ts` has no project for that profile; the banner says "The candidate predates the browser matrix", Slack "кандидат старше этих профилей").
+1. The matrix verdict, right below the hidden marker. Passed: `> [!NOTE]` "The automated browser matrix passed on all 5 profiles (run)". Otherwise: `> [!CAUTION]` "**The automated browser matrix did not pass.** Failed: … No result: … See the run." A profile is "failed" when its tests failed or its job failed, "no result" when its job produced no valid result (setup failure, staging down, timeout, cancel, unreadable job list), and "not in this candidate" when the candidate predates the browser matrix (its `playwright.config.ts` has only the old `chromium` project, so all five profiles, Chromium included, are "not in this candidate"; the banner says "The candidate predates the browser matrix", Slack "кандидат старше этих профилей").
 2. In Acceptance, after the Preview URL, `### Automated browser matrix`: one row per profile with the result and the passed, failed, flaky and skipped counts, and the run link.
 3. The checks as before, with SMOKE-SHORT b to e marked as automated or given back to the tester as above.
 
