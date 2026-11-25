@@ -1,0 +1,7 @@
+/* Doubled to beat the Radix Button height (app CSS loads before Radix). */
+.actionButton.actionButton {
+    height: auto;
+    min-height: var(--cp-space-7);
+    white-space: normal;
+    text-align: center;
+}

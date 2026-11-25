@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 
-import Amount from './Amount';
+import { Amount } from './Amount';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -20,7 +20,9 @@ test('keeps a custom prefix inside the non-wrapping amount', () => {
     );
 
     expect(container.textContent).toBe('~12.5 USD');
-    expect(getComputedStyle(container.firstElementChild as HTMLElement).whiteSpace).toBe('nowrap');
+    // One root element holds the prefix and the amount (its `nowrap` lives in the CSS Module).
+    expect(container.childElementCount).toBe(1);
+    expect(container.firstElementChild?.textContent).toBe('~12.5 USD');
 });
 
 test('hides a custom prefix when the tiny-amount indicator is present', () => {

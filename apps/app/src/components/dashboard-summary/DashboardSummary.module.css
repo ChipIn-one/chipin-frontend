@@ -1,0 +1,7 @@
+/* Card asChild: doubled to beat the Radix `.rt-reset:where(button)` reset (app CSS loads first). */
+.summaryButton.summaryButton {
+    width: 100%;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+}

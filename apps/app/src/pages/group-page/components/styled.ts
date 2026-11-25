@@ -5,7 +5,7 @@ import { MEDIA_QUERIES } from 'constants/breakpoints';
 import { GROUP_COVER_OBJECT_POSITION, GROUP_COVER_RATIO } from 'constants/groupCover';
 import { themeColor } from 'helpers/colors';
 
-import Image from 'basics/Image';
+import { Image } from 'basics/Image';
 
 const CoverWrapper = styled(Flex)<{ $hasCover: boolean }>`
     overflow: hidden;

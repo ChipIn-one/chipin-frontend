@@ -3,7 +3,7 @@ import styled, { css } from 'styled-components';
 import { GROUP_COVER_RATIO } from 'constants/groupCover';
 import { themeColor } from 'helpers/colors';
 
-import Image from 'basics/Image';
+import { Image } from 'basics/Image';
 
 const CoverPreview = styled.div`
     position: relative;

@@ -7,7 +7,7 @@ import { useGroupActivity, useGroupDetail } from 'hooks/useGroupDetail';
 import { useGroups } from 'hooks/useGroupsList';
 import { useUiPrefsStore } from 'store/ui-prefs';
 
-import GroupsCards from 'components/GroupsCards';
+import { GroupsCards } from 'components/GroupsCards';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
 import { GroupCoverBox } from './styled';

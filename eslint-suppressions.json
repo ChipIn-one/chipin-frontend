@@ -24,22 +24,12 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/BalanceBadges.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/DebtAmount.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
   "apps/app/src/basics/GroupRoleBadge.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/basics/Image.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -104,16 +94,6 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/numbers/amount/Amount.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/basics/numbers/amount/index.ts": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/AddExpenseButton.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -142,22 +122,12 @@
       "count": 1
     }
   },
-  "apps/app/src/components/GroupsCards.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/GroupsSectionHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
   "apps/app/src/components/LanguageSelector.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/UsersRow.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -172,21 +142,6 @@
       "count": 2
     }
   },
-  "apps/app/src/components/dashboard-onboarding/DashboardOnboarding.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/dashboard-summary/DashboardHeader.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/dashboard-summary/DashboardSummary.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/group-card/GroupCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -199,11 +154,6 @@
   },
   "apps/app/src/components/invite-onboarding/InviteOnboarding.tsx": {
     "no-restricted-syntax": {
-      "count": 2
-    }
-  },
-  "apps/app/src/components/invite/InviteActionRows.tsx": {
-    "import-x/no-default-export": {
       "count": 1
     }
   },
@@ -688,11 +638,6 @@
   },
   "apps/app/src/pages/DashboardPage.test.tsx": {
     "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/DashboardPage.tsx": {
-    "import-x/no-default-export": {
       "count": 1
     }
   },

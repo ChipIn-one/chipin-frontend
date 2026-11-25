@@ -1,0 +1,6 @@
+/* Doubled to beat the Radix Button size 2 height and padding (app CSS loads before Radix).
+   20px is the Radix --line-height-2 at scaling 100% (theme.ts). */
+.toggleButton.toggleButton {
+    height: calc(20px + var(--cp-space-2));
+    padding-inline: calc(var(--cp-space-2) * 1.25);
+}

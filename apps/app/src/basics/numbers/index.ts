@@ -1,4 +1,4 @@
-import AmountComp, { amountSelectors } from './amount';
+import { Amount as AmountComp, amountSelectors } from './amount';
 import { constructNumberComponent } from './NumberConstructor';
 
 export const Amount = constructNumberComponent(AmountComp);

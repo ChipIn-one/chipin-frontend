@@ -1,23 +1,12 @@
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { CheckIcon, Link2Icon, QrCodeIcon, Share2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import type { UseInviteResult } from 'hooks/pwaHooks';
 
 import InviteQRModal from './InviteQRModal';
 
-const InviteActionButton = styled.button`
-    display: block;
-    width: 100%;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    font: inherit;
-    color: inherit;
-    text-align: left;
-`;
+import styles from './InviteActionRows.module.css';
 
 interface Props {
     invite: UseInviteResult;
@@ -47,7 +36,11 @@ const InviteActionRows = ({ invite }: Props) => {
     return (
         <Flex direction="column" gap="2">
             <Card asChild size="2">
-                <InviteActionButton type="button" onClick={() => void onPrimaryInvite()}>
+                <button
+                    className={styles.actionButton}
+                    type="button"
+                    onClick={() => void onPrimaryInvite()}
+                >
                     <Flex align="center" gap="3" p="4">
                         <Avatar
                             size="3"
@@ -65,12 +58,16 @@ const InviteActionRows = ({ invite }: Props) => {
                             </Text>
                         </Flex>
                     </Flex>
-                </InviteActionButton>
+                </button>
             </Card>
 
             {isNativeShareSupported && (
                 <Card asChild size="2">
-                    <InviteActionButton type="button" onClick={() => void onCopyLink()}>
+                    <button
+                        className={styles.actionButton}
+                        type="button"
+                        onClick={() => void onCopyLink()}
+                    >
                         <Flex align="center" gap="3" p="4">
                             <Avatar
                                 size="3"
@@ -92,13 +89,13 @@ const InviteActionRows = ({ invite }: Props) => {
                                 </Text>
                             </Flex>
                         </Flex>
-                    </InviteActionButton>
+                    </button>
                 </Card>
             )}
 
             <InviteQRModal qrLink={inviteLink} content={qr}>
                 <Card asChild size="2">
-                    <InviteActionButton type="button">
+                    <button className={styles.actionButton} type="button">
                         <Flex align="center" gap="3" p="4">
                             <Avatar
                                 size="3"
@@ -116,11 +113,11 @@ const InviteActionRows = ({ invite }: Props) => {
                                 </Text>
                             </Flex>
                         </Flex>
-                    </InviteActionButton>
+                    </button>
                 </Card>
             </InviteQRModal>
         </Flex>
     );
 };
 
-export default InviteActionRows;
+export { InviteActionRows };

@@ -1,5 +1,5 @@
 import { type FocusEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
+import { Box, Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
 import {
     ChevronDownIcon,
     ChevronUpIcon,
@@ -26,14 +26,10 @@ import { EmptyState } from 'basics/empty-states';
 import { OnlineOnly } from 'components/online-only';
 
 import { GroupCard } from './group-card';
-import {
-    SearchButtonShell,
-    SearchFieldShell,
-    SearchIndicator,
-    SettledToggleButton,
-} from './groups-cards/styled';
 import { CreateUpdateGroupModal } from './modals';
 import { GroupsCardsSkeleton } from './skeletons';
+
+import styles from './GroupsCards.module.css';
 
 interface Props {
     groups: Group[];
@@ -127,7 +123,12 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
             <Flex align="center" justify="between" gap="2" minWidth="0">
                 <Flex align="center" flexGrow="1" minWidth="0">
                     {isSearchOpen ? (
-                        <SearchFieldShell width="100%" onBlur={onSearchBlur}>
+                        <Box
+                            className={styles.searchField}
+                            width="100%"
+                            minWidth="0"
+                            onBlur={onSearchBlur}
+                        >
                             <TextField.Root
                                 ref={searchInputRef}
                                 autoFocus
@@ -157,7 +158,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                     </TextField.Slot>
                                 )}
                             </TextField.Root>
-                        </SearchFieldShell>
+                        </Box>
                     ) : (
                         <Text size="3" weight="bold" truncate>
                             {label}
@@ -167,7 +168,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
 
                 <Flex align="center" gap="3" flexShrink="0">
                     {!isSearchOpen && (
-                        <SearchButtonShell>
+                        <Flex as="span" display="inline-flex" position="relative">
                             <IconButton
                                 ref={searchButtonRef}
                                 type="button"
@@ -180,8 +181,10 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                             >
                                 <SearchIcon size={17} />
                             </IconButton>
-                            {hasSearchQuery && <SearchIndicator aria-hidden />}
-                        </SearchButtonShell>
+                            {hasSearchQuery && (
+                                <span className={styles.searchIndicator} aria-hidden />
+                            )}
+                        </Flex>
                     )}
                     <CreateUpdateGroupModal type="create">
                         <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupCreate}>
@@ -235,7 +238,8 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                     <Text size="1" color="gray" align="center">
                         {t('groups.settledAutoHide')}
                     </Text>
-                    <SettledToggleButton
+                    <Button
+                        className={styles.settledToggle}
                         type="button"
                         size="3"
                         variant="soft"
@@ -265,7 +269,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                 )}
                             </Flex>
                         </Flex>
-                    </SettledToggleButton>
+                    </Button>
 
                     {isSettledVisible &&
                         hiddenSettledGroups.map(model => (
@@ -281,4 +285,4 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     );
 };
 
-export default GroupsCards;
+export { GroupsCards };

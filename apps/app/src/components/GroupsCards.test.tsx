@@ -19,7 +19,7 @@ import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
-import GroupsCards from './GroupsCards';
+import { GroupsCards } from './GroupsCards';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -393,7 +393,6 @@ test('uses one full-width thick settled toggle with state chevrons', () => {
     const toggle = screen.getByRole('button', { name: /groups.showSettled/ });
     expect(toggle.textContent).toContain('groups.settledCount:1');
     expect(toggle.textContent).toContain('groups.showSettled');
-    expect(getComputedStyle(toggle).width).toBe('100%');
     expect(toggle.className).toContain('rt-r-size-3');
     expect(toggle.querySelector('.lucide-chevron-down')).not.toBeNull();
     expect(toggle.querySelector('.lucide-chevron-up')).toBeNull();

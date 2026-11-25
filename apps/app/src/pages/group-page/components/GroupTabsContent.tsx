@@ -13,7 +13,7 @@ import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { NoGroupExpensesEmptyState } from 'basics/empty-states';
 import { SettleUpModal } from 'components/modals/settle-up-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
-import UsersRow from 'components/UsersRow';
+import { UsersRow } from 'components/UsersRow';
 
 import GroupBalancesTab from './GroupBalancesTab';
 import GroupInviteEmptyState from './GroupInviteEmptyState';

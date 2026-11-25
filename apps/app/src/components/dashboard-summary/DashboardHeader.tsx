@@ -1,6 +1,5 @@
 import { Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { ROUTES } from 'constants/routes';
 import { useIsUserAdmin, useSelfUserState } from 'hooks/useSelfUser';
@@ -11,9 +10,7 @@ import { NavButton } from 'components/NavButton';
 
 import ViewModeSwitch from '../ViewModeSwitch';
 
-const GreetingHeading = styled(Heading)`
-    overflow-wrap: anywhere;
-`;
+import styles from './DashboardHeader.module.css';
 
 const DashboardHeader: React.FC = () => {
     const { t } = useTranslation('dashboard');
@@ -36,7 +33,7 @@ const DashboardHeader: React.FC = () => {
                 </Box>
 
                 <Box minWidth="0">
-                    <GreetingHeading size="5">
+                    <Heading className={styles.greeting} size="5">
                         <Skeleton loading={isUserLoading}>
                             {isUserLoading
                                 ? tSkeletons('dashboardHeader.greeting')
@@ -44,7 +41,7 @@ const DashboardHeader: React.FC = () => {
                                       name: user?.displayName ?? '',
                                   })}
                         </Skeleton>
-                    </GreetingHeading>
+                    </Heading>
                     <Text size={{ initial: '2', sm: '3' }} color="gray" as="span">
                         <Skeleton loading={isUserLoading}>
                             {isUserLoading
@@ -67,4 +64,4 @@ const DashboardHeader: React.FC = () => {
     );
 };
 
-export default DashboardHeader;
+export { DashboardHeader };

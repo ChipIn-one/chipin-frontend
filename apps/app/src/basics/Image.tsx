@@ -1,7 +1,15 @@
-import { type ImgHTMLAttributes, type ReactEventHandler, useState } from 'react';
+import {
+    type CSSProperties,
+    type ImgHTMLAttributes,
+    type ReactEventHandler,
+    useState,
+} from 'react';
 import { Skeleton } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
+
+import { cx } from 'helpers/cx';
+
+import styles from './Image.module.css';
 
 type ImageStatus = 'loading' | 'loaded' | 'error';
 
@@ -18,19 +26,8 @@ interface ImageProps extends ImgHTMLAttributes<HTMLImageElement> {
     fallbackLetters?: number;
 }
 
-const Img = styled.img<{ width: string; height: string }>`
-    width: ${({ width }) => width};
-    height: ${({ height }) => height};
-    object-fit: contain;
-`;
-
-const EmptyImg = styled.div<{ width: string; height: string }>`
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: ${({ width }) => width};
-    height: ${({ height }) => height};
-`;
+// The size props are any CSS length, so they reach the module as local custom properties.
+type SizeStyle = CSSProperties & Record<'--_image-width' | '--_image-height', string>;
 
 const Image = ({
     src,
@@ -38,6 +35,7 @@ const Image = ({
     height = 'auto',
     alt = '-',
     className,
+    style,
     onLoad,
     onError,
     ...props
@@ -53,12 +51,13 @@ const Image = ({
     }
 
     const status = imageState.src === src ? imageState.status : 'loading';
+    const sizeStyle: SizeStyle = { ...style, '--_image-width': width, '--_image-height': height };
 
     if (!src || status === 'error') {
         return (
-            <EmptyImg width={width} height={height} className={className} {...props}>
+            <div className={cx(styles.empty, className)} style={sizeStyle} {...props}>
                 {t('media.noImage')}
-            </EmptyImg>
+            </div>
         );
     }
 
@@ -74,18 +73,19 @@ const Image = ({
 
     return (
         <Skeleton loading={status === 'loading'}>
-            <Img
+            <img
                 {...props}
+                style={sizeStyle}
                 width={width}
                 height={height}
                 src={src}
                 alt={alt}
                 onLoad={onImageLoad}
                 onError={onImageError}
-                className={className}
+                className={cx(styles.root, className)}
             />
         </Skeleton>
     );
 };
 
-export default Image;
+export { Image };

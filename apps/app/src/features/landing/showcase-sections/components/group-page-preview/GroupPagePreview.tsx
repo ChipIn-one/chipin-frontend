@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Amount, BalanceSummaryText } from 'basics';
 import { OwedToYouCard } from 'components/summary-debt-cards';
-import UsersRow from 'components/UsersRow';
+import { UsersRow } from 'components/UsersRow';
 
 import { LandingPreviewCard } from '../landing-preview-card';
 

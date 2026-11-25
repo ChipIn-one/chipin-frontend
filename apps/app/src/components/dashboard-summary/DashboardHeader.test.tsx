@@ -10,7 +10,7 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { clearSeededSelfUser, seedSelfUser } from 'test/selfUserSeed';
 
-import DashboardHeader from './DashboardHeader';
+import { DashboardHeader } from './DashboardHeader';
 
 import 'i18n/index';
 

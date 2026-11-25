@@ -1,4 +1,4 @@
-import DashboardHeader from './DashboardHeader';
-import DashboardSummary from './DashboardSummary';
+import { DashboardHeader } from './DashboardHeader';
+import { DashboardSummary } from './DashboardSummary';
 
 export { DashboardHeader, DashboardSummary };

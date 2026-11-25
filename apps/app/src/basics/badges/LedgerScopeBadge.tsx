@@ -1,11 +1,8 @@
 import { Badge, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import styled from 'styled-components';
 
-const ScopeBadge = styled(Badge)`
-    max-width: 100%;
-`;
+import styles from './LedgerScopeBadge.module.css';
 
 interface Props {
     groupId: string | null;
@@ -23,7 +20,7 @@ const LedgerScopeBadge = ({ groupId, groupName }: Props) => {
     const isGroupEvent = groupId !== null && Boolean(groupName);
 
     return (
-        <ScopeBadge size="1" variant="soft" color="gray">
+        <Badge className={styles.root} size="1" variant="soft" color="gray">
             {isGroupEvent ? (
                 <Text as="span" truncate>
                     {groupName}
@@ -31,7 +28,7 @@ const LedgerScopeBadge = ({ groupId, groupName }: Props) => {
             ) : (
                 t('event.betweenFriends')
             )}
-        </ScopeBadge>
+        </Badge>
     );
 };
 

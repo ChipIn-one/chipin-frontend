@@ -15,8 +15,9 @@ import { NoDebtsEmptyState } from 'basics/empty-states';
 import { Amount } from 'basics/numbers';
 import { OutboxBalanceCaption } from 'components/outbox-balance-caption';
 
-import { SummaryCardButton } from './styled';
 import { summarizeDashboard } from './summary';
+
+import styles from './DashboardSummary.module.css';
 
 interface Props {
     isLoading?: boolean;
@@ -26,7 +27,7 @@ interface Props {
 const SUMMARY_DETAILS_ID = 'dashboard-balance-summary-details';
 const NO_BALANCES: DashboardBalances = [];
 
-const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Props) => {
+const DashboardSummary = ({ isLoading = false, hasExpenseHistory = false }: Props) => {
     const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(false);
     const defaultCurrency = useUserSetting(userCurrency);
@@ -155,7 +156,8 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
     return (
         <Flex direction="column" gap="2">
             <Card asChild size="1">
-                <SummaryCardButton
+                <button
+                    className={styles.summaryButton}
                     type="button"
                     aria-expanded={isExpanded}
                     aria-controls={SUMMARY_DETAILS_ID}
@@ -169,7 +171,7 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
                                 : 'summary.showBalanceDetails',
                         )}
                     </VisuallyHidden>
-                </SummaryCardButton>
+                </button>
             </Card>
 
             {isExpanded && <Card size="1">{detailsContent}</Card>}
@@ -178,4 +180,4 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
     );
 };
 
-export default DashBoardSummary;
+export { DashboardSummary };

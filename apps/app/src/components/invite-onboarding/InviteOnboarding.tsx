@@ -1,7 +1,6 @@
 import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import type { UseInviteResult } from 'hooks/pwaHooks';
 
@@ -9,34 +8,7 @@ import { InviteActionRows } from 'components/invite';
 
 import InviteIllustrationAsset from 'assets/group-invite-empty-state.webp';
 
-const InviteCard = styled(Card)`
-    overflow: hidden;
-    background:
-        radial-gradient(circle at top, var(--green-a4), transparent 68%), var(--color-panel-solid);
-`;
-
-const InviteIllustration = styled.img`
-    display: block;
-    width: min(100%, 20rem);
-    height: auto;
-    margin: 0 auto;
-`;
-
-const InviteButton = styled(Button)`
-    width: 100%;
-`;
-
-const ShareDivider = styled(Flex)`
-    width: 100%;
-
-    &::before,
-    &::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--cp-border-translucent);
-    }
-`;
+import styles from './InviteOnboarding.module.css';
 
 interface Props {
     invite: UseInviteResult;
@@ -55,9 +27,10 @@ const InviteOnboarding = ({ invite }: Props) => {
 
     return (
         <Flex direction="column" gap="3">
-            <InviteCard size="3">
+            <Card className={styles.root} size="3">
                 <Flex direction="column" align="center" gap="3">
-                    <InviteIllustration
+                    <img
+                        className={styles.illustration}
                         src={InviteIllustrationAsset}
                         alt=""
                         aria-hidden="true"
@@ -73,7 +46,8 @@ const InviteOnboarding = ({ invite }: Props) => {
                         </Text>
                     </Flex>
 
-                    <InviteButton
+                    <Button
+                        className={styles.inviteButton}
                         type="button"
                         size="3"
                         color="green"
@@ -82,15 +56,15 @@ const InviteOnboarding = ({ invite }: Props) => {
                     >
                         <UserPlusIcon size={18} />
                         {t('page.expenses.inviteAction')}
-                    </InviteButton>
+                    </Button>
                 </Flex>
-            </InviteCard>
+            </Card>
 
-            <ShareDivider align="center" gap="3">
+            <Flex className={styles.shareDivider} width="100%" align="center" gap="3">
                 <Text size="1" color="gray">
                     {t('page.expenses.shareVia')}
                 </Text>
-            </ShareDivider>
+            </Flex>
 
             <InviteActionRows invite={invite} />
         </Flex>

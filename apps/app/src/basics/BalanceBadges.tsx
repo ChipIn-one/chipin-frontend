@@ -2,21 +2,17 @@ import { type ComponentProps, useState } from 'react';
 import { Badge, Button, Flex } from '@radix-ui/themes';
 import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { Amount } from './numbers';
 import { BalanceBadgesSkeleton } from './skeletons/BalanceBadgesSkeleton';
+
+import styles from './BalanceBadges.module.css';
 
 export interface BadgeItem {
     tokenCode: string;
     value: number;
     color: ComponentProps<typeof Badge>['color'];
 }
-
-const BalanceBadgesButton = styled(Button)`
-    height: calc(var(--line-height-2) + var(--space-2));
-    padding-inline: calc(var(--space-2) * 1.25);
-`;
 
 const DEFAULT_MAX_VISIBLE = 3;
 
@@ -61,18 +57,20 @@ const BalanceBadges: React.FC<Props> = ({
             ))}
 
             {!isExpanded && hiddenCount > 0 && (
-                <BalanceBadgesButton
+                <Button
+                    className={styles.toggleButton}
                     color={overflowColor}
                     variant="soft"
                     size="2"
                     onClick={() => setIsExpanded(true)}
                 >
                     +{hiddenCount}
-                </BalanceBadgesButton>
+                </Button>
             )}
 
             {isExpanded && (
-                <BalanceBadgesButton
+                <Button
+                    className={styles.toggleButton}
                     color={overflowColor}
                     variant="soft"
                     size="2"
@@ -80,7 +78,7 @@ const BalanceBadges: React.FC<Props> = ({
                 >
                     <ChevronLeftIcon size={16} />
                     {t('buttons.hide')}
-                </BalanceBadgesButton>
+                </Button>
             )}
         </Flex>
     );

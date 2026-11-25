@@ -1,24 +1,18 @@
 import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { UserPlusIcon, UsersRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { useFriendInvite } from 'hooks/pwaHooks';
 import { useSelfUser } from 'hooks/useSelfUser';
 
-import Image from 'basics/Image';
+import { Image } from 'basics/Image';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 import { OnlineOnly } from 'components/online-only';
 
 import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.webp';
 
-const ActionButton = styled(Button)`
-    height: auto;
-    min-height: var(--space-7);
-    white-space: normal;
-    text-align: center;
-`;
+import styles from './DashboardOnboarding.module.css';
 
 const DashboardOnboarding = () => {
     const { t } = useTranslation(['dashboard', 'common']);
@@ -93,13 +87,14 @@ const DashboardOnboarding = () => {
                     >
                         <CreateUpdateGroupModal type="create">
                             <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupCreate}>
-                                <ActionButton type="button" size="3">
+                                <Button className={styles.actionButton} type="button" size="3">
                                     <UsersRoundIcon size={18} />
                                     {t('common:buttons.createGroup')}
-                                </ActionButton>
+                                </Button>
                             </OnlineOnly>
                         </CreateUpdateGroupModal>
-                        <ActionButton
+                        <Button
+                            className={styles.actionButton}
                             type="button"
                             size="3"
                             variant="soft"
@@ -108,7 +103,7 @@ const DashboardOnboarding = () => {
                         >
                             <UserPlusIcon size={18} />
                             {t('onboarding.actions.inviteFriend')}
-                        </ActionButton>
+                        </Button>
                     </Flex>
                 </Flex>
             </Flex>
