@@ -2,19 +2,23 @@
 // classification and the connectivity store, with msw answering the request and `/health`.
 import { onlineManager } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { requireSession } from 'app/auth/requireSession';
+import { AUTH_READY_TIMEOUT_MS } from 'app/auth/session';
 import { AuthLayout } from 'app/router/AuthLayout';
 import { initializeApi } from 'bootstrap/initializeApi';
-import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
+import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { GuardLoader } from 'features/routing';
 import { invalidateAuthSession } from 'helpers/authSession';
-import { LocalStorage } from 'helpers/localStorage';
+import { LocalStorage, resetTabUserId } from 'helpers/localStorage';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { publicApi } from 'shared/api/client';
+import { startCacheRestore } from 'shared/offline/restore';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
@@ -48,6 +52,9 @@ const BANNER = 'network.offlineBanner';
 const PAGE_CONTENT = 'Cached page content';
 
 let healthRequests = 0;
+// `HEALTH_CHECK_TIMEOUT_MS` of `shared/api/health.ts` (not exported).
+const HEALTH_TIMEOUT_MS = 5000;
+const BROWSER_GIVES_UP_MS = 30_000;
 
 const answer = (stats: () => Response, health: () => Response) => {
     healthRequests = 0;
@@ -80,10 +87,28 @@ beforeAll(() => {
 beforeEach(() => {
     onlineManager.setOnline(true);
     useConnectivityStore.setState({ mode: 'online' });
+    // A user saved on the device: the banner speaks of saved data (NET-001).
+    LocalStorage.set(LS_KEY_USER, {
+        id: 'user-1',
+        role: 'USER',
+        settings: {
+            defaultCurrency: 'USD',
+            defaultCategory: 'food',
+            timeFormat: '24h',
+            language: 'en',
+            theme: 'light',
+            simplifyDebts: true,
+            skipCategory: false,
+            soloModeByDefault: false,
+            saveGroupExpensesToSolo: false,
+            sex: 'male',
+        },
+    });
 });
 
 afterEach(() => {
     onlineManager.setOnline(true);
+    LocalStorage.remove(LS_KEY_USER);
 });
 
 test('onLine=false + a network error: the offline banner, no blocking page, no health probe', async () => {
@@ -220,7 +245,10 @@ describe('offline cold start through /auth/refresh', () => {
 
     let refreshRequests = 0;
 
-    const answerRefresh = (refresh: () => Response, health: () => Response) => {
+    const answerRefresh = (
+        refresh: () => Response | Promise<Response>,
+        health: () => Response | Promise<Response>,
+    ) => {
         refreshRequests = 0;
         server.use(
             http.post('*/auth/refresh', () => {
@@ -232,6 +260,9 @@ describe('offline cold start through /auth/refresh', () => {
     };
 
     beforeEach(() => {
+        // No user saved on the device: nothing to show offline (NET-007).
+        LocalStorage.remove(LS_KEY_USER);
+        resetTabUserId();
         invalidateAuthSession();
         LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
         useAuthStore.setState({ status: 'unknown', unauthReason: undefined, isNewUser: null });
@@ -248,14 +279,17 @@ describe('offline cold start through /auth/refresh', () => {
         LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
     });
 
-    test('the catch of the session check sees offline: no sign-out, the banner over the loader', async () => {
+    test('NET-007 the catch of the session check sees offline: no sign-out, the offline load error instead of the page', async () => {
         answerRefresh(
             () => HttpResponse.error(),
             () => HttpResponse.error(),
         );
         renderColdStart();
 
-        expect(await screen.findByText(BANNER)).toBeTruthy();
+        expect((await screen.findByRole('alert')).textContent).toContain(
+            'network.offlineLoadErrorDescription',
+        );
+        expect(screen.queryByText(BANNER)).toBeNull();
         expect(refreshRequests).toBe(1);
         expect(useConnectivityStore.getState().mode).toBe('offline');
         expect(useAuthStore.getState()).toMatchObject({
@@ -263,6 +297,61 @@ describe('offline cold start through /auth/refresh', () => {
             unauthReason: undefined,
         });
         expect(screen.queryByText(PAGE_CONTENT)).toBeNull();
+    });
+
+    test('NET-007 the browser says online, the refresh and /health never answer: the load error with Retry by 5 s, through the loader', async () => {
+        // `performance.now()` stays real: the connectivity marks (`getLastOfflineAt`) must not
+        // land in the future of the next test.
+        vi.useFakeTimers({
+            toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+        });
+        try {
+            startCacheRestore(undefined);
+            answerRefresh(
+                // The browser gives up on the hung refresh only much later (20-50 s).
+                () => delay(BROWSER_GIVES_UP_MS).then(() => HttpResponse.error()),
+                // msw's XHR mock does not run axios' `timeout`: the 5 s probe timeout of
+                // `shared/api/health.ts` is played as no answer for 5 s, then no response.
+                () => delay(HEALTH_TIMEOUT_MS).then(() => HttpResponse.error()),
+            );
+            router = createMemoryRouter(
+                [
+                    {
+                        element: (
+                            <>
+                                <CheckSignIn />
+                                <AuthLayout />
+                            </>
+                        ),
+                        loader: requireSession,
+                        hydrateFallbackElement: <GuardLoader />,
+                        children: [{ path: '/dashboard', element: <p>{PAGE_CONTENT}</p> }],
+                    },
+                ],
+                { initialEntries: ['/dashboard'] },
+            );
+            render(
+                <ThemeProvider theme={lightThemeStyled}>
+                    <RouterProvider router={router} />
+                </ThemeProvider>,
+            );
+
+            // The 5 s of the probe sent with the refresh, plus a margin.
+            await act(() => vi.advanceTimersByTimeAsync(AUTH_READY_TIMEOUT_MS + 100));
+
+            expect(screen.getByRole('alert').textContent).toContain(
+                'network.offlineLoadErrorDescription',
+            );
+            expect(screen.getByRole('button', { name: 'network.retry' })).toBeTruthy();
+            expect(screen.queryByText(PAGE_CONTENT)).toBeNull();
+            expect(document.querySelector('svg animate')).toBeNull();
+            expect(refreshRequests).toBe(1);
+            expect(useAuthStore.getState().status).toBe('unknown');
+        } finally {
+            // Settle the hung refresh: the next test must not join it.
+            await act(() => vi.advanceTimersByTimeAsync(BROWSER_GIVES_UP_MS));
+            vi.useRealTimers();
+        }
     });
 
     test('no online event ever fires: Retry after /health recovers resumes the session check', async () => {

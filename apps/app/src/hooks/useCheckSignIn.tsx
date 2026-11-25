@@ -5,10 +5,11 @@ import { ROUTES } from 'constants/routes';
 import { markAuthSessionSignedOut, subscribeToRemoteAuthLogout } from 'helpers/authSession';
 import { getLocalUser, getTabUserId, hasAuthSessionHint } from 'helpers/localStorage';
 import { isNetworkError } from 'shared/api/client';
+import { probeBackendHealth } from 'shared/api/health';
 import { AUTH_STATUS, SESSION_MODE, UNAUTH_REASON } from 'store/authConstants';
 import { selectAuthStatus, selectSessionMode } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { useConnectivityStore } from 'store/connectivityStore';
+import { onConnectivityChange, useConnectivityStore } from 'store/connectivityStore';
 import { loadGroupsListForSession } from 'store/groupsList';
 import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { useUiPrefsStore } from 'store/ui-prefs';
@@ -57,6 +58,33 @@ useAuthStore.subscribe(() => {
 });
 
 /**
+ * NET-007: with no user saved on this device a refresh that hangs (a network the browser calls
+ * online but that answers nothing, e.g. Wi-Fi without internet) would keep the loader up until the
+ * browser gives up on it, 20-50 s later. `/health` is probed alongside it (at most 5 s): no answer
+ * while the attempt still runs marks the network unusable, as the refresh's own network error
+ * would, so `AuthLayout` shows the offline load error. The refresh itself is left running (a
+ * cancelled refresh may have rotated the cookie on the server); its answer still decides.
+ * `startedAt` is when the attempt began: only a probe sent after it counts, never an older shared
+ * one (e.g. of the 15 s re-check) whose `unreachable` describes the network before this attempt.
+ *
+ * Known limit: if the network comes back while the hung refresh is still pending, the start waits
+ * for that refresh (the dedupe blocks a new attempt), and a recovery found by the re-check may drop
+ * back to the error screen for one cycle. It heals itself when the refresh settles: its failure
+ * online schedules the retry with backoff, its success signs in.
+ */
+const probeWhileRefreshHangs = (attempt: symbol, startedAt: number): void => {
+    void probeBackendHealth(startedAt).then(health => {
+        if (
+            health === 'unreachable' &&
+            attemptInFlight === attempt &&
+            useAuthStore.getState().status === AUTH_STATUS.UNKNOWN
+        ) {
+            onConnectivityChange('offline', startedAt);
+        }
+    });
+};
+
+/**
  * One attempt of the initial session check (cold start), outside React: the guard loader of
  * `app/auth/session.ts` starts it before any component mounts, `useCheckSignIn` starts it again on a
  * connectivity change. Does nothing once the session is resolved, on the OAuth callback (the
@@ -93,10 +121,16 @@ const startSessionCheck = (pathname: string): void => {
 
     const attempt = Symbol('session-check');
     attemptInFlight = attempt;
+    const startedAt = performance.now();
     const since = Date.now();
     const hadCachedUser = getLocalUser() !== null;
     const cachedIdBefore = getTabUserId();
-    refreshAuthTokens()
+    const refresh = refreshAuthTokens();
+
+    if (!hasCachedUserId) {
+        probeWhileRefreshHangs(attempt, startedAt);
+    }
+    refresh
         .then(() => {
             setAuthenticated();
             return loadSessionData({

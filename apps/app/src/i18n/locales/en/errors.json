@@ -54,9 +54,13 @@
     "network": {
         "offline": "No internet connection",
         "offlineBanner": "No network. Saved data is shown",
+        "offlineBannerNoData": "No network",
+        "offlineLoadErrorDescription": "The data cannot be loaded without a network.",
+        "offlineLoadErrorTitle": "No network",
         "offlineStatus": "Offline",
         "retry": "Retry",
-        "retryFailed": "Still no network. Saved data is shown"
+        "retryFailed": "Still no network. Saved data is shown",
+        "retryFailedNoData": "Still no network"
     },
     "oauth": {
         "missing_code": "Google sign-in could not be completed. Please try again."

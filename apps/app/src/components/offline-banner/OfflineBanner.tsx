@@ -3,7 +3,15 @@ import { Button, Callout, Flex } from '@radix-ui/themes';
 import { WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { useTabUserId } from 'hooks/useTabUserId';
 import { useConnectivityStore } from 'store/connectivityStore';
+
+const noticeKey = (hasRetryFailed: boolean, hasSavedUser: boolean) => {
+    if (hasRetryFailed) {
+        return hasSavedUser ? 'network.retryFailed' : 'network.retryFailedNoData';
+    }
+    return hasSavedUser ? 'network.offlineBanner' : 'network.offlineBannerNoData';
+};
 
 // Mounted only while offline, so every offline episode starts with fresh retry state.
 const OfflineNotice = () => {
@@ -12,6 +20,8 @@ const OfflineNotice = () => {
     const [isChecking, setIsChecking] = useState(false);
     const [hasRetryFailed, setHasRetryFailed] = useState(false);
     const isMountedRef = useRef(true);
+    // NET-001: with no user saved on this device there is no saved data to speak of.
+    const hasSavedUser = useTabUserId() !== undefined;
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -49,9 +59,7 @@ const OfflineNotice = () => {
                 <WifiOffIcon size={16} aria-hidden="true" />
             </Callout.Icon>
             <Flex align="center" justify="between" gap="3" wrap="wrap">
-                <Callout.Text>
-                    {t(hasRetryFailed ? 'network.retryFailed' : 'network.offlineBanner')}
-                </Callout.Text>
+                <Callout.Text>{t(noticeKey(hasRetryFailed, hasSavedUser))}</Callout.Text>
                 <Button
                     type="button"
                     size="1"
