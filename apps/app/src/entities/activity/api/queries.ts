@@ -1,8 +1,9 @@
 // The user's own activity (spec 03 §1.2, §6 row 5) under `['activity','self',filters]`: the
 // previews of the dashboard feed and the flat log of the Activity page, 30 s fresh, infinite,
-// persisted as their first page only (`trimmingPersister`), cut to it on unmount and before a
-// focus/reconnect refetch only while the network is usable. Both come through `api()` as domain
-// items (amounts as `Money`). `activityKeys.self()` invalidates every feed of the user. The history
+// persisted as their first page only (`trimmingPersister`), cut to it on unmount (offline: once
+// the network is back, if still unobserved); the previews feed also before a focus/reconnect
+// refetch, only while the network is usable. Both come through `api()` as domain items (amounts as
+// `Money`). `activityKeys.self()` invalidates every feed of the user. The history
 // of one activity chain (the expense history page) is `['activity','children',parentId]`, 60 s.
 import { useEffect } from 'react';
 import type { InfiniteData, Query, QueryClient } from '@tanstack/react-query';
@@ -11,7 +12,7 @@ import { infiniteQueryOptions, useInfiniteQuery, useQueryClient } from '@tanstac
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { api } from 'shared/api/client';
 import { refetchIfRestored } from 'shared/api/queryClient';
-import { isNetworkUsable } from 'shared/offline/network';
+import { isNetworkUsable, waitForOnline } from 'shared/offline/network';
 
 import { firstPageOnly } from '../model/selfActivity';
 import {
@@ -91,28 +92,30 @@ const fetchChildrenPage = (
         signal,
     }).then(toActivityChildrenPage);
 
-// A refetch of an infinite query reloads every loaded page in turn. A stale feed is cut back to
-// its first page before a focus/reconnect refetch, so the refetch is one request. The cut keeps
-// the data's age and invalidation, so whether it refetches does not change. Offline nothing is
-// cut, neither here nor on unmount (`useTrimOnUnmount`): the loaded pages stay readable until the
-// network is back (except after a ledger write that failed on a network drop:
+// A refetch of an infinite query reloads every loaded page in turn. A stale previews feed is cut
+// back to its first page before a focus/reconnect refetch, so the refetch is one request. The cut
+// keeps the data's age and invalidation, so whether it refetches does not change. Offline nothing
+// is cut, neither here nor on unmount (`useTrimOnUnmount`): the loaded pages stay readable until
+// the network is back (except after a ledger write that failed on a network drop:
 // `invalidateSelfActivity` cuts at once).
 type FeedQuery<P> = Query<P, Error, InfiniteData<P, number | null>, SelfFeedKey>;
 
-const trimBeforeRefetch = <P>(query: FeedQuery<P>): boolean => {
+/** Cuts a feed to its first page, keeping the data's age and invalidation. */
+const cutToFirstPage = <P>(query: FeedQuery<P>): void => {
     const { data, dataUpdatedAt, isInvalidated } = query.state;
 
-    if (
-        isNetworkUsable() &&
-        data &&
-        data.pages.length > 1 &&
-        query.isStaleByTime(SELF_ACTIVITY_STALE_TIME)
-    ) {
+    if (data && data.pages.length > 1) {
         // `manual`: a paused fetch keeps its status.
         query.setData(firstPageOnly(data), { updatedAt: dataUpdatedAt, manual: true });
         if (isInvalidated) {
             query.invalidate();
         }
+    }
+};
+
+const trimBeforeRefetch = <P>(query: FeedQuery<P>): boolean => {
+    if (isNetworkUsable() && query.isStaleByTime(SELF_ACTIVITY_STALE_TIME)) {
+        cutToFirstPage(query);
     }
     return true;
 };
@@ -216,10 +219,36 @@ export const invalidateActivityChildren = (
         .then(() => client.invalidateQueries({ queryKey }, { cancelRefetch: true }));
 };
 
+// The clients with a cut pending until the network is back: one waiter per client.
+const clientsAwaitingOnline = new WeakSet<QueryClient>();
+
+// Once the network is back, every feed of the user's activity that no page shows is cut to its
+// first page (a feed mounted again meanwhile keeps its pages: its page reads them).
+const trimUnobservedWhenOnline = (client: QueryClient): void => {
+    if (clientsAwaitingOnline.has(client)) {
+        return;
+    }
+    clientsAwaitingOnline.add(client);
+    void waitForOnline().then(() => {
+        clientsAwaitingOnline.delete(client);
+        // Every entry under `['activity','self']` is an infinite feed.
+        const feeds = client
+            .getQueryCache()
+            .findAll({ queryKey: activityKeys.self() }) as unknown as FeedQuery<unknown>[];
+
+        for (const feed of feeds) {
+            if (feed.getObserversCount() === 0) {
+                cutToFirstPage(feed);
+            }
+        }
+    });
+};
+
 // When a feed's page unmounts, the feed is cut to its first page: the stale refetch of the next
 // mount (`refetchOnMount` runs during render, it cannot cut) is then one request, not one per page
 // loaded before. Offline it is not cut: the pages loaded before stay readable on the way back,
-// as for a focus/reconnect (`trimBeforeRefetch`).
+// as for a focus/reconnect (`trimBeforeRefetch`); it is cut once the network is back, if no page
+// shows it by then.
 const useTrimOnUnmount = (): void => {
     const client = useQueryClient();
 
@@ -227,6 +256,8 @@ const useTrimOnUnmount = (): void => {
         () => () => {
             if (isNetworkUsable()) {
                 trimSelfActivity(client);
+            } else {
+                trimUnobservedWhenOnline(client);
             }
         },
         [client],

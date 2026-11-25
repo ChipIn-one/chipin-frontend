@@ -372,6 +372,57 @@ test('NET-001: offline, leaving the dashboard keeps every loaded page of its fee
     }
 });
 
+test('NET-001: a feed left offline is cut to its first page once the network is back, keeping its age and invalidation', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { queryKey } = selfActivityPreviewsQueryOptions();
+
+    onlineManager.setOnline(false);
+    try {
+        expect(mountAndUnmountPreviews(client)).toHaveLength(3);
+        await client.invalidateQueries({ queryKey }, { cancelRefetch: false });
+        const before = client.getQueryState(queryKey);
+        expect(before?.isInvalidated).toBe(true);
+
+        onlineManager.setOnline(true);
+        await vi.waitFor(() => {
+            expect(client.getQueryData<SelfActivityPreviewsData>(queryKey)?.pages).toEqual([
+                previewsPage('a', 40),
+            ]);
+        });
+        expect(client.getQueryState(queryKey)).toMatchObject({
+            dataUpdatedAt: before?.dataUpdatedAt,
+            isInvalidated: true,
+        });
+    } finally {
+        onlineManager.setOnline(true);
+        client.clear();
+    }
+});
+
+test('NET-001: a feed left offline and shown again before the network is back keeps its pages', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { queryKey } = selfActivityPreviewsQueryOptions();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children);
+
+    let shown: { unmount: () => void } | undefined;
+
+    onlineManager.setOnline(false);
+    try {
+        expect(mountAndUnmountPreviews(client)).toHaveLength(3);
+        shown = renderHook(() => useSelfActivityPreviewsQuery(), { wrapper });
+
+        onlineManager.setOnline(true);
+        // The waiter runs in a microtask after the online notification.
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(client.getQueryData<SelfActivityPreviewsData>(queryKey)?.pages).toHaveLength(3);
+    } finally {
+        onlineManager.setOnline(true);
+        shown?.unmount();
+        client.clear();
+    }
+});
+
 test('NET-001: online, leaving the dashboard cuts its feed to the first page', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 

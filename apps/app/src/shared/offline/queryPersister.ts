@@ -95,38 +95,37 @@ export const trimInfinitePages = (client: PersistedClient): PersistedClient => (
 type DehydratedQueryState = DehydratedState['queries'][number]['state'];
 
 /**
- * An entry kept with data after a failed refetch or next page is persisted as its last success:
- * `hydrate` restores the state as dehydrated, and an `error` status would come back as an error.
- * The data keeps its age and invalidation; the fetch-more direction (`fetchMeta`) is dropped.
+ * The stored copy of every query carries no error and no fetch state: a success with a failed
+ * attempt waiting to retry keeps its `fetchFailureReason`, and an `AxiosError` serializes its
+ * request config (the `Authorization` header), so no error object ever reaches IndexedDB. An entry
+ * kept with data after a failed refetch or next page is persisted as its last success: `hydrate`
+ * restores the state as dehydrated, and an `error` status would come back as an error. The data
+ * keeps its age and invalidation; the fetch-more direction (`fetchMeta`) is dropped.
  */
-const asLastSuccess = (state: DehydratedQueryState): DehydratedQueryState =>
-    state.status === 'error'
-        ? {
-              ...state,
-              status: 'success',
-              error: null,
-              fetchFailureCount: 0,
-              fetchFailureReason: null,
-              fetchMeta: null,
-          }
-        : state;
+const withoutErrors = (state: DehydratedQueryState): DehydratedQueryState => ({
+    ...state,
+    status: state.status === 'error' ? 'success' : state.status,
+    error: null,
+    fetchFailureCount: 0,
+    fetchFailureReason: null,
+    fetchMeta: null,
+});
 
-const persistErroredAsLastSuccess = (client: PersistedClient): PersistedClient => ({
+const persistWithoutErrors = (client: PersistedClient): PersistedClient => ({
     ...client,
     clientState: {
         ...client.clientState,
         queries: client.clientState.queries.map(query => ({
             ...query,
-            state: asLastSuccess(query.state),
+            state: withoutErrors(query.state),
         })),
     },
 });
 
-/** `dehydrateOptions` has no data hook, so the trimming and the error rewrite wrap the persister. */
+/** `dehydrateOptions` has no data hook, so the trimming and the error removal wrap the persister. */
 export const trimmingPersister = (base: Persister): Persister => ({
     ...base,
-    persistClient: client =>
-        base.persistClient(trimInfinitePages(persistErroredAsLastSuccess(client))),
+    persistClient: client => base.persistClient(trimInfinitePages(persistWithoutErrors(client))),
 });
 
 // The persisted envelope is checked on read (invariant 6); the dehydrated entries themselves are
@@ -149,16 +148,20 @@ const PersistedClientSchema = z.object({
 export const deserializePersistedClient = (text: string): PersistedClient =>
     PersistedClientSchema.parse(persistCodec.parse(text));
 
-// A 4xx `ApiError` is final (`queryRetry`): the server rejected the data (a group detail 403/404
-// wins over the cached group, spec 03 §6 row 4, 03-10b), so it is not brought back on a reload.
-const isFinalClientError = (error: unknown): boolean =>
-    error instanceof ApiError && error.status >= 400 && error.status < 500;
+// The statuses by which the server rejects the data (a group detail 403/404 wins over the cached
+// group, spec 03 §6 row 4, 03-10b): such an entry is not brought back on a reload. A transient 4xx
+// (408, 429, a 409 `SYSTEM.CONFLICT`, see `queryRetry`) keeps the data, as a 5xx does.
+const DATA_REJECTED_STATUSES: ReadonlySet<number> = new Set([401, 403, 404, 410]);
+
+const isDataRejected = (error: unknown): boolean =>
+    error instanceof ApiError && DATA_REJECTED_STATUSES.has(error.status);
 
 // A success, or an error that kept data (a failed refetch or next page: a network error, a 5xx, a
-// timeout), which `trimmingPersister` writes as the last success; a final client error drops it.
+// timeout, a transient 4xx), which `trimmingPersister` writes as the last success; a rejection of
+// the data drops it.
 const hasPersistableData = (state: { status: string; data: unknown; error: unknown }): boolean =>
     state.status === 'success' ||
-    (state.status === 'error' && state.data !== undefined && !isFinalClientError(state.error));
+    (state.status === 'error' && state.data !== undefined && !isDataRejected(state.error));
 
 export const dehydrateOptions: DehydrateOptions = {
     shouldDehydrateQuery: query =>

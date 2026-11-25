@@ -224,7 +224,8 @@ const failRefetch = async (client: QueryClient, queryKey: string[], error: Error
 };
 
 const networkError = () => new Error('Network Error');
-const apiError = (status: number) => new ApiError({ status, payload: undefined, cause: null });
+const apiError = (status: number, code?: string) =>
+    new ApiError({ status, payload: code === undefined ? undefined : { code }, cause: null });
 
 describe('a query kept with data after a failed fetch', () => {
     test('NET-001: an infinite feed whose next page failed is persisted as its last success, first page only', async () => {
@@ -304,7 +305,32 @@ describe('a query kept with data after a failed fetch', () => {
         });
     });
 
-    test('NET-001: an error without data, a 4xx ApiError, meta.persist=false and a pending op are not persisted', async () => {
+    test('NET-001: a refetch that failed with a transient 4xx (429, 409 SYSTEM.CONFLICT, 408) persists the data as success', async () => {
+        const userId = nextUser();
+        const source = newClient();
+        const failures: [string[], ApiError][] = [
+            [['groups', 'detail', 'g-429'], apiError(429)],
+            [['groups', 'detail', 'g-409'], apiError(409, 'SYSTEM.CONFLICT')],
+            [['groups', 'detail', 'g-408'], apiError(408)],
+        ];
+        for (const [queryKey, error] of failures) {
+            await failRefetch(source, queryKey, error);
+        }
+
+        await save(userId, source);
+        const target = newClient();
+        await restore(userId, target);
+
+        for (const [queryKey] of failures) {
+            expect(target.getQueryState(queryKey)).toMatchObject({
+                status: 'success',
+                data: { ok: true },
+                dataUpdatedAt: 1000,
+            });
+        }
+    });
+
+    test('NET-001: an error without data, a 401/403/404/410 ApiError, meta.persist=false and a pending op are not persisted', async () => {
         const userId = nextUser();
         const source = newClient();
         const pendingKey = ['ledger', 'entry', 'entry-1'];
@@ -315,6 +341,8 @@ describe('a query kept with data after a failed fetch', () => {
         });
         await failRefetch(source, ['groups', 'detail', 'g-404'], apiError(404));
         await failRefetch(source, ['groups', 'detail', 'g-403'], apiError(403));
+        await failRefetch(source, ['groups', 'detail', 'g-401'], apiError(401));
+        await failRefetch(source, ['groups', 'detail', 'g-410'], apiError(410));
         source.setQueryData(DASHBOARD_KEY, { ok: true });
         await source
             .fetchQuery({
@@ -330,5 +358,72 @@ describe('a query kept with data after a failed fetch', () => {
         await save(userId, source);
 
         expect(await storedQueries(userId)).toEqual([]);
+    });
+});
+
+describe('no error object reaches IndexedDB', () => {
+    const TOKEN = 'secret-access-token';
+    // An Axios network error serializes its request config, the `Authorization` header included.
+    const axiosNetworkError = () =>
+        Object.assign(new Error('Network Error'), {
+            code: 'ERR_NETWORK',
+            config: { headers: { Authorization: `Bearer ${TOKEN}` } },
+        });
+
+    test('NET-001: a success whose failed attempt waits to retry is stored without its fetchFailureReason or the request headers', async () => {
+        const userId = nextUser();
+        const source = newClient();
+        const failures = [
+            { queryKey: DASHBOARD_KEY, error: axiosNetworkError() },
+            {
+                queryKey: GROUPS_KEY,
+                error: new ApiError({
+                    status: 503,
+                    payload: undefined,
+                    cause: axiosNetworkError(),
+                }),
+            },
+        ];
+        const fetches = failures.map(({ queryKey, error }) => {
+            source.setQueryData(queryKey, { ok: true }, { updatedAt: 1000 });
+            return source
+                .fetchQuery({ queryKey, queryFn: rejectWith(error), retry: 1, retryDelay: 60_000 })
+                .catch(() => undefined);
+        });
+
+        try {
+            await vi.waitFor(() => {
+                for (const { queryKey } of failures) {
+                    expect(source.getQueryState(queryKey)).toMatchObject({
+                        status: 'success',
+                        fetchFailureCount: 1,
+                    });
+                }
+            });
+            expect(source.getQueryState(DASHBOARD_KEY)?.fetchFailureReason).toBe(
+                failures[0]?.error,
+            );
+
+            await save(userId, source);
+        } finally {
+            await source.cancelQueries();
+            await Promise.all(fetches);
+        }
+        const stored = (await get<string>(queryCacheKey(userId))) ?? '';
+
+        expect(stored).not.toContain('Authorization');
+        expect(stored).not.toContain(TOKEN);
+        const queries = await storedQueries(userId);
+        expect(queries).toHaveLength(2);
+        for (const query of queries) {
+            expect(query.state).toMatchObject({
+                status: 'success',
+                data: { ok: true },
+                error: null,
+                fetchFailureCount: 0,
+                fetchFailureReason: null,
+                fetchMeta: null,
+            });
+        }
     });
 });
