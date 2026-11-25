@@ -94,8 +94,8 @@ export interface LedgerWriteEffects {
 const ONLINE_WRITE = { networkMode: 'online', retry: false } as const;
 
 // The write's session is over once the auth session changed (sign-out, sign-in, expiry) or its
-// client stopped being a user's cache: a refreshed token of another user (another tab switched the
-// account) keeps the session version, but the previous user's client is dropped.
+// client stopped being a user's cache. Since #641 a refreshed token of another user (another tab
+// switched the account) also moves the session version; the client check is defence in depth.
 const isCurrent = (client: QueryClient, { sessionVersion }: SessionBound): boolean =>
     isAuthSessionCurrent(sessionVersion) && isUserCacheClient(client);
 

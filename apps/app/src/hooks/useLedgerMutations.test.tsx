@@ -23,11 +23,16 @@ import {
     type SettlementDraft,
 } from 'entities/ledger';
 import { usersKeys } from 'entities/users';
-import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
+import {
+    getAuthSessionVersion,
+    invalidateAuthSession,
+    isAuthSessionSwitchedSince,
+} from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
 import { createQueryClient } from 'shared/api/queryClient';
 import { currencyCode, fromUnits } from 'shared/money';
+import { clearUserData } from 'shared/offline/clearUserData';
 import { OutboxLockTimeoutError } from 'shared/offline/outboxIo';
 import {
     OutboxCreateSentError,
@@ -458,7 +463,8 @@ const groupWrites: [string, string, (writes: Writes) => Promise<unknown>][] = [
 ];
 
 // Another tab switched the account: this tab's token refresh returns the other user's token. The
-// auth session version stays, the previous user's data and client go (spec 03 §1.5).
+// auth session version moves as a switch, not a session end, and the previous user's data and client
+// go (spec 03 §1.5, #641).
 const switchAccountInAnotherTab = (): void => {
     const sessionVersion = getAuthSessionVersion();
 
@@ -470,12 +476,26 @@ const switchAccountInAnotherTab = (): void => {
     act(() => {
         onAccessTokenRefreshed(fakeAccessToken('user-2'));
     });
+    expect(getAuthSessionVersion()).toBe(sessionVersion + 1);
+    expect(isAuthSessionSwitchedSince(sessionVersion)).toBe(true);
+};
+
+// The tab's user client is dropped without a change of the auth session version: since #641 every
+// production path that drops it also moves the version, so this keeps the hook's client guard
+// (`isUserCacheClient`) tested on its own (defence in depth).
+const dropUserClient = (): void => {
+    const sessionVersion = getAuthSessionVersion();
+
+    act(() => {
+        void clearUserData('user-1', () => undefined);
+    });
     expect(getAuthSessionVersion()).toBe(sessionVersion);
 };
 
 describe.each<[string, () => void]>([
     ['a sign-out', invalidateAuthSession],
     ['an account switch in another tab', switchAccountInAnotherTab],
+    ['a drop of its user client alone', dropUserClient],
 ])('a write answered after %s', (_name, endSession) => {
     test.each(groupWrites)(
         'a %s is refused as an ended session and reloads nothing in the next session',

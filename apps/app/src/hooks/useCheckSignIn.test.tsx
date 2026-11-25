@@ -647,6 +647,123 @@ test('a connectivity flap during the reconnect refresh: one refresh, data loaded
         });
 });
 
+// Spec 03 §1.6 (#641): the flap's re-run is skipped while the refresh is in flight; when that
+// refresh then fails with a request error (still online), nothing else would retry it.
+test('§1.6 reconnect: a refresh failing with a request error after a flap retries once and loads the data', () => {
+    cacheSignedInUser();
+    onlineManager.setOnline(false);
+    let fail: () => void = () => undefined;
+    const refreshAuthTokens = vi
+        .fn<() => Promise<string>>()
+        .mockImplementationOnce(
+            () =>
+                new Promise<string>((_resolve, reject) => {
+                    fail = () => reject(new Error('request error'));
+                }),
+        )
+        .mockImplementationOnce(() => {
+            useAuthStore.setState({ sessionMode: 'online' });
+            return Promise.resolve('next-access-token');
+        });
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+    const loadGroupsList = vi.mocked(loadGroupsListForSession);
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState().sessionMode).toBe('offline-cached');
+    })
+        .then(() => {
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            return waitFor(() => {
+                expect(refreshAuthTokens).toHaveBeenCalledOnce();
+            });
+        })
+        .then(() => {
+            act(() => {
+                onlineManager.setOnline(false);
+            });
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            act(() => {
+                fail();
+            });
+            return waitFor(() => {
+                expect(loadGroupsList).toHaveBeenCalledOnce();
+            });
+        })
+        .then(() => {
+            expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
+            expect(useAuthStore.getState()).toMatchObject({
+                status: 'authenticated',
+                sessionMode: 'online',
+            });
+        });
+});
+
+test('§1.6 reconnect: a refresh that keeps failing with a request error is retried only once', async () => {
+    cacheSignedInUser();
+    onlineManager.setOnline(false);
+    const refreshAuthTokens = vi.fn(() => Promise.reject(new Error('request error')));
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+
+    renderHook();
+
+    await waitFor(() => {
+        expect(useAuthStore.getState().sessionMode).toBe('offline-cached');
+    });
+    act(() => {
+        onlineManager.setOnline(true);
+    });
+    await waitFor(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
+    });
+    await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+
+    expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
+    expect(loadGroupsListForSession).not.toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({
+        status: 'authenticated',
+        sessionMode: 'offline-cached',
+    });
+});
+
+test('§1.6 reconnect: a refresh failing after the hook unmounted is not retried', async () => {
+    cacheSignedInUser();
+    onlineManager.setOnline(false);
+    let fail: () => void = () => undefined;
+    const refreshAuthTokens = vi.fn(
+        () =>
+            new Promise<string>((_resolve, reject) => {
+                fail = () => reject(new Error('request error'));
+            }),
+    );
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+
+    const { unmount } = renderHook();
+
+    await waitFor(() => {
+        expect(useAuthStore.getState().sessionMode).toBe('offline-cached');
+    });
+    act(() => {
+        onlineManager.setOnline(true);
+    });
+    await waitFor(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+    });
+    unmount();
+    fail();
+    await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+
+    expect(refreshAuthTokens).toHaveBeenCalledOnce();
+});
+
 // 04-2a2b: the guard loader starts the initial check before the hook mounts (`startSessionCheck`,
 // via `authReady`); the hook's effect re-runs on connectivity changes while that attempt runs.
 test('a connectivity flap during the loader-started boot refresh: one refresh, data loaded once', () => {

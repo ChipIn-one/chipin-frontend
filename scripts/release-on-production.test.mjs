@@ -15,7 +15,7 @@ const guardStep = guard.steps.find(step => step.id === 'guard');
 describe('release-on-production workflow', () => {
     test('runs only for a successful vercel[bot] status on a vercel[bot] Production deployment', () => {
         expect(Object.keys(workflow.on)).toEqual(['deployment_status']);
-        expect(Object.keys(workflow.jobs)).toEqual(['guard', 'release', 'redeploy']);
+        expect(Object.keys(workflow.jobs)).toEqual(['guard', 'release', 'redeploy', 'notify']);
         expect(guard.if).toContain("github.repository_owner == 'ChipIn-one'");
         expect(guard.if).toContain(appEnvironmentCondition('Production'));
         expect(guard.if).toContain("github.event.deployment_status.state == 'success'");
@@ -160,20 +160,21 @@ describe('release-on-production guard', () => {
     test('releases the master head ahead of the newest tag, ignoring non-semver v* tags', () => {
         const result = run(head);
         expect(result.status).toBe(0);
-        expect(result.output).toBe(`sha=${head}\nrelease=true\n`);
+        expect(result.output).toBe(`newest_tag=v1.0.10\nsha=${head}\nrelease=true\n`);
     });
 
     test('passes an already tagged SHA (rollback promote) to the engine, which answers ALREADY_RELEASED', () => {
-        expect(run(tagged).output).toBe(`sha=${tagged}\nrelease=true\n`);
-        expect(run(base).output).toBe(`sha=${base}\nrelease=true\n`);
-        expect(run(ten).output).toBe(`sha=${ten}\nrelease=true\n`);
+        for (const sha of [tagged, base, ten])
+            expect(run(sha).output).toBe(`newest_tag=v1.0.10\nsha=${sha}\nrelease=true\n`);
     });
 
     test('skips an untagged rollback behind the newest tag (by version order) with a green warning', () => {
         for (const sha of [afterNine, between]) {
             const result = run(sha);
             expect(result.status).toBe(0);
-            expect(result.output).toBe('release=false\n');
+            expect(result.output).toBe(
+                'newest_tag=v1.0.10\nskip_reason=rollback-untagged\nrelease=false\n',
+            );
             expect(result.stdout).toContain('rollback to a commit behind the newest tag v1.0.10');
         }
     });
@@ -181,11 +182,15 @@ describe('release-on-production guard', () => {
     test('skips a SHA that is not on master or not in the history', () => {
         const offMaster = run(feature);
         expect(offMaster.status).toBe(0);
-        expect(offMaster.output).toBe('release=false\n');
+        expect(offMaster.output).toBe(
+            'newest_tag=v1.0.10\nskip_reason=not-on-master\nrelease=false\n',
+        );
         expect(offMaster.stdout).toContain('the commit is not on master');
         const unknown = run('f'.repeat(40));
         expect(unknown.status).toBe(0);
-        expect(unknown.output).toBe('release=false\n');
+        expect(unknown.output).toBe(
+            'newest_tag=v1.0.10\nskip_reason=not-in-history\nrelease=false\n',
+        );
     });
 
     test('fails on a deployment SHA that is not a full commit SHA', () => {
@@ -242,7 +247,7 @@ describe('release-on-production guard: workflow files of the promoted SHA (#838)
     test('fails an untagged SHA whose .github/workflows differs from the master tip, naming the cause and the files', () => {
         const result = run(oldWorkflows);
         expect(result.status).toBe(1);
-        expect(result.output).toBe('');
+        expect(result.output).toBe('newest_tag=v1.0.1\n');
         expect(result.stdout).toContain(
             `::error::No release for ${oldWorkflows}: its .github/workflows differs from the master tip`,
         );
@@ -254,14 +259,14 @@ describe('release-on-production guard: workflow files of the promoted SHA (#838)
     test('passes an already tagged SHA with different workflow files (engine no-op, no ref created)', () => {
         const result = run(taggedOld);
         expect(result.status).toBe(0);
-        expect(result.output).toBe(`sha=${taggedOld}\nrelease=true\n`);
+        expect(result.output).toBe(`newest_tag=v1.0.1\nsha=${taggedOld}\nrelease=true\n`);
     });
 
     test('passes an untagged SHA whose workflow files equal the master tip', () => {
         for (const sha of [sameWorkflows, head]) {
             const result = run(sha);
             expect(result.status).toBe(0);
-            expect(result.output).toBe(`sha=${sha}\nrelease=true\n`);
+            expect(result.output).toBe(`newest_tag=v1.0.1\nsha=${sha}\nrelease=true\n`);
         }
     });
 

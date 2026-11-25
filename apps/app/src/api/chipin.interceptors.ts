@@ -6,6 +6,7 @@ import {
     hasAuthAccessTokenRotated,
     isAuthSessionCurrent,
     isAuthSessionSignedOut,
+    isAuthSessionSwitchedSince,
     prepareAuthRequest,
     refreshAuthSession,
 } from 'helpers/authSession';
@@ -31,6 +32,7 @@ export const initChipInApiInterceptors = (
             hasAuthAccessTokenRotated,
             isAuthSessionCurrent,
             isAuthSessionSignedOut,
+            isAuthSessionSwitchedSince,
             prepareAuthRequest,
             refreshAuthSession,
         },

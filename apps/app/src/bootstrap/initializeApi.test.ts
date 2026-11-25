@@ -4,11 +4,18 @@ import { renderHook } from '@testing-library/react';
 import { get, set } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { publicApiInstance } from 'api/chipin.instance';
+import { apiInstance, publicApiInstance } from 'api/chipin.instance';
+import { AuthRequestCancelledError } from 'api/chipin.interceptors';
 import type { UserSettings } from 'api/chipin.types';
 import { resetUpdateRequiredForTests, useIsUpdateRequired } from 'app/pwa/updateRequired';
 import { reconcileRestoredSelf, type SelfUser, usersKeys } from 'entities/users';
-import { saveLocalUser } from 'helpers/localStorage';
+import {
+    establishAuthSession,
+    getFreshAccessToken,
+    invalidateAuthSession,
+    setAccessTokenRefreshListener,
+} from 'helpers/authSession';
+import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { queryCacheKey } from 'shared/offline/constants';
 import { outboxGate } from 'shared/offline/outboxGate';
@@ -16,6 +23,7 @@ import { persistCodec } from 'shared/offline/persistCodec';
 import { QUERY_CACHE_BUSTER } from 'shared/offline/queryPersister';
 import { bootstrapUserCache, clientFor, RESTORE_TIMEOUT_MS } from 'shared/offline/restore';
 import { setCacheRestoredHandler } from 'shared/offline/userCaches';
+import { useAuthStore } from 'store/authStore';
 
 import { initializeApi } from './initializeApi';
 
@@ -184,5 +192,62 @@ describe('03-20 / API-002: a 426 CLIENT.OUTDATED reaches the "Update required" s
 
         expect(outboxGate.isClosed('outdated')).toBe(false);
         expect(result.current).toBe(false);
+    });
+});
+
+// Spec 03 §1.5 (#641), as the app wires it: the refresh listener `onAccessTokenRefreshed` and the
+// unauthorized callback `expireSession`. Another tab signed Y in; X's request gets a 401, its retry
+// refresh returns Y's token.
+describe('§1.5 refresh switch through the app wiring', () => {
+    const accessToken = (userId: string): string =>
+        `header.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 3_600, sub: userId }))}.signature`;
+    type ApiRequestConfig = Parameters<
+        NonNullable<Parameters<typeof apiInstance.interceptors.request.use>[0]>
+    >[0];
+    const response = (config: ApiRequestConfig, status: number, data: unknown) => ({
+        config,
+        data,
+        headers: {},
+        status,
+        statusText: '',
+    });
+    const defaultAdapter = apiInstance.defaults.adapter;
+
+    afterEach(() => {
+        apiInstance.defaults.adapter = defaultAdapter;
+        setAccessTokenRefreshListener(null);
+        invalidateAuthSession();
+    });
+
+    test('the X request is cancelled as stale, Y is not expired, LocalUser is Y', async () => {
+        const tokenOfX = accessToken('user-x');
+        const tokenOfY = accessToken('user-y');
+
+        saveLocalUser({ id: 'user-x', role: 'USER', settings });
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+        establishAuthSession(tokenOfX);
+        apiInstance.defaults.adapter = config => {
+            if (config.url === '/auth/refresh') {
+                return Promise.resolve(response(config, 200, { token: tokenOfY }));
+            }
+            return config.headers.Authorization === `Bearer ${tokenOfX}`
+                ? Promise.reject({
+                      config,
+                      isAxiosError: true,
+                      response: response(config, 401, { code: 'AUTH.UNAUTHORIZED' }),
+                  })
+                : Promise.resolve(response(config, 200, {}));
+        };
+
+        const error: unknown = await apiInstance.get('/dashboard').then(
+            () => null,
+            (rejection: unknown) => rejection,
+        );
+
+        expect(error).toBeInstanceOf(AuthRequestCancelledError);
+        expect(error).toMatchObject({ isStaleSession: true });
+        expect(useAuthStore.getState().unauthReason).toBeUndefined();
+        expect(getLocalUser()?.id).toBe('user-y');
+        expect(await getFreshAccessToken()).toBe(tokenOfY);
     });
 });

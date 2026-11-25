@@ -10,10 +10,15 @@ import {
     AuthSessionPersistenceError,
     clearExpiredAuthSession,
     establishAuthSession,
+    getAuthSessionVersion,
     getFreshAccessToken,
     invalidateAuthSession,
+    isAuthSessionCurrent,
     isAuthSessionSignedOut,
+    isAuthSessionSwitchedSince,
     logoutOtherDevicesSession,
+    markAuthSessionAccountSwitched,
+    markAuthSessionSignedOut,
     setAccessTokenRefreshListener,
     startAuthLogout,
     subscribeToRemoteAuthLogout,
@@ -197,6 +202,26 @@ describe('authSession', () => {
                 expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(true);
             },
         );
+    });
+
+    // #641: X asked, the refresh for it found Y (§1.5): nothing is sent with Y's token.
+    test('§1.5: logout-other-devices whose refresh finds another user is not sent', async () => {
+        markRestorableAuthSession();
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
+            token: createAccessToken(Date.now() / 1000 + 3_600),
+        });
+        setAccessTokenRefreshListener(() => {
+            markAuthSessionAccountSwitched();
+        });
+
+        try {
+            await expect(logoutOtherDevicesSession()).rejects.toThrow(
+                'Auth session changed during token rotation',
+            );
+        } finally {
+            setAccessTokenRefreshListener(null);
+        }
+        expect(authApi.logoutOtherDevices).not.toHaveBeenCalled();
     });
 
     test('reports an expired session when logout-other-devices cannot restore the cookie session', () => {
@@ -439,6 +464,33 @@ describe('authSession', () => {
             .finally(() => {
                 setAccessTokenRefreshListener(null);
             });
+    });
+
+    // Spec 03 §1.5 (#641): a refresh-found account switch makes the previous version stale but is
+    // told apart from a session start or end.
+    test('§1.5: a refresh switch is stale but not a session end; a later end or start is', () => {
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        const before = getAuthSessionVersion();
+
+        expect(isAuthSessionSwitchedSince(before)).toBe(false);
+        markAuthSessionAccountSwitched();
+        const switched = getAuthSessionVersion();
+
+        expect(isAuthSessionCurrent(before)).toBe(false);
+        expect(isAuthSessionSwitchedSince(before)).toBe(true);
+        markAuthSessionAccountSwitched();
+        expect(isAuthSessionSwitchedSince(before)).toBe(true);
+        expect(isAuthSessionSwitchedSince(switched)).toBe(true);
+
+        invalidateAuthSession();
+        expect(isAuthSessionSwitchedSince(before)).toBe(false);
+        expect(isAuthSessionSwitchedSince(switched)).toBe(false);
+
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        const started = getAuthSessionVersion();
+        markAuthSessionAccountSwitched();
+        markAuthSessionSignedOut();
+        expect(isAuthSessionSwitchedSince(started)).toBe(false);
     });
 
     test('validates untrusted remote logout payloads before invalidating a tab', () => {
