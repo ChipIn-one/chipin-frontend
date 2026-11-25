@@ -44,15 +44,87 @@ test('preparation dispatches with zero required inputs and documented defaults',
     expect(prepare.concurrency.group).not.toContain('inputs.');
 });
 
-test('result reader posts to Slack only through env and never interpolates comment text into shell', () => {
+test('result reader never holds the Slack webhook and never interpolates comment text into shell', () => {
     const steps = result.jobs['read-result'].steps;
     const validate = steps.find(step => step.run?.includes('release-qa-result.mjs'));
-    expect(validate.env).toMatchObject({
-        SLACK_WEBHOOK_CI: '${{ secrets.SLACK_WEBHOOK_CI }}',
+    expect(validate.env).toEqual({
+        GITHUB_TOKEN: '${{ github.token }}',
         SLACK_USER_MAP: '${{ vars.SLACK_USER_MAP }}',
     });
     for (const step of steps) expect(step.run ?? '').not.toContain('${{');
     expect(JSON.stringify(result)).not.toContain('github.event.comment.body');
+});
+
+// chipin-frontend#876: every Slack post goes through the pinned shared org action; the webhook secret is
+// only its `webhook-url` input, never in the env of a step that holds a GitHub token.
+const SLACK_ACTION =
+    'ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea';
+const frontendCi = parse(readFileSync('.github/workflows/frontend-ci.yml', 'utf8'));
+
+const expectSharedSlackSteps = (steps, scriptStep) => {
+    const build = steps.find(step => step.id === scriptStep);
+    const index = steps.indexOf(build);
+    const [post, warn] = steps.slice(index + 1);
+    expect(post).toEqual({
+        name: 'Post to Slack',
+        id: 'slack',
+        if: `steps.${scriptStep}.outputs.slack_post == 'true'`,
+        'continue-on-error': true,
+        uses: SLACK_ACTION,
+        with: {
+            'webhook-url': '${{ secrets.SLACK_WEBHOOK_CI }}',
+            text: `\${{ steps.${scriptStep}.outputs.slack_text }}`,
+            'timeout-seconds': '10',
+        },
+    });
+    expect(warn.if).toBe(
+        `steps.${scriptStep}.outputs.slack_post == 'true' && steps.slack.outputs.result != 'sent'`,
+    );
+    expect(warn.env).toEqual({
+        RESULT: '${{ steps.slack.outputs.result }}',
+        FAILURE: `\${{ steps.${scriptStep}.outputs.slack_failure }}`,
+    });
+    expect(warn.run).toContain(
+        'echo "::warning::SLACK_WEBHOOK_CI is not configured; nothing was posted."',
+    );
+    expect(warn.run).toContain('echo "::warning::$FAILURE"');
+    expect(steps.at(-1)).toBe(warn);
+};
+
+test('both QA workflows post the script text through the shared Slack action and warn on non-delivery', () => {
+    expectSharedSlackSteps(prepare.jobs.prepare.steps, 'prepare');
+    expectSharedSlackSteps(result.jobs['read-result'].steps, 'result');
+});
+
+test('SLACK_WEBHOOK_CI is only the webhook-url input of the shared action, and nothing curls Slack', () => {
+    const notify = frontendCi.jobs['notify-master-failure'];
+    for (const workflow of [prepare, result, frontendCi]) {
+        for (const job of Object.values(workflow.jobs)) {
+            for (const step of job.steps ?? []) {
+                const { with: inputs = {}, ...rest } = step;
+                expect(JSON.stringify(rest), step.name).not.toContain('secrets.SLACK_WEBHOOK_CI');
+                expect(JSON.stringify(step), step.name).not.toMatch(/hooks\.slack\.com|curl /);
+                if (JSON.stringify(inputs).includes('SLACK_WEBHOOK_CI')) {
+                    expect(step.uses, step.name).toBe(SLACK_ACTION);
+                    expect(inputs['webhook-url']).toBe('${{ secrets.SLACK_WEBHOOK_CI }}');
+                }
+            }
+        }
+    }
+    expect(notify.permissions).toEqual({});
+    expect(notify.steps.map(step => step.uses ?? 'run')).toEqual(['run', SLACK_ACTION]);
+    const [build, post] = notify.steps;
+    expect(build['continue-on-error']).toBe(true);
+    expect(build.run).not.toContain('${{');
+    expect(post).toMatchObject({
+        if: "steps.message.outputs.text != ''",
+        'continue-on-error': true,
+        with: {
+            'webhook-url': '${{ secrets.SLACK_WEBHOOK_CI }}',
+            text: '${{ steps.message.outputs.text }}',
+            'timeout-seconds': '10',
+        },
+    });
 });
 
 // Release browser matrix (#666, docs/e2e-tests.md#release-browser-matrix) and the PR smoke: both
@@ -265,6 +337,8 @@ test('preparation runs resolve, then one e2e job per profile, then prepare, each
     });
 });
 
+const prepareRunOf = job => job.steps.find(step => step.run?.includes('release-qa-prepare.mjs'));
+
 test('only prepare holds the Issue, Slack and dev-read secrets; the e2e job holds only staging and bypass secrets', () => {
     const { resolve, e2e, prepare: job } = prepare.jobs;
     // The optional bypass secret reaches only the probe of the validated Preview URL.
@@ -288,6 +362,8 @@ test('only prepare holds the Issue, Slack and dev-read secrets; the e2e job hold
             'VERCEL_AUTOMATION_BYPASS_SECRET',
         ]),
     );
+    // The webhook never shares a step env with the Issue write or dev-read token.
+    expect(JSON.stringify(prepareRunOf(job).env)).not.toContain('SLACK_WEBHOOK_CI');
     // Trusted jobs install nothing and run only this master SHA's code.
     for (const trusted of [resolve, job]) {
         expect(JSON.stringify(trusted.steps)).not.toMatch(/npm (ci|install)|npx /);
@@ -296,7 +372,7 @@ test('only prepare holds the Issue, Slack and dev-read secrets; the e2e job hold
     // No workflow expression inside any shell script: values reach scripts through env.
     for (const each of [resolve, job])
         for (const step of each.steps) expect(step.run ?? '', step.name).not.toContain('${{');
-    const prepareRun = job.steps.find(step => step.run?.includes('release-qa-prepare.mjs'));
+    const prepareRun = prepareRunOf(job);
     expect(prepareRun.env).toMatchObject({
         CANDIDATE_SHA: '${{ needs.resolve.outputs.sha }}',
         PREVIEW_DEPLOYMENT_ID: '${{ needs.resolve.outputs.deployment_id }}',

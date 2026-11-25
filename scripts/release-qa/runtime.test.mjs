@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,11 +20,23 @@ import {
     readPackageBuildChanges,
     readReleaseScope,
     readResultAndNotify,
+    handoffMessage,
     resolveCandidate,
     resolveReleaseCandidate,
-    sendHandoff,
+    emitResult,
+    loggedResult,
+    slackMasks,
+    slackOutputs,
     validateResultEvent,
 } from './runtime.mjs';
+
+// The workflow's Slack step posts the text a run returns (shared org action); `post` records it the same way.
+const recordSlack = sink => value => {
+    if (value?.slack) sink(value.slack.text);
+    return value;
+};
+const readAndRecord = ({ post = value => value, ...args }) => readResultAndNotify(args).then(post);
+const prepareAndRecord = ({ post = value => value, ...args }) => prepareReleaseQa(args).then(post);
 
 const SHA = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
@@ -197,24 +210,89 @@ test('visible same-SHA Issue is reused even when an earlier preparation succeede
     ).toBe(true);
 });
 
-test('Slack failure leaves admitted Issue intact and reports retryable delivery', () => {
+test('the handoff message carries the retry guidance the Slack step prints when delivery fails', () => {
     const issue = {
         number: 50,
         html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50',
     };
-    return sendHandoff({
-        post: () => Promise.reject(new Error('network failed')),
-        webhook: 'https://hooks.slack.com/services/secret',
+    const value = handoffMessage({
         slackId: 'U0C9X8T4R2Q',
         issue,
         sha: SHA,
         url: 'https://chipin-frontend-abc-sylliks-projects.vercel.app',
-    }).then(value => {
-        expect(value).toEqual({
-            delivered: false,
-            reason: 'Slack delivery failed; retry the same SHA after checking webhook/channel.',
-        });
     });
+    expect(value.failure).toBe(
+        'Slack delivery failed; retry the same SHA after checking webhook/channel.',
+    );
+    expect(value.text).toMatch(/^<@U0C9X8T4R2Q> Релиз-кандидат /);
+});
+
+test('the logged result never contains the Slack text or the Slack user ID', () => {
+    const result = {
+        outcome: 'QA_ISSUE_READY',
+        slack: { text: '<@U0C9X8T4R2Q> Релиз-кандидат', failure: 'warn' },
+    };
+    const logged = loggedResult(result);
+    expect(JSON.parse(logged)).toEqual({ outcome: 'QA_ISSUE_READY', slack: { post: true } });
+    expect(logged).not.toContain('U0C9X8T4R2Q');
+    expect(logged).not.toContain('text');
+    expect(result.slack.text).toBe('<@U0C9X8T4R2Q> Релиз-кандидат');
+    expect(JSON.parse(loggedResult({ outcome: 'IGNORED' }))).toEqual({ outcome: 'IGNORED' });
+});
+
+test('the entry scripts print through emitResult, never the raw result', () => {
+    for (const file of ['scripts/release-qa-prepare.mjs', 'scripts/release-qa-result.mjs']) {
+        const source = readFileSync(file, 'utf8');
+        expect(source, file).toContain('emitResult(result, {');
+        expect(source, file).not.toContain('JSON.stringify(result)');
+        expect(source, file).not.toContain('slackOutputs(');
+    }
+});
+
+test('every mentioned Slack user ID is masked before any output is written', () => {
+    const run = text => {
+        const events = [];
+        emitResult(
+            { outcome: 'X', slack: { text, failure: 'warn' } },
+            {
+                write: chunk => {
+                    if (chunk) events.push(['write', chunk]);
+                },
+                output: chunk => events.push(['output', chunk]),
+            },
+        );
+        return events;
+    };
+    const one = run(`<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка`);
+    expect(one[0]).toEqual(['write', '::add-mask::U0C9X8T4R2Q\n']);
+    expect(one.findIndex(([kind]) => kind === 'output')).toBe(2);
+    expect(one[1][1]).not.toContain('U0C9X8T4R2Q');
+    expect(one[2][1]).toContain('<@U0C9X8T4R2Q>');
+
+    const two = run('<@U0OWNER123> QA PASS, <@U0C9X8T4R2Q> and <@U0OWNER123> again');
+    expect(two[0]).toEqual(['write', '::add-mask::U0OWNER123\n::add-mask::U0C9X8T4R2Q\n']);
+    expect(two.map(([kind]) => kind)).toEqual(['write', 'write', 'output']);
+
+    expect(slackMasks({ text: 'syllik QA PASS <@not-an-id> <!channel>' })).toBe('');
+    expect(slackMasks(undefined)).toBe('');
+    const none = [];
+    emitResult({ outcome: 'IGNORED' }, { write: chunk => chunk && none.push(chunk) });
+    expect(none).toEqual(['{"outcome":"IGNORED"}\n']);
+});
+
+test('Slack step outputs use a random heredoc delimiter, and no message means no post', () => {
+    const ids = ['ghadelimiter_1', 'ghadelimiter_2'];
+    expect(slackOutputs({ text: 'a\nb', failure: 'warn' }, () => ids.shift())).toBe(
+        'slack_text<<ghadelimiter_1\na\nb\nghadelimiter_1\n' +
+            'slack_failure<<ghadelimiter_2\nwarn\nghadelimiter_2\n' +
+            'slack_post=true\n',
+    );
+    expect(slackOutputs(undefined)).toBe('slack_post=false\n');
+    const random = slackOutputs({ text: 'x', failure: 'y' });
+    expect(random).toMatch(/^slack_text<<ghadelimiter_[0-9a-f-]{36}\nx\n/);
+    expect(() =>
+        slackOutputs({ text: 'ghadelimiter_1', failure: '' }, () => 'ghadelimiter_1'),
+    ).toThrow(/delimiter/);
 });
 
 test('comment event re-reads Issue and comment before accepting current assigned QA result', () => {
@@ -499,7 +577,6 @@ test('unauthorized QA result event cannot become a validated PASS', () => {
 
 const OLD = 'c'.repeat(40);
 const PREVIEW_URL = 'https://chipin-frontend-abc-sylliks-projects.vercel.app';
-const WEBHOOK = 'https://hooks.slack.com/services/T0/B0/secret';
 const greenRun = sha => ({
     id: 1,
     head_sha: sha,
@@ -703,58 +780,42 @@ const noBareUrl = text =>
     expect(text.replace(/<https:\/\/[^<>|\s]+\|[^<>|]+>/g, '')).not.toContain('https://');
 
 test('handoff mentions the QA with Slack links and no "Missing QA steps" line', () => {
-    const posted = [];
     const issue = {
         number: 50,
         html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50',
     };
-    return sendHandoff({
-        post: (url, payload) => {
-            posted.push(payload.text);
-            return Promise.resolve(true);
-        },
-        webhook: WEBHOOK,
+    const value = handoffMessage({
         slackId: 'U0C9X8T4R2Q',
         issue,
         sha: SHA,
         url: PREVIEW_URL,
         missingSteps: [13, 14],
-    }).then(value => {
-        expect(value).toEqual({ delivered: true });
-        expect(posted[0]).not.toMatch(/Missing QA steps/);
-        expect(posted[0]).toBe(
-            [`<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка`, ...LINK_LINES].join(
-                '\n',
-            ),
-        );
-        noBareUrl(posted[0]);
     });
+    const posted = [value.text];
+    expect(posted[0]).not.toMatch(/Missing QA steps/);
+    expect(posted[0]).toBe(
+        [`<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка`, ...LINK_LINES].join('\n'),
+    );
+    noBareUrl(posted[0]);
 });
 
 test('handoff for the owner as QA says the owner checks and mentions nobody', () => {
-    const posted = [];
     const issue = {
         number: 50,
         html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50',
     };
-    return sendHandoff({
-        post: (url, payload) => {
-            posted.push(payload.text);
-            return Promise.resolve(true);
-        },
-        webhook: WEBHOOK,
+    const value = handoffMessage({
         slackId: null,
         issue,
         sha: SHA,
         url: PREVIEW_URL,
-    }).then(value => {
-        expect(value).toEqual({ delivered: true });
-        expect(posted[0]).toBe(
-            [`Релиз-кандидат ${COMMIT_LINK} — проверяет владелец`, ...LINK_LINES].join('\n'),
-        );
-        expect(posted[0]).not.toContain('<@');
-        noBareUrl(posted[0]);
     });
+    const posted = [value.text];
+    expect(posted[0]).toBe(
+        [`Релиз-кандидат ${COMMIT_LINK} — проверяет владелец`, ...LINK_LINES].join('\n'),
+    );
+    expect(posted[0]).not.toContain('<@');
+    noBareUrl(posted[0]);
 });
 
 function evidenceApi({
@@ -906,24 +967,17 @@ const ownerEnv = {
     GITHUB_RUN_ID: '777',
 };
 
-test('zero-input dispatch on a non-UI compare resolves the candidate, records no manual QA and posts one Slack line', () => {
-    const posted = [];
-    const post = (url, payload) => {
-        posted.push({ url, text: payload.text });
-        return Promise.resolve(true);
-    };
+test('zero-input dispatch on a non-UI compare resolves the candidate, records no manual QA and returns one Slack line', () => {
     const env = {
         ...ownerEnv,
         CANDIDATE_SHA: '',
         PREVIEW_DEPLOYMENT_ID: '',
         QA_PRIORITY: '',
-        SLACK_WEBHOOK_CI: WEBHOOK,
     };
-    return prepareReleaseQa({
+    return prepareAndRecord({
         env,
         readApi: evidenceApi(),
         writeApi: null,
-        post,
         probe: () => Promise.resolve(),
     }).then(value => {
         expect(value).toMatchObject({
@@ -932,32 +986,30 @@ test('zero-input dispatch on a non-UI compare resolves the candidate, records no
             evidence: ['docs/help.md'],
             included: [{ issue: 12, pulls: [20] }],
             candidate: { sha: SHA, deploymentId: 42, url: PREVIEW_URL, fallback: false },
-            slack: { delivered: true },
         });
-        expect(posted).toHaveLength(1);
-        expect(posted[0].url).toBe(WEBHOOK);
-        expect(posted[0].text).toBe(
-            `Релиз-кандидат ${COMMIT_LINK} — QA не нужен, UI не менялся\n<${PREVIEW_URL}|Build>`,
-        );
-        noBareUrl(posted[0].text);
+        expect(value.slack).toEqual({
+            text: `Релиз-кандидат ${COMMIT_LINK} — QA не нужен, UI не менялся\n<${PREVIEW_URL}|Build>`,
+            failure: 'Slack delivery failed; check the webhook and channel.',
+        });
+        noBareUrl(value.slack.text);
     });
 });
 
 test('an unlinked docs-only commit and a Dependabot PR without an Issue no longer block', () => {
     const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2' };
-    return prepareReleaseQa({
+    return prepareAndRecord({
         env,
         readApi: evidenceApi({ pulls: null }),
         writeApi: null,
         probe: () => Promise.resolve(),
     })
         .then(value => {
+            // No webhook in the script env: the line is still built; the Slack step skips or posts it.
             expect(value).toMatchObject({
                 outcome: 'NO_MANUAL_QA_REQUIRED',
                 noQa: [{ commit: SHA }],
-                slack: { delivered: false },
             });
-            expect(value.slack.reason).toMatch(/SLACK_WEBHOOK_CI/);
+            expect(value.slack.text).toMatch(/QA не нужен/);
             const dependabot = evidenceApi({
                 pulls: 'dependabot',
                 files: ['package.json', 'package-lock.json'],
@@ -970,7 +1022,7 @@ test('an unlinked docs-only commit and a Dependabot PR without an Issue no longe
                     },
                 }),
             });
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env,
                 readApi: dependabot,
                 writeApi: null,
@@ -987,7 +1039,7 @@ test('an unlinked docs-only commit and a Dependabot PR without an Issue no longe
 
 test('an unlinked commit under src/ still blocks the handoff', () => {
     const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2' };
-    return prepareReleaseQa({
+    return prepareAndRecord({
         env,
         readApi: evidenceApi({ pulls: null, files: ['apps/app/src/App.tsx'] }),
         writeApi: null,
@@ -1000,35 +1052,34 @@ test('an unlinked commit under src/ still blocks the handoff', () => {
     );
 });
 
-test('a Slack failure on the no-QA line does not change the outcome', () => {
+test('the no-QA line never reads the webhook, so a Slack outcome cannot change the outcome', () => {
     const env = {
         ...ownerEnv,
         CANDIDATE_SHA: SHA,
         PREVIEW_DEPLOYMENT_ID: '42',
         QA_PRIORITY: 'P2',
-        SLACK_WEBHOOK_CI: WEBHOOK,
+        SLACK_WEBHOOK_CI: 'not a webhook',
     };
-    return prepareReleaseQa({
+    return prepareAndRecord({
         env,
         readApi: evidenceApi(),
         writeApi: null,
-        post: () => Promise.reject(new Error('down')),
         probe: () => Promise.resolve(),
     }).then(value =>
         expect(value).toMatchObject({
             outcome: 'NO_MANUAL_QA_REQUIRED',
-            slack: { delivered: false },
+            slack: { failure: 'Slack delivery failed; check the webhook and channel.' },
         }),
     );
 });
 
 test('dispatch outside the owner or with an invalid explicit priority is rejected before any read', () => {
     const env = { ...ownerEnv, CANDIDATE_SHA: '', PREVIEW_DEPLOYMENT_ID: '', QA_PRIORITY: 'P9' };
-    expect(() => prepareReleaseQa({ env, readApi: evidenceApi(), writeApi: null })).toThrow(
+    expect(() => prepareAndRecord({ env, readApi: evidenceApi(), writeApi: null })).toThrow(
         /QA_PRIORITY/,
     );
     expect(() =>
-        prepareReleaseQa({
+        prepareAndRecord({
             env: { ...env, QA_PRIORITY: '', GITHUB_ACTOR: 'someone' },
             readApi: evidenceApi(),
             writeApi: null,
@@ -1077,24 +1128,20 @@ function resultFixture({
     };
 }
 
-test('a valid result with a leading space and notes posts one Slack line mentioning the mapped owner', () => {
-    const posted = [];
+test('a valid result with a leading space and notes returns one Slack line mentioning the mapped owner', () => {
     const { event, api } = resultFixture({ body: ' qa pass \nAll checks done' });
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
-    return readResultAndNotify({
+    const env = { SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
+    return readAndRecord({
         event,
         api,
         env,
-        post: (url, payload) => {
-            posted.push(payload.text);
-            return Promise.resolve(true);
-        },
     }).then(value => {
         expect(value).toMatchObject({
             outcome: 'VALID_QA_RESULT',
             result: { outcome: 'PASS', sha: SHA, qa: 'SoRawSteak' },
-            slack: { delivered: true },
+            slack: { failure: 'Slack delivery failed; check the webhook and channel.' },
         });
+        const posted = [value.slack.text];
         expect(posted).toEqual([
             `<@U0OWNER123> QA PASS по ${COMMIT_LINK} — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50> (QA: SoRawSteak)`,
         ]);
@@ -1103,30 +1150,28 @@ test('a valid result with a leading space and notes posts one Slack line mention
     });
 });
 
-test('a Slack failure is reported and does not change a valid result', () => {
+test('a valid result carries the guidance the Slack step prints when delivery fails', () => {
     const { event, api } = resultFixture({ body: 'QA FAIL\nSettle up is broken' });
-    return readResultAndNotify({
+    return readAndRecord({
         event,
         api,
-        env: { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' },
-        post: () => Promise.reject(new Error('down')),
+        env: { SLACK_USER_MAP: '{}' },
     }).then(value => {
         expect(value).toMatchObject({
             outcome: 'VALID_QA_RESULT',
             result: { outcome: 'FAIL' },
-            slack: { delivered: false },
+            slack: { failure: 'Slack delivery failed; check the webhook and channel.' },
         });
-        expect(value.slack.reason).toMatch(/Slack/);
+        expect(value.slack.text).toMatch(/^syllik QA FAIL по /);
     });
 });
 
 test('owner, non-assigned, bot and edited results are rejected and never reach Slack; other comments are ignored', () => {
     let posts = 0;
-    const post = () => {
+    const post = recordSlack(() => {
         posts += 1;
-        return Promise.resolve(true);
-    };
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    });
+    const env = { SLACK_USER_MAP: '{}' };
     const rejected = [
         resultFixture({ user: { login: 'syllik', type: 'User' } }),
         resultFixture({ user: { login: 'stranger', type: 'User' } }),
@@ -1135,7 +1180,7 @@ test('owner, non-assigned, bot and edited results are rejected and never reach S
     ];
     const next = index => {
         if (index === rejected.length) return Promise.resolve();
-        return readResultAndNotify({ ...rejected[index], env, post })
+        return readAndRecord({ ...rejected[index], env, post })
             .then(
                 () => {
                     throw new Error(`Rejected case ${index} was accepted.`);
@@ -1146,7 +1191,7 @@ test('owner, non-assigned, bot and edited results are rejected and never reach S
     };
     return next(0)
         .then(() =>
-            readResultAndNotify({
+            readAndRecord({
                 ...resultFixture({ body: 'Starting now, QA PASS later' }),
                 env,
                 post,
@@ -1269,7 +1314,7 @@ test('an unlinked Dependabot dependencies bump goes to a QA Issue instead of blo
     });
     const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2' };
     // Reaching the handoff configuration check proves the plan needs a QA Issue and nothing blocked before it.
-    return prepareReleaseQa({ env, readApi, writeApi: null, probe: () => Promise.resolve() }).then(
+    return prepareAndRecord({ env, readApi, writeApi: null, probe: () => Promise.resolve() }).then(
         () => {
             throw new Error('Build-affecting bump skipped QA.');
         },
@@ -1291,7 +1336,7 @@ test('an unlinked lint devDependency bump stays NO_MANUAL_QA_REQUIRED', () => {
         }),
     });
     const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2' };
-    return prepareReleaseQa({ env, readApi, writeApi: null, probe: () => Promise.resolve() }).then(
+    return prepareAndRecord({ env, readApi, writeApi: null, probe: () => Promise.resolve() }).then(
         value =>
             expect(value).toMatchObject({
                 outcome: 'NO_MANUAL_QA_REQUIRED',
@@ -1302,17 +1347,13 @@ test('an unlinked lint devDependency bump stays NO_MANUAL_QA_REQUIRED', () => {
 
 test('a fallback candidate is labelled as not the master head on the no-QA line', () => {
     const posted = [];
-    const post = (url, payload) => {
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
+    const post = recordSlack(text => posted.push(text));
     const env = {
         ...ownerEnv,
         CANDIDATE_SHA: '',
         PREVIEW_DEPLOYMENT_ID: '',
-        SLACK_WEBHOOK_CI: WEBHOOK,
     };
-    return prepareReleaseQa({
+    return prepareAndRecord({
         env,
         readApi: evidenceApi({ head: { sha: HEAD, preview: true } }),
         writeApi: null,
@@ -1325,7 +1366,7 @@ test('a fallback candidate is labelled as not the master head on the no-QA line'
                 `Релиз-кандидат ${COMMIT_LINK} — QA не нужен, UI не менялся (не последний коммит master ${HEAD.slice(0, 7)}: ждёт CI)`,
             );
             posted.length = 0;
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env,
                 readApi: evidenceApi({ head: { sha: HEAD, preview: false } }),
                 writeApi: null,
@@ -1338,7 +1379,7 @@ test('a fallback candidate is labelled as not the master head on the no-QA line'
                 `(не последний коммит master ${HEAD.slice(0, 7)}: ждёт Preview)`,
             );
             posted.length = 0;
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env,
                 readApi: evidenceApi(),
                 writeApi: null,
@@ -1350,27 +1391,20 @@ test('a fallback candidate is labelled as not the master head on the no-QA line'
 });
 
 test('a fallback candidate is labelled as not the master head on the handoff line', () => {
-    const posted = [];
     const issue = {
         number: 50,
         html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50',
     };
-    return sendHandoff({
-        post: (url, payload) => {
-            posted.push(payload.text);
-            return Promise.resolve(true);
-        },
-        webhook: WEBHOOK,
+    const { text } = handoffMessage({
         slackId: 'U0C9X8T4R2Q',
         issue,
         sha: SHA,
         url: PREVIEW_URL,
         fallbackNote: ` (не последний коммит master ${HEAD.slice(0, 7)}: ждёт CI)`,
-    }).then(() => {
-        expect(posted[0].split('\n')[0]).toBe(
-            `<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка (не последний коммит master ddddddd: ждёт CI)`,
-        );
     });
+    expect(text.split('\n')[0]).toBe(
+        `<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка (не последний коммит master ddddddd: ждёт CI)`,
+    );
 });
 
 function editedFixture({
@@ -1401,41 +1435,37 @@ function editedFixture({
 
 test('editing or deleting a result from the assigned QA posts one "no longer valid" line', () => {
     const posted = [];
-    const post = (url, payload) => {
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
-    return readResultAndNotify({ ...editedFixture(), env, post })
+    const post = recordSlack(text => posted.push(text));
+    const env = { SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
+    return readAndRecord({ ...editedFixture(), env, post })
         .then(value => {
             expect(value).toMatchObject({
                 outcome: 'QA_RESULT_INVALIDATED',
-                slack: { delivered: true },
+                slack: { text: expect.any(String) },
             });
             expect(posted).toEqual([
                 `<@U0OWNER123> Результат QA по ${COMMIT_LINK} отозван — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50>`,
             ]);
             noBareUrl(posted[0]);
-            return readResultAndNotify({ ...editedFixture({ action: 'deleted' }), env, post });
+            return readAndRecord({ ...editedFixture({ action: 'deleted' }), env, post });
         })
         .then(value => {
             expect(value).toMatchObject({
                 outcome: 'QA_RESULT_INVALIDATED',
-                slack: { delivered: true },
+                slack: { text: expect.any(String) },
             });
             expect(posted).toHaveLength(2);
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture(),
                 env,
-                post: () => Promise.reject(new Error('down')),
             });
         })
         .then(value => {
             expect(value).toMatchObject({
                 outcome: 'QA_RESULT_INVALIDATED',
-                slack: { delivered: false },
+                slack: { failure: 'Slack delivery failed; check the webhook and channel.' },
             });
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture({ user: { login: 'stranger', type: 'User' } }),
                 env,
                 post,
@@ -1450,14 +1480,13 @@ test('editing or deleting a result from the assigned QA posts one "no longer val
 
 test('a near-miss first line from the assigned QA fails with the allowed lines; from anyone else it is ignored', () => {
     let posts = 0;
-    const post = () => {
+    const post = recordSlack(() => {
         posts += 1;
-        return Promise.resolve(true);
-    };
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    });
+    const env = { SLACK_USER_MAP: '{}' };
     const next = bodies => {
         if (bodies.length === 0) return Promise.resolve();
-        return readResultAndNotify({ ...resultFixture({ body: bodies[0] }), env, post })
+        return readAndRecord({ ...resultFixture({ body: bodies[0] }), env, post })
             .then(
                 () => {
                     throw new Error(`Near miss ${bodies[0]} passed.`);
@@ -1472,7 +1501,7 @@ test('a near-miss first line from the assigned QA fails with the allowed lines; 
     return next(['QA PASSED', '**QA PASS**', 'QA PASS.'])
         .then(() =>
             Promise.all([
-                readResultAndNotify({
+                readAndRecord({
                     ...resultFixture({
                         body: 'QA PASSED',
                         user: { login: 'stranger', type: 'User' },
@@ -1480,7 +1509,7 @@ test('a near-miss first line from the assigned QA fails with the allowed lines; 
                     env,
                     post,
                 }),
-                readResultAndNotify({
+                readAndRecord({
                     ...resultFixture({
                         body: 'QA PASSED',
                         user: { login: 'syllik', type: 'User' },
@@ -1497,17 +1526,16 @@ test('a near-miss first line from the assigned QA fails with the allowed lines; 
 });
 
 test('a marker in a closed Issue or in an Issue with another title is not accepted', () => {
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    const env = { SLACK_USER_MAP: '{}' };
     let posts = 0;
-    const post = () => {
+    const post = recordSlack(() => {
         posts += 1;
-        return Promise.resolve(true);
-    };
+    });
     return Promise.all([
-        readResultAndNotify({ ...resultFixture({ state: 'closed' }), env, post }),
-        readResultAndNotify({ ...resultFixture({ title: 'My own QA notes' }), env, post }),
-        readResultAndNotify({ ...resultFixture({ title: `Release QA ${BASE}` }), env, post }),
-        readResultAndNotify({
+        readAndRecord({ ...resultFixture({ state: 'closed' }), env, post }),
+        readAndRecord({ ...resultFixture({ title: 'My own QA notes' }), env, post }),
+        readAndRecord({ ...resultFixture({ title: `Release QA ${BASE}` }), env, post }),
+        readAndRecord({
             ...editedFixture(),
             api: resultFixture({ state: 'closed', updatedAt: '2026-10-23T11:05:00Z' }).api,
             env,
@@ -1526,12 +1554,9 @@ test('a marker in a closed Issue or in an Issue with another title is not accept
 
 test('the "no longer valid" line is sent only when the previous body was a valid result', () => {
     const posted = [];
-    const post = (url, payload) => {
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
-    return readResultAndNotify({
+    const post = recordSlack(text => posted.push(text));
+    const env = { SLACK_USER_MAP: '{}' };
+    return readAndRecord({
         ...editedFixture({ from: 'QA PASSED', to: 'QA PASS' }),
         env,
         post,
@@ -1539,7 +1564,7 @@ test('the "no longer valid" line is sent only when the previous body was a valid
         .then(nearMissFixed => {
             expect(nearMissFixed.outcome).toBe('QA_RESULT_INVALIDATED');
             expect(nearMissFixed).not.toHaveProperty('slack');
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture({ from: 'Checking now', to: 'QA PASS' }),
                 env,
                 post,
@@ -1547,7 +1572,7 @@ test('the "no longer valid" line is sent only when the previous body was a valid
         })
         .then(noteToResult => {
             expect(noteToResult).not.toHaveProperty('slack');
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture({ action: 'deleted', from: 'QA PASSED' }),
                 env,
                 post,
@@ -1556,7 +1581,7 @@ test('the "no longer valid" line is sent only when the previous body was a valid
         .then(deletedNearMiss => {
             expect(deletedNearMiss).toEqual({ outcome: 'IGNORED' });
             const missing = editedFixture({ action: 'deleted' });
-            return readResultAndNotify({
+            return readAndRecord({
                 event: { ...missing.event, comment: { id: 8, user: missing.event.comment.user } },
                 api: missing.api,
                 env,
@@ -1567,7 +1592,7 @@ test('the "no longer valid" line is sent only when the previous body was a valid
             expect(deletedUnknownBody.outcome).toBe('QA_RESULT_INVALIDATED');
             expect(deletedUnknownBody).not.toHaveProperty('slack');
             expect(posted).toEqual([]);
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture({ from: ' qa pass \nnotes', to: 'QA PASSED' }),
                 env,
                 post,
@@ -1576,10 +1601,10 @@ test('the "no longer valid" line is sent only when the previous body was a valid
         .then(resultToNearMiss => {
             expect(resultToNearMiss).toMatchObject({
                 outcome: 'QA_RESULT_INVALIDATED',
-                slack: { delivered: true },
+                slack: { text: expect.any(String) },
             });
             expect(posted).toHaveLength(1);
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture({ action: 'deleted', from: 'QA BLOCKED' }),
                 env,
                 post,
@@ -1588,7 +1613,7 @@ test('the "no longer valid" line is sent only when the previous body was a valid
         .then(deletedResult => {
             expect(deletedResult).toMatchObject({
                 outcome: 'QA_RESULT_INVALIDATED',
-                slack: { delivered: true },
+                slack: { text: expect.any(String) },
             });
             expect(posted).toHaveLength(2);
         });
@@ -1596,12 +1621,9 @@ test('the "no longer valid" line is sent only when the previous body was a valid
 
 test('with the owner as sole QA, a new owner QA PASS is valid and posts the result line', () => {
     const posted = [];
-    const post = (url, payload) => {
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
-    return readResultAndNotify({
+    const post = recordSlack(text => posted.push(text));
+    const env = { SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
+    return readAndRecord({
         ...resultFixture({ user: OWNER, assignees: OWNER_ONLY }),
         env,
         post,
@@ -1611,12 +1633,12 @@ test('with the owner as sole QA, a new owner QA PASS is valid and posts the resu
                 outcome: 'VALID_QA_RESULT',
                 issueNumber: 50,
                 result: { outcome: 'PASS', sha: SHA, qa: 'syllik' },
-                slack: { delivered: true },
+                slack: { text: expect.any(String) },
             });
             expect(posted).toEqual([
                 `<@U0OWNER123> QA PASS по ${COMMIT_LINK} — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50> (QA: syllik)`,
             ]);
-            return readResultAndNotify({
+            return readAndRecord({
                 ...resultFixture({ body: 'QA FAIL\nBroken', user: OWNER, assignees: OWNER_ONLY }),
                 env,
                 post,
@@ -1633,11 +1655,10 @@ test('with the owner as sole QA, a new owner QA PASS is valid and posts the resu
 
 test('with Den as QA, an owner QA PASS is still ignored as a result; with the owner as sole QA, others are rejected', () => {
     let posts = 0;
-    const post = () => {
+    const post = recordSlack(() => {
         posts += 1;
-        return Promise.resolve(true);
-    };
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    });
+    const env = { SLACK_USER_MAP: '{}' };
     const cases = [
         resultFixture({ user: OWNER, assignees: DEN_ASSIGNED }),
         resultFixture({ user: { login: 'SoRawSteak', type: 'User' }, assignees: OWNER_ONLY }),
@@ -1647,7 +1668,7 @@ test('with Den as QA, an owner QA PASS is still ignored as a result; with the ow
     ];
     const next = index => {
         if (index === cases.length) return Promise.resolve();
-        return readResultAndNotify({ ...cases[index], env, post })
+        return readAndRecord({ ...cases[index], env, post })
             .then(
                 () => {
                     throw new Error(`Owner case ${index} was accepted.`);
@@ -1659,12 +1680,12 @@ test('with Den as QA, an owner QA PASS is still ignored as a result; with the ow
     return next(0)
         .then(() =>
             Promise.all([
-                readResultAndNotify({
+                readAndRecord({
                     ...resultFixture({ user: OWNER, assignees: OWNER_ONLY, state: 'closed' }),
                     env,
                     post,
                 }),
-                readResultAndNotify({
+                readAndRecord({
                     ...resultFixture({ user: OWNER, assignees: OWNER_ONLY, title: 'Owner notes' }),
                     env,
                     post,
@@ -1678,9 +1699,9 @@ test('with Den as QA, an owner QA PASS is still ignored as a result; with the ow
 });
 
 test('near-miss rules apply to the owner as sole QA; with Den as QA the owner near-miss stays ignored', () => {
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
-    const post = () => Promise.resolve(true);
-    return readResultAndNotify({
+    const env = { SLACK_USER_MAP: '{}' };
+    const post = recordSlack(() => undefined);
+    return readAndRecord({
         ...resultFixture({ body: 'QA PASSED', user: OWNER, assignees: OWNER_ONLY }),
         env,
         post,
@@ -1695,7 +1716,7 @@ test('near-miss rules apply to the owner as sole QA; with Den as QA the owner ne
                 ),
         )
         .then(() =>
-            readResultAndNotify({
+            readAndRecord({
                 ...resultFixture({ body: 'QA PASSED', user: OWNER, assignees: DEN_ASSIGNED }),
                 env,
                 post,
@@ -1706,13 +1727,10 @@ test('near-miss rules apply to the owner as sole QA; with Den as QA the owner ne
 
 test('editing or deleting an owner result withdraws it only when the owner is the sole QA', () => {
     const posted = [];
-    const post = (url, payload) => {
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
-    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
+    const post = recordSlack(text => posted.push(text));
+    const env = { SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
     const withdrawn = `<@U0OWNER123> Результат QA по ${COMMIT_LINK} отозван — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50>`;
-    return readResultAndNotify({
+    return readAndRecord({
         ...editedFixture({ user: OWNER, assignees: OWNER_ONLY }),
         env,
         post,
@@ -1722,9 +1740,9 @@ test('editing or deleting an owner result withdraws it only when the owner is th
                 outcome: 'QA_RESULT_INVALIDATED',
                 withdrewResult: true,
                 currentQa: 'syllik',
-                slack: { delivered: true },
+                slack: { text: expect.any(String) },
             });
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture({ action: 'deleted', user: OWNER, assignees: OWNER_ONLY }),
                 env,
                 post,
@@ -1733,7 +1751,7 @@ test('editing or deleting an owner result withdraws it only when the owner is th
         .then(value => {
             expect(value).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', withdrewResult: true });
             expect(posted).toEqual([withdrawn, withdrawn]);
-            return readResultAndNotify({
+            return readAndRecord({
                 ...editedFixture({ user: OWNER, assignees: DEN_ASSIGNED }),
                 env,
                 post,
@@ -1911,10 +1929,7 @@ test('dispatch with qa_login=syllik and reassign_qa moves an existing QA Issue t
                 : evidence.list(path),
     };
     const posted = [];
-    const post = (url, payload) => {
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
+    const post = recordSlack(text => posted.push(text));
     const env = {
         ...ownerEnv,
         CANDIDATE_SHA: SHA,
@@ -1923,14 +1938,13 @@ test('dispatch with qa_login=syllik and reassign_qa moves an existing QA Issue t
         QA_LOGIN: 'syllik',
         QA_REASSIGN: 'true',
         CHIPIN_ISSUE_WRITE_TOKEN: 'write',
-        SLACK_WEBHOOK_CI: WEBHOOK,
         SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}',
     };
     let root = null;
     return sharedRoot()
         .then(dir => {
             root = dir;
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env,
                 readApi,
                 writeApi: assignment.writeApi,
@@ -1944,7 +1958,7 @@ test('dispatch with qa_login=syllik and reassign_qa moves an existing QA Issue t
             expect(value).toMatchObject({
                 outcome: 'QA_ISSUE_READY',
                 issue: 'https://github.com/ChipIn-one/chipin-frontend/issues/50',
-                slack: { delivered: true },
+                slack: { text: expect.any(String) },
             });
             expect(assignment.writes).toEqual([{ method: 'DELETE', assignees: ['SoRawSteak'] }]);
             expect(assignment.issue().assignees).toEqual([{ login: 'syllik' }]);
@@ -2289,10 +2303,7 @@ test('the Preview probe sends the bypass header only with a secret, only to the 
 
 test('a non-UI candidate with a failed matrix still states the failure in its one Slack line', () => {
     const posted = [];
-    const post = (url, payload) => {
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
+    const post = recordSlack(text => posted.push(text));
     let dir = null;
     return matrixDir({
         chromium: matrixResult('chromium'),
@@ -2302,12 +2313,11 @@ test('a non-UI candidate with a failed matrix still states the failure in its on
     })
         .then(created => {
             dir = created;
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env: {
                     ...ownerEnv,
                     CANDIDATE_SHA: SHA,
                     PREVIEW_DEPLOYMENT_ID: '42',
-                    SLACK_WEBHOOK_CI: WEBHOOK,
                     E2E_MATRIX_DIR: dir,
                 },
                 readApi: withJobs(
@@ -2387,7 +2397,6 @@ const uiEnv = dir => ({
     QA_PRIORITY: 'P2',
     QA_LOGIN: 'SoRawSteak',
     CHIPIN_ISSUE_WRITE_TOKEN: 'write',
-    SLACK_WEBHOOK_CI: WEBHOOK,
     SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}',
     E2E_MATRIX_DIR: dir,
 });
@@ -2396,11 +2405,10 @@ test('a new QA Issue states a failed matrix at the top, per profile, before the 
     const events = [];
     const assignment = assignmentApi(['syllik']);
     const posted = [];
-    const post = (url, payload) => {
+    const post = recordSlack(text => {
         events.push('slack');
-        posted.push(payload.text);
-        return Promise.resolve(true);
-    };
+        posted.push(text);
+    });
     let root = null;
     let dir = null;
     return matrixDir({
@@ -2416,7 +2424,7 @@ test('a new QA Issue states a failed matrix at the top, per profile, before the 
         })
         .then(shared => {
             root = shared;
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env: uiEnv(dir),
                 readApi: withJobs(uiQaApis(assignment), matrixJobs({ webkit: 'failure' })),
                 writeApi: assignment.writeApi,
@@ -2434,7 +2442,10 @@ test('a new QA Issue states a failed matrix at the top, per profile, before the 
             ]),
         )
         .then(({ value, body }) => {
-            expect(value).toMatchObject({ outcome: 'QA_ISSUE_READY', slack: { delivered: true } });
+            expect(value).toMatchObject({
+                outcome: 'QA_ISSUE_READY',
+                slack: { text: expect.any(String) },
+            });
             expect(value.matrix.profiles.map(profile => profile.status)).toEqual([
                 'passed',
                 'passed',
@@ -2473,15 +2484,12 @@ test('a missing matrix (no artifacts, jobs unreadable) still creates the QA Issu
         })
         .then(shared => {
             root = shared;
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env: uiEnv(dir),
                 readApi: withJobs(uiQaApis(assignment), new Error('HTTP 500')),
                 writeApi: assignment.writeApi,
                 sharedRoot: root,
-                post: (url, payload) => {
-                    posted.push(payload.text);
-                    return Promise.resolve(true);
-                },
+                post: recordSlack(text => posted.push(text)),
                 probe: () => Promise.resolve(),
             }).then(value =>
                 readFile(join(root, 'created.md'), 'utf8').then(body => ({ value, body })),
@@ -2533,15 +2541,12 @@ test('a same-SHA rerun keeps the Issue body and posts the new matrix result as a
         })
         .then(shared => {
             root = shared;
-            return prepareReleaseQa({
+            return prepareAndRecord({
                 env: uiEnv(dir),
                 readApi: withJobs(uiQaApis(assignment, [existing]), matrixJobs()),
                 writeApi,
                 sharedRoot: root,
-                post: () => {
-                    events.push('slack');
-                    return Promise.resolve(true);
-                },
+                post: recordSlack(() => events.push('slack')),
                 probe: () => Promise.resolve(),
             });
         })
@@ -2596,15 +2601,12 @@ test('pass, then fail on a same-SHA rerun: the comment hands SMOKE-SHORT b-e bac
         },
     };
     const run = (results, jobs, issues, shared) =>
-        prepareReleaseQa({
+        prepareAndRecord({
             env: uiEnv(dir),
             readApi: withJobs(uiQaApis(assignment, issues), jobs),
             writeApi,
             sharedRoot: shared,
-            post: () => {
-                events.push('slack');
-                return Promise.resolve(true);
-            },
+            post: recordSlack(() => events.push('slack')),
             probe: () => Promise.resolve(),
         });
     return matrixDir(Object.fromEntries(PROFILE_IDS.map(id => [id, matrixResult(id)])))
@@ -2694,21 +2696,17 @@ test('the resolve job returns the candidate, its immutable Preview and the fallb
             fallbackFromEnv({ CANDIDATE_FALLBACK_HEAD: 'abc', CANDIDATE_FALLBACK_MISSING: 'CI' }),
         ).toThrow(/full lowercase/);
         const posted = [];
-        return prepareReleaseQa({
+        return prepareAndRecord({
             env: {
                 ...ownerEnv,
                 CANDIDATE_SHA: SHA,
                 PREVIEW_DEPLOYMENT_ID: '42',
                 CANDIDATE_FALLBACK_HEAD: HEAD,
                 CANDIDATE_FALLBACK_MISSING: 'CI',
-                SLACK_WEBHOOK_CI: WEBHOOK,
             },
             readApi: evidenceApi(),
             writeApi: null,
-            post: (url, payload) => {
-                posted.push(payload.text);
-                return Promise.resolve(true);
-            },
+            post: recordSlack(text => posted.push(text)),
             probe: () => Promise.resolve(),
         }).then(() =>
             expect(posted[0].split('\n')[0]).toBe(

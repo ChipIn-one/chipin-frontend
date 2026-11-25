@@ -198,10 +198,11 @@ jobs:
     timeout-minutes: 1
     permissions: {}
     steps:
-      - name: Post to Slack
+      # Text only: event fields reach the shell through env; jq escapes `&<>` for Slack mrkdwn.
+      - name: Build the Slack message
+        id: message
         continue-on-error: true
         env:
-          SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
           WORKFLOW: ${{ github.workflow }}
           BRANCH: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
@@ -209,14 +210,20 @@ jobs:
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ -z "$SLACK_WEBHOOK_CI" ]; then
-            echo "SLACK_WEBHOOK_CI is not set; skipping the Slack notification."
-            exit 0
-          fi
-          payload="$(jq -n \
+          set -euo pipefail
+          text="$(jq -nr \
             --arg workflow "$WORKFLOW" --arg branch "$BRANCH" --arg sha "${SHA:0:7}" \
             --arg actor "$ACTOR" --arg commit "$COMMIT_URL" --arg run "$RUN_URL" \
             'def e: gsub("&";"&amp;") | gsub("<";"&lt;") | gsub(">";"&gt;");
-             {text: ":red_circle: \($workflow|e) failed on `\($branch|e)` at <\($commit)|\($sha)> by \($actor|e) - <\($run)|run>"}')"
-          curl -sS --fail --max-time 10 -o /dev/null -H 'Content-Type: application/json' \
-            --data "$payload" "$SLACK_WEBHOOK_CI"
+             ":red_circle: \($workflow|e) failed on `\($branch|e)` at <\($commit)|\($sha)> by \($actor|e) - <\($run)|run>"')"
+          delimiter="ghadelimiter_$(cat /proc/sys/kernel/random/uuid)"
+          printf 'text<<%s\n%s\n%s\n' "$delimiter" "$text" "$delimiter" >> "$GITHUB_OUTPUT"
+      # The shared org action skips an empty webhook and never fails the job.
+      - name: Post to Slack
+        if: steps.message.outputs.text != ''
+        continue-on-error: true
+        uses: ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_CI }}
+          text: ${{ steps.message.outputs.text }}
+          timeout-seconds: '10'
