@@ -12,6 +12,7 @@ import {
     AuthRequestCancelledError,
     isNetworkError,
     isRequestCancelled,
+    isRequestNotSent,
 } from 'shared/api/client';
 import { ApiError } from 'shared/lib/apiError';
 
@@ -173,7 +174,11 @@ export const classifyOutboxError = (error: unknown, opKind: OutboxKind): OutboxE
     if (error instanceof ApiResponseFormatError || isRequestCancelled(error)) {
         return { kind: 'transient' };
     }
-    return isNetworkError(error) ? { kind: 'network' } : final('rejected');
+    // A request never sent (a client misconfiguration such as a bad API URL) waits like a network
+    // error, as before #631: a queued user write is not lost to a bad build.
+    return isNetworkError(error) || isRequestNotSent(error)
+        ? { kind: 'network' }
+        : final('rejected');
 };
 
 /** 1 s → 60 s, ±20 %. */
@@ -423,7 +428,8 @@ const onSendError = async (
         }
         case 'final': {
             // Synchronously, before the write: later ops of this entry are skipped from now on.
-            // The server answered for good: only the write is repeated, never the request.
+            // A resend cannot succeed (the server answered for good, or a client error that is not a
+            // request failure, e.g. a mapper error): only the write is repeated, never the request.
             outboxGate.block(op.entryId);
             const landed = await trackFailureWrite(
                 op.entryId,
