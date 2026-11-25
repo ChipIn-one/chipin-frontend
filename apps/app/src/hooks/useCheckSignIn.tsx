@@ -58,7 +58,7 @@ useAuthStore.subscribe(() => {
 });
 
 /**
- * NET-007: with no user saved on this device a refresh that hangs (a network the browser calls
+ * NET-008: with no user saved on this device a refresh that hangs (a network the browser calls
  * online but that answers nothing, e.g. Wi-Fi without internet) would keep the loader up until the
  * browser gives up on it, 20-50 s later. `/health` is probed alongside it (at most 5 s): no answer
  * while the attempt still runs marks the network unusable, as the refresh's own network error

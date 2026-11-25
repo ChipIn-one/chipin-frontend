@@ -24,7 +24,7 @@ vi.mock('basics/PageLoader', () => ({
     default: () => <div data-testid="page-loader" />,
 }));
 
-// No real `/health` request from jsdom (the session check probes it alongside a refresh, NET-007).
+// No real `/health` request from jsdom (the session check probes it alongside a refresh, NET-008).
 vi.mock('shared/api/health', async importOriginal => ({
     ...(await importOriginal<typeof import('shared/api/health')>()),
     probeBackendHealth: vi.fn(() => Promise.resolve('ok')),
@@ -352,7 +352,7 @@ describe('the live session', () => {
     });
 
     test.each(['error', 'persistence_error'] as const)(
-        'NET-007 a session %s with a hint offline and no saved user: the offline load error, never the page',
+        'NET-008 a session %s with a hint offline and no saved user: the offline load error, never the page',
         async reason => {
             LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
             onlineManager.setOnline(false);
@@ -378,7 +378,7 @@ describe('the live session', () => {
         },
     );
 
-    test('NET-007 Retry checks /health: a failed check keeps the error and says there is still no network', async () => {
+    test('NET-008 Retry checks /health: a failed check keeps the error and says there is still no network', async () => {
         const interaction = userEvent.setup();
         const retryBackendHealth = vi.fn(() => Promise.reject(new Error('unreachable')));
         const original = useConnectivityStore.getState().retryBackendHealth;
@@ -497,7 +497,7 @@ describe('with the loader (the whole tree)', () => {
         expect(refreshAuthTokens).not.toHaveBeenCalled();
     });
 
-    test('NET-007 offline cold start, hint, no saved user, no answer: the load error within 5 s; the network back continues the start', async () => {
+    test('NET-008 offline cold start, hint, no saved user, no answer: the load error within 5 s; the network back continues the start', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
         LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
         onlineManager.setOnline(false);
@@ -537,7 +537,7 @@ describe('with the loader (the whole tree)', () => {
         }
     });
 
-    test('NET-007 offline cold start with a saved user: the cached page, as before', async () => {
+    test('NET-008 offline cold start with a saved user: the cached page, as before', async () => {
         saveUser();
         LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
         onlineManager.setOnline(false);

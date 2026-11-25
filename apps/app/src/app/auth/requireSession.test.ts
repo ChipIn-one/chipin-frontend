@@ -70,7 +70,7 @@ const ROWS: [string, Session, SessionAccess, SessionAccess, SessionAccess][] = [
 
 describe('sessionAccess', () => {
     test.each(ROWS)(
-        'AUTH-071 NET-007 %s: redirect, sign-in, the cached page offline with a hint and a saved user, the offline load error without one',
+        'AUTH-071 NET-008 %s: redirect, sign-in, the cached page offline with a hint and a saved user, the offline load error without one',
         (_name, session, otherwise, hintOfflineSaved, hintOfflineNoData) => {
             ENVIRONMENTS.forEach(env => {
                 const hintOffline = env.hasSavedUser ? hintOfflineSaved : hintOfflineNoData;
@@ -175,7 +175,7 @@ describe('requireSession', () => {
         await expect(requireSession(loaderArgs('/dashboard'))).resolves.toBeNull();
     });
 
-    test('NET-007 hint, offline, no saved user: the loader resolves at once without a redirect, no 5 s wait', async () => {
+    test('NET-008 hint, offline, no saved user: the loader resolves at once without a redirect, no 5 s wait', async () => {
         vi.useFakeTimers();
         try {
             onlineManager.setOnline(false);
@@ -202,7 +202,7 @@ describe('requireSession', () => {
         }
     });
 
-    test('NET-007 online with a hint and no saved user the loader still waits for the check (up to 5 s)', async () => {
+    test('NET-008 online with a hint and no saved user the loader still waits for the check (up to 5 s)', async () => {
         vi.useFakeTimers();
         try {
             const refreshAuthTokens = vi.fn(() => new Promise<string>(() => undefined));
@@ -228,7 +228,7 @@ describe('requireSession', () => {
         }
     });
 
-    test('NET-007 a saved user on the device: the environment has it, offline the cached page', () => {
+    test('NET-008 a saved user on the device: the environment has it, offline the cached page', () => {
         onlineManager.setOnline(false);
         LocalStorage.set(LS_KEY_USER, { id: 'user-1', role: 'USER', settings: SETTINGS });
         useAuthStore.setState({ status: 'unknown', unauthReason: undefined });

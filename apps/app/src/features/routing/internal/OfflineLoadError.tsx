@@ -9,7 +9,7 @@ import { EmptyState } from 'basics/empty-states';
 
 /**
  * The load error of a protected page on a cold start without a usable network and with no user
- * saved on this device (NET-007): there is no cache to show, so instead of an empty page (or an
+ * saved on this device (NET-008): there is no cache to show, so instead of an empty page (or an
  * endless loader) it says the data cannot be loaded without a network. Retry checks `/health` as
  * the offline banner does (NET-001); when the network is usable again `AuthLayout` goes back to the
  * session check. The inline offline banner is not shown here: one Retry on the screen.

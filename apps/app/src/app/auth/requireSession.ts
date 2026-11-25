@@ -18,7 +18,7 @@ import { authReady, readSession, type Session, UNKNOWN_OFFLINE } from './session
  *   (`authStore.signOut`, spec 04 §2.3): the loader only, no redirect, no page;
  * - `modal`: `AuthModal` alone;
  * - `modalOverPage`: `AuthModal` over the page, which stays mounted but hidden (an expired session);
- * - `offlineNoData`: the offline load error with Retry (NET-007): a session hint, no usable network
+ * - `offlineNoData`: the offline load error with Retry (NET-008): a session hint, no usable network
  *   and no user saved on this device, so there is no cache to show; never the page, no redirect.
  *
  * The offline rows (`error`, `persistence_error`, `unknown_offline`); every other row ignores the
@@ -50,7 +50,7 @@ export interface SessionEnvironment {
 
 export const sessionAccess = (session: Session, env: SessionEnvironment): SessionAccess => {
     // D2: offline with a live session hint the cached data is shown, never a redirect; with no
-    // user saved on this device there is nothing to show: the offline load error (NET-007).
+    // user saved on this device there is nothing to show: the offline load error (NET-008).
     const isOfflineWithHint = env.hasSessionHint && !env.isNetworkUsable;
     const offlineAccess = env.hasSavedUser ? 'pass' : 'offlineNoData';
     const offlineCache = isOfflineWithHint ? offlineAccess : 'modal';
@@ -101,7 +101,7 @@ export const requireSession = ({ request }: { request: Request }): Promise<Respo
         .then(() => {
             const sessionReady = authReady(url.pathname);
 
-            // NET-007: offline with a hint and no saved user the check cannot answer and there is
+            // NET-008: offline with a hint and no saved user the check cannot answer and there is
             // no cache to wait for: no 5 s wait, `AuthLayout` shows the offline load error now.
             return sessionAccess(readSession(), readSessionEnvironment()) === 'offlineNoData'
                 ? undefined

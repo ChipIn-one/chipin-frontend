@@ -103,7 +103,7 @@ const AuthLayout = () => {
     );
     // Re-rendered on a network change: the offline rows depend on it.
     useSyncExternalStore(subscribeNetwork, isNetworkUsable);
-    // Re-rendered when this tab's saved user changes: the offline rows depend on it (NET-007).
+    // Re-rendered when this tab's saved user changes: the offline rows depend on it (NET-008).
     useTabUserId();
     const [wasPageShown, setWasPageShown] = useState(false);
     const pageRef = useRef<HTMLDivElement>(null);
@@ -112,7 +112,7 @@ const AuthLayout = () => {
 
     useHidePagePortals(isPageHidden, pageRef);
 
-    // NET-007: offline with nothing saved on this device there is no page to show, whether the
+    // NET-008: offline with nothing saved on this device there is no page to show, whether the
     // check is still unanswered or ended in an error: the load error with Retry, never the page.
     // When the network is usable again this falls back to the loader and the check goes on.
     if (access === 'offlineNoData') {
