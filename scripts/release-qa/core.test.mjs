@@ -1212,7 +1212,6 @@ describe('authorized QA result', () => {
             assertConfiguration(
                 {
                     CHIPIN_DEV_READ_TOKEN: 'read',
-                    SLACK_WEBHOOK_CI: 'https://hooks.slack.com/services/a/b/c',
                     SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}',
                 },
                 'SoRawSteak',
@@ -1223,17 +1222,13 @@ describe('authorized QA result', () => {
                 {
                     CHIPIN_DEV_READ_TOKEN: 'read',
                     CHIPIN_ISSUE_WRITE_TOKEN: 'write',
-                    SLACK_WEBHOOK_CI: 'https://hooks.slack.com/services/a/b/c',
                     SLACK_USER_MAP: '{}',
                 },
                 'SoRawSteak',
             ),
         ).toThrow(/SLACK_USER_MAP/);
-        const full = {
-            CHIPIN_DEV_READ_TOKEN: 'read',
-            CHIPIN_ISSUE_WRITE_TOKEN: 'write',
-            SLACK_WEBHOOK_CI: 'https://hooks.slack.com/services/a/b/c',
-        };
+        // The webhook is not part of the script configuration (the Slack step posts the handoff).
+        const full = { CHIPIN_DEV_READ_TOKEN: 'read', CHIPIN_ISSUE_WRITE_TOKEN: 'write' };
         expect(
             assertConfiguration(
                 { ...full, SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}' },
@@ -1247,6 +1242,12 @@ describe('authorized QA result', () => {
         expect(() => assertConfiguration({ ...full, SLACK_USER_MAP: 'nope' }, 'syllik')).toThrow(
             /JSON/,
         );
+        expect(
+            assertConfiguration(
+                { ...full, SLACK_WEBHOOK_CI: 'not a webhook', SLACK_USER_MAP: '{}' },
+                'syllik',
+            ),
+        ).toEqual({ slackId: null });
     });
 });
 

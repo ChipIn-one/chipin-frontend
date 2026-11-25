@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { lstat, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -7,6 +8,7 @@ import { appEnvironmentNames, isAppEnvironment } from '../deployment-environment
 import {
     RELEASE_OWNER,
     REPOSITORY,
+    SLACK_USER_ID,
     MATRIX_PROFILES,
     TESTER_GUIDE_URL,
     assertConfiguration,
@@ -21,7 +23,6 @@ import {
     hasGreenFrontendCiRun,
     isNearMissResult,
     isOwnerLogin,
-    isSlackWebhook,
     matrixRunUrl,
     parseMatrixResult,
     parseQaResult,
@@ -216,49 +217,59 @@ export function formatNoQaLine({ sha, url, fallbackNote = '', matrix = null }) {
     return `Релиз-кандидат ${slackCommitLink(sha)} — QA не нужен, UI не менялся${fallbackNote}${matrixLine}\n${slackLink(url, 'Build')}`;
 }
 
-export function sendHandoff({
-    post,
-    webhook,
-    slackId,
-    issue,
-    sha,
-    url,
-    fallbackNote = '',
-    matrix = null,
-}) {
-    const payload = { text: formatHandoff({ slackId, issue, sha, url, fallbackNote, matrix }) };
-    return post(webhook, payload)
-        .then(() => ({ delivered: true }))
-        .catch(() => ({
-            delivered: false,
-            reason: 'Slack delivery failed; retry the same SHA after checking webhook/channel.',
-        }));
+// Slack is posted by the workflow step after the script, through the shared org action
+// (ChipIn-one/.github automation/slack-notify-action); the script never holds the webhook. It returns the
+// message text and the guidance printed as a warning when the delivery fails.
+export const HANDOFF_FAILURE =
+    'Slack delivery failed; retry the same SHA after checking webhook/channel.';
+export const LINE_FAILURE = 'Slack delivery failed; check the webhook and channel.';
+
+export function handoffMessage({ slackId, issue, sha, url, fallbackNote = '', matrix = null }) {
+    return {
+        text: formatHandoff({ slackId, issue, sha, url, fallbackNote, matrix }),
+        failure: HANDOFF_FAILURE,
+    };
 }
 
-// Posts one presentation-only line. A missing webhook or a failed delivery is reported, never thrown.
-function postLine({ post, webhook, text }) {
-    if (!isSlackWebhook(webhook))
-        return Promise.resolve({
-            delivered: false,
-            reason: 'SLACK_WEBHOOK_CI is not configured; nothing was posted.',
-        });
-    return post(webhook, { text })
-        .then(() => ({ delivered: true }))
-        .catch(() => ({
-            delivered: false,
-            reason: 'Slack delivery failed; check the webhook and channel.',
-        }));
+const lineMessage = text => ({ text, failure: LINE_FAILURE });
+
+// The result as printed to the public Actions log: the JSON never carries the Slack text, only whether a
+// message will be posted. The text still reaches the log in the shared action's step header (its `with:`
+// inputs and `env`), so `slackMasks` masks every Slack user ID it mentions before the text is written out.
+export function loggedResult(result) {
+    if (!result || typeof result !== 'object' || !('slack' in result))
+        return JSON.stringify(result);
+    return JSON.stringify({ ...result, slack: { post: Boolean(result.slack) } });
 }
 
-export function postSlack(webhook, payload, fetchImpl = fetch) {
-    return fetchImpl(webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    }).then(response => {
-        if (!response.ok) throw new Error('Slack webhook returned a non-success status.');
-        return true;
-    });
+// `::add-mask::` lines for every `<@U…>` mention in the Slack text (the QA's ID in a handoff, the owner's mapped
+// ID in a result or withdrawn line), matched with the same SLACK_USER_ID pattern the map validation uses.
+export function slackMasks(slack) {
+    if (!slack?.text) return '';
+    const ids = [...String(slack.text).matchAll(/<@([^<>|\s]+)>/g)]
+        .map(match => match[1])
+        .filter(id => SLACK_USER_ID.test(id));
+    return [...new Set(ids)].map(id => `::add-mask::${id}\n`).join('');
+}
+
+// Entry-script tail: masks first, then the redacted log line, then the step outputs for the Slack step.
+export function emitResult(result, { write, output = null }) {
+    write(slackMasks(result?.slack));
+    write(`${loggedResult(result)}\n`);
+    if (output) output(slackOutputs(result?.slack));
+}
+
+// Step outputs for the Slack step: `slack_post`, and `slack_text` / `slack_failure` in heredoc form with a
+// random delimiter. A result without a message (no `slack`) posts nothing.
+export function slackOutputs(slack, delimiter = () => `ghadelimiter_${randomUUID()}`) {
+    if (!slack) return 'slack_post=false\n';
+    const block = (name, value) => {
+        const end = delimiter();
+        if (String(value).includes(end))
+            throw new Error('The output value contains the delimiter.');
+        return `${name}<<${end}\n${value}\n${end}\n`;
+    };
+    return `${block('slack_text', slack.text)}${block('slack_failure', slack.failure)}slack_post=true\n`;
 }
 
 // Vercel's Protection Bypass for Automation header, sent only with the optional secret and only to
@@ -1000,7 +1011,6 @@ export function prepareReleaseQa({
     readApi,
     writeApi,
     sharedRoot,
-    post = postSlack,
     probe = null,
     matrixFiles,
 }) {
@@ -1056,7 +1066,7 @@ export function prepareReleaseQa({
                     fallbackNote: fallbackNote(candidate),
                     matrix,
                 });
-                return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({
+                return {
                     outcome: 'NO_MANUAL_QA_REQUIRED',
                     sha,
                     candidate,
@@ -1065,8 +1075,8 @@ export function prepareReleaseQa({
                     included: plan.included,
                     noQa: plan.noQa,
                     matrix,
-                    slack,
-                }));
+                    slack: lineMessage(text),
+                };
             }
             const { slackId } = assertConfiguration(env, qaLogin);
             if (!writeApi) throw new Error('CHIPIN_ISSUE_WRITE_TOKEN transport is required.');
@@ -1131,30 +1141,26 @@ export function prepareReleaseQa({
                                     shared,
                                     env.CHIPIN_ISSUE_WRITE_TOKEN,
                                     assigned.number,
-                                ).then(() =>
-                                    sendHandoff({
-                                        post,
-                                        webhook: env.SLACK_WEBHOOK_CI,
+                                ).then(() => ({
+                                    outcome: 'QA_ISSUE_READY',
+                                    issue: assigned.html_url,
+                                    sha,
+                                    candidate,
+                                    baseline,
+                                    preview,
+                                    missingSteps: plan.missingSteps,
+                                    noQa: plan.noQa,
+                                    smoke: plan.smoke,
+                                    matrix,
+                                    slack: handoffMessage({
                                         slackId,
                                         issue: assigned,
                                         sha,
                                         url: preview.url,
                                         fallbackNote: fallbackNote(candidate),
                                         matrix,
-                                    }).then(slack => ({
-                                        outcome: 'QA_ISSUE_READY',
-                                        issue: assigned.html_url,
-                                        sha,
-                                        candidate,
-                                        baseline,
-                                        preview,
-                                        missingSteps: plan.missingSteps,
-                                        noQa: plan.noQa,
-                                        smoke: plan.smoke,
-                                        matrix,
-                                        slack,
-                                    })),
-                                ),
+                                    }),
+                                })),
                             );
                     });
                 }),
@@ -1258,10 +1264,10 @@ export function validateResultEvent({ event, api }) {
     });
 }
 
-// Slack is called only for a validated result from the sole assigned QA (the owner only when he is the sole
-// assignee), or when that QA edits or deletes
-// a result. Lines are built from validated fields only. Slack failure is reported, never changes the outcome.
-export function readResultAndNotify({ event, api, env, post = postSlack }) {
+// A Slack line is returned only for a validated result from the sole assigned QA (the owner only when he is the
+// sole assignee), or when that QA edits or deletes a result. Lines are built from validated fields only. The
+// workflow posts it; a Slack failure is a warning and never changes the outcome.
+export function readResultAndNotify({ event, api, env }) {
     return validateResultEvent({ event, api }).then(value => {
         if (value.outcome === 'QA_RESULT_INVALIDATED' && value.withdrewResult) {
             const text = formatInvalidationLine({
@@ -1270,10 +1276,7 @@ export function readResultAndNotify({ event, api, env, post = postSlack }) {
                 issueNumber: value.issueNumber,
                 userMap: env.SLACK_USER_MAP,
             });
-            return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({
-                ...value,
-                slack,
-            }));
+            return { ...value, slack: lineMessage(text) };
         }
         if (value.outcome !== 'VALID_QA_RESULT') return value;
         const text = formatResultLine({
@@ -1282,9 +1285,6 @@ export function readResultAndNotify({ event, api, env, post = postSlack }) {
             issueNumber: value.issueNumber,
             userMap: env.SLACK_USER_MAP,
         });
-        return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({
-            ...value,
-            slack,
-        }));
+        return { ...value, slack: lineMessage(text) };
     });
 }

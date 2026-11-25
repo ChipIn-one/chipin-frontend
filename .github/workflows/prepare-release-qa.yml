@@ -155,10 +155,10 @@ jobs:
           pattern: e2e-result-*
           path: ${{ runner.temp }}/e2e-results
       - name: Prepare canonical QA Issue and handoff
+        id: prepare
         env:
           CHIPIN_DEV_READ_TOKEN: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
           CHIPIN_ISSUE_WRITE_TOKEN: ${{ secrets.CHIPIN_ISSUE_WRITE_TOKEN }}
-          SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
           SLACK_USER_MAP: ${{ vars.SLACK_USER_MAP }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CANDIDATE_SHA: ${{ needs.resolve.outputs.sha }}
@@ -170,3 +170,24 @@ jobs:
           QA_LOGIN: ${{ inputs.qa_login }}
           QA_REASSIGN: ${{ inputs.reassign_qa }}
         run: node scripts/release-qa-prepare.mjs
+      # The shared org action holds the webhook alone; it never fails the job (result sent|skipped|failed).
+      - name: Post to Slack
+        id: slack
+        if: steps.prepare.outputs.slack_post == 'true'
+        continue-on-error: true
+        uses: ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_CI }}
+          text: ${{ steps.prepare.outputs.slack_text }}
+          timeout-seconds: '10'
+      - name: Warn when Slack was not posted
+        if: steps.prepare.outputs.slack_post == 'true' && steps.slack.outputs.result != 'sent'
+        env:
+          RESULT: ${{ steps.slack.outputs.result }}
+          FAILURE: ${{ steps.prepare.outputs.slack_failure }}
+        run: |
+          if [ "$RESULT" = "skipped" ]; then
+            echo "::warning::SLACK_WEBHOOK_CI is not configured; nothing was posted."
+          else
+            echo "::warning::$FAILURE"
+          fi

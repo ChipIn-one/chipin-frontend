@@ -9,7 +9,7 @@ const QA_MARKER =
 const RESULT_LINE = /^qa\s+(pass|fail|blocked)$/i;
 // Leading Markdown decoration a tester may type before a result, such as ** or >.
 const LEADING_MARKUP = /^[\s*_#>`~-]+/;
-const SLACK_USER_ID = /^U[A-Z0-9]{8,}$/;
+export const SLACK_USER_ID = /^U[A-Z0-9]{8,}$/;
 export const RELEASE_OWNER = 'syllik';
 // Russian tester guide on master, linked from every new QA Issue and the #chipin-ci handoff.
 export const TESTER_GUIDE_URL = `https://github.com/${REPOSITORY}/blob/master/docs/qa/README.md`;
@@ -211,24 +211,11 @@ function slackLogin(login) {
     return login;
 }
 
-export function isSlackWebhook(value) {
-    return (
-        typeof value === 'string' && /^https:\/\/hooks\.slack\.com\/services\/[^\s]+$/.test(value)
-    );
-}
-
 export function assertConfiguration(env, qaLogin) {
-    for (const key of [
-        'CHIPIN_DEV_READ_TOKEN',
-        'CHIPIN_ISSUE_WRITE_TOKEN',
-        'SLACK_WEBHOOK_CI',
-        'SLACK_USER_MAP',
-    ]) {
+    for (const key of ['CHIPIN_DEV_READ_TOKEN', 'CHIPIN_ISSUE_WRITE_TOKEN', 'SLACK_USER_MAP']) {
         if (!env[key]) throw new Error(`${key} is required before a QA handoff.`);
     }
-    if (!isSlackWebhook(env.SLACK_WEBHOOK_CI)) {
-        throw new Error('SLACK_WEBHOOK_CI must be a Slack Incoming Webhook URL.');
-    }
+    // The webhook is not read here: the Slack step of the workflow posts the handoff (shared org action).
     let map;
     try {
         map = JSON.parse(env.SLACK_USER_MAP);
