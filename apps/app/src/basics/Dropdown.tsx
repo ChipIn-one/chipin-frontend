@@ -1,5 +1,5 @@
-import { type ReactNode, useState } from 'react';
-import { DropdownMenu } from '@radix-ui/themes';
+import { type CSSProperties, type ReactNode, useState } from 'react';
+import { DropdownMenu, Flex, Text } from '@radix-ui/themes';
 
 type ContentProps = React.ComponentProps<typeof DropdownMenu.Content>;
 type ItemColor = React.ComponentProps<typeof DropdownMenu.Item>['color'];
@@ -11,7 +11,24 @@ export interface DropdownMenuItem {
     onSelect?: () => void;
     isDisabled?: boolean;
     color?: ItemColor;
+    /** A small grey caption under the label (why the item is disabled, for example). */
+    hint?: ReactNode;
 }
+
+// An item with a hint grows past the menu's fixed item height.
+const WITH_HINT: CSSProperties = { height: 'auto' };
+
+const itemLabel = ({ label, hint }: DropdownMenuItem): ReactNode =>
+    hint === undefined ? (
+        label
+    ) : (
+        <Flex direction="column" py="1">
+            <span>{label}</span>
+            <Text size="1" color="gray">
+                {hint}
+            </Text>
+        </Flex>
+    );
 
 export interface DropdownMenuSection {
     label?: ReactNode;
@@ -61,6 +78,7 @@ const Dropdown = ({
                 key={item.value}
                 disabled={item.isDisabled}
                 color={isActive ? 'green' : item.color}
+                style={item.hint === undefined ? undefined : WITH_HINT}
                 onSelect={() => {
                     item.onSelect?.();
                     if (isSelectable) {
@@ -69,7 +87,7 @@ const Dropdown = ({
                 }}
             >
                 {item.icon}
-                {item.label}
+                {itemLabel(item)}
             </DropdownMenu.Item>
         );
     };
@@ -80,10 +98,11 @@ const Dropdown = ({
             value={item.value}
             disabled={item.isDisabled}
             color={selectedValue === item.value ? 'green' : item.color}
+            style={item.hint === undefined ? undefined : WITH_HINT}
             onSelect={item.onSelect}
         >
             {item.icon}
-            {item.label}
+            {itemLabel(item)}
         </DropdownMenu.RadioItem>
     );
 

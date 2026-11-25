@@ -9,7 +9,7 @@ import { BaseModal, MODAL_SIZES } from 'components/modals/base-modal';
 import { OverlayBody } from 'components/modals/components';
 
 import { ConflictDraftNotice } from './components/conflict-draft-notice/ConflictDraftNotice';
-import ExpenseButtons from './components/expense-buttons/ExpenseButtons';
+import { ExpenseButtons } from './components/expense-buttons/ExpenseButtons';
 import ExpenseDetailsSection from './components/expense-details-section/ExpenseDetailsSection';
 import ExpenseSplitCard from './components/expense-split-card/ExpenseSplitCard';
 import ExpenseTargetSection from './components/expense-target-section/ExpenseTargetSection';

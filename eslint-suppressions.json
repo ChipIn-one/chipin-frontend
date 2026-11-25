@@ -267,11 +267,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/GroupCoverPickerControl.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/styled.ts": {
     "no-restricted-syntax": {
       "count": 2
@@ -494,11 +489,6 @@
     },
     "@typescript-eslint/no-unsafe-member-access": {
       "count": 2
-    }
-  },
-  "apps/app/src/features/add-expense/components/expense-buttons/ExpenseButtons.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
     }
   },
   "apps/app/src/features/add-expense/components/expense-details-section/ExpenseDetailsSection.tsx": {
@@ -776,11 +766,6 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/friends-page/components/FriendActionsDropdown.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/friends-page/components/FriendInviteEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -857,11 +842,6 @@
     }
   },
   "apps/app/src/pages/group-page/components/GroupMembersTab.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/group-page/components/GroupSettingsTab.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }

@@ -1,4 +1,4 @@
-import { IconButton } from '@radix-ui/themes';
+import { IconButton, Tooltip } from '@radix-ui/themes';
 import { ImageUpIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,14 +18,17 @@ interface Props {
 const GroupCoverPickerControl = ({ isOverlay = false, isSaving, onCoverChange }: Props) => {
     const { t } = useTranslation('group');
     // §2.9: a cover upload is never done offline (the form may stay open while the network drops).
-    const isDisabled = useRequiresOnline(ONLINE_ONLY_ACTIONS.groupCover) || isSaving;
+    const isBlocked = useRequiresOnline(ONLINE_ONLY_ACTIONS.groupCover);
+    const isDisabled = isBlocked || isSaving;
 
-    return (
+    const picker = (
         <IconButton asChild variant="surface" color="gray" size="2">
             <CoverPickerLabel
                 $isDisabled={isDisabled}
                 $isOverlay={isOverlay}
-                title={t('modal.cover.action')}
+                // KB NET-006: blocked, the tooltip says why (no native title next to it).
+                title={isBlocked ? undefined : t('modal.cover.action')}
+                data-online-only={isBlocked ? ONLINE_ONLY_ACTIONS.groupCover : undefined}
             >
                 <ImageUpIcon size={20} aria-hidden />
                 <HiddenFileInput
@@ -38,6 +41,12 @@ const GroupCoverPickerControl = ({ isOverlay = false, isSaving, onCoverChange }:
             </CoverPickerLabel>
         </IconButton>
     );
+
+    return isBlocked ? (
+        <Tooltip content={t('common:outbox.onlineRequired')}>{picker}</Tooltip>
+    ) : (
+        picker
+    );
 };
 
-export default GroupCoverPickerControl;
+export { GroupCoverPickerControl };

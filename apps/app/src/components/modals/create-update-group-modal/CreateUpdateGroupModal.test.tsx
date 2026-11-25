@@ -1,5 +1,6 @@
+import { Theme } from '@radix-ui/themes';
 import { onlineManager } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -516,6 +517,41 @@ const saveRefusedUpdate = async (): Promise<void> => {
         expect(console.error).toHaveBeenCalledTimes(1);
     });
 };
+
+test('NET-006: flag off, offline: the cover picker is disabled with the hint; back online: enabled', async () => {
+    const interaction = userEvent.setup();
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <CreateUpdateGroupModal type="create">
+                        <button type="button">{OPEN_MODAL_LABEL}</button>
+                    </CreateUpdateGroupModal>
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+    await interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }));
+    act(() => {
+        onlineManager.setOnline(false);
+    });
+    const picker = () => screen.getByLabelText('modal.cover.pickerLabel');
+    const blocked = picker().closest('[data-online-only="group.cover"]');
+
+    expect(picker()).toHaveProperty('disabled', true);
+    expect(blocked).not.toBeNull();
+    await interaction.hover(blocked ?? picker());
+    expect((await screen.findByRole('tooltip')).textContent).toContain(
+        'common:outbox.onlineRequired',
+    );
+
+    act(() => {
+        onlineManager.setOnline(true);
+    });
+    expect(picker()).toHaveProperty('disabled', false);
+    expect(picker().closest('[data-online-only]')).toBeNull();
+});
 
 test('an update refused offline keeps the modal open and says the network is offline', async () => {
     onlineManager.setOnline(false);

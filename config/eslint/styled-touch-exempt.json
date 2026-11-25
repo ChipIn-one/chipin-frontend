@@ -1,1 +1,7 @@
-[]
+[
+    {
+        "path": "apps/app/src/components/modals/components/overlay-layout/styled.ts",
+        "reason": "One mobile footer rule so a blocked online-only Save (OnlineOnly span) fills its grid cell like the unblocked button; moving the whole overlay layout to a CSS Module is out of scope for this fix.",
+        "issue": "ChipIn-one/chipin-frontend#866"
+    }
+]

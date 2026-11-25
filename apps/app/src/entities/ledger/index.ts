@@ -46,6 +46,7 @@ export {
     registerLedgerOutboxDefaults,
     startLedgerOutbox,
     updateExpenseViaOutbox,
+    useCanQueueLedgerWrite,
     useIsOfflineWriteAvailable,
 } from './api/outbox';
 export type {

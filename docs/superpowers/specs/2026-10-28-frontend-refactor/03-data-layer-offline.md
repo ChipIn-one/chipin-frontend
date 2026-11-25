@@ -878,21 +878,29 @@ without one read time). (5) There is no `offline` i18n namespace: the spec's `of
 toasts `savedSending` ("Saved, sending…"), a changed repeat of a create being sent `createAlreadySending` (the form
 stays open); a queued delete disables the entry's Edit and Delete (A review N5).
 
-Deviation (03-16a part C): online-only actions and the sign-out and account-switch confirms; flag off, nothing of it
-renders, subscribes or reads IDB, and every auth transition runs in master's order. (1) `useRequiresOnline(action)`
-(`hooks/`, blocked = flag on and either `!isNetworkUsable()`, re-rendered on `onlineManager`, or
-`sessionMode === offline-cached`) and `<OnlineOnly action>` (`components/online-only`): not blocked, the child as it is
-(a Radix trigger's `asChild` props reach it through `Slot`); blocked, the child gets `disabled` + `aria-disabled`, the
-trigger's props are dropped and a focusable span carries the tooltip "An internet connection is required".
-`<OnlineOnlyGroup>` puts the user-settings cards in a disabled `fieldset` (a page caption says why); menu items and a
-card button read the hook. `ONLINE_ONLY_ACTIONS` (`constants/`) has `settleUp`, `settlement.delete`/`edit`,
-`group.create`/`update`/`cover`/`leave`/`kick`/`delete`, `invite.accept`, `avatar.upload`, `user.settings`,
-`friend.delete`, `logoutOtherDevices`; "invites" of the table are the join confirmations (sharing an existing invite
-link stays local) and the group delete is added. Source-scan tests check that every key has an entry point and that
-every JSX usage of the online-only trigger modals and every caller of the online-only mutation hooks sits behind a
-wrapper (`DevMenu`, development only, is exempt). The group settle-up trigger is wrapped and an open
+Deviation (03-16a part C): online-only actions and the sign-out and account-switch confirms; flag off, nothing of the
+confirms renders, subscribes or reads IDB, and every auth transition runs in master's order, while the online-only
+actions are disabled offline in both modes (ChipIn-one/chipin-frontend#866, KB NET-006/NET-007). (1)
+`useRequiresOnline(action, { canQueueOffline })` (`hooks/`, blocked = `!isNetworkUsable()`, re-rendered on
+`onlineManager`, or `sessionMode === offline-cached`, whether the flag is on or off; the expense writes
+`expense.save`/`expense.delete` (`OFFLINE_WRITE_ACTIONS`) are exempt only with the flag on and `canQueueOffline`, which
+the caller reads from `useCanQueueLedgerWrite` (`entities/ledger`: the outbox is available and an edit or a delete has
+its entry cached as an `EXPENSE`), so the hook needs no query client) and `<OnlineOnly action canQueueOffline>`
+(`components/online-only`): not blocked, the child as it is (a Radix trigger's `asChild` props reach it through `Slot`);
+blocked, the child gets `disabled` + `aria-disabled`, the trigger's props are dropped and a focusable span carries the
+tooltip "An internet connection is required". `<OnlineOnlyGroup>` puts the user-settings cards in a disabled `fieldset`
+(a page caption says why); menu items and a card button read the hook and show the same hint (#866: a menu item's
+caption, the simplify-debts caption, the cover picker's tooltip). `ONLINE_ONLY_ACTIONS` (`constants/`) has `settleUp`,
+`settlement.delete`/`edit`, `group.create`/`update`/`cover`/`leave`/`kick`/`delete`, `invite.accept`, `avatar.upload`,
+`user.settings`, `friend.delete`, `logoutOtherDevices`, and since #866 `expense.save` (the add/edit form's submit,
+`ExpenseButtons`) and `expense.delete` (the history's Delete of an expense); "invites" of the table are the join
+confirmations (sharing an existing invite link stays local) and the group delete is added. Source-scan tests check that
+every key has an entry point and that every JSX usage of the online-only trigger modals and every caller of the
+online-only mutation hooks sits behind a wrapper (`DevMenu`, development only, is exempt); the expense hooks are checked
+by name (create/edit only through `useExpenseModalSubmit` in `ExpenseButtons`, wrapped in `expense.save`; every
+`useDeleteLedgerEntry` caller wraps `expense.delete`). The group settle-up trigger is wrapped and an open
 `GroupSettleUpFlow` closes when the network goes (not while its payment request runs; it does not reopen). The refusals
-before `mutate` stay as the guard for flag off and for a control used as the network went. (2) C2-02: the history's
+before `mutate` stay as the last guard for a control used as the network went. (2) C2-02: the history's
 Update and Delete of a non-expense are wrapped (`settlement.edit`/`delete`); `chooseLedgerWritePath` already takes the
 online path for an entry not cached as an `EXPENSE`. (3) Resolves 03-15a (11): settle-up refuses rather than shows the
 caption alone. A group's flow shows "Send or cancel the unsent expenses of this group first" with a button that opens
@@ -1077,7 +1085,7 @@ the form; en and ru only (D7 amendment), not ×5.
 
 | Operation | Offline |
 |---|---|
-| Create / edit / delete an expense (group and personal) | yes, phase 1 |
+| Create / edit / delete an expense (group and personal) | yes, phase 1, through the outbox while it can take the write (`VITE_FEATURE_OFFLINE_WRITES` on, outbox available, an edit or delete of a cached expense); otherwise (production today: flag off) no, the save and delete are disabled offline (KB NET-007, #866) |
 | Create/rename a group, participants, cover, leave, kick, invites | no in phase 1; phase 2 (D2) — rename and participants through the same outbox after BE-03-8; phase 2 PR ids are not assigned — the deferral is listed among the owner confirmations (00, C1-28) |
 | Settle-up / repayment / payment, deletion and editing of a settlement | **never** (see below) |
 | Avatar/cover (upload) | never (multipart, progress) |
@@ -1085,8 +1093,13 @@ the form; en and ru only (D7 amendment), not ×5.
 | Delete a friend, logout other devices | no |
 
 Mechanism: `useRequiresOnline()` (from `isNetworkUsable()` + `sessionMode`) and `<OnlineOnly>` around the button:
-offline → `disabled`, `aria-disabled`, tooltip "An internet connection is required"; entry into `GroupSettleUpFlow`
-is closed entirely. The constant `ONLINE_ONLY_ACTIONS` + a test that every action is wrapped.
+offline → `disabled`, `aria-disabled`, tooltip "An internet connection is required"; entry into `GroupSettleUpFlow` is
+closed entirely. The constant `ONLINE_ONLY_ACTIONS` + a test that every action is wrapped. This holds whether
+`VITE_FEATURE_OFFLINE_WRITES` is on or off (KB NET-006, ChipIn-one/chipin-frontend#866). The expense writes
+(`expense.save`: the add/edit form's submit; `expense.delete`: the history's Delete) are gated the same way unless the
+outbox can take the write (KB NET-007: flag on, outbox available, an edit or a delete of an entry cached as an
+`EXPENSE`; `canQueueOffline` from `useCanQueueLedgerWrite`); then they are not blocked and go to the outbox. Backend
+down keeps the network usable, so nothing is disabled: the blocking unavailable page (NET-002) is the only notice.
 
 **Settlement — online only, on two levels (C2-02).** Deleting (reverse) and editing a settlement go through the same
 `DELETE`/`PATCH /ledger/entries/{id}` as expenses (the backend `LedgerEntryCommandService.deleteEntry` handles

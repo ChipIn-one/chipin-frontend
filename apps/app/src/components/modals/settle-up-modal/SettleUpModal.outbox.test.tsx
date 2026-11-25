@@ -284,41 +284,43 @@ describe('the friends settle-up (its balances span groups): refused while anythi
     });
 });
 
-describe('§2.9: the group flow is online-only', () => {
-    test('flag off, offline: the trigger opens the flow as before', async () => {
-        act(() => {
-            onlineManager.setOnline(false);
-        });
-        await openGroupSettleUp();
+describe('§2.9: the group flow is online-only (KB NET-006: whether offline writes are on or off)', () => {
+    const FLAGS = [
+        ['off', 'false'],
+        ['on', 'true'],
+    ] as const;
 
-        expect(screen.getByRole('dialog')).toBeTruthy();
-    });
+    test.each(FLAGS)(
+        'NET-006: flag %s, offline: the trigger is disabled and the flow does not open',
+        async (_flag, value) => {
+            vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', value);
+            act(() => {
+                onlineManager.setOnline(false);
+            });
+            render(<SettleUpModal source="group" group={group} />, { wrapper: Theme });
+            const trigger = screen.getByRole('button', { name: 'Settle up' });
 
-    test('flag on, offline: the trigger is disabled and the flow does not open', async () => {
-        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
-        act(() => {
-            onlineManager.setOnline(false);
-        });
-        render(<SettleUpModal source="group" group={group} />, { wrapper: Theme });
-        const trigger = screen.getByRole('button', { name: 'Settle up' });
+            expect(trigger).toHaveProperty('disabled', true);
+            expect(trigger.getAttribute('aria-disabled')).toBe('true');
+            expect(screen.queryByRole('dialog')).toBeNull();
+        },
+    );
 
-        expect(trigger).toHaveProperty('disabled', true);
-        expect(trigger.getAttribute('aria-disabled')).toBe('true');
-        expect(screen.queryByRole('dialog')).toBeNull();
-    });
+    test.each(FLAGS)(
+        'NET-006: flag %s: an open flow is closed when the network goes, and stays closed after',
+        async (_flag, value) => {
+            vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', value);
+            await openGroupSettleUp();
+            expect(screen.getByRole('dialog')).toBeTruthy();
 
-    test('flag on: an open flow is closed when the network goes, and stays closed after', async () => {
-        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
-        await openGroupSettleUp();
-        expect(screen.getByRole('dialog')).toBeTruthy();
-
-        act(() => {
-            onlineManager.setOnline(false);
-        });
-        expect(screen.queryByRole('dialog')).toBeNull();
-        act(() => {
-            onlineManager.setOnline(true);
-        });
-        expect(screen.queryByRole('dialog')).toBeNull();
-    });
+            act(() => {
+                onlineManager.setOnline(false);
+            });
+            expect(screen.queryByRole('dialog')).toBeNull();
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            expect(screen.queryByRole('dialog')).toBeNull();
+        },
+    );
 });
