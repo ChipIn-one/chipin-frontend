@@ -13,7 +13,11 @@ import { activityKeys } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
 import { capabilitiesQueryOptions, ledgerKeys } from 'entities/ledger';
 import { usersKeys } from 'entities/users';
-import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
+import {
+    getAuthSessionVersion,
+    invalidateAuthSession,
+    isAuthSessionSwitchedSince,
+} from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import {
     LedgerWriteRefusedError,
@@ -518,7 +522,8 @@ test('a settlement delete the server refuses (403) shows the translated error an
 });
 
 // Another tab switched the account: this tab's token refresh returns the other user's token. The
-// auth session version stays, the previous user's data and client go (spec 03 §1.5).
+// auth session version moves as a switch, not a session end, and the previous user's data and client
+// go (spec 03 §1.5, #641).
 const switchAccountInAnotherTab = (): void => {
     const sessionVersion = getAuthSessionVersion();
 
@@ -530,7 +535,8 @@ const switchAccountInAnotherTab = (): void => {
     act(() => {
         onAccessTokenRefreshed(fakeAccessToken('user-2'));
     });
-    expect(getAuthSessionVersion()).toBe(sessionVersion);
+    expect(getAuthSessionVersion()).toBe(sessionVersion + 1);
+    expect(isAuthSessionSwitchedSince(sessionVersion)).toBe(true);
 };
 
 describe.each<[string, () => void]>([

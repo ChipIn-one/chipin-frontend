@@ -533,8 +533,8 @@ describe('a write whose session ended during the request', () => {
         },
     );
 
-    // Another tab switched the account and this tab's token refresh found it: the session version
-    // stays, the previous user's client is dropped (`clearUserData`).
+    // The user client is dropped (`clearUserData`) without a session version change: defence in
+    // depth, since #641 a refresh switch also moves the version.
     test.each([200, 404])(
         'a write answered %i after its user client was dropped reloads nothing for the next user',
         async status => {
