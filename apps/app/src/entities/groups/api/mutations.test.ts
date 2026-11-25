@@ -316,7 +316,7 @@ describe('group mutations', () => {
         // Opening the group: the activity reader finds its first page fresh.
         const reader = new InfiniteQueryObserver(
             userCache.client,
-            groupActivityQueryOptions(created.id),
+            groupActivityQueryOptions(created.id, userCache.client),
         );
         const stop = reader.subscribe(() => undefined);
         await new Promise(resolve => setTimeout(resolve, 20));
@@ -503,10 +503,9 @@ describe('group mutations', () => {
         joinWrite.mockResolvedValue(rejoined);
         readList.mockResolvedValue({ items: [rejoined], nextCursor: null });
 
+        // #669: the denied read writes no other cache (a group page reloads the list itself).
         await readDetail(group.id);
-        await vi.waitFor(() => {
-            expect(listGroups()).toEqual([]);
-        });
+        expect(listGroups()).toEqual(cached([group]));
         await write.join(group.inviteToken);
 
         expect(listGroups()).toEqual(cached([rejoined]));
@@ -1000,7 +999,7 @@ describe('group mutations', () => {
         const detail = new QueryObserver(userCache.client, groupDetailQueryOptions(shown.id));
         const activity = new InfiniteQueryObserver(
             userCache.client,
-            groupActivityQueryOptions(shown.id),
+            groupActivityQueryOptions(shown.id, userCache.client),
         );
         const stopDetail = detail.subscribe(() => undefined);
         const stopActivity = activity.subscribe(() => undefined);
@@ -1371,6 +1370,8 @@ describe('group mutations', () => {
         expect(kickWrite).toHaveBeenCalledWith(group.id, 'user-2');
         expect(readGroup).toHaveBeenCalledWith(group.id);
         expect(detailOf(group.id)).toEqual(toTestGroup(afterKick));
+        // #669: the list reloads for the group's card (the detail read writes no other cache).
+        expect(readList).toHaveBeenCalledOnce();
         expect(isKnownUsersInvalidated()).toBe(true);
         expect(userCache.isDashboardInvalidated()).toBe(true);
         expect(effects.onMembersChanged).toHaveBeenCalledWith(group.id, userCache.client);

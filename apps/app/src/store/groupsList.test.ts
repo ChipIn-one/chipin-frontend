@@ -165,7 +165,7 @@ const seedActivity = (pages: number) => {
     );
 };
 
-test('a changed group is read again on any page: no group page needed, its list entry updates', async () => {
+test('a changed group is read again on any page: no group page needed, its list reloads on its next mount', async () => {
     let detailReads = 0;
     server.use(
         http.get('*/groups/a', () => {
@@ -180,10 +180,12 @@ test('a changed group is read again on any page: no group page needed, its list 
     await invalidateGroup('a');
 
     await vi.waitFor(() => {
-        expect(listed()).toEqual([group('a', 'New balances'), group('b')]);
+        expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'New balances'));
     });
     expect(detailReads).toBe(1);
-    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'New balances'));
+    // #669: the detail read writes no other cache; the list no page shows loads on its next mount.
+    expect(listed()).toEqual([group('a'), group('b')]);
+    expect(userCache.client.getQueryState(listKey)?.isInvalidated).toBe(true);
     expect(userCache.client.getQueryState(activityKey)?.isInvalidated).toBe(true);
     expect(userCache.client.getQueryData<{ pages: unknown[] }>(activityKey)?.pages).toHaveLength(1);
 });
@@ -224,7 +226,7 @@ test('offline after a write, the refresh settles without waiting for the detail 
     });
     answerRead?.();
     await vi.waitFor(() => {
-        expect(listed()).toEqual([group('a', 'After the reconnect')]);
+        expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'After the reconnect'));
     });
     userCache.client.unmount();
 });

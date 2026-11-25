@@ -21,10 +21,9 @@ import {
     keepRejoinedGroup,
     putGroupAndReloadList,
     refreshGroup,
-    reloadGroupsList,
     writeGroupDetail,
 } from './groupCache';
-import { putGroupInCachedList } from './listCache';
+import { putGroupInCachedList, reloadGroupsList } from './listCache';
 
 export const groupsMutationKeys = {
     create: ['groups', 'create'] as const,

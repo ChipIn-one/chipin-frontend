@@ -210,20 +210,29 @@ test('renders nothing while an unlisted group loads for the first time', () => {
 });
 
 test.each([403, 404])(
-    'shows the not-found card on a %i detail and drops the group from the list',
+    'GRP-011 shows the not-found card on a %i detail and reloads the list, which no longer has the group',
     async status => {
         useUiPrefsStore.getState().setLastGroupId(group.id);
+        let listReads = 0;
         server.use(
             http.get('*/groups/group-1', () =>
                 HttpResponse.json({ code: 'GROUP_NOT_FOUND' }, { status }),
             ),
+            http.get('*/groups', () => {
+                listReads += 1;
+                return HttpResponse.json({ items: [], nextCursor: null });
+            }),
         );
 
         render(<GroupPage />);
 
         expect(await screen.findByText('group:page.notFound')).not.toBeNull();
         expect(screen.queryByTestId('group-tabs')).toBeNull();
-        expect(cachedGroupsList(getDefaultTestQueryClient())).toEqual([]);
+        // #669: the denied read itself writes no other cache; the page reloads the list once.
+        await waitFor(() => {
+            expect(cachedGroupsList(getDefaultTestQueryClient())).toEqual([]);
+        });
+        expect(listReads).toBe(1);
         expect(useUiPrefsStore.getState().lastGroupId).toBeNull();
     },
 );

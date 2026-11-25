@@ -302,6 +302,24 @@ const RETURN_CONTAINERS = [
     'IfStatement > IfStatement > BlockStatement > ',
 ];
 
+// The QueryClient methods that write, remove, invalidate, cancel or fetch a cache entry
+// (`pure-query-fn`).
+const QUERY_CACHE_METHODS = [
+    'setQueryData',
+    'setQueriesData',
+    'removeQueries',
+    'resetQueries',
+    'invalidateQueries',
+    'refetchQueries',
+    'cancelQueries',
+    'fetchQuery',
+    'prefetchQuery',
+    'fetchInfiniteQuery',
+    'prefetchInfiniteQuery',
+    'ensureQueryData',
+    'ensureInfiniteQueryData',
+].join('|');
+
 /**
  * ChipIn project `no-restricted-syntax` entries (spec 02 §D0 "project"; 02-C12): images only
  * through basics/Image, Zustand reads only by a selector, an object selector only with useShallow
@@ -373,6 +391,24 @@ export const projectRules = ({ appDir }) => [
         ignores: [appGlob(appDir, 'src/entities/*/api/queries.ts')],
         message:
             'Build query keys with the entity key factory (`statsKeys.all`, `groupKeys.detail(id)`) from entities/<entity>/api/queries.ts.',
+    },
+    {
+        // #669 (docs/engineering/rules/50-api-data.md §Query Functions): a query function reads its
+        // own resource and writes no other query cache. Unscoped (no MAX_SCOPES slot). An inline
+        // `queryFn` that takes `client` from its context (`({ client }) =>`, `const { client } =
+        // context`, `context.client`) or calls a QueryClient cache method. Limits (review checks
+        // them): a named or passed-through `queryFn` (`queryFn: fetchX`, `ctx => helper(ctx)`) is
+        // not inspected, and writes through `Query`/`QueryCache` objects (`query.setData`,
+        // `cache.remove`) are not caught.
+        id: 'pure-query-fn',
+        selector: [
+            "Property[key.name='queryFn'] > :function > ObjectPattern > Property[key.name='client']",
+            "Property[key.name='queryFn'] VariableDeclarator > ObjectPattern.id > Property[key.name='client']",
+            "Property[key.name='queryFn'] MemberExpression[property.name='client']",
+            `Property[key.name='queryFn'] CallExpression[callee.property.name=/^(?:${QUERY_CACHE_METHODS})$/]`,
+        ].join(', '),
+        message:
+            'A queryFn is pure: read its own resource and return it or reject; change another cache in a mutation, a read-side seed (`initialData`) or a hook effect (docs/engineering/rules/50-api-data.md §Query Functions).',
     },
     {
         // spec 05 §3 (D23): colors only as `var(--cp-*)` from @chipin/tokens. A whole-string hex

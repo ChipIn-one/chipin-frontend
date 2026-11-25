@@ -1,9 +1,10 @@
-// Edits of the cached groups list on a given client: the group detail query writes the group it
-// read (or drops one it may not read), and the group mutations (`groupCache.ts`) write the groups
-// they changed. Never a request of its own, except the reload a race leaves owed.
+// The cached groups list on a given client, changed only after a write or a denial (#669: a
+// query function writes no other cache, `50-api-data.md` §Query Functions): the group mutations
+// (`groupCache.ts`) write the groups the server just returned, and a reload asks the server for
+// the list again. The edits send no request of their own, except the reload a race leaves owed.
 import type { QueryClient } from '@tanstack/react-query';
 
-import { type GroupsListData, removeGroupFromList, upsertGroupInList } from '../model/groupsList';
+import { type GroupsListData, upsertGroupInList } from '../model/groupsList';
 import type { Group } from '../model/types';
 
 import { groupsKeys } from './keys';
@@ -51,39 +52,23 @@ export const settleListDebt = (client: QueryClient, debt: ListDebt): Promise<voi
     });
 };
 
-// Whether the list loaded since a read was sent. Its load may have started before the read, so it
-// can be older than the read's answer or newer: neither may overwrite the other (a stale response
-// never overwrites newer state), and the server decides with one more list load. The edits keep
-// the list's age, so only a list load moves it.
-const isListLoadedSince = (client: QueryClient, readStartedAt: number | undefined): boolean =>
-    readStartedAt !== undefined &&
-    (client.getQueryState(listKey)?.dataUpdatedAt ?? 0) >= readStartedAt;
-
 /**
- * Puts a group into the cached list. `readStartedAt`: when a read (the group detail) was sent;
- * when the list loaded since then, the group is not written and the list loads again instead (one
- * more request). Without it the group is a write the server just confirmed. Never rejects.
+ * Puts a group a write just returned (confirmed by the server) into the cached list. Never
+ * rejects.
  */
-export const putGroupInCachedList = (
-    client: QueryClient,
-    group: Group,
-    readStartedAt?: number,
-): Promise<void> => {
-    if (isListLoadedSince(client, readStartedAt)) {
-        return settleListDebt(client, 'reload');
-    }
-    return settleListDebt(
+export const putGroupInCachedList = (client: QueryClient, group: Group): Promise<void> =>
+    settleListDebt(
         client,
         editGroupsList(client, data => upsertGroupInList(data, group)),
     );
-};
 
 /**
- * Drops a group the user can no longer read (a 403/404 on its detail): a denial always applies,
- * whenever the list loaded. Never rejects.
+ * After a change of the groups (a write, a member or ledger change, a denied group page): an
+ * active `groups.list` refetches now, an inactive one on its next mount. A running load may
+ * predate the change, so it is cancelled first (`cancelRefetch` alone restarts it only when the
+ * entry has data). The list data is never edited: the server's list decides.
  */
-export const dropGroupFromCachedList = (client: QueryClient, groupId: string): Promise<void> =>
-    settleListDebt(
-        client,
-        editGroupsList(client, data => removeGroupFromList(data, groupId)),
-    );
+export const reloadGroupsList = (client: QueryClient): Promise<void> =>
+    client
+        .cancelQueries({ queryKey: listKey })
+        .then(() => client.invalidateQueries({ queryKey: listKey }, { cancelRefetch: true }));

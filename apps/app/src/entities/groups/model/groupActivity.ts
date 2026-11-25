@@ -7,6 +7,9 @@ import type { GroupActivityPage } from './types';
 
 export type GroupActivityData = InfiniteData<GroupActivityPage, number | null>;
 
+/** The param of a group activity's first page: no cursor (a function: a constant would narrow to `null`). */
+export const firstActivityPageParam = (): number | null => null;
+
 const isPreview = (item: ActivityItem): item is ActivityPreview => !('kind' in item);
 
 /**
