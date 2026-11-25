@@ -37,7 +37,11 @@ const HIDDEN_PORTAL_ATTRIBUTE = 'data-auth-hidden-portal';
  * app-level overlays can open themselves (`BackendUnavailablePage` on an outage, the add-expense
  * draft reopened after a reload), and Back/Forward can remount another page under the expired
  * session, whose new overlays are not marked either. Conversely, an outage dialog already open
- * at expiry time is marked too and stays hidden behind `AuthModal` (known limitation).
+ * at expiry time is marked too and stays hidden behind `AuthModal` (known limitation). A page never
+ * shown (a cold start whose startup refresh fails) has nothing hidden: the modal stands alone, and
+ * an overlay that reopens itself then (the add-expense draft after a reload) can list the user's
+ * cached friends and groups next to `AuthModal` (AUTH-077: the hooks select the cache while
+ * expired); the draft already holds that data.
  */
 const useHidePagePortals = (isHidden: boolean, pageRef: RefObject<HTMLElement | null>): void => {
     useLayoutEffect(() => {

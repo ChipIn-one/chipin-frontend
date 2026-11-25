@@ -206,3 +206,26 @@ test.each(['online', 'offline-cached'] as const)(
         expect(requests.count - beforeReconnect).toBe(1);
     },
 );
+
+test.each([
+    ['expired', true],
+    ['invalid', true],
+    ['signed_out', false],
+    ['missing', false],
+] as const)(
+    'AUTH-077: with reason %s the cached friends are shown: %s, with no request',
+    async (reason, isShown) => {
+        const requests = serveKnownUsers();
+        mountAsUserClient();
+        getDefaultTestQueryClient().setQueryData(usersKeys.known(), [createKnownUser('friend-1')]);
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+
+        const { result } = renderHook(() => useKnownUsers());
+
+        expect(result.current.friends?.map(friend => friend.user.id)).toEqual(
+            isShown ? ['friend-1'] : undefined,
+        );
+        await settle();
+        expect(requests.count).toBe(0);
+    },
+);

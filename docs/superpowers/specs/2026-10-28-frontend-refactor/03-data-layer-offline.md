@@ -269,9 +269,14 @@ is silently lost. Therefore:
 - `app/providers/UserQueryProvider.tsx`: no `userId` → `QueryClientProvider` without persistence; with one →
   `<QueryClientProvider key={userId} client={clientFor(userId)}>`, and restore/subscribe with `persistOptions(userId)` happen outside
   React before the router is created (§1.6, `bootstrapUserCache`). Two users never share one `QueryClient`.
-  `userId` is set only while the session hint is true (`usePersistedUserId`, re-read on every auth transition):
-  after an expiry or a sign-out the app runs on the anonymous client; the user's client stays in memory and its
-  cache in IndexedDB (deleted only by `clearUserData`, 03-7b).
+  `userId` is set only while the session hint is true (`usePersistedUserId`, re-read on every auth transition), with
+  one exception (AUTH-077, #836): after an expiry or an `invalid` session the tab user's client **already mounted**
+  stays mounted (no remount, so the page under `AuthModal` keeps its state, spec 04 §2.3); no IndexedDB is read for a
+  client not yet created, and the hint stays false, so a reload is no offline cold start. While expired the UI still
+  selects that client's cached data (`selectCanReadUserCache`: authenticated, or unauthenticated with `expired` or
+  `invalid`), but no user query fetches; the ungated balances and currency-rates queries are cancelled locally without a token, and the public `/health` read is sent. After a sign-out or with another tab user the
+  app runs on the anonymous client (or the other user's); the user's client stays in memory and its cache in
+  IndexedDB (deleted only by `clearUserData`, 03-7b).
   `onRestored` resolves `restoreReady` (§1.6). Every tab reads the outbox key for the overlay; the outbox mutations are
   adopted and started **only by the tab holding the drain lock** (§2.3): `restoreOutbox(client, userId).then(() =>
   client.resumePausedMutations())`.

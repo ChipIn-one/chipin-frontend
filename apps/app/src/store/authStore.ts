@@ -251,7 +251,7 @@ const loadSignedInData = (): Promise<void> => {
     ]).then(() => undefined);
 };
 
-export const useAuthStore = create<AuthStore>(set => ({
+export const useAuthStore = create<AuthStore>((set, get) => ({
     status: AUTH_STATUS.UNKNOWN,
     unauthReason: undefined,
     isNewUser: null,
@@ -308,7 +308,18 @@ export const useAuthStore = create<AuthStore>(set => ({
         if (isLeavingAfterOwnSignOut()) {
             return;
         }
+        // Any session change answers an open account-switch question with Cancel (M1).
         dismissAccountSwitchConfirm();
+        // AUTH-077: the hidden page's queries still refetch (window focus, intervals) and their
+        // 401s land here again; a session already expired or invalid is not ended a second time
+        // (no version bump, no hint rewrite, no reset of the UI preferences and the self load).
+        const { status, unauthReason } = get();
+        if (
+            status === AUTH_STATUS.UNAUTHENTICATED &&
+            (unauthReason === UNAUTH_REASON.EXPIRED || unauthReason === UNAUTH_REASON.INVALID)
+        ) {
+            return;
+        }
         invalidateAuthSession();
         clearLocalUserRole();
         resetAuthScopedStores();

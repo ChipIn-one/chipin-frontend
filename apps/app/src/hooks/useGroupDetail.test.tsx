@@ -499,3 +499,53 @@ test('a scroll trigger on the page of a group just left loads nothing more', () 
     unmount();
     expect(getDefaultTestQueryClient().getQueryState(activityKey)).toBeUndefined();
 });
+
+test.each([
+    ['expired', true],
+    ['invalid', true],
+    ['signed_out', false],
+    ['missing', false],
+    ['error', false],
+    [undefined, false],
+] as const)(
+    'AUTH-077: signed out with reason %s the cached detail is shown: %s (no request either way)',
+    async (reason, isShown) => {
+        getDefaultTestQueryClient().setQueryData(detailKey, cachedGroup);
+        let requests = 0;
+        server.use(
+            http.get('*/groups/group-1', () => {
+                requests += 1;
+                return HttpResponse.json(group);
+            }),
+        );
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+
+        const { result } = renderHook(() => useGroupDetail(group.id));
+
+        expect(result.current.group).toEqual(isShown ? cachedGroup : undefined);
+        await Promise.resolve();
+        expect(requests).toBe(0);
+    },
+);
+
+test('AUTH-077: an expiry after a 401 refetch keeps the cached detail (only a 403/404 denies)', async () => {
+    getDefaultTestQueryClient().setQueryData(detailKey, cachedGroup);
+    server.use(
+        http.get('*/groups/group-1', () =>
+            HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 }),
+        ),
+    );
+    const { result } = renderHook(() => useGroupDetail(group.id));
+
+    await act(() =>
+        getDefaultTestQueryClient()
+            .refetchQueries({ queryKey: detailKey })
+            .catch(() => undefined),
+    );
+    act(() => {
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
+    });
+
+    expect(result.current.isDenied).toBe(false);
+    expect(result.current.group).toEqual(cachedGroup);
+});

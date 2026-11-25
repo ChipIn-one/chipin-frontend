@@ -37,12 +37,15 @@ const soloGuardLoader =
 const SoloGuardLayout = () => {
     const isUserFetched = useSelfUserState().isFetched;
     const canAccessSolo = useCanAccessSolo();
+    const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
 
     if (!isUserFetched) {
         return <PageLoader />;
     }
 
-    if (!canAccessSolo) {
+    // AUTH-077: an expired session derives no role (D16), but the shown page stays where it is,
+    // hidden by `AuthLayout` under the sign-in modal; the guard decides again once signed in.
+    if (!canAccessSolo && isSignedIn) {
         return <Navigate to={ROUTES.DASHBOARD} replace />;
     }
 

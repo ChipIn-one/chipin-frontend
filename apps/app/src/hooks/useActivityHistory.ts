@@ -13,6 +13,7 @@ import {
 import { isGroupDeniedError } from 'entities/groups';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectCanReadUserCache } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 export interface ActivityHistoryResult {
@@ -47,8 +48,11 @@ export interface ActivityHistoryResult {
 
 export const useActivityHistory = (parentActivityId: string | undefined): ActivityHistoryResult => {
     const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
-    const isEnabled =
-        isUserCacheClient(useQueryClient()) && isSignedIn && parentActivityId !== undefined;
+    const canRead = useAuthStore(selectCanReadUserCache);
+    const isUserClient = isUserCacheClient(useQueryClient());
+    const isEnabled = isUserClient && isSignedIn && parentActivityId !== undefined;
+    // AUTH-077: an expired session keeps the cached history selected (its page is hidden).
+    const isReadable = isUserClient && canRead && parentActivityId !== undefined;
     const query = useActivityChildrenQuery(parentActivityId ?? '', { enabled: isEnabled });
     const { fetchNextPage, refetch } = query;
     // A paused load counts: starting another would cancel it, again and again while offline.
@@ -56,7 +60,7 @@ export const useActivityHistory = (parentActivityId: string | undefined): Activi
     // A 403/404 (removed from the group, the expense's group deleted) wins over cached data, as
     // for `groups.detail`: stale events with working Edit/Delete must not be shown.
     const isDenied = query.isError && isGroupDeniedError(query.error);
-    const data = isEnabled && !isDenied ? query.data : undefined;
+    const data = isReadable && !isDenied ? query.data : undefined;
     const { parent, events, hasInvalidEvents } = useMemo(
         () => loadedActivityChildren(data),
         [data],

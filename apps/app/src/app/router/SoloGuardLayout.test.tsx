@@ -94,6 +94,15 @@ describe('SoloGuardLayout', () => {
         },
     );
 
+    test('AUTH-077: an expired session does not redirect the shown Solo page (it stays hidden under the modal)', () => {
+        signInWithSelf(selfUser('ADMIN'));
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
+
+        renderGuard(null);
+
+        expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
+    });
+
     test('waits while the self user is still to come', () => {
         renderGuard(null);
 

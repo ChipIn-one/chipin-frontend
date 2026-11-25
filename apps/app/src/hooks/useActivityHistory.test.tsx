@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { activityKeys } from 'entities/activity';
 import { useAuthStore } from 'store/authStore';
-import { legacyPreview } from 'test/activityFixtures';
+import { domainPreview, legacyPreview } from 'test/activityFixtures';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
@@ -192,3 +192,28 @@ test('an unreadable later event is left out and flagged', async () => {
     expect(result.current.events.map(event => event.id)).toEqual(['activity-1-3']);
     expect(result.current.hasInvalidEvents).toBe(true);
 });
+
+test.each([
+    ['expired', true],
+    ['invalid', true],
+    ['signed_out', false],
+    ['missing', false],
+] as const)(
+    'AUTH-077: with reason %s the cached history is shown: %s, with no request',
+    async (reason, isShown) => {
+        const cursors = serveHistory();
+        const client = mountAsUserClient();
+        const { parent: cachedParent, lastEvent } = domainPreview('activity-1');
+        client.setQueryData(activityKeys.children('activity-1'), {
+            pages: [{ parent: cachedParent, items: [lastEvent], nextCursor: null }],
+            pageParams: [null],
+        });
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+
+        const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+        expect(result.current.events.map(event => event.id)).toEqual(isShown ? [lastEvent.id] : []);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        expect(cursors).toEqual([]);
+    },
+);

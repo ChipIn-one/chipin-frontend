@@ -8,6 +8,7 @@ import type { Group } from 'entities/groups';
 import { useGroupsListQuery } from 'entities/groups';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectCanReadUserCache } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 const NO_GROUPS: Group[] = [];
@@ -35,8 +36,11 @@ export const useGroupsList = (): GroupsListResult => {
     const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
     const isUserClient = isUserCacheClient(useQueryClient());
     const isEnabled = isSignedIn && isUserClient;
+    // AUTH-077: an expired session keeps the cached groups selected (its page is hidden).
+    const canRead = useAuthStore(selectCanReadUserCache);
+    const isReadable = canRead && isUserClient;
     const query = useGroupsListQuery({ enabled: isEnabled });
-    const groups = isEnabled ? query.data : undefined;
+    const groups = isReadable ? query.data : undefined;
     const isError = isEnabled && groups === undefined && (query.isError || query.isPaused);
 
     return {
