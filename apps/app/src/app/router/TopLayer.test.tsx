@@ -166,7 +166,8 @@ test('renders the update-required screen last in the layer, above the toasts', a
 });
 
 // The token values themselves (floating < toast < blocking, all above the dialog content's 1) are
-// CSS: jsdom applies no stylesheets, so the paint order is in the preview QA list.
+// CSS, checked in `packages/tokens/tokens.test.ts`; jsdom applies no stylesheets, so the paint order
+// itself is in the preview QA list.
 test("NET-003 puts the toaster on the z-index token scale instead of sonner's own value", async () => {
     render(<Shell />);
     act(() => {
