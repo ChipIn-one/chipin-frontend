@@ -22,6 +22,7 @@ import {
     publicApiInstance,
 } from './http';
 import { encodePathSegment } from './pathSegment';
+import { queryRetry } from './queryClient';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
 vi.mock('@sentry/react', () => ({ captureMessage: vi.fn() }));
@@ -437,6 +438,50 @@ describe('isNetworkError', () => {
             false,
         );
         expect(isNetworkError(new TypeError('x'))).toBe(false);
+    });
+
+    test('an Axios error raised before any request was sent (setup error) is not a network error', async () => {
+        // A real setup error of the installed Axios: the option validator rejects before the adapter.
+        const invalidOption: unknown = await apiInstance
+            .request({
+                url: '/x',
+                transitional: { silentJSONParsing: 'yes' as unknown as boolean },
+            })
+            .catch((caught: unknown) => caught);
+
+        expect(invalidOption).toMatchObject({ code: AxiosError.ERR_BAD_OPTION_VALUE });
+        expect(
+            invalidOption instanceof AxiosError ? invalidOption.request : 'other',
+        ).toBeUndefined();
+
+        const setupErrors = [
+            invalidOption,
+            new AxiosError('Unknown option x', AxiosError.ERR_BAD_OPTION),
+            new AxiosError('options must be an object', AxiosError.ERR_BAD_OPTION_VALUE),
+            new AxiosError('Invalid URL', AxiosError.ERR_INVALID_URL),
+            new AxiosError('Unsupported protocol ftp:', AxiosError.ERR_BAD_REQUEST),
+            // Refused by the adapter after the Request object exists: still never sent.
+            new AxiosError('Too large', AxiosError.ERR_BAD_REQUEST, undefined, {}),
+            new AxiosError('Adapter not supported', AxiosError.ERR_NOT_SUPPORT, undefined, {}),
+        ];
+
+        for (const error of setupErrors) {
+            expect(isNetworkError(error)).toBe(false);
+            expect(queryRetry(0, error)).toBe(false);
+        }
+    });
+
+    test('a sent request without a response is a network error and is retried', () => {
+        const offline = new AxiosError('Network Error', AxiosError.ERR_NETWORK, undefined, {});
+        const refused = new AxiosError('connect ECONNREFUSED', 'ECONNREFUSED', undefined, {});
+        const timeout = new AxiosError('timeout', AxiosError.ETIMEDOUT, undefined, {});
+
+        for (const error of [offline, refused, timeout]) {
+            expect(isNetworkError(error)).toBe(true);
+            expect(queryRetry(0, error)).toBe(true);
+        }
+        // A transport code without the request object (the fetch adapter without `Request`).
+        expect(isNetworkError(new AxiosError('Network Error', AxiosError.ERR_NETWORK))).toBe(true);
     });
 });
 

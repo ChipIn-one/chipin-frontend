@@ -213,15 +213,31 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         '    const zNone = useStore();',
         '    const zObj = useStore(authStore, state => ({ a: state.a }));',
         '    const zArr = useStore(authStore, state => [state.a]);',
+        // A double assertion leaf, an assertion combo, `&&` with a new value, a doubly asserted root.
+        '    const dbl = useAuthStore(state => state.list ?? ([] as unknown as Item[]));',
+        '    const combo = useAuthStore(state => state.list ?? ([] satisfies Item[] as Item[]));',
+        '    const and = useAuthStore(state => state.a && { a: state.a });',
+        '    const andArr = useStore(authStore, state => (state.a && [state.a]) as Item[]);',
+        '    const dblRoot = useAuthStore(state => ({}) as unknown as Item);',
+        // The deepest detected chain: 6 value nodes down to the literal.
+        '    const deep = useAuthStore(s => s.a ?? (s.b ?? (s.c ?? (s.d ?? (s.e ?? (s.f || []))))));',
         // Fine: a conditional of plain values, Zustand useStore with a value selector or useShallow,
         // derived arrays (not detected: the heuristic covers only literals).
         '    const condValue = useAuthStore(state => (state.c ? state.a : state.b));',
         '    const zOne = useStore(authStore, state => state.a);',
         '    const zShallow = useStore(authStore, useShallow(state => ({ a: state.a })));',
         '    const derived = useAuthStore(state => state.items.map(item => item.id));',
+        '    const andValue = useAuthStore(state => state.a && state.b);',
+        // Fine: a literal built inside a call or a nested function is not the returned value.
+        '    const mapped = useAuthStore(s => s.items.map(i => ({ i })));',
+        '    const called = useAuthStore(s => (s.a ? f({}) : s.b));',
+        '    const found = useAuthStore(s => s.a ?? s.list.find(x => ({})));',
+        '    const calledDeep = useAuthStore(s => (s.a ? s.b : (s.c ?? g([]))));',
         "    const amount = parseFloat('1.5');",
         '    return [all, arrow, fn, literal, one, shallow, named, external, snapshot, nested, arr,',
-        '        cond, condOne, fnArr, zAll, zNone, zObj, zArr, condValue, zOne, zShallow, derived, amount];',
+        '        cond, condOne, fnArr, zAll, zNone, zObj, zArr, dbl, combo, and, andArr, dblRoot, deep,',
+        '        condValue, zOne, zShallow, derived, andValue,',
+        '        mapped, called, found, calledDeep, amount];',
         '};',
         'const Picture = styled.img``;',
         "const Avatar = styled('img')``;",
@@ -245,6 +261,7 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         'store-without-selector',
         'store-object-without-shallow',
         'store-object-without-shallow',
+        ...Array(6).fill('store-object-without-shallow'),
         'money-parse-float',
         'img-element',
         'img-element',
@@ -354,6 +371,32 @@ describe('money-wire-conversion (spec 03 §4.3, C1-11) merged with the other imp
     });
 });
 
+describe('store-object-without-shallow stays fast on long chains', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedSyntax(projectRules({ appDir: '.' })),
+    ];
+    const terms = Array.from({ length: 30 }, (_, index) => `s.a${index}`);
+    const ternary = terms.reduceRight((rest, term) => `${term} ? ${term}v : ${rest}`, 's.z');
+
+    test.each([
+        ['a 30-term || chain', terms.join(' || ')],
+        ['a 30-deep ternary chain', ternary],
+    ])('%s lints within the time budget, with no report', async (_, body) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const started = performance.now();
+        const [result] = await eslint.lintText(`export const v = useAuthStore(s => ${body});`, {
+            filePath: 'src/components/A.tsx',
+        });
+
+        expect(performance.now() - started).toBeLessThan(3000);
+        expect(result.messages).toEqual([]);
+    });
+});
+
 describe('query-key-literal (spec 03 §1.3)', () => {
     const config = [
         {
@@ -373,16 +416,21 @@ describe('query-key-literal (spec 03 §1.3)', () => {
         "export const f = client.getQueryData(['stats']);",
         "export const g = client.setQueryData(['stats'] as const, data);",
         "export const h = client.getQueryState(['stats']);",
+        // A conditional key with a literal branch (bare, asserted, or the whole conditional asserted).
+        "export const j = useQuery({ queryKey: c ? ['a'] : statsKeys.all, queryFn });",
+        "export const k = useQuery({ queryKey: c ? statsKeys.all : (['b'] as const), queryFn });",
+        "export const l = useQuery({ queryKey: (c ? ['a'] : ['b']) as const, queryFn });",
         // Fine: keys from a factory (property and argument), an array in another property or
         // in a later argument.
         'export const d = useQuery({ queryKey: statsKeys.all, queryFn });',
         "export const e = useQuery({ queryKey: groupKeys.detail(id), meta: { tags: ['x'] } });",
         "export const i = client.setQueryData(statsKeys.all, ['x']);",
+        'export const m = useQuery({ queryKey: c ? statsKeys.all : groupKeys.all, queryFn });',
     ].join('\n');
 
     test.each([
-        ['src/features/landing/A.tsx', Array(6).fill('query-key-literal')],
-        ['src/entities/stats/A.test.tsx', Array(6).fill('query-key-literal')],
+        ['src/features/landing/A.tsx', Array(9).fill('query-key-literal')],
+        ['src/entities/stats/A.test.tsx', Array(9).fill('query-key-literal')],
         // The key factories themselves.
         ['src/entities/stats/api/queries.ts', []],
     ])('%s reports exactly %j', async (file, ids) => {

@@ -4,8 +4,10 @@
 //
 // Checked against openapi/chipin.yaml by gen-types.mjs (exit 1 on any error):
 // (a) every `multipleOf: 0.0001` schema is a registered property (or its map values), and every
-//     non-integer number property (or map/array of numbers) is in exactly one list or in
-//     NON_MONEY_NUMBER_FIELDS; a number must be plain `number` (or `number | null`), no other union;
+//     non-integer number property (or map of numbers) is in exactly one list or in
+//     NON_MONEY_NUMBER_FIELDS; any other number (an array item, nested, a parameter) fails; a number
+//     must be plain `number` (or `number | null`), no other union;
+//     `example`/`examples`/`default`/`enum`/`const`/`x-*` values are data, not schemas, unchecked;
 // (b) a MONEY_FIELDS property, in any schema, is a number with `multipleOf: 0.0001`, and a
 //     MONEY_MAP_FIELDS property is a map of such numbers;
 // (c) the generated `percentageShares` is `Record<string, WireDecimal>`, and no registered field
@@ -59,16 +61,44 @@ export const wireKind = (name, schema, registry = REGISTRY) => {
 const pointer = segments =>
     `#/${segments.map(s => String(s).replace(/~/g, '~0').replace(/\//g, '~1')).join('/')}`;
 
+// Keywords whose values are data, not schemas: example values, defaults, enum members, a `const`
+// value, extensions.
+const isDataKeyword = key =>
+    ['example', 'examples', 'default', 'enum', 'const'].includes(key) || key.startsWith('x-');
+// Keys whose value is a map of names (a property, schema, response code, media type, path, ...):
+// its keys are names, so a property named `default` or a `default` response is still walked.
+const NAME_MAPS = new Set([
+    'properties',
+    'patternProperties',
+    'dependentSchemas',
+    '$defs',
+    'definitions',
+    'paths',
+    'webhooks',
+    'callbacks',
+    'pathItems',
+    'schemas',
+    'parameters',
+    'requestBodies',
+    'responses',
+    'headers',
+    'content',
+    'encoding',
+    'links',
+    'securitySchemes',
+]);
+
 /**
  * JSON pointers of every `multipleOf: 0.0001` schema and every schema whose type includes `number`
- * (anywhere: under `oneOf`/`anyOf`/`allOf`, components behind a `$ref`, nested arrays and maps),
- * plus every object property.
+ * (anywhere: under `oneOf`/`anyOf`/`allOf`, components behind a `$ref`, nested arrays and maps,
+ * but not inside `example`/`examples`/`default`/`enum`/`const`/`x-*` values), plus every object property.
  */
 const scan = document => {
     const scaled = [];
     const numbers = [];
     const properties = [];
-    const walk = (node, segments) => {
+    // `names`: the node is a name map, so its keys are names, never keywords.
+    const walk = (node, segments, names) => {
         if (node === null || typeof node !== 'object') {
             return;
         }
@@ -78,17 +108,26 @@ const scan = document => {
         if (mentionsNumber(node)) {
             numbers.push(pointer(segments));
         }
-        if (!Array.isArray(node) && node.properties && typeof node.properties === 'object') {
+        if (
+            !names &&
+            !Array.isArray(node) &&
+            node.properties &&
+            typeof node.properties === 'object'
+        ) {
             for (const [name, schema] of Object.entries(node.properties)) {
                 properties.push({ name, schema, path: pointer([...segments, 'properties', name]) });
             }
         }
         for (const [key, value] of Object.entries(node)) {
-            walk(value, [...segments, key]);
+            if (names || Array.isArray(node)) {
+                walk(value, [...segments, key], false);
+            } else if (!isDataKeyword(key)) {
+                walk(value, [...segments, key], NAME_MAPS.has(key));
+            }
         }
     };
 
-    walk(document, []);
+    walk(document, [], false);
     return { scaled, numbers, properties };
 };
 
@@ -135,12 +174,30 @@ export const checkWireFields = (document, registry = REGISTRY) => {
     }
     // A number schema is allowed only as a classified property or its map values (the registry
     // shape): never under oneOf/anyOf/allOf, behind a $ref, in an array or nested, nor in a union.
-    for (const path of numbers) {
-        if (!classified.has(path)) {
-            errors.push(
-                `(a) ${path}: an unclassified number schema; make it a registered property (or its map values) or add the field to NON_MONEY_NUMBER_FIELDS in scripts/api/wire-fields.mjs`,
-            );
+    // A property (a registry list or the allowlist) or its map values (a map list) can be classified.
+    const propertyPaths = new Set(properties.map(({ path }) => path));
+    const mapValuePaths = new Set(properties.map(({ path }) => `${path}/additionalProperties`));
+    const remedy = path => {
+        if (propertyPaths.has(path)) {
+            return 'make it a registered property or add the field to NON_MONEY_NUMBER_FIELDS';
         }
+        if (mapValuePaths.has(path)) {
+            return 'add the map property to MONEY_MAP_FIELDS or DECIMAL_MAP_FIELDS';
+        }
+        return (
+            'it is not an object property or map value (an array item or nested number cannot be ' +
+            "classified, nor a parameter, header or $ref'd schema): make it a number property or " +
+            'map of a schema, or change the parameter type or extend the registry'
+        );
+    };
+
+    for (const path of numbers) {
+        if (classified.has(path)) {
+            continue;
+        }
+        errors.push(
+            `(a) ${path}: an unclassified number schema; ${remedy(path)} in scripts/api/wire-fields.mjs`,
+        );
     }
     for (const path of scaled) {
         if (!classified.has(path) && !numbers.includes(path)) {
