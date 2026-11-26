@@ -100,8 +100,8 @@ export const writeGroupDetail = (client: QueryClient, group: Group): Promise<voi
 /**
  * A group a write just returned goes into the cached list at once, then the list reloads, and the
  * written group stays in it whatever the reload read, unless the write is no longer current (a
- * sign-out, an account switch, or, for an update or a cover upload, a change of the group's
- * membership: a leave, a removal or a join).
+ * sign-out, an account switch, or a change of the group's membership meanwhile: a leave, a
+ * removal or a join).
  */
 export const putGroupAndReloadList = (
     client: QueryClient,

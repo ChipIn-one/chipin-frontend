@@ -1,7 +1,6 @@
 import { type RefObject, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { onlineManager } from '@tanstack/react-query';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
 import { readSessionEnvironment, sessionAccess } from 'app/auth/requireSession';
@@ -15,11 +14,7 @@ import { useAuthStore } from 'store/authStore';
 
 import { AuthModal } from 'components/modals/auth-modal';
 
-// Spec 04 §2.3 (C3-09): the page under the modal of an expired session keeps its state, but the
-// finances are not visible or reachable for whoever holds the device now.
-const PageContainer = styled.div<{ $hidden: boolean }>`
-    visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
-`;
+import styles from './AuthLayout.module.css';
 
 // Marks the overlays the page opened (Radix dialogs and sheets are portaled to `<body>`, outside the
 // container above) while `useHidePagePortals` hides them.
@@ -155,14 +150,15 @@ const AuthLayout = () => {
 
     return (
         <>
-            <PageContainer
+            <div
+                className={styles.root}
                 ref={pageRef}
-                $hidden={isPageHidden}
+                data-hidden={isPageHidden}
                 inert={isPageHidden}
                 aria-hidden={isPageHidden || undefined}
             >
                 <Outlet />
-            </PageContainer>
+            </div>
             {isPageHidden && authModal}
         </>
     );

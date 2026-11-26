@@ -9,7 +9,7 @@ import { GlobalHooks } from 'pages/GlobalHooks';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PageLoader from 'basics/PageLoader';
-import AddExpenseButton from 'components/AddExpenseButton';
+import { AddExpenseButton } from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import { Header } from 'components/Header';
 import { EarlySupporterPromoModal } from 'components/modals/early-supporter-promo-modal';

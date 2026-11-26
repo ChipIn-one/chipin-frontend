@@ -112,9 +112,9 @@ const reloadDashboard = (client: QueryClient): Promise<void> =>
 
 // The successful joins of each group on each client, and its successful leaves and removals (the
 // ends of the user's membership): a leave that a rejoin overtook does not forget the group (the
-// join is newer), and an update or a cover upload that any membership change overtook writes
-// nothing: after a leave or a removal the group is gone (whether its page is still mounted or
-// not), and after a rejoin the join's group is newer.
+// join is newer), and an update, a cover upload or a join's list reload that any membership
+// change overtook writes nothing: after a leave or a removal the group is gone (whether its page
+// is still mounted or not), and after a rejoin the join's group is newer.
 type GroupCounts = WeakMap<QueryClient, Map<string, number>>;
 
 const joinCounts: GroupCounts = new WeakMap();
@@ -272,7 +272,9 @@ export const uploadGroupCoverMutationOptions = () =>
 /**
  * `POST /groups/invite/{inviteToken}`; as an update, and a leave running meanwhile keeps it. A
  * rejoin of a group left while its page is still mounted keeps that page's entries
- * (`keepRejoinedGroup`): only a join does, a late update or cover upload does not.
+ * (`keepRejoinedGroup`): only a join does, a late update or cover upload does not. As an update,
+ * a change of the membership after the join answered (a leave, a removal or a newer join) during
+ * its list reload writes nothing back (#892).
  */
 export const joinGroupMutationOptions = () =>
     mutationOptions<Group, Error, JoinGroupVariables>({
@@ -286,7 +288,15 @@ export const joinGroupMutationOptions = () =>
             }
             countJoin(client, group.id);
             keepRejoinedGroup(client, group.id);
-            return afterGroupWritten(client, group, () => isCurrent(client, variables));
+            const joined = membershipOf(client, group.id);
+
+            return afterGroupWritten(
+                client,
+                group,
+                () =>
+                    isCurrent(client, variables) &&
+                    !isMembershipChangedSince(client, group.id, joined),
+            );
         },
     });
 

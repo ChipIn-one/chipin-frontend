@@ -135,6 +135,12 @@
     /* Activity sub-events details row divider */
     --cp-subevents-divider: var(--olive-a4);
 
+    /* component tokens: shell (#894) */
+    --cp-nav-highlight: var(--green-4);
+    --cp-nav-highlight-solo: var(--violet-4);
+    --cp-fab-border: var(--grass-7);
+    --cp-fab-border-solo: var(--violet-7);
+
     /* Media: text over a cover and its scrim, the same in both modes */
     --cp-media-on: #ffffff;
     --cp-media-scrim: #000000;

@@ -1,0 +1,51 @@
+.root {
+    --_nav-highlight: var(--cp-nav-highlight);
+}
+
+.root[data-variant='solo'] {
+    --_nav-highlight: var(--cp-nav-highlight-solo);
+}
+
+/* Card: doubled to beat the Radix Card position and overflow (app CSS loads before Radix). */
+.surface.surface {
+    position: sticky;
+    top: calc(var(--cp-space-6) + var(--cp-space-4));
+    width: 100%;
+    height: calc(
+        100dvh - var(--cp-space-6) - var(--cp-space-6) - var(--cp-space-4) - var(--cp-space-4)
+    );
+    overflow-y: auto;
+}
+
+/* Ghost Button: doubled to beat the Radix ghost margin, height, alignment and hover background. */
+.navButton.navButton {
+    position: relative;
+    width: 100%;
+    min-height: var(--cp-space-8);
+    margin: 0;
+    justify-content: flex-start;
+}
+
+.navButton::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: calc(var(--cp-space-4) * -1);
+    width: 4px;
+    height: var(--cp-space-7);
+    border-radius: 0 var(--cp-radius-2) var(--cp-radius-2) 0;
+    background-color: currentColor;
+    box-shadow: 0 0 20px currentColor;
+    opacity: 0;
+    transform: translateY(-50%);
+}
+
+.navButton.navButton[data-active='true'],
+.navButton.navButton:hover {
+    background: linear-gradient(90deg, var(--_nav-highlight), transparent 82%);
+}
+
+.navButton[data-active='true']::before,
+.navButton:hover::before {
+    opacity: 1;
+}

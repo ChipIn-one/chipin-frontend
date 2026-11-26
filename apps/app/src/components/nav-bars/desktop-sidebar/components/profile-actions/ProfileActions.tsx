@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Flex } from '@radix-ui/themes';
-import { LogOutIcon } from 'lucide-react';
+import { ChevronDownIcon, LogOutIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useSelfUserState } from 'hooks/useSelfUser';
@@ -8,7 +8,7 @@ import { useSelfUserState } from 'hooks/useSelfUser';
 import { useSignOutConfirm } from 'components/sign-out-confirm';
 import { UserProfileSummary } from 'components/user-profile-summary';
 
-import { ProfileButton, ProfileChevron, ProfileSignOutContent, ProfileSignOutSlot } from './styled';
+import styles from './ProfileActions.module.css';
 
 interface Props {
     isSoloMode: boolean;
@@ -26,8 +26,9 @@ const ProfileActions = ({ isSoloMode }: Props) => {
     };
 
     return (
-        <Flex direction="column">
-            <ProfileButton
+        <Flex className={styles.root} data-expanded={isExpanded} direction="column">
+            <Button
+                className={styles.profileButton}
                 onClick={onToggle}
                 aria-expanded={isExpanded}
                 aria-controls="desktop-profile-actions"
@@ -40,15 +41,15 @@ const ProfileActions = ({ isSoloMode }: Props) => {
                     isLoading={isUserLoading}
                     avatarSize="4"
                 />
-                <ProfileChevron $isExpanded={isExpanded} size={20} aria-hidden />
-            </ProfileButton>
+                <ChevronDownIcon className={styles.chevron} size={20} aria-hidden />
+            </Button>
 
-            <ProfileSignOutSlot
+            <div
+                className={styles.signOutSlot}
                 id="desktop-profile-actions"
-                $isExpanded={isExpanded}
                 aria-hidden={!isExpanded}
             >
-                <ProfileSignOutContent>
+                <div className={styles.signOutContent}>
                     <Button
                         onClick={requestSignOut}
                         disabled={!isExpanded}
@@ -60,11 +61,11 @@ const ProfileActions = ({ isSoloMode }: Props) => {
                         <LogOutIcon size={18} />
                         {t('buttons.signOut')}
                     </Button>
-                </ProfileSignOutContent>
-            </ProfileSignOutSlot>
+                </div>
+            </div>
             {signOutDialog}
         </Flex>
     );
 };
 
-export default ProfileActions;
+export { ProfileActions };

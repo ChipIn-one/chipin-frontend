@@ -128,6 +128,8 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
 
     expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
     expect(screen.getAllByRole('link')).toHaveLength(4);
+    // Without the center action the surface is solid: no cutout for it.
+    expect(document.querySelector('[data-cutout]')?.getAttribute('data-cutout')).toBe('false');
 });
 
 test('EXP-062 keeps four mobile items with only a one-member group', () => {
@@ -188,21 +190,12 @@ test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
     });
     const centerAction = addExpenseButton.parentElement as HTMLElement;
     const navContent = centerAction.parentElement as HTMLElement;
-    const navWrapper = navContent.parentElement as HTMLElement;
     const navSurface = navContent.previousElementSibling as HTMLElement;
 
-    expect(getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-action-lift').trim()).toBe(
-        'var(--space-3)',
-    );
-    expect(
-        getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-cutout-center-y').trim(),
-    ).toBe('calc(0px - var(--mobile-nav-action-lift))');
-    expect(getComputedStyle(centerAction).transform).toBe(
-        'translate(-50%, calc(-50% - var(--mobile-nav-action-lift)))',
-    );
-    expect(getComputedStyle(navSurface).getPropertyValue('--mobile-nav-cutout-radius').trim()).toBe(
-        'calc(var(--space-7) - var(--space-1))',
-    );
+    // The lifted slot sits in the nav content, next to the items, over the surface cutout.
+    expect(navContent.contains(screen.getByRole('link', { name: 'Dashboard' }))).toBe(true);
+    expect(centerAction.contains(screen.getByRole('link', { name: 'Dashboard' }))).toBe(false);
+    expect(navSurface.getAttribute('data-cutout')).toBe('true');
 });
 
 test('marks the active item with aria-current, not by color alone', () => {

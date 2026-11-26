@@ -1,0 +1,42 @@
+.root {
+    --_action-lift: var(--cp-space-3);
+    --_cutout-center-y: calc(0px - var(--_action-lift));
+
+    /* Keep the persistent navigation above in-flow content without competing with Radix portals. */
+    z-index: var(--cp-z-content);
+    overflow: visible;
+}
+
+.surface {
+    --_cutout-radius: calc(var(--cp-space-7) - var(--cp-space-1));
+
+    position: absolute;
+    inset: 0;
+    background: var(--cp-accent-surface);
+}
+
+.surface[data-cutout='true'] {
+    background: radial-gradient(
+        circle var(--_cutout-radius) at 50% var(--_cutout-center-y),
+        transparent var(--_cutout-radius),
+        var(--cp-accent-surface) var(--_cutout-radius)
+    );
+}
+
+.content {
+    min-height: var(--cp-space-9);
+}
+
+.centerAction {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, calc(-50% - var(--_action-lift)));
+}
+
+/* Doubled to beat the Radix Button height and surface box-shadow (app CSS loads before Radix). */
+.item.item {
+    width: 100%;
+    min-height: var(--cp-space-9);
+    box-shadow: none;
+}

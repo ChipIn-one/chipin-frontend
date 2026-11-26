@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button, IconButton } from '@radix-ui/themes';
 import { BugIcon, CalendarPlusIcon, FlaskConicalIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { useExtendSubscriptionByDay, useUpdateSelf } from 'hooks/useUserMutations';
 import { AUTH_STATUS } from 'store/authConstants';
@@ -12,14 +11,11 @@ import { selectResolvedAppearance, selectSetPreference, useAppearanceStore } fro
 
 import { Dropdown } from 'basics/Dropdown';
 
+import styles from './DevMenu.module.css';
+
 interface Props {
     isShowLabel?: boolean;
 }
-
-const LabeledTrigger = styled(Button)`
-    width: 100%;
-    justify-content: flex-start;
-`;
 
 const DevMenu = ({ isShowLabel = false }: Props) => {
     const [shouldCrash, setShouldCrash] = useState(false);
@@ -67,10 +63,10 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
         },
     ];
     const trigger = isShowLabel ? (
-        <LabeledTrigger size="3" variant="outline" color="gray">
+        <Button className={styles.labeledTrigger} size="3" variant="outline" color="gray">
             <FlaskConicalIcon />
             {t('header.devMenu')}
-        </LabeledTrigger>
+        </Button>
     ) : (
         <IconButton
             size={{

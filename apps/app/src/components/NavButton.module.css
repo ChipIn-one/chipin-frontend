@@ -1,0 +1,59 @@
+/*
+ * UnstyledButton. App CSS loads before Radix; consumers (e.g. InteractiveCard, the nav bars)
+ * pass a module class whose rules must beat these by specificity.
+ * - `.root` (0,1,0) is the base. Radix's later `.rt-reset` (`all: unset`) and `.rt-BaseButton`
+ *   rules override it, so the doubled rule below does the real work.
+ * - `.root.root` (0,2,0) unsets only what Radix sets on the element, so it beats Radix
+ *   without beating the consumers' `display` or `width`. Radix's `display: inline-flex`
+ *   equals the base value, so it is left alone. A consumer that replaces the `:focus-visible`
+ *   outline uses (0,3,0) (InteractiveCard's `.root.root:focus-visible`).
+ */
+.root {
+    all: unset;
+    display: inline-flex;
+    cursor: pointer;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.root.root {
+    align-items: unset;
+    justify-content: unset;
+    flex-shrink: unset;
+    -webkit-user-select: unset;
+    user-select: unset;
+    vertical-align: unset;
+    font-family: unset;
+    font-style: unset;
+    font-size: unset;
+    font-weight: unset;
+    line-height: unset;
+    letter-spacing: unset;
+    text-align: unset;
+    text-indent: unset;
+    -webkit-tap-highlight-color: unset;
+    height: unset;
+    margin: unset;
+    padding: unset;
+    gap: unset;
+    border-radius: unset;
+    background-color: unset;
+    background-image: unset;
+    color: unset;
+    box-shadow: unset;
+    filter: unset;
+    opacity: unset;
+    z-index: unset;
+    /* Radix sets an outline on `:focus`, `:active` and `[data-disabled]`; the focus rule below comes later. */
+    outline: unset;
+    outline-offset: unset;
+    cursor: pointer;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* (0,2,0) beats the Radix focus outline (0,1,0); a consumer replacing it needs more (see above). */
+.root:focus-visible {
+    outline: 2px solid var(--cp-focus-ring);
+    outline-offset: 2px;
+}

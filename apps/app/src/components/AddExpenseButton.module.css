@@ -1,0 +1,12 @@
+/* The mobile button (FAB): doubled to beat the Radix Button size 4 height and padding
+   (app CSS loads before Radix). */
+.root.root {
+    width: var(--cp-space-9);
+    height: var(--cp-space-9);
+    padding: 0;
+    border: 6px solid var(--cp-fab-border);
+}
+
+.root.root[data-variant='solo'] {
+    border-color: var(--cp-fab-border-solo);
+}

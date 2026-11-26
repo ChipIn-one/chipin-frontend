@@ -208,8 +208,8 @@ Before rolling back past 04-4a2, read [Domains and rollback](#domains-and-rollba
 
 The app moves to its own host in two steps (spec 04 §4.5,
 `docs/superpowers/specs/2026-10-28-frontend-refactor/04-routing-monorepo-site.md`).
-Step 1 (04-4a2) is below; step 2 (the site takes `chipin.one`, 04-4b) adds its
-own section.
+Step 1 (04-4a2) is below; step 2 (the site takes `chipin.one`, 04-4b) follows
+in [Step 2: the site takes `chipin.one`](#step-2-the-site-takes-chipinone).
 
 Neither step makes `chipin.one` or `dev.chipin.one` installable as the app
 (#758). In step 1 the legacy hosts serve no manifest and no web-app metas and
@@ -342,3 +342,137 @@ Rollback criterion: 404 or 5xx on `chipin.one` or `app.chipin.one` rising above
 - Once the offline-write flag (03-17) is enabled in prod, step 1 is not rolled
   back without first disabling the flag and letting the outbox queues drain:
   the outbox lives in the IndexedDB of `app.chipin.one`.
+
+### Step 2: the site takes `chipin.one`
+
+Done by the owner on 2026-11-26 (04-4b). The domains move from the app project
+`chipin-frontend` to the site project `chipin-site` (Root Directory
+`apps/site`); the DNS zone is on Vercel, so no record changes. After the move:
+
+| Project           | Domains                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `chipin-frontend` | `app.chipin.one` (Production), `app-dev.chipin.one` (Preview, `master`)                                                     |
+| `chipin-site`     | `chipin.one` and `www.chipin.one` (Production, no redirect), `dev.chipin.one` and `site-dev.chipin.one` (Preview, `master`) |
+
+The site serves the old app URLs by the `302` rows of `apps/site/vercel.json`
+(spec 04 §4.2 step 2; `302` until 04-5a): on `chipin.one` and `www.chipin.one`
+private app paths go to `https://app.chipin.one` + the same path and query, on
+`dev.chipin.one` and `site-dev.chipin.one` to `https://app-dev.chipin.one`;
+`/group/join/<t>` and `/friends/join/<t>` go to the site landing
+`/join/group/<t>` and `/join/friend/<t>` on every host. `/api/stats` is proxied
+on the same hosts. `www.chipin.one` gets the same rules as `chipin.one` and no
+`X-Robots-Tag`.
+
+Preconditions:
+
+- Step 1 in Production (04-4a2 promoted, app domains valid, criterion 10 green).
+- 04-2f and 04-2g in Production; 04-2h green.
+- The site has 04-3b1, 04-3b2, 04-3c and 04-3d and its dev check on
+  `site-dev.chipin.one` passed.
+- `chipin-site` settings, all found missing on 2026-11-26:
+  - `site-dev.chipin.one` is connected to the Preview environment with Git
+    branch `master`. As a Production domain without a Production deployment it
+    answered `DEPLOYMENT_NOT_FOUND`.
+  - Vercel Authentication (Deployment Protection) is off. Domains bound to a
+    branch count as Preview, so with protection on `dev.chipin.one` and
+    `site-dev.chipin.one` ask for a Vercel login. The app project has it off too.
+  - Node.js version 24.x, the same as the app project and the root
+    `package.json` `engines`.
+- The site's `master` deployment is promoted to Production before the move. The
+  site's Production Branch is `main` with Git deployments off, so without a
+  Promote `chipin.one` would have no deployment to serve.
+
+Order:
+
+1. Rehearsal on dev: in `chipin-frontend` → Settings → Domains remove
+   `dev.chipin.one`; in `chipin-site` add `dev.chipin.one`, environment Preview,
+   Git branch `master`. Wait for Valid Configuration, then run the dev variant
+   of the checks below on `dev.chipin.one` (targets `https://app-dev.chipin.one`,
+   `X-Robots-Tag: noindex, nofollow` present).
+2. Prod: in `chipin-frontend` remove `chipin.one`; in `chipin-site` add
+   `chipin.one` as a Production domain. Vercel adds `www.chipin.one` with it,
+   makes `www.chipin.one` the primary and turns `chipin.one` into a `308`
+   redirect to `www.chipin.one`. Edit `chipin.one` right away: Production, no
+   redirect. Leave `www.chipin.one` as a Production domain without a redirect
+   too. Browsers cache a `308`, so every minute it is served adds visitors who
+   go to `www` from then on; that is why `www.chipin.one` must serve the same
+   rules as `chipin.one`.
+3. Right after, the prod checks below (criterion 7 and 9 of spec 04).
+4. The `www.chipin.one` rows of `apps/site/vercel.json` (#530, after the move):
+   until the site build with them is promoted, `www.chipin.one/dashboard`,
+   `/oauth/callback` and `/api/stats` answer `404`. Merge, check
+   `site-dev.chipin.one` (a regression check only: the `www` rows show only on
+   `www.chipin.one`), then Promote the site's `master` deployment and run the
+   `www` checks below.
+5. Monitor for 48 hours against the rollback criterion. 04-5a/b not earlier
+   than 7 days without a step-2 rollback.
+
+Checks (criterion 7; on dev the same on `dev.chipin.one`, app targets on
+`https://app-dev.chipin.one`):
+
+- `curl -sI https://chipin.one/` → `200`, no `Location` (not a `308` to `www`),
+  no `X-Robots-Tag`; the same for `/privacy`, `/terms`, `/ru/`, `/ru/privacy`;
+- `curl -sI https://chipin.one/dashboard` → `302`,
+  `Location: https://app.chipin.one/dashboard`; the same for `/solo`,
+  `/activity`, `/settings`, `/group/<uuid>`, `/friends`, `/login`;
+- `curl -sI 'https://chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1'` →
+  `302`, `Location: https://app.chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1`;
+- `curl -sI https://chipin.one/group/join/x` → `302`, `Location: /join/group/x`;
+  `/friends/join/x` → `302`, `Location: /join/friend/x`;
+  `/join/group/x` → `200`, `Referrer-Policy: no-referrer`;
+- `/not-found` → `404` (the site `404.astro`, no redirect);
+  `/manifest.webmanifest` → `404`;
+- `/sitemap.xml` → `302` to `/sitemap-index.xml`; `/index.html` and `/app.html`
+  → `302` to `/`; `/es/` → `301` to `/`;
+- `curl -sI https://chipin.one/sw.js` → `200`, `Cache-Control: no-cache`;
+  `curl -s https://chipin.one/sw.js` is the kill-switch (`unregister`, no
+  Workbox);
+- `/api/stats` → `200`, `Cache-Control: private, no-store`;
+  `/.well-known/assetlinks.json` → `200`;
+- `curl -sI https://chipin.one/join/group/x | grep -ci content-security-policy`
+  → `1` (criterion 9); no response of `chipin.one` has `Set-Cookie`;
+- `www.chipin.one` (after the Promote of order step 4): `/` → `200`, no
+  redirect, no `X-Robots-Tag`; `/dashboard` → `302` to
+  `https://app.chipin.one/dashboard`;
+  `'https://www.chipin.one/oauth/callback?code=x&returnTo=%2Fgroup%2F1'` → `302`
+  to the same path and query on `https://app.chipin.one`; `/api/stats` → `200`,
+  `Cache-Control: private, no-store`;
+- `https://app.chipin.one/dashboard` → `200`, `X-Robots-Tag: noindex, nofollow`;
+- in a browser: Google sign-in from the site (`/login?locale=…` on the app host)
+  and through the old `https://chipin.one/oauth/callback`; `Set-Cookie` of
+  sign-in and refresh on `app.chipin.one/api/…` is `__Host-` without `Domain=`;
+  an old invite link `https://chipin.one/group/join/<t>` → the site landing →
+  its button → the confirmation screen on `app.chipin.one` → joining.
+
+### Rollback of step 2
+
+Rollback criterion: as for step 1 (404 or 5xx on `chipin.one` or
+`app.chipin.one` above 1 % per hour, an OAuth sign-in error), or the site
+unavailable. It takes minutes and needs no PR:
+
+- Prod: remove `chipin.one` from `chipin-site` and add it to `chipin-frontend`
+  as a Production domain without a redirect. Dev: remove `dev.chipin.one` from
+  `chipin-site` and add it to `chipin-frontend`, Preview, Git branch `master`.
+- Leave `www.chipin.one` on `chipin-site` (Production, no redirect). The app
+  project has no `www` rules: its legacy-host redirects, `/api` rewrites,
+  `/sw.js` kill-switch rewrite and the app's legacy-host lists
+  (`helpers/serviceWorkerHost.ts`, `helpers/legacyHost.ts`) name only
+  `chipin.one` and `dev.chipin.one`. On the app project `www.chipin.one` would
+  install the full app worker, answer `404` on `/api/*` and serve the app shell
+  on private paths. On the site it keeps sending private paths to
+  `app.chipin.one`, so visitors who still have the cached `308` keep working.
+  Moving `www.chipin.one` to the app project first needs an app PR that adds it
+  to those host lists. If the rollback is for a broken site build, fix
+  `www.chipin.one` with an Instant Rollback of `chipin-site` to its previous
+  Production deployment, not by moving the domain.
+- Never make `www.chipin.one` a `307` to `chipin.one` while browsers may still
+  hold the cached `308` `chipin.one` → `www.chipin.one` from step 2 of the move:
+  the two redirects loop.
+- The app project keeps the step-1 redirects: `chipin.one` serves today's
+  landing again, private paths still `302` to `app.chipin.one`, `/sw.js` stays
+  the kill-switch of 04-4a1, and the new invite links `/join/group|friend/<t>`
+  are handled by its compat redirects. The site's own step-2 redirects are `302`, so
+  browsers cached none of them (only the Vercel `308` above). `app.chipin.one` and an enabled 03-17 are not
+  affected.
+- After 04-5a this rollback is impossible: 04-5a removes the landing and the
+  legacy-host rules from the app project.
