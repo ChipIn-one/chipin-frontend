@@ -54,12 +54,12 @@ They move to `PROP_COLOR` and `getBalanceDirection` when a design-system task to
   meet this rule. They are enough only when the same words are visible nearby (a column or card
   titled "You owe").
 
+- Show the absolute value next to the words (`Math.abs`, or `Amount`'s default `isAbsolute`);
+  `+` is used only for "owed" (`DebtAmount withPlus`). Never show a minus sign to mean "you owe".
+
 Today `GroupCard`, `DashboardSummary` (total and its owed/owing lines) and `FriendListItem`
 (`pages/friends-page`) show direction to sighted users by color only, with hidden words. Fix them
 when a task touches them.
-
-- Show the absolute value next to the words (`Math.abs`, or `Amount`'s default `isAbsolute`);
-  `+` is used only for "owed" (`DebtAmount withPlus`). Never show a minus sign to mean "you owe".
 
 ## One large amount per screen
 
@@ -80,7 +80,8 @@ set `font-size` and `font-weight` in styled CSS; that moves to a CSS Module with
   contract does not fit, extend `AmountInput`; do not fork it in a feature.
 - The label sits above the field (see [forms.md](forms.md)); the currency is visible next to the
   field: a currency `Select` or the static code beside it, as in `SettlementAmountField`
-  (settle-up). The amount and its currency are one pair and may sit side by side on phones.
+  (settle-up). The amount and its currency are one pair and may sit side by side on phones. (In
+  the expense modal the currency select is a separate cell, below the amount on phones.)
 - Split rows keep a fixed control width (`120px` today) so the values line up down the list.
 
 Today the expense amount and the settle-up amount use `AmountInput`; the split rows

@@ -82,7 +82,7 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
   the result of an action the user just took: saved, created, copied, failed to save (including
   "you are offline" when the action could not run).
 - Allowed system events, the only exceptions: the result of a queued offline operation
-  (`ConflictNotices`, a toast and never a dialog), session expiry (`useAuthToasts`), the PWA
+  (`ConflictNotices`, a toast and never a dialog), session and token problems (`useAuthToasts`), the PWA
   update and install messages, and the public site's language suggestion.
 - Never a toast for a load error, for an empty screen or for the offline status itself: those are
   the inline states above.

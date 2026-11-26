@@ -15,7 +15,7 @@ Use these; a new field type is added here first:
 | One of a short list   | `SegmentedControl` (`basics/SegmentedControl`)                                                                                      |
 | One of a few, rich    | `RadioCards` (`basics`), options with a title and a description                                                                     |
 | One of a long list    | `Select` (`basics/Select`); searchable: `SearchSelect` (`components/search-select`), `CurrencySelect` (`components/CurrencySelect`) |
-| Search box            | Radix `TextField.Root` with a search icon slot and a translated `aria-label` (`GroupsCards`, `FriendsSearchBar`, `SearchSelect`)    |
+| Search box            | Radix `TextField.Root` with a search icon slot and a translated `aria-label` (`GroupsCards`, `SearchSelect`)                        |
 | Date                  | Radix `TextField.Root` with a visible label (`ExpenseDateField`)                                                                    |
 | Yes/no, several picks | Radix `Checkbox` (as in the expense participants list)                                                                              |
 | On/off setting        | Radix `Switch` (settings page, group settings)                                                                                      |
@@ -36,11 +36,12 @@ Use these; a new field type is added here first:
   `SettlementAmountField` (settle-up) already does. Today `TextInput` and `TextArea` show it in the
   label row, in place of the label; moving it is a change to those two basics, not to each form.
 
-Today the expense description field (`expense-amount-fields`) has only a placeholder and an
-`aria-label`, no visible label; fix it when touched.
-
 - Required fields pass `isRequired` to the basic, which sets `required` and checks for an empty
   value.
+
+Today the expense description field (`expense-amount-fields`) has only a placeholder and an
+`aria-label`, no visible label, and `FriendsSearchBar` (`pages/friends-page`) has no `aria-label`,
+only a placeholder; fix them when touched.
 
 ## Buttons
 

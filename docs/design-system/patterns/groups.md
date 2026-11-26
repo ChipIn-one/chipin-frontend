@@ -16,7 +16,8 @@ How people and groups look on every screen. Paths are inside `apps/app/src`; che
 - Icon tiles (a Radix `Avatar` with an icon `fallback`, as in `EmptyState` and the summary cards)
   are not avatars and may use Radix `Avatar` directly.
 - Sizes are the Radix `Avatar` `size` prop. In use today: `1`-`2` in rows and `UsersRow`, `3` in
-  debt and member lists, `4` on group cards and in `RemoveFriendAlertDialog`. There are no avatar
+  debt and member lists, `4` on group cards and in `RemoveFriendAlertDialog`, `5` in `UserProfileSummary`, `8` in
+  `UserAvatarModal`. There are no avatar
   component tokens yet; pick the size of the same place on another screen.
 - `UsersRow` shows at most `max` avatars (default `5`, all callers pass `5`) and one `+N` avatar
   for the rest. Do not list members as a wrapped avatar grid on cards.
