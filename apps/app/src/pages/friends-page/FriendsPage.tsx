@@ -9,13 +9,14 @@ import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { FriendsList, FriendsSidebar } from './components';
 
 const FriendsPage = () => {
-    const { friends, isError, isLoading } = useKnownUsers();
+    const { friends, isError, isLoading, isOffline, refetch } = useKnownUsers();
     const [search, setSearch] = useState('');
     const [filterKey, setFilterKey] = useState('all');
 
-    // As before the migration, a failed first load (or one waiting for the network) with nothing
-    // cached shows the invite empty state; with data, the offline banner alone says so.
-    const isEmptyFriends = isError || friends?.length === 0;
+    // USR-013: only a loaded, empty list is "no friends". A failed first load (or one waiting for
+    // the network) with nothing cached is an error or offline state; with data the list stays and
+    // the offline banner alone says so.
+    const isEmptyFriends = friends?.length === 0;
 
     const { currencies, currencyGroups, settledFriends } = useMemo(
         () => getFriendsView(friends ?? [], search, filterKey),
@@ -39,7 +40,10 @@ const FriendsPage = () => {
                 <FriendsList
                     currencyGroups={currencyGroups}
                     isEmpty={isEmptyFriends}
+                    isError={isError}
                     isLoading={isLoading}
+                    isOffline={isOffline}
+                    onRetry={() => void refetch()}
                     settledFriends={settledFriends}
                 />
             </InternalPageColumnsFromSm>
@@ -47,4 +51,4 @@ const FriendsPage = () => {
     );
 };
 
-export default FriendsPage;
+export { FriendsPage };

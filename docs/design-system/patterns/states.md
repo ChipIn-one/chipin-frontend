@@ -35,7 +35,8 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
 - `EmptyState` (`basics`) is the only empty screen: icon, title, optional description, one
   action. The ready variants (`NoActivityEmptyState`, `NoFriendsEmptyState`,
   `NoGroupExpensesEmptyState`, `NoGroupMembersEmptyState`, `NoGroupsEmptyState`,
-  `NoDebtsEmptyState`) live in `basics/empty-states`.
+  `NoDebtsEmptyState`, and for errors and offline `LoadErrorEmptyState` and `OfflineEmptyState`)
+  live in `basics/empty-states`.
 - A new empty screen is a new variant file there (fixed icon, color and texts, an optional
   `action` prop), never new markup in the page.
 - One action, and it is the screen's next step ("Create group", "Invite a friend"), following
@@ -50,9 +51,11 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
 
 ## Error: inline with Retry
 
-- A failed first load renders in place of the content: an `EmptyState` with a
-  `RefreshCwIcon`, the error title and description from i18n, and a `soft` Retry button that
-  refetches (`activity:retryAction`, also reused by the group page).
+- A failed first load renders in place of the content: `LoadErrorEmptyState`
+  (`basics/empty-states`), an `EmptyState` with a `RefreshCwIcon`, the block's error title and
+  description from i18n, and a `soft` Retry button (`activity:retryAction`, also reused by the
+  group page) that calls `onRetry` to refetch. The Friends page uses it; `ActivityList` still
+  renders the same card inline and moves to the variant when touched.
 - A failed next page keeps the loaded list and shows a small `soft` Retry button below it
   (`ActivityList`, `GroupTabsContent`).
 - Whole-app failures are not screen states: a route render or loader error goes to
@@ -68,8 +71,10 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
   (`components/offline-status`) is the compact badge on top of dialogs and sheets; it has no
   controls (mounted once in `app/router/TopLayer.tsx`).
 - Cached data stays on screen while offline. A block with nothing cached shows an `EmptyState`
-  with the offline title and no Retry: the page banner has Retry, and the load resumes by itself on
-  reconnect. A whole page with nothing cached on a cold start shows `OfflineLoadError`
+  with the offline title and no Retry: `OfflineEmptyState` (`basics/empty-states`,
+  `errors:network.offline`). The page banner has Retry, and the load resumes by itself on
+  reconnect. `ActivityList` still renders this card inline and moves to the variant when touched.
+  A whole page with nothing cached on a cold start shows `OfflineLoadError`
   (`features/routing/internal`), which carries the one Retry.
 - Buttons of online-only actions are wrapped in `OnlineOnly` / `OnlineOnlyGroup`
   (`components/online-only`) with the action from `constants/onlineOnlyActions.ts`: they stay

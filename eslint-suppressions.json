@@ -533,17 +533,7 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/friends-page/FriendsPage.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/friends-page/components/CurrencyGroupCard.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/components/FriendInviteEmptyState.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -554,11 +544,6 @@
     }
   },
   "apps/app/src/pages/friends-page/components/FriendsFilterDropdown.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/components/FriendsList.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -579,11 +564,6 @@
     }
   },
   "apps/app/src/pages/friends-page/components/SettledUpCard.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/index.ts": {
     "import-x/no-default-export": {
       "count": 1
     }

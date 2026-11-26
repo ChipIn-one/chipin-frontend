@@ -5,6 +5,10 @@
     "searchPlaceholder": "Search friends",
     "emptyTitle": "No friends yet",
     "emptyDescription": "Add friends to track shared expenses and settle up easily.",
+    "loadErrorTitle": "Couldn't load your friends",
+    "loadErrorDescription": "Try loading your friends again.",
+    "inviteLoadErrorTitle": "Couldn't load your invite link",
+    "inviteLoadErrorDescription": "Try loading your invite link again.",
     "filter": {
         "allCurrencies": "All currencies",
         "byFriends": "By friends"
