@@ -39,6 +39,19 @@
                 {
                     "type": "host",
                     "value": {
+                        "eq": "www.chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://app.chipin.one/:path",
+            "statusCode": 302
+        },
+        {
+            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
                         "eq": "dev.chipin.one"
                     }
                 }
@@ -122,6 +135,18 @@
                     "type": "host",
                     "value": {
                         "eq": "chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://api.chipin.one/stats"
+        },
+        {
+            "source": "/api/stats",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "eq": "www.chipin.one"
                     }
                 }
             ],
