@@ -1,5 +1,5 @@
-import { MutationObserver } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { MutationObserver, onlineManager } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -161,6 +161,8 @@ const renderPage = () =>
         </MemoryRouter>,
     );
 
+const coverWrapper = (): HTMLElement | null => screen.getByTestId('group-cover-hero').parentElement;
+
 const expectNotFound = async (): Promise<void> => {
     expect(
         await screen.findByRole('heading', { level: 1, name: 'group:page.notFoundTitle' }),
@@ -236,8 +238,62 @@ test('GRP-017 shows the cover skeleton while an unlisted group loads for the fir
     renderPage();
 
     expect(screen.getByTestId('group-cover-hero').dataset.loading).toBe('true');
+    expect(coverWrapper()?.getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByTestId('group-tabs')).toBeNull();
     expect(screen.queryByText('group:page.notFoundTitle')).toBeNull();
+});
+
+test('GRP-017 a failed first read of an unlisted group shows Retry, not the not-found state', async () => {
+    getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
+    let isBack = false;
+    server.use(
+        http.get('*/groups/group-1', () =>
+            isBack ? HttpResponse.json(detail) : HttpResponse.json({}, { status: 500 }),
+        ),
+    );
+
+    renderPage();
+
+    const retry = await screen.findByRole('button', { name: 'activity:retryAction' });
+    expect(screen.getByText('group:page.loadErrorTitle')).not.toBeNull();
+    expect(screen.getByText('group:page.loadErrorDescription')).not.toBeNull();
+    expect(screen.queryByText('group:page.notFoundTitle')).toBeNull();
+    expect(screen.queryByTestId('group-tabs')).toBeNull();
+    expect(coverWrapper()?.getAttribute('aria-busy')).toBe('false');
+
+    isBack = true;
+    fireEvent.click(retry);
+
+    await waitFor(() => {
+        expect(screen.getByTestId('group-tabs').dataset.name).toBe(detail.name);
+    });
+    expect(screen.queryByText('group:page.loadErrorTitle')).toBeNull();
+});
+
+test('GRP-017 an unlisted group read offline shows the offline notice, not the not-found state', async () => {
+    getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
+    let reads = 0;
+    server.use(
+        http.get('*/groups/group-1', () => {
+            reads += 1;
+            return HttpResponse.json(detail);
+        }),
+    );
+    onlineManager.setOnline(false);
+
+    try {
+        renderPage();
+
+        expect(await screen.findByText('errors:network.offline')).not.toBeNull();
+        expect(screen.queryByRole('button', { name: 'activity:retryAction' })).toBeNull();
+        expect(screen.queryByText('group:page.notFoundTitle')).toBeNull();
+        expect(screen.queryByTestId('group-tabs')).toBeNull();
+        expect(reads).toBe(0);
+    } finally {
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+    }
 });
 
 test('GRP-017 shows the not-found state with a way to the dashboard when the route has no group id', async () => {
@@ -285,11 +341,11 @@ test('never renders the detail of another group for the route group', async () =
 
     renderPage();
 
-    expect(await screen.findByText('group:page.notFoundTitle')).not.toBeNull();
+    await expectNotFound();
     expect(screen.queryByTestId('group-tabs')).toBeNull();
 });
 
-test('a denial on a refetch replaces the shown group with the not-found state', async () => {
+test('GRP-017 a denial on a refetch replaces the shown group with the not-found state', async () => {
     seedDetail(detail);
     server.use(
         http.get('*/groups/group-1', () =>
@@ -305,7 +361,7 @@ test('a denial on a refetch replaces the shown group with the not-found state', 
         getDefaultTestQueryClient().refetchQueries({ queryKey: groupsKeys.detail(group.id) }),
     );
 
-    expect(await screen.findByText('group:page.notFoundTitle')).not.toBeNull();
+    await expectNotFound();
     expect(screen.queryByTestId('group-tabs')).toBeNull();
     expect(useUiPrefsStore.getState().lastGroupId).toBeNull();
 });

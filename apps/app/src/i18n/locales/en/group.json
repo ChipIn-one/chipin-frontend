@@ -201,6 +201,8 @@
         "shareWarning": "Share invite link with trusted people only.",
         "notFoundTitle": "Group not found",
         "notFoundDescription": "It may have been deleted, or you are no longer a member.",
+        "loadErrorTitle": "Couldn't load this group",
+        "loadErrorDescription": "Try loading the group again.",
         "activityStubTitle": "Group activity",
         "activityStubDescription": "Full activity history is available on the Activity page.",
         "expenses": {

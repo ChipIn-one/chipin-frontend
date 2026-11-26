@@ -37,13 +37,18 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
             direction="column"
             position="relative"
         >
-            <Image
-                className={styles.image}
-                src={group?.coverUrl ?? undefined}
-                alt={t('page.coverAlt', { name: group?.name ?? '' })}
-                width="100%"
-                height="100%"
-            />
+            {/* No group yet: a skeleton, not the "No image" fallback. */}
+            {isLoading && !group ? (
+                <Skeleton className={styles.image} width="100%" height="100%" />
+            ) : (
+                <Image
+                    className={styles.image}
+                    src={group?.coverUrl ?? undefined}
+                    alt={t('page.coverAlt', { name: group?.name ?? '' })}
+                    width="100%"
+                    height="100%"
+                />
+            )}
             {group?.coverUrl ? <Box className={styles.gradient} aria-hidden /> : null}
 
             <Flex
