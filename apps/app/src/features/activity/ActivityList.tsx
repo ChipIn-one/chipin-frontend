@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
-import { ChevronsDownIcon, ClipboardListIcon, RefreshCwIcon, WifiOffIcon } from 'lucide-react';
+import { ChevronsDownIcon, RefreshCwIcon, WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { useSelfActivityLog } from 'hooks/useSelfActivity';
 
-import { EmptyState, NoActivityEmptyState } from 'basics/empty-states';
+import {
+    EmptyState,
+    NoActivityEmptyState,
+    NoFilteredActivityEmptyState,
+} from 'basics/empty-states';
 import { useEmptyStateAddExpenseAction } from 'components/EmptyStateAddExpenseButton';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
@@ -99,10 +103,7 @@ const ActivityList = ({ activeFilter, onShowAll }: Props) => {
         activeFilter === 'all' ? (
             <NoActivityEmptyState action={addExpenseAction} />
         ) : (
-            <EmptyState
-                icon={<ClipboardListIcon size={20} />}
-                title={t('filteredEmptyTitle')}
-                description={t('filteredEmptyDescription')}
+            <NoFilteredActivityEmptyState
                 action={
                     <Button type="button" variant="soft" onClick={onShowAll}>
                         {t('showAllAction')}
