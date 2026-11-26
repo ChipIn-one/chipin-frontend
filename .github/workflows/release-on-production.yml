@@ -119,7 +119,7 @@ jobs:
     permissions:
       contents: write           # tags and GitHub Releases in this repository (the called workflow inherits this)
       pull-requests: read       # inventory: merged pull requests of the commits since the previous tag
-    uses: ChipIn-one/.github/.github/workflows/release.yml@8d90632a037019cf4878e20546028ab3eef8f34d # v1.14.1
+    uses: ChipIn-one/.github/.github/workflows/release.yml@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
     with:
       ref: ${{ needs.guard.outputs.sha }}
       apply: true
