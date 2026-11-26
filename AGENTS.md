@@ -26,6 +26,7 @@ These invariants hold on `master` today (lint, `check:file-layout`, CI, or the e
 17. Every task PR body has `## Version impact` (`none|patch|minor|major`): the input of the release increment, read by the release engine at Promote to Production. A task never changes `version` in `package.json`/`package-lock.json` (see Release).
 18. A change to the domain, API or visible behavior starts in the KB (`chipin-knowledge-base/common/glossary.md`, `common/specs/<capability>.md`) through a linked PR; tests are named by requirement IDs. A conflict with an ADR in `common/adr/` means stop and ask the owner.
 19. Take the KB from `../chipin-knowledge-base`, otherwise `git clone` it there, otherwise read it through GitHub; if it is unavailable both locally and through GitHub, the task is BLOCKED.
+20. UI follows the design system: before a UI task read [`docs/design-system/README.md`](docs/design-system/README.md) and [`30-ui.md`](docs/engineering/rules/30-ui.md), then only the files the README names; colors and sizes come only from `@chipin/tokens` (`var(--cp-*)` in CSS Modules, `PROP_COLOR` for Radix `color` props).
 
 ## Target (refactor in progress)
 
@@ -63,7 +64,7 @@ The release process owns releases: the owner runs Promote to Production for a ch
 
 ## Review
 
-An independent reviewer checks the "Applies now" invariants and that changed logic has regression tests. The reviewer does not comment on style, formatting, import order, or anything CI catches.
+An independent reviewer checks the "Applies now" invariants and that changed logic has regression tests. In a UI change it also checks that a new ChipIn component has a card and a registry row ([`process.md`](docs/design-system/process.md)) and that a screen has one primary action. The reviewer does not comment on style, formatting, import order, or anything CI catches.
 Mandatory review focus: auth/session/refresh and tokens, interceptors and permissions, routing and auth composition, request races and cancellation, service worker/PWA, CI, security (CSP), and dependency updates.
 
 <!-- ai-workflow:agents-routing:start -->
