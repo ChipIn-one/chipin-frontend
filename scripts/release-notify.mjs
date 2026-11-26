@@ -8,6 +8,10 @@
 // at most MAX_PER_LINE numbers per line and then `+N more`; PR numbers stay in the Release body. The types come from
 // one GraphQL read (`issues: read`); if it fails, one ungrouped `Issues (n):` line is posted instead. GITHUB_TOKEN reads
 // only this repository and public ones, so an Issue of a private sibling repository lands under `No type`.
+// The same read takes each Issue's state and milestone (#919): one `Milestone:` line shows the progress of the product
+// goals (ChipIn-one/.github#300) of the Included Issues, `<title> done/total done`, at most MAX_MILESTONES and then
+// `+N more`. Done is the milestone's closed Issues plus the Included Issues still open (the completion run closes them in
+// parallel with this job). Milestones of the same title are one goal and are summed. No milestone, no line.
 //
 // Inputs come only from env; every external value is escaped for Slack mrkdwn (`&`, `<`, `>`). Outputs `text` (heredoc
 // form with a random delimiter) and `post=true|false` to GITHUB_OUTPUT. The script never fails the job: any error is a
@@ -27,7 +31,12 @@ const MAX_TYPE_READS = 100;
 // Native types in this order, then any other type by name, then Issues without a readable type.
 const TYPE_ORDER = ['Feature', 'Bug', 'Task'];
 const NO_TYPE = 'No type';
+// Milestones shown on the `Milestone:` line; the rest is `+N more`.
+const MAX_MILESTONES = 3;
 const MAX_INT32 = 2147483647;
+// Fields read per Included Issue: type, state, and the milestone with its closed and total Issue counts.
+const ISSUE_FIELDS =
+    'issueType { name } state milestone { number title url closed: issues(states: [CLOSED]) { totalCount } all: issues { totalCount } }';
 
 export const escapeMrkdwn = value =>
     String(value ?? '')
@@ -161,6 +170,49 @@ const issueLines = (refs, issueTypes, ctx) => {
     return [...groups.keys()].sort(typeOrder).map(type => refsLine(type, groups.get(type), ctx));
 };
 
+const count = value => (Number.isSafeInteger(value) && value >= 0 ? value : null);
+
+// The `Milestone:` line, or null. `issueMilestones` is a Map of ref key to { repo, number, title, url, closed, total,
+// open } (`open`: this Included Issue is still open) or null. Milestones of the same title are one product goal: their
+// counts are summed and the link goes to this repository's milestone when it has one. Goals with more Included Issues
+// come first.
+const milestoneLine = (refs, issueMilestones, { repository }) => {
+    if (!(issueMilestones instanceof Map)) return null;
+    const goals = new Map();
+    for (const ref of refs) {
+        const milestone = ref.repo ? issueMilestones.get(ref.key) : null;
+        const title = typeName(milestone?.title);
+        const closed = count(milestone?.closed);
+        const total = count(milestone?.total);
+        if (!title || closed === null || total === null || !Number.isSafeInteger(milestone.number))
+            continue;
+        const name = title.toLowerCase();
+        if (!goals.has(name))
+            goals.set(name, { title, url: null, milestones: new Map(), open: 0, included: 0 });
+        const goal = goals.get(name);
+        goal.milestones.set(`${String(milestone.repo).toLowerCase()}#${milestone.number}`, {
+            closed,
+            total,
+        });
+        if (safeUrl(milestone.url) && (!goal.url || sameName(milestone.repo, repository)))
+            goal.url = milestone.url;
+        goal.included += 1;
+        if (milestone.open === true) goal.open += 1;
+    }
+    if (goals.size === 0) return null;
+    const sorted = [...goals.values()].sort(
+        (a, b) => b.included - a.included || a.title.localeCompare(b.title, 'en'),
+    );
+    const shown = sorted.slice(0, MAX_MILESTONES).map(goal => {
+        const sums = [...goal.milestones.values()];
+        const total = sums.reduce((sum, item) => sum + item.total, 0);
+        const done = Math.min(total, sums.reduce((sum, item) => sum + item.closed, 0) + goal.open);
+        return `${link(goal.url, goal.title)} ${done}/${total} done`;
+    });
+    const more = sorted.length > MAX_MILESTONES ? `, +${sorted.length - MAX_MILESTONES} more` : '';
+    return `*${sorted.length === 1 ? 'Milestone' : 'Milestones'}:* ${shown.join(', ')}${more}`;
+};
+
 const shaText = ({ sha, repository, serverUrl }) => {
     if (!SHA.test(sha ?? ''))
         return `\`${escapeMrkdwn(String(sha ?? 'unknown').replaceAll('`', ''))}\``;
@@ -176,7 +228,8 @@ const deploymentLine = deploymentUrl => {
  * Pure rule table of #484. Input fields (all strings, possibly empty):
  * guardRelease, skipReason, sha, newestTag, releaseResult, outcome, tag, redeployResult, repository, serverUrl,
  * deploymentUrl, releaseUrl, releaseBody; issueTypes is a Map of `Owner/repo#N` to type name or null (absent when
- * the type read failed). Returns { post: boolean, text: string }.
+ * the type read failed); issueMilestones is a Map of `Owner/repo#N` to a milestone (see milestoneLine) or null (absent
+ * when the read failed). Returns { post: boolean, text: string }.
  */
 export function decideMessage(input) {
     const serverUrl = safeUrl(input.serverUrl)
@@ -242,7 +295,12 @@ export function decideMessage(input) {
             text: lines(
                 `:rocket: *${app} ${tag} released*${releaseUrl ? ` - ${link(releaseUrl, 'Release notes')}` : ''}`,
                 refs.length > 0
-                    ? issueLines(refs, input.issueTypes, ctx).join('\n')
+                    ? [
+                          ...issueLines(refs, input.issueTypes, ctx),
+                          milestoneLine(refs, input.issueMilestones, ctx),
+                      ]
+                          .filter(Boolean)
+                          .join('\n')
                     : typeof input.releaseBody === 'string'
                       ? 'Included Issues: none listed in the Release'
                       : 'Included Issues: the Release could not be read, see the Release notes',
@@ -311,10 +369,17 @@ export async function fetchRelease({ env, fetchImpl, timeoutMs }) {
     return { url: release?.html_url ?? '', body: release?.body ?? '' };
 }
 
-// One GraphQL read of the native Issue Type of each ref (at most MAX_TYPE_READS). Returns a Map of ref key to type
-// name, or null for an Issue without a type or one the token cannot read; throws when the request itself fails or
-// when it answers only errors. Partial GraphQL errors (an unreadable repository or Issue) go to `warn`.
-export async function fetchIssueTypes({ env, fetchImpl, timeoutMs, refs, warn = () => undefined }) {
+// One GraphQL read of the native Issue Type, state and milestone of each ref (at most MAX_TYPE_READS). Returns
+// { types, milestones }: Maps of ref key to type name and to { repo, number, title, url, closed, total, open }, each
+// null for an Issue without one or one the token cannot read; throws when the request itself fails or when it answers
+// only errors. Partial GraphQL errors (an unreadable repository or Issue) go to `warn`.
+export async function fetchIssueDetails({
+    env,
+    fetchImpl,
+    timeoutMs,
+    refs,
+    warn = () => undefined,
+}) {
     const api = (env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/u, '');
     const url = env.GITHUB_GRAPHQL_URL || `${api}/graphql`;
     const byRepo = new Map();
@@ -326,7 +391,8 @@ export async function fetchIssueTypes({ env, fetchImpl, timeoutMs, refs, warn = 
         byRepo.get(ref.repo).push(ref);
     }
     const types = new Map();
-    if (byRepo.size === 0) return types;
+    const milestones = new Map();
+    if (byRepo.size === 0) return { types, milestones };
     const variables = {};
     const params = [];
     const fields = [...byRepo.entries()].map(([repo, items], r) => {
@@ -335,7 +401,7 @@ export async function fetchIssueTypes({ env, fetchImpl, timeoutMs, refs, warn = 
         variables[`n${r}`] = name;
         params.push(`$o${r}: String!`, `$n${r}: String!`);
         const issues = items
-            .map((ref, i) => `i${i}: issue(number: ${ref.number}) { issueType { name } }`)
+            .map((ref, i) => `i${i}: issue(number: ${ref.number}) { ${ISSUE_FIELDS} }`)
             .join(' ');
         return `r${r}: repository(owner: $o${r}, name: $n${r}) { ${issues} }`;
     });
@@ -358,19 +424,38 @@ export async function fetchIssueTypes({ env, fetchImpl, timeoutMs, refs, warn = 
     if (!data || typeof data !== 'object') throw new Error('the Issue Type read returned no data');
     [...byRepo.values()].forEach((items, r) =>
         items.forEach((ref, i) => {
-            types.set(ref.key, typeName(data[`r${r}`]?.[`i${i}`]?.issueType?.name));
+            const issue = data[`r${r}`]?.[`i${i}`];
+            types.set(ref.key, typeName(issue?.issueType?.name));
+            const milestone = issue?.milestone;
+            milestones.set(
+                ref.key,
+                milestone && typeof milestone === 'object'
+                    ? {
+                          repo: ref.repo,
+                          number: milestone.number,
+                          title: milestone.title,
+                          url: milestone.url,
+                          closed: milestone.closed?.totalCount,
+                          total: milestone.all?.totalCount,
+                          open: issue.state === 'OPEN',
+                      }
+                    : null,
+            );
         }),
     );
     const errors = Array.isArray(result?.errors) ? result.errors : [];
     if (errors.length > 0) {
-        if ([...types.values()].every(name => name === null))
+        if (
+            [...types.values()].every(name => name === null) &&
+            [...milestones.values()].every(milestone => milestone === null)
+        )
             throw new Error(`the Issue Type read returned ${errors.length} error(s) and no type`);
         const first = errors[0];
         warn(
             `${errors.length} Issue(s) without a readable type (${oneLine(first?.type ?? 'error')}: ${oneLine(first?.message).slice(0, 200)})`,
         );
     }
-    return types;
+    return { types, milestones };
 }
 
 export const outputBlock = (name, value, delimiter = `ghadelimiter_${randomUUID()}`) => {
@@ -408,16 +493,18 @@ export async function main(
                 const refs = issueRefs(includedIssues(input.releaseBody));
                 if (refs.some(ref => ref.repo)) {
                     try {
-                        input.issueTypes = await fetchIssueTypes({
+                        const details = await fetchIssueDetails({
                             env,
                             fetchImpl,
                             timeoutMs,
                             refs,
                             warn: text => write(`::warning::${text}.\n`),
                         });
+                        input.issueTypes = details.types;
+                        input.issueMilestones = details.milestones;
                     } catch (error) {
                         write(
-                            `::warning::Posting the Issues without Issue Types: ${message(error)}.\n`,
+                            `::warning::Posting the Issues without Issue Types and milestones: ${message(error)}.\n`,
                         );
                     }
                 }

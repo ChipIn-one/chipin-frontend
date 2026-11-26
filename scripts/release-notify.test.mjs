@@ -380,6 +380,129 @@ describe('release-notify compact Included Issues (#908)', () => {
     });
 });
 
+describe('release-notify milestone line (#919)', () => {
+    const FE_REPO = 'ChipIn-one/chipin-frontend';
+    const MS = `https://github.com/${FE_REPO}/milestone`;
+    const refs = numbers => numbers.map(n => `${FE_REPO}#${n} (#${n + 1000})`);
+    const ms = (number, title, closed, total, open = false, repo = FE_REPO) => ({
+        repo,
+        number,
+        title,
+        url: `https://github.com/${repo}/milestone/${number}`,
+        closed,
+        total,
+        open,
+    });
+    const milestones = entries => new Map(entries.map(([key, value]) => [key, value]));
+    const fe = n => `${FE_REPO}#${n}`;
+    const milestoneLineOf = text => text.split('\n').find(line => line.startsWith('*Milestone'));
+
+    test('one milestone: linked title and done/total, after the Issue lines and before SHA', () => {
+        const { text } = decide({
+            releaseBody: body(refs([1, 2])),
+            issueTypes: new Map([
+                [fe(1), 'Bug'],
+                [fe(2), 'Task'],
+            ]),
+            issueMilestones: milestones([
+                [fe(1), ms(5, 'Public site', 4, 10)],
+                [fe(2), null],
+            ]),
+        });
+        const lines = text.split('\n');
+        const index = lines.indexOf(`*Milestone:* <${MS}/5|Public site> 4/10 done`);
+        expect(index).toBeGreaterThan(0);
+        expect(lines[index - 1]).toMatch(/^\*Task \(1\):\*/u);
+        expect(lines[index + 1]).toMatch(/^SHA: /u);
+    });
+
+    test('open Included Issues count as done once each; done never exceeds total', () => {
+        const { text } = decide({
+            releaseBody: body(refs([1, 2, 3])),
+            issueMilestones: milestones([
+                [fe(1), ms(6, 'Design system v1', 2, 16, true)],
+                [fe(2), ms(6, 'Design system v1', 2, 16, true)],
+                [fe(3), ms(7, 'Premium', 3, 3, true)],
+            ]),
+        });
+        expect(milestoneLineOf(text)).toBe(
+            `*Milestones:* <${MS}/6|Design system v1> 4/16 done, <${MS}/7|Premium> 3/3 done`,
+        );
+    });
+
+    test('several milestones: more Included Issues first, then by title; at most 3 and then +N more', () => {
+        const { text } = decide({
+            releaseBody: body(refs([1, 2, 3, 4, 5, 6])),
+            issueMilestones: milestones([
+                [fe(1), ms(8, 'Onboarding and invites', 0, 5)],
+                [fe(2), ms(7, 'Premium', 1, 3)],
+                [fe(3), ms(5, 'Public site', 4, 10)],
+                [fe(4), ms(5, 'Public site', 4, 10)],
+                [fe(5), ms(4, 'Telegram TMA', 0, 2)],
+                [fe(6), ms(6, 'Design system v1', 2, 16)],
+            ]),
+        });
+        expect(milestoneLineOf(text)).toBe(
+            `*Milestones:* <${MS}/5|Public site> 4/10 done, <${MS}/6|Design system v1> 2/16 done, <${MS}/8|Onboarding and invites> 0/5 done, +2 more`,
+        );
+    });
+
+    test('the same title in two repositories is one goal: counts summed, link to this repository', () => {
+        const be = 'ChipIn-one/chipin-backend';
+        const { text } = decide({
+            releaseBody: body([`${be}#9`, ...refs([1])]),
+            issueMilestones: milestones([
+                [`${be}#9`, ms(4, 'Telegram TMA', 1, 1, true, be)],
+                [fe(1), ms(4, 'telegram tma', 0, 2)],
+            ]),
+        });
+        expect(milestoneLineOf(text)).toBe(`*Milestone:* <${MS}/4|Telegram TMA> 2/3 done`);
+        const unsafe = decide({
+            releaseBody: body([`${be}#9`, ...refs([1])]),
+            issueMilestones: milestones([
+                [`${be}#9`, ms(4, 'Telegram TMA', 1, 1, true, be)],
+                [fe(1), { ...ms(4, 'Telegram TMA', 0, 2), url: 'http://example.com' }],
+            ]),
+        });
+        expect(milestoneLineOf(unsafe.text)).toBe(
+            '*Milestone:* <https://github.com/ChipIn-one/chipin-backend/milestone/4|Telegram TMA> 2/3 done',
+        );
+    });
+
+    test('no line without milestones, without the milestone read, or for unusable counts', () => {
+        for (const issueMilestones of [
+            undefined,
+            new Map(),
+            milestones([[fe(1), null]]),
+            milestones([[fe(1), ms(5, 'Public site', -1, 10)]]),
+            milestones([[fe(1), ms(5, '  ', 1, 10)]]),
+            milestones([[fe(1), { ...ms(5, 'Public site', 1, 10), total: '10' }]]),
+        ]) {
+            const { text } = decide({ releaseBody: body(refs([1])), issueMilestones });
+            expect(text).not.toContain('Milestone');
+        }
+    });
+
+    test('a milestone title is one escaped line; an unsafe URL leaves plain text', () => {
+        const { text } = decide({
+            releaseBody: body(refs([1])),
+            issueMilestones: milestones([
+                [fe(1), { ...ms(5, '<!channel>\n& co', 1, 2), url: 'javascript:alert(1)' }],
+            ]),
+        });
+        expect(milestoneLineOf(text)).toBe('*Milestone:* &lt;!channel&gt; &amp; co 1/2 done');
+        expect(
+            milestoneLineOf(
+                decide({
+                    releaseBody: body(refs([1])),
+                    issueMilestones: milestones([[fe(1), ms(5, '*Bold_ ~x~ `y`', 1, 2)]]),
+                }).text,
+            ),
+        ).toBe(`*Milestone:* <${MS}/5|Bold x y> 1/2 done`);
+        expect(text).not.toContain('<!channel>');
+    });
+});
+
 describe('release-notify main', () => {
     const graphql = {
         data: { r0: { i0: { issueType: { name: 'Bug' } }, i1: { issueType: null } } },
@@ -407,14 +530,54 @@ describe('release-notify main', () => {
         expect(typesInit.headers.Authorization).toBe('Bearer secret-github-token');
         const request = JSON.parse(typesInit.body);
         expect(request.variables).toEqual({ o0: 'ChipIn-one', n0: 'chipin-frontend' });
-        expect(request.query).toContain('i0: issue(number: 540) { issueType { name } }');
-        expect(request.query).toContain('i1: issue(number: 718) { issueType { name } }');
+        expect(request.query).toContain(
+            'i0: issue(number: 540) { issueType { name } state milestone { number title url closed: issues(states: [CLOSED]) { totalCount } all: issues { totalCount } } }',
+        );
+        expect(request.query).toContain(
+            'i1: issue(number: 718) { issueType { name } state milestone {',
+        );
         const parsed = parseOutput(outputs.join(''));
         expect(parsed.post).toBe('true');
         expect(parsed.text).toBe(result.text);
         expect(parsed.text).toContain(`*Bug (1):* <${FE}/540|#540>`);
         expect(parsed.text).toContain(`*No type (1):* <${FE}/718|#718>`);
         expect(lines.join('')).not.toContain('secret-github-token');
+        expect(parsed.text).not.toContain('Milestone');
+    });
+
+    test('the same read gives the milestone line (#919): open Included Issues count as done', async () => {
+        const milestone = (closed, total) => ({
+            number: 5,
+            title: 'Public site',
+            url: 'https://github.com/ChipIn-one/chipin-frontend/milestone/5',
+            closed: { totalCount: closed },
+            all: { totalCount: total },
+        });
+        const fetchImpl = releaseThen(() =>
+            reply(200, {
+                data: {
+                    r0: {
+                        i0: {
+                            issueType: { name: 'Bug' },
+                            state: 'OPEN',
+                            milestone: milestone(3, 10),
+                        },
+                        i1: {
+                            issueType: { name: 'Task' },
+                            state: 'CLOSED',
+                            milestone: milestone(3, 10),
+                        },
+                    },
+                },
+            }),
+        );
+        const { outputs, options } = collect();
+        await main(ENV, { ...options, fetchImpl });
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+        const text = parseOutput(outputs.join('')).text;
+        expect(text).toContain(
+            `*Task (1):* <${FE}/718|#718>\n*Milestone:* <https://github.com/ChipIn-one/chipin-frontend/milestone/5|Public site> 4/10 done\nSHA:`,
+        );
     });
 
     test('one request for two repositories maps each alias back; Issues past the read limit and huge numbers are not read', async () => {
@@ -484,6 +647,37 @@ describe('release-notify main', () => {
         expect(text).toContain(`*Bug (1):* <${FE}/540|#540>\n*No type (1):* <${FE}/718|#718>`);
     });
 
+    test('errors with no type but a milestone keep the read: No type group and the milestone line', async () => {
+        const fetchImpl = releaseThen(() =>
+            reply(200, {
+                data: {
+                    r0: {
+                        i0: {
+                            issueType: null,
+                            state: 'OPEN',
+                            milestone: {
+                                number: 7,
+                                title: 'Premium',
+                                url: 'https://github.com/ChipIn-one/chipin-frontend/milestone/7',
+                                closed: { totalCount: 1 },
+                                all: { totalCount: 3 },
+                            },
+                        },
+                        i1: null,
+                    },
+                },
+                errors: [{ type: 'NOT_FOUND', message: 'Could not resolve' }],
+            }),
+        );
+        const { outputs, options } = collect();
+        await main(ENV, { ...options, fetchImpl });
+        const text = parseOutput(outputs.join('')).text;
+        expect(text).toContain(`*No type (2):* <${FE}/540|#540> <${FE}/718|#718>`);
+        expect(text).toContain(
+            '*Milestone:* <https://github.com/ChipIn-one/chipin-frontend/milestone/7|Premium> 2/3 done',
+        );
+    });
+
     test('uses GITHUB_GRAPHQL_URL when set', async () => {
         const fetchImpl = releaseThen(() => reply(200, graphql));
         const { options } = collect();
@@ -514,10 +708,13 @@ describe('release-notify main', () => {
             const fetchImpl = releaseThen(typesReply);
             const { lines, outputs, options } = collect();
             await main(ENV, { ...options, fetchImpl });
-            expect(lines.join('')).toContain('::warning::Posting the Issues without Issue Types');
+            expect(lines.join('')).toContain(
+                '::warning::Posting the Issues without Issue Types and milestones',
+            );
             const parsed = parseOutput(outputs.join(''));
             expect(parsed.post).toBe('true');
             expect(parsed.text).toContain(`*Issues (2):* <${FE}/540|#540> <${FE}/718|#718>`);
+            expect(parsed.text).not.toContain('Milestone');
         },
     );
 
