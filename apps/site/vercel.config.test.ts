@@ -89,6 +89,8 @@ const request = (url: string, host: string): Response => {
 };
 
 const PROD = 'chipin.one';
+// Vercel attached www.chipin.one with chipin.one in step 2 (04-4b); it serves the site like prod.
+const PROD_HOSTS = [PROD, 'www.chipin.one'];
 const NOINDEX_HOSTS = ['site-dev.chipin.one', 'dev.chipin.one', 'chipin-site-git-x.vercel.app'];
 
 describe('apps/site/vercel.json', () => {
@@ -101,7 +103,7 @@ describe('apps/site/vercel.json', () => {
         expect(config).toMatchObject({ git: { deploymentEnabled: { main: false } } });
     });
 
-    test.each([PROD, ...NOINDEX_HOSTS])('sends the security headers on %s', host => {
+    test.each([...PROD_HOSTS, ...NOINDEX_HOSTS])('sends the security headers on %s', host => {
         for (const path of ['/', '/ru/', '/missing']) {
             const { headers } = request(path, host);
 
@@ -139,7 +141,7 @@ describe('apps/site/vercel.json', () => {
         expect(request('/ru/', host).headers['X-Robots-Tag']).toBe('noindex, nofollow');
     });
 
-    test.each([PROD, 'www.chipin.one', 'app.chipin.one', 'evil-dev.chipin.one.example'])(
+    test.each([...PROD_HOSTS, 'app.chipin.one', 'evil-dev.chipin.one.example'])(
         '%s has no X-Robots-Tag',
         host => {
             expect(request('/', host).headers['X-Robots-Tag']).toBeUndefined();
@@ -178,6 +180,7 @@ const redirects = (config as { redirects?: Redirect[] }).redirects ?? [];
 /** The app origin of each site host's environment (§4.2 step 2). */
 const SITE_HOST_APP_ORIGINS: Record<string, string> = {
     'chipin.one': 'https://app.chipin.one',
+    'www.chipin.one': 'https://app.chipin.one',
     'dev.chipin.one': 'https://app-dev.chipin.one',
     'site-dev.chipin.one': 'https://app-dev.chipin.one',
 };
@@ -188,9 +191,9 @@ const OTHER_HOSTS = [
     'chipin-site-git-x.vercel.app',
     'app.chipin.one',
     'app-dev.chipin.one',
-    'www.chipin.one',
     'evil.example',
     'chipin.one.evil.example',
+    'www.chipin.one.evil.example',
 ];
 const ALL_HOSTS = [...SITE_HOSTS, ...OTHER_HOSTS];
 
@@ -636,6 +639,7 @@ describe('/api/stats, the landing statistics proxy (§4.1)', () => {
     /** The backend of each host's environment, as the app project's `/api` proxy. */
     const STATS_BACKENDS: Record<string, string> = {
         'chipin.one': 'https://api.chipin.one/stats',
+        'www.chipin.one': 'https://api.chipin.one/stats',
         'dev.chipin.one': 'https://api-dev.chipin.one/stats',
         'site-dev.chipin.one': 'https://api-dev.chipin.one/stats',
         'chipin-site-git-x.vercel.app': 'https://api-dev.chipin.one/stats',
@@ -646,12 +650,14 @@ describe('/api/stats, the landing statistics proxy (§4.1)', () => {
         expect(rewriteOn('/api/stats', host)).toBe(backend);
     });
 
-    test.each(['www.chipin.one', 'app.chipin.one', 'evil.example', 'chipin.one.evil.example'])(
-        'on %s proxies nothing',
-        host => {
-            expect(rewriteOn('/api/stats', host)).toBeUndefined();
-        },
-    );
+    test.each([
+        'app.chipin.one',
+        'evil.example',
+        'chipin.one.evil.example',
+        'www.chipin.one.evil.example',
+    ])('on %s proxies nothing', host => {
+        expect(rewriteOn('/api/stats', host)).toBeUndefined();
+    });
 
     test('only /api/stats reaches the backend: no other API path, no prefix match', () => {
         for (const host of Object.keys(STATS_BACKENDS)) {

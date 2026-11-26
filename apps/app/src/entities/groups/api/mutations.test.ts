@@ -1310,6 +1310,57 @@ describe('group mutations', () => {
         expect(listGroups()).toEqual(cached([]));
     });
 
+    test('#892 GRP-011 a leave during the list reload of a join does not put the group back', async () => {
+        const joined = { ...group, role: 'MEMBER', name: 'Joined group' } satisfies WireGroup;
+        let answerList: (() => void) | undefined;
+        joinWrite.mockResolvedValue(joined);
+        readList.mockImplementation(
+            () =>
+                new Promise(resolve => {
+                    answerList = () => {
+                        resolve({ items: [joined], nextCursor: null });
+                    };
+                }),
+        );
+        seedList([]);
+
+        const late = write.join(group.inviteToken);
+        await vi.waitFor(() => {
+            expect(answerList).toBeDefined();
+        });
+        const heldList = answerList;
+        readList.mockResolvedValue({ items: [], nextCursor: null });
+        // Every list written once the leave succeeded: none may show the group again.
+        let isLeft = false;
+        const shown: unknown[] = [];
+        const unsubscribe = userCache.client.getQueryCache().subscribe(event => {
+            if (
+                isLeft &&
+                event.type === 'updated' &&
+                event.action.type === 'success' &&
+                event.query.queryHash === hashKey(groupsKeys.list())
+            ) {
+                shown.push(listGroups());
+            }
+        });
+        leaveWrite.mockImplementation(() => {
+            isLeft = true;
+            return Promise.resolve();
+        });
+        await write.leave({ groupId: group.id });
+        heldList?.();
+        await late;
+        await vi.waitFor(() => {
+            expect(userCache.client.isFetching()).toBe(0);
+        });
+        unsubscribe();
+
+        expect(shown).not.toHaveLength(0);
+        expect(shown).not.toContainEqual(expect.arrayContaining(cached([joined])));
+        expect(listGroups()).toEqual(cached([]));
+        expect(effects.onGroupGone).toHaveBeenCalledWith(group.id, userCache.client);
+    });
+
     test('forgets group A after unrelated group B joins while leave A is pending', async () => {
         let resolveLeave: (() => void) | undefined;
         leaveWrite.mockImplementation(
