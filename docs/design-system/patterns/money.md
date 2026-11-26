@@ -1,0 +1,99 @@
+# Money: amounts, debt direction and amount input
+
+Applies [principles.md](../principles.md) 2, 3 and 7 to every place that shows or takes money.
+Paths are inside `apps/app/src`. Component cards: [Amount](../components/amount.md), [DebtAmount](../components/debt-amount.md), [OwedStatusText](../components/owed-status-text.md), [BalanceBadges](../components/balance-badges.md), [BalanceSummaryText](../components/balance-summary-text.md), [AmountInput](../components/amount-input.md).
+
+## Output goes through `Amount`
+
+- Every amount on screen is rendered by `Amount` (`basics/numbers`) or by a basic built on it:
+  `DebtAmount` (`basics/DebtAmount`), `OwedStatusText`, `BalanceBadges`, `BalanceSummaryText`
+  (`basics`). Feature and page code never formats money itself.
+- The currency is always next to the number: pass `tokenCode` to `Amount` (`currency` to
+  `DebtAmount`, `currencyCode` to `OwedStatusText`). A balance without its currency is a bug.
+- Approximate amounts after a currency conversion carry the `~` prefix through `customPrefix`, as
+  in [`GroupCard`](../../../apps/app/src/components/group-card/GroupCard.tsx). Tiny amounts render
+  as `< 0.01 USD` inside `Amount`; do not round them away yourself.
+
+## Debt colors
+
+The three debt roles exist once, in [`tokens.css`](../../../packages/tokens/tokens.css) and in
+`PROP_COLOR` ([tokens.md](../tokens.md#radix-color-props-prop_color)):
+
+| Direction    | CSS (CSS Modules)        | Radix `color` prop       |
+| ------------ | ------------------------ | ------------------------ |
+| You are owed | `var(--cp-debt-owed)`    | `PROP_COLOR.debtOwed`    |
+| You owe      | `var(--cp-debt-owing)`   | `PROP_COLOR.debtOwing`   |
+| Settled      | `var(--cp-debt-settled)` | `PROP_COLOR.debtSettled` |
+
+- New and touched money code takes its color only from this table. No `color="green"`,
+  `"red"`, `"grass"`, `"tomato"` or `"gray"` literal on a money element, and no per-screen
+  shade.
+- The direction comes from `getBalanceDirection` (`helpers/currencies`), not from a local
+  `> 0` check.
+
+Today (origin/master) no money component meets these two rules yet, and no lint checks them:
+
+- Radix literals: `DebtAmount`, `GroupCard`, `BalanceSummaryText` use `green`/`red`/`gray`;
+  `OwedStatusText` and `EventExpense` (`features/activity`) use `green`/`red`;
+  `DashboardSummary`, `dashboard-summary/summary.ts` (the `BalanceBadges` items), `OwedToYouCard`
+  and `YouOweCard` use `grass`/`tomato`.
+- Local sign checks: `OwedStatusText` (`value >= 0`), `GroupCard`, `EventExpense`. Only
+  `DebtAmount` calls `getBalanceDirection`.
+
+They move to `PROP_COLOR` and `getBalanceDirection` when a design-system task touches them.
+
+## Direction in words and color together
+
+- A debt is never told by sign or color alone. Visible words stand next to the amount: "You are
+  owed", "You owe" or "Settled up" (`common:balances.*`) for balances; activity events use their
+  own verbs ("You lent", "You borrowed").
+- Reference for the layout: [`OwedStatusText`](../../../apps/app/src/basics/OwedStatusText.tsx)
+  shows the words and the absolute amount in one colored line (its color and sign check are
+  legacy, see above).
+- `VisuallyHidden` words (as in `DebtAmount`) serve screen readers only; on their own they do not
+  meet this rule. They are enough only when the same words are visible nearby (a column or card
+  titled "You owe").
+
+- Show the absolute value next to the words (`Math.abs`, or `Amount`'s default `isAbsolute`);
+  `+` is used only for "owed" (`DebtAmount withPlus`). Never show a minus sign to mean "you owe".
+
+Today `GroupCard`, `DashboardSummary` (total and its owed/owing lines) and `FriendListItem`
+(`pages/friends-page`) show direction to sighted users by color only, with hidden words. Fix them
+when a task touches them.
+
+## One large amount per screen
+
+- A screen has at most one key amount shown: size `7`, weight `bold` (the total balance in
+  `DashboardSummary`). It is level 3 of the [visibility scale](hierarchy.md#visibility-scale).
+- Other shown amounts on the same screen use size `2`-`4` (list rows `2`-`3`, summary cards `4`).
+- Sizes of shown amounts are Radix `size` props, never a `font-size` in CSS.
+
+Today the two large amount inputs (`expense-amount-fields/styled.ts`, `settle-up-modal/styled.ts`)
+set `font-size` and `font-weight` in styled CSS; that moves to a CSS Module with
+`var(--cp-font-size-*)` when they are touched.
+
+## Input goes through `AmountInput`
+
+- Every money field is `AmountInput` (`basics`): it sets `inputMode="decimal"`, parses through
+  `parseAmountInput` (`helpers/numbers`) and limits fraction digits (`maxFractionDigits`, default
+  `2`, `null` for none). Do not use a raw `TextField` or `type="number"` for money. If its
+  contract does not fit, extend `AmountInput`; do not fork it in a feature.
+- The label sits above the field (see [forms.md](forms.md)); the currency is visible next to the
+  field: a currency `Select` or the static code beside it, as in `SettlementAmountField`
+  (settle-up). The amount and its currency are one pair and may sit side by side on phones. (In
+  the expense modal the currency select is a separate cell, below the amount on phones.)
+- Split rows keep a fixed control width (`120px` today) so the values line up down the list.
+
+Today the expense amount and the settle-up amount use `AmountInput`; the split rows
+(`features/add-expense/.../expense-input-actions`, which also take shares and percents) still use
+a raw `TextField.Root`. They move to `AmountInput` when a task touches them.
+
+## Forbidden
+
+- Formatting money outside `Amount`: `toFixed`, `Intl.NumberFormat`, `toLocaleString` or a string
+  template in feature or page code.
+- A balance or amount without its currency code.
+- A debt direction told only by color, or only by sign.
+- Changing the color of an amount per screen, or any debt color outside the table above.
+- Two size-`7` amounts on one screen.
+- A money field that is not `AmountInput`.

@@ -23,16 +23,22 @@ Each layer uses only the layer below it. Docs never name a value that is not in
 | ---------------------------------------------- | --------------------------------------------------------------------- |
 | [principles.md](principles.md)                 | The seven product principles                                          |
 | [patterns/hierarchy.md](patterns/hierarchy.md) | Visibility scale, one screen = one task, navigation, audit list       |
+| [patterns/money.md](patterns/money.md)         | Amounts, debt colors and direction, one key amount, amount input      |
+| [patterns/groups.md](patterns/groups.md)       | Avatars, `UsersRow`, role badge, group card order, interactive cards  |
+| [patterns/states.md](patterns/states.md)       | Loading, empty, error and offline states; when to toast               |
+| [patterns/forms.md](patterns/forms.md)         | Field set, labels and errors, buttons, modals, destructive confirms   |
 | [tokens.md](tokens.md)                         | How to read and add tokens, what is forbidden and which check bans it |
 | [components.md](components.md)                 | Registry of every basic and ChipIn component                          |
 | [components/](components/)                     | Cards for ChipIn-specific components (props, states, a11y, example)   |
-
-Coming later: patterns for money, groups, states and forms (ChipIn-one/chipin-frontend#490).
 
 ## If you do X, read Y
 
 - Any UI task: [principles.md](principles.md).
 - A new screen, or buttons and navigation on a screen: [patterns/hierarchy.md](patterns/hierarchy.md).
+- Showing or entering an amount, a balance or a debt: [patterns/money.md](patterns/money.md).
+- Members, avatars, roles, group cards or any clickable card: [patterns/groups.md](patterns/groups.md).
+- A screen or block that loads data, or a toast: [patterns/states.md](patterns/states.md).
+- A form, a modal or a destructive action: [patterns/forms.md](patterns/forms.md).
 - A color, spacing, radius, font, shadow or z-index: [tokens.md](tokens.md).
 - A new component, or you need one: [components.md](components.md) first; reuse before you create.
 - Styling a component (Radix props, CSS Modules, styled-components): [tokens.md](tokens.md#what-is-forbidden).
