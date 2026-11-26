@@ -42,7 +42,7 @@ jobs:
         continue-on-error: true
         uses: ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
         with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK_CI }}
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_FE_RELEASES }}
           text: ${{ steps.result.outputs.slack_text }}
           timeout-seconds: '10'
       - name: Warn when Slack was not posted
@@ -52,7 +52,7 @@ jobs:
           FAILURE: ${{ steps.result.outputs.slack_failure }}
         run: |
           if [ "$RESULT" = "skipped" ]; then
-            echo "::warning::SLACK_WEBHOOK_CI is not configured; nothing was posted."
+            echo "::warning::SLACK_WEBHOOK_FE_RELEASES is not configured; nothing was posted."
           else
             echo "::warning::$FAILURE"
           fi

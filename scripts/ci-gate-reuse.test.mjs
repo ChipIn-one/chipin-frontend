@@ -209,7 +209,7 @@ describe('decideGateReuse', () => {
                 { ...passed(1, '2026-11-20T10:00:00Z'), head_sha: 'b'.repeat(40) },
                 {
                     ...passed(2, '2026-11-20T10:00:00Z'),
-                    name: 'Notify #chipin-ci on master failure',
+                    name: 'Notify #ci on master failure',
                 },
             ]).reuse,
         ).toBe(false);
