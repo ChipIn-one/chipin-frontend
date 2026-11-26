@@ -34,8 +34,9 @@ import { useUiPrefsStore } from 'store/ui-prefs';
 import { toastWriteRefusal, useIsUserWriteEnabled } from './useUserMutations';
 
 /**
- * Why a group write was not sent: `session` — signed out or on the anonymous client; `offline` —
- * no network (spec 03 §2.9).
+ * Why a group write was not sent: `session` — signed out or on the anonymous client, or (for a
+ * queued update) the group was left or removed meanwhile; both are silent. `offline` — no network
+ * (spec 03 §2.9).
  */
 export type GroupWriteRefusal = 'session' | 'offline';
 
@@ -118,34 +119,63 @@ export const useCreateGroup = () => {
     return { createGroup, isPending: useIsWriting(groupsMutationKeys.create) };
 };
 
-interface RunningUpdate {
+interface ChainedUpdate {
     sessionVersion: number;
+    values: string;
     promise: Promise<Group>;
 }
 
-// The running update of each group on each client: a second update of the same group in the same
-// session joins it instead of sending another request.
-const runningUpdates = new WeakMap<QueryClient, Map<string, RunningUpdate>>();
+// The last update (running or queued) of each group on each client (#893). An update of the same
+// group in the same session waits until the last one settles, then is sent; only one with the same
+// values as the last joins it instead of sending another request.
+const chainedUpdates = new WeakMap<QueryClient, Map<string, ChainedUpdate>>();
 
-const runningUpdatesOf = (client: QueryClient): Map<string, RunningUpdate> => {
-    const updates = runningUpdates.get(client) ?? new Map<string, RunningUpdate>();
+const chainedUpdatesOf = (client: QueryClient): Map<string, ChainedUpdate> => {
+    const updates = chainedUpdates.get(client) ?? new Map<string, ChainedUpdate>();
 
-    runningUpdates.set(client, updates);
+    chainedUpdates.set(client, updates);
     return updates;
 };
 
-/** Resolves with the updated group once the list has reloaded with it. */
+// The identity of an update's values: a field left out differs from one set.
+const updateValues = ({ groupName, groupDescription, simplifyDebts }: UpdateGroupParams): string =>
+    JSON.stringify([groupName ?? null, groupDescription ?? null, simplifyDebts ?? null]);
+
+// The leave and remove writes of a group on a client: the ones made after an update was queued end
+// its turn unless they failed (the group is gone for the user, or going).
+const GROUP_GONE_KEYS = [groupsMutationKeys.leave, groupsMutationKeys.remove];
+
+const groupGoneWrites = (client: QueryClient, groupId: string) =>
+    GROUP_GONE_KEYS.flatMap(mutationKey =>
+        client.getMutationCache().findAll({
+            mutationKey,
+            predicate: ({ state: { variables } }) =>
+                typeof variables === 'object' &&
+                variables !== null &&
+                'groupId' in variables &&
+                variables.groupId === groupId,
+        }),
+    );
+
+/**
+ * Resolves with the updated group once the list has reloaded with it. An update with the same
+ * values as the last one of the group joins it; another is sent after the previous one settles,
+ * and settles on its own.
+ */
 export const useUpdateGroup = () => {
     const client = useQueryClient();
     const isEnabled = useIsUserWriteEnabled();
     const { mutateAsync } = useMutation(updateGroupMutationOptions());
     const updateGroup = useCallback(
         (params: UpdateGroupParams): Promise<Group> => {
-            const updates = runningUpdatesOf(client);
-            const running = updates.get(params.groupId);
+            const updates = chainedUpdatesOf(client);
+            const values = updateValues(params);
+            const last = updates.get(params.groupId);
+            // An update of an earlier session neither joins nor holds back one of this session.
+            const previous = last && isAuthSessionCurrent(last.sessionVersion) ? last : null;
 
-            if (running && isAuthSessionCurrent(running.sessionVersion)) {
-                return running.promise;
+            if (previous?.values === values) {
+                return previous.promise;
             }
             const refusal = refusalBeforeMutate(isEnabled);
 
@@ -153,13 +183,40 @@ export const useUpdateGroup = () => {
                 return refusal;
             }
             const sessionVersion = getAuthSessionVersion();
-            const promise = mutateAsync({ ...params, sessionVersion }).finally(() => {
+            const variables = { ...params, sessionVersion };
+            // Only settled ones: a leave or remove still running at the call counts as made since.
+            const goneWritesBefore = new Set(
+                groupGoneWrites(client, params.groupId)
+                    .filter(({ state }) => state.status !== 'pending')
+                    .map(({ mutationId }) => mutationId),
+            );
+            const isGroupGoneSince = (): boolean =>
+                groupGoneWrites(client, params.groupId).some(
+                    ({ mutationId, state }) =>
+                        !goneWritesBefore.has(mutationId) && state.status !== 'error',
+                );
+            // Its turn after the previous one: refused (silently, as an ended session) if the
+            // session ended or the group was left or removed meanwhile, or refused offline. It is
+            // sent through the cache, not the observer, which may have unmounted by then.
+            const sendInTurn = (): Promise<Group> =>
+                isAuthSessionCurrent(sessionVersion) && !isGroupGoneSince()
+                    ? (refusalBeforeMutate(isEnabled) ??
+                      client
+                          .getMutationCache()
+                          .build(
+                              client,
+                              client.defaultMutationOptions(updateGroupMutationOptions()),
+                          )
+                          .execute(variables))
+                    : Promise.reject(new GroupWriteRefusedError('session'));
+            const promise = (
+                previous ? previous.promise.then(sendInTurn, sendInTurn) : mutateAsync(variables)
+            ).finally(() => {
                 if (updates.get(params.groupId)?.promise === promise) {
                     updates.delete(params.groupId);
                 }
             });
-
-            updates.set(params.groupId, { sessionVersion, promise });
+            updates.set(params.groupId, { sessionVersion, values, promise });
             return promise;
         },
         [client, isEnabled, mutateAsync],
