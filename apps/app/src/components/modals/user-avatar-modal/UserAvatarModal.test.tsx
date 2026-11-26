@@ -11,7 +11,7 @@ import { useAuthStore } from 'store/authStore';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
-import UserAvatarModal from './UserAvatarModal';
+import { UserAvatarModal } from './UserAvatarModal';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -93,6 +93,13 @@ test('rejects an unsupported file before starting an upload', () => {
         )
         .then(() => {
             expect(screen.getByText('avatarModal.errors.unsupportedType')).toBeTruthy();
+            // The error look comes from the CSS Module on this state (jsdom does not apply it).
+            expect(
+                screen
+                    .getByLabelText('avatarModal.pickerLabel')
+                    .closest('label')
+                    ?.getAttribute('data-error'),
+            ).toBe('true');
             expect(
                 screen.getByRole('button', { name: 'avatarModal.actions.upload' }),
             ).toHaveProperty('disabled', true);

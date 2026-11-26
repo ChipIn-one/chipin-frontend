@@ -232,7 +232,10 @@ test('keeps a single constrained scroll body for group debt selection', () => {
 
         expect(scrollViewports).toHaveLength(1);
         expect(scrollRoot).not.toBeNull();
-        expect(getComputedStyle(scrollRoot as HTMLElement).maxHeight).not.toBe('none');
+        // The `max-height` comes from the CSS Module through this custom property (jsdom does not
+        // apply it).
+        expect((scrollRoot as HTMLElement).style.getPropertyValue('--_max-height')).not.toBe('');
+        expect(scrollViewports[0]?.getAttribute('data-max-height')).toBe('true');
     });
 });
 

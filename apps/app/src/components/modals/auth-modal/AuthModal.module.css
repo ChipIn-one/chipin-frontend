@@ -1,0 +1,26 @@
+.illustrationPanel {
+    max-width: 390px;
+    overflow: hidden;
+    /* stylelint-disable declaration-property-value-disallowed-list, csstools/value-no-unknown-custom-properties -- the Radix panel surface (white in light, a dark panel in dark) has no --cp-* token, and a token on :root cannot reference it */
+    background:
+        radial-gradient(circle at 50% 18%, var(--cp-auth-illustration-glow), transparent 58%),
+        var(--color-panel-solid);
+    /* stylelint-enable declaration-property-value-disallowed-list, csstools/value-no-unknown-custom-properties */
+    border-radius: var(--cp-radius-5);
+}
+
+.illustration {
+    display: block;
+    max-width: 100%;
+    max-height: 280px;
+}
+
+@media (max-width: 767px) {
+    .illustrationPanel {
+        max-width: 360px;
+    }
+
+    .illustration {
+        max-height: clamp(160px, 28dvh, 250px);
+    }
+}

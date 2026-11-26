@@ -1,3 +1,3 @@
-import UserAvatarModal from './UserAvatarModal';
+import { UserAvatarModal } from './UserAvatarModal';
 
 export { UserAvatarModal };

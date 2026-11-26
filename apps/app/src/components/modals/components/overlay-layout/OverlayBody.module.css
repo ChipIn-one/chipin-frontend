@@ -1,0 +1,66 @@
+/*
+ * ScrollArea root: doubled to beat the Radix ScrollArea size (app CSS loads before Radix).
+ * The Radix ScrollArea puts `className`/`style` on its root and every other prop on its viewport,
+ * so the variants are data attributes of the viewport and the content.
+ */
+.root.root {
+    /* Set from the `maxHeight` prop (any CSS length). */
+    --_max-height: none;
+
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    height: auto;
+    max-height: var(--_max-height);
+    padding-right: var(--cp-space-4);
+}
+
+.root [data-radix-scroll-area-viewport] {
+    height: 100%;
+    max-height: none;
+    overscroll-behavior: contain;
+}
+
+.root [data-radix-scroll-area-viewport][data-max-height='true'] {
+    height: auto;
+    max-height: inherit;
+}
+
+/* Radix sets `min-width: 100%; display: table` inline on the viewport child. */
+.root [data-radix-scroll-area-viewport] > div {
+    width: 100%;
+    min-width: 0 !important;
+    height: auto;
+}
+
+.root [data-radix-scroll-area-viewport][data-fill-height='true'] > div {
+    height: 100%;
+}
+
+.content {
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-top: var(--cp-space-6);
+}
+
+.content[data-fill-height='true'] {
+    height: 100%;
+}
+
+@media (max-width: 767px) {
+    .root.root {
+        max-height: none;
+        padding-right: 0;
+    }
+
+    .root.root [data-radix-scroll-area-viewport] {
+        height: 100%;
+        max-height: none;
+    }
+
+    .content {
+        padding: var(--cp-space-4);
+    }
+}

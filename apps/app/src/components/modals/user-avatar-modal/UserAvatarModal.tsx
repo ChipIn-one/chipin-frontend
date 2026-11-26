@@ -19,7 +19,7 @@ import { ProgressBar } from 'basics/progress-bar/ProgressBar';
 import { BaseModal } from '../base-modal';
 import { OverlayBody, OverlayFooter } from '../components';
 
-import { FileDropZone, HiddenFileInput, PreviewBackdrop } from './styled';
+import styles from './UserAvatarModal.module.css';
 
 interface Props {
     children: ReactNode;
@@ -141,22 +141,28 @@ const UserAvatarModal = ({ children }: Props) => {
                 <>
                     <OverlayBody>
                         <Flex direction="column" align="center" gap="5">
-                            <PreviewBackdrop role="img" aria-label={t('avatarModal.previewLabel')}>
+                            <div
+                                className={styles.previewBackdrop}
+                                role="img"
+                                aria-label={t('avatarModal.previewLabel')}
+                            >
                                 <UserAvatar
                                     user={user ?? undefined}
                                     src={resolvedPreviewUrl}
                                     size="8"
                                     variant="solid"
                                 />
-                            </PreviewBackdrop>
+                            </div>
 
-                            <FileDropZone
-                                $hasError={validationError !== null}
-                                $isDisabled={isUploading}
+                            <label
+                                className={styles.dropZone}
+                                data-error={validationError !== null}
+                                data-disabled={isUploading}
                                 onDragOver={onDragOver}
                                 onDrop={onDrop}
                             >
-                                <HiddenFileInput
+                                <input
+                                    className={styles.hiddenInput}
                                     type="file"
                                     accept={IMAGE_FILE_ACCEPT}
                                     aria-label={t('avatarModal.pickerLabel')}
@@ -182,7 +188,7 @@ const UserAvatarModal = ({ children }: Props) => {
                                         </Text>
                                     </Flex>
                                 </Flex>
-                            </FileDropZone>
+                            </label>
 
                             {validationError && (
                                 <Box width="100%">
@@ -245,4 +251,4 @@ const UserAvatarModal = ({ children }: Props) => {
     );
 };
 
-export default UserAvatarModal;
+export { UserAvatarModal };

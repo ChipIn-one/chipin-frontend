@@ -1,0 +1,45 @@
+.root {
+    flex-shrink: 0;
+    margin-top: var(--cp-space-4);
+    background: inherit;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--cp-space-3);
+}
+
+/* Separator: doubled to beat the Radix Separator display (app CSS loads before Radix). */
+.separator.separator {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .root {
+        position: sticky;
+        bottom: 0;
+        margin-top: 0;
+        padding: 0 var(--cp-space-4);
+    }
+
+    .footer {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+        padding: var(--cp-space-4) 0;
+        padding-bottom: calc(var(--cp-space-4) + env(safe-area-inset-bottom));
+    }
+
+    .footer > * {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .footer > :only-child {
+        grid-column: 1 / -1;
+    }
+
+    .separator.separator {
+        display: block;
+    }
+}

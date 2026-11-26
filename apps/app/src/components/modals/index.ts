@@ -1,7 +1,7 @@
 import { AuthModal } from './auth-modal';
 import { BaseAlertDialog } from './base-alert-dialog';
 import { BaseModal } from './base-modal';
-import { ModalOverlayGlobalStyles, OverlayBody, OverlayFooter } from './components';
+import { OverlayBody, OverlayFooter } from './components';
 import { CreateUpdateGroupModal } from './create-update-group-modal';
 import { EarlySupporterPromoModal } from './early-supporter-promo-modal';
 import { KickGroupMemberAlertDialog } from './kick-group-member-alert-dialog';
@@ -21,7 +21,6 @@ export {
     EarlySupporterPromoModal,
     KickGroupMemberAlertDialog,
     LeaveGroupAlertDialog,
-    ModalOverlayGlobalStyles,
     ModalRouter,
     OverlayBody,
     OverlayFooter,
