@@ -1,0 +1,10 @@
+/* App CSS loads before Radix, so the rules on the Radix text field are doubled to win by specificity. */
+.input.input {
+    width: 120px;
+    flex: none;
+}
+
+.input.input input {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}

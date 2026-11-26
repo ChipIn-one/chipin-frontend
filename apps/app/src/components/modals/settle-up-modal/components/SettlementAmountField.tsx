@@ -1,11 +1,12 @@
 import { useId, useRef } from 'react';
-import { Button, Flex, Text, TextField } from '@radix-ui/themes';
+import { Button, Card, Flex, Text, TextField } from '@radix-ui/themes';
 import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { AmountInput } from 'basics';
 import { Select, type SelectItem } from 'basics/Select';
 
-import { AmountField, CurrencyField, LargeAmountInput, StaticCurrencyField } from '../styled';
+import styles from './SettlementAmountField.module.css';
 
 interface Props {
     inputId: string;
@@ -77,8 +78,9 @@ const SettlementAmountField = ({
             </Text>
 
             <Flex align="stretch" gap="2">
-                <AmountField>
-                    <LargeAmountInput
+                <div className={styles.amountField}>
+                    <AmountInput
+                        className={styles.amountInput}
                         id={inputId}
                         value={amount}
                         onChange={onAmountChange}
@@ -97,11 +99,11 @@ const SettlementAmountField = ({
                         <TextField.Slot side="right" color="gray">
                             <PencilIcon size={18} aria-hidden />
                         </TextField.Slot>
-                    </LargeAmountInput>
-                </AmountField>
+                    </AmountInput>
+                </div>
 
                 {currencyItems.length > 1 ? (
-                    <CurrencyField>
+                    <div className={styles.currencyField}>
                         <Select
                             items={currencyItems}
                             value={currency}
@@ -109,13 +111,13 @@ const SettlementAmountField = ({
                             size="3"
                             triggerVariant="surface"
                         />
-                    </CurrencyField>
+                    </div>
                 ) : (
-                    <StaticCurrencyField size="1">
+                    <Card className={styles.staticCurrency} size="1">
                         <Text size="5" weight="bold">
                             {currency}
                         </Text>
-                    </StaticCurrencyField>
+                    </Card>
                 )}
             </Flex>
 
@@ -143,4 +145,4 @@ const SettlementAmountField = ({
     );
 };
 
-export default SettlementAmountField;
+export { SettlementAmountField };

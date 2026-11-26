@@ -1,0 +1,12 @@
+/* App CSS loads before Radix, so the rules on Radix `Text` are doubled to win by specificity. */
+.participantName.participantName {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-align: left;
+    white-space: normal;
+}
+
+.debtAmount.debtAmount {
+    flex-shrink: 0;
+}

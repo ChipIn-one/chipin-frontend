@@ -1,12 +1,14 @@
 import { useId } from 'react';
-import { Text } from '@radix-ui/themes';
+import { Text, TextField } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import { selectInputFractionDigits } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import { AmountBox, DescriptionInput, LargeAmountInput } from './styled';
+import { AmountInput } from 'basics';
+
+import styles from './ExpenseAmountFields.module.css';
 
 const ExpenseAmountFields = () => {
     const { t } = useTranslation('group');
@@ -24,12 +26,13 @@ const ExpenseAmountFields = () => {
     );
 
     return (
-        <AmountBox>
+        <div className={styles.root}>
             <Text as="label" htmlFor={amountId} size="2" weight="bold" color="gray">
                 {t('common:fields.amount')}
             </Text>
 
-            <LargeAmountInput
+            <AmountInput
+                className={styles.amountInput}
                 id={amountId}
                 value={amount}
                 onChange={setAmount}
@@ -39,7 +42,8 @@ const ExpenseAmountFields = () => {
                 autoFocus
             />
 
-            <DescriptionInput
+            <TextField.Root
+                className={styles.descriptionInput}
                 type="text"
                 size="3"
                 variant="surface"
@@ -48,7 +52,7 @@ const ExpenseAmountFields = () => {
                 value={description}
                 onChange={event => setDescription(event.target.value)}
             />
-        </AmountBox>
+        </div>
     );
 };
 

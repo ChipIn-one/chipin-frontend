@@ -20,7 +20,8 @@ import { Amount, UserAvatar } from 'basics';
 import { ExpenseInputActions } from '../expense-input-actions/ExpenseInputActions';
 
 import { getSplitParticipantControlData } from './helpers';
-import { CheckSpacer, Controls, ParticipantLabel } from './styled';
+
+import styles from './ExpenseUsersList.module.css';
 
 interface ExpenseUserRowProps {
     participantId: string;
@@ -108,15 +109,16 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
             />
         );
     } else if (!isCheckSpacerHidden) {
-        selectionControl = <CheckSpacer />;
+        selectionControl = <span className={styles.checkSpacer} />;
     }
 
     return (
         <Flex align="center" justify="between" gap="3" height="40px">
-            <ParticipantLabel
+            <label
+                className={styles.participant}
                 htmlFor={isIncludeLocked ? undefined : checkboxId}
-                $isUserIncluded={isUserIncluded}
-                $isLocked={isIncludeLocked}
+                data-included={isUserIncluded}
+                data-locked={isIncludeLocked}
             >
                 {selectionControl}
                 <UserAvatar user={member} size="2" />
@@ -132,8 +134,8 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
                         />
                     </Text>
                 </Flex>
-            </ParticipantLabel>
-            <Controls $isUserIncluded={isUserIncluded}>
+            </label>
+            <div className={styles.controls} data-included={isUserIncluded}>
                 {controlData ? (
                     <ExpenseInputActions
                         value={controlData.value}
@@ -149,7 +151,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
                         }
                     />
                 ) : null}
-            </Controls>
+            </div>
         </Flex>
     );
 });

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Box, Flex, Popover, Text, TextField } from '@radix-ui/themes';
+import { Box, Button, Flex, Popover, ScrollArea, Text, TextField } from '@radix-ui/themes';
 import { SearchIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
 import { getFilterFunction } from 'helpers/text';
 
-import { OptionButton, OptionsScrollArea, SearchSelectContent } from './styled';
 import type { SearchSelectItem } from './types';
+
+import styles from './SearchSelect.module.css';
 
 type BoxProps = ComponentProps<typeof Box>;
 type PopoverContentProps = ComponentProps<typeof Popover.Content>;
@@ -96,7 +97,8 @@ const SearchSelect = ({
                 </Box>
             </Popover.Trigger>
 
-            <SearchSelectContent
+            <Popover.Content
+                className={styles.content}
                 align="end"
                 sideOffset={4}
                 width={resolvedContentWidth}
@@ -120,7 +122,7 @@ const SearchSelect = ({
                         </TextField.Root>
                     </Box>
 
-                    <OptionsScrollArea type="auto" scrollbars="vertical">
+                    <ScrollArea className={styles.options} type="auto" scrollbars="vertical">
                         <Flex direction="column" gap="2" pr="4">
                             {filteredItems.length > 0 ? (
                                 filteredItems.map(item => {
@@ -142,8 +144,9 @@ const SearchSelect = ({
 
                                     if (item.href) {
                                         return (
-                                            <OptionButton
+                                            <Button
                                                 key={item.value}
+                                                className={styles.option}
                                                 asChild
                                                 size="3"
                                                 variant="soft"
@@ -158,13 +161,14 @@ const SearchSelect = ({
                                                 >
                                                     {contents}
                                                 </a>
-                                            </OptionButton>
+                                            </Button>
                                         );
                                     }
 
                                     return (
-                                        <OptionButton
+                                        <Button
                                             key={item.value}
+                                            className={styles.option}
                                             type="button"
                                             size="3"
                                             variant="soft"
@@ -176,7 +180,7 @@ const SearchSelect = ({
                                             onClick={() => onValueChange(item.value)}
                                         >
                                             {contents}
-                                        </OptionButton>
+                                        </Button>
                                     );
                                 })
                             ) : (
@@ -187,9 +191,9 @@ const SearchSelect = ({
                                 </Box>
                             )}
                         </Flex>
-                    </OptionsScrollArea>
+                    </ScrollArea>
                 </Flex>
-            </SearchSelectContent>
+            </Popover.Content>
         </Popover.Root>
     );
 };

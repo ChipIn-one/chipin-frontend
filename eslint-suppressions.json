@@ -254,11 +254,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/modals/settle-up-modal/components/DebtSection.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/modals/settle-up-modal/components/DebtSelectionStep.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -269,22 +264,7 @@
       "count": 1
     }
   },
-  "apps/app/src/components/modals/settle-up-modal/components/SettlementAmountField.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/settle-up-modal/components/SettlementDebtSummary.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/modals/settle-up-modal/components/SettlementForm.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/settle-up-modal/components/SettlementFormContent.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -292,11 +272,6 @@
   "apps/app/src/components/modals/settle-up-modal/components/SettlementStatus.tsx": {
     "import-x/no-default-export": {
       "count": 1
-    }
-  },
-  "apps/app/src/components/modals/settle-up-modal/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 3
     }
   },
   "apps/app/src/components/modals/user-avatar-modal/UserAvatarModal.tsx": {
@@ -393,11 +368,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/add-expense/components/expense-details-section/components/expense-amount-fields/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
   "apps/app/src/features/add-expense/components/expense-details-section/components/expense-currency-category-fields/ExpenseCurrencyCategoryFields.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -413,11 +383,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/add-expense/components/expense-search-select-content/ExpenseSearchSelectContent.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/add-expense/components/expense-split-card/ExpenseSplitCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -425,11 +390,6 @@
   },
   "apps/app/src/features/add-expense/components/expense-split-card/components/expense-split-mode-control/ExpenseSplitModeControl.tsx": {
     "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-users-list/styled.ts": {
-    "no-restricted-syntax": {
       "count": 1
     }
   },

@@ -7,7 +7,7 @@ import { type ExpenseParticipant, useExpenseModalStore } from 'store/expenseModa
 import { UserAvatar } from 'basics';
 import { SearchSelect, type SearchSelectItem } from 'components/search-select';
 
-import ExpenseSearchSelectContent from '../expense-search-select-content/ExpenseSearchSelectContent';
+import { ExpenseSearchSelectContent } from '../expense-search-select-content/ExpenseSearchSelectContent';
 
 const ExpensePayerSearchSelect = () => {
     const { t } = useTranslation('group');
