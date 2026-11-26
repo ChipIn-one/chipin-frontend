@@ -1,4 +1,4 @@
-import { Dialog, Theme } from '@radix-ui/themes';
+import { AlertDialog, Dialog, Theme } from '@radix-ui/themes';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -90,6 +90,64 @@ test('NET-004 shows the offline status while offline and hides it online, also w
     act(() => {
         useConnectivityStore.setState({ mode: 'online' });
     });
+    expect(screen.queryByText(offlineStatusText())).toBeNull();
+});
+
+/** A page with a dialog that the test opens and closes, then the top layer. */
+const PageWithDialog = ({ isOpen }: { isOpen: boolean }) => (
+    <Theme appearance="dark">
+        <Dialog.Root open={isOpen}>
+            <Dialog.Content aria-describedby={undefined}>
+                <Dialog.Title>{DIALOG_TITLE}</Dialog.Title>
+            </Dialog.Content>
+        </Dialog.Root>
+        <TopLayer />
+    </Theme>
+);
+
+test('#936 offline with no dialog open shows no status pill: the inline banner is the one indicator', () => {
+    render(<PageWithDialog isOpen={false} />);
+
+    act(() => {
+        useConnectivityStore.setState({ mode: 'offline' });
+    });
+    expect(screen.queryByText(offlineStatusText())).toBeNull();
+});
+
+test('#936 offline: opening a dialog shows the status pill, closing the last one hides it', async () => {
+    useConnectivityStore.setState({ mode: 'offline' });
+    const { rerender } = render(<PageWithDialog isOpen={false} />);
+    expect(screen.queryByText(offlineStatusText())).toBeNull();
+
+    rerender(<PageWithDialog isOpen />);
+    expect(await screen.findByText(offlineStatusText())).toBeTruthy();
+
+    rerender(<PageWithDialog isOpen={false} />);
+    await waitFor(() => {
+        expect(screen.queryByText(offlineStatusText())).toBeNull();
+    });
+});
+
+test('#936 offline with an alert dialog open shows the status pill', async () => {
+    useConnectivityStore.setState({ mode: 'offline' });
+    render(
+        <Theme>
+            <AlertDialog.Root open>
+                <AlertDialog.Content aria-describedby={undefined}>
+                    <AlertDialog.Title>{DIALOG_TITLE}</AlertDialog.Title>
+                </AlertDialog.Content>
+            </AlertDialog.Root>
+            <TopLayer />
+        </Theme>,
+    );
+    expect(await screen.findByText(offlineStatusText())).toBeTruthy();
+});
+
+test('#936 online shows no status pill with or without a dialog', () => {
+    const { rerender } = render(<PageWithDialog isOpen={false} />);
+    expect(screen.queryByText(offlineStatusText())).toBeNull();
+
+    rerender(<PageWithDialog isOpen />);
     expect(screen.queryByText(offlineStatusText())).toBeNull();
 });
 
