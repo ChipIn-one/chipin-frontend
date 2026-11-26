@@ -11,6 +11,7 @@ import type { GroupActivityResult } from 'hooks/useGroupDetail';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
 import { NoGroupExpensesEmptyState } from 'basics/empty-states';
+import { useEmptyStateAddExpenseAction } from 'components/EmptyStateAddExpenseButton';
 import { SettleUpModal } from 'components/modals/settle-up-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 import { UsersRow } from 'components/UsersRow';
@@ -28,6 +29,7 @@ interface Props {
 const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
     const { t } = useTranslation(['group', 'common', 'activity']);
     const invite = useGroupInvite(group);
+    const addExpenseAction = useEmptyStateAddExpenseAction();
     const [activeTab, setActiveTab] = useState('expenses');
     const activityItems = getActivityPreviewEvents(activity.items);
     const members = group.members.map(member => member.user);
@@ -102,7 +104,7 @@ const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
                                     previews={activityItems}
                                     emptyState={
                                         shouldShowInviteOnboarding ? null : (
-                                            <NoGroupExpensesEmptyState />
+                                            <NoGroupExpensesEmptyState action={addExpenseAction} />
                                         )
                                     }
                                     isShowSummary

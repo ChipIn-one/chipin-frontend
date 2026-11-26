@@ -7,7 +7,8 @@ import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { useSelfActivityLog } from 'hooks/useSelfActivity';
 
-import { EmptyState } from 'basics/empty-states';
+import { EmptyState, NoActivityEmptyState } from 'basics/empty-states';
+import { useEmptyStateAddExpenseAction } from 'components/EmptyStateAddExpenseButton';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
 import type { ActivityFilter } from './ActivityHeader';
@@ -15,9 +16,11 @@ import { ActivityEventsList } from './components';
 
 interface Props {
     activeFilter: ActivityFilter;
+    /** Resets the type filter to All: the action of a filtered-out empty list (EXP-066). */
+    onShowAll: () => void;
 }
 
-const ActivityList = ({ activeFilter }: Props) => {
+const ActivityList = ({ activeFilter, onShowAll }: Props) => {
     const { t } = useTranslation(['activity', 'errors']);
     const {
         events,
@@ -32,6 +35,7 @@ const ActivityList = ({ activeFilter }: Props) => {
         loadMore,
         reload,
     } = useSelfActivityLog();
+    const addExpenseAction = useEmptyStateAddExpenseAction();
 
     const filteredEvents = useMemo(() => {
         if (activeFilter === 'expenses') {
@@ -89,9 +93,30 @@ const ActivityList = ({ activeFilter }: Props) => {
         return <EmptyState icon={<WifiOffIcon size={20} />} title={t('errors:network.offline')} />;
     }
 
+    // A type filter that leaves nothing offers Show all (EXP-066); the unfiltered feed, Add Expense
+    // (EXP-065).
+    const emptyState = (
+        <NoActivityEmptyState
+            action={
+                activeFilter === 'all' ? (
+                    addExpenseAction
+                ) : (
+                    <Button type="button" variant="soft" onClick={onShowAll}>
+                        {t('showAllAction')}
+                    </Button>
+                )
+            }
+        />
+    );
+
     return (
         <>
-            <ActivityEventsList log={filteredEvents} isFullActivityFeed isNavigable />
+            <ActivityEventsList
+                log={filteredEvents}
+                emptyState={emptyState}
+                isFullActivityFeed
+                isNavigable
+            />
 
             {isNextPageLoading && (
                 <Flex justify="center" py="4">
