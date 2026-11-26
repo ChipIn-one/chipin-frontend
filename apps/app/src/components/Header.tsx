@@ -2,14 +2,12 @@ import { Box, Button, Container, Flex } from '@radix-ui/themes';
 import { ArrowRightIcon, LogInIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { PUBLIC_HOME_PAGE } from 'constants/publicRouteManifest';
 import { ROUTES } from 'constants/routes';
-import { themeColor } from 'helpers/colors';
 import { matchLocale, type SupportedLocale } from 'helpers/locale';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
@@ -30,15 +28,7 @@ import { LandingNav } from './header/LandingNav';
 import { SignInEntry } from './modals/auth-modal';
 import { HeaderNav } from './nav-bars/HeaderNav';
 
-const StickyBox = styled(Box)`
-    position: sticky;
-    top: 0;
-    width: 100%;
-    /* The root Theme contains this local layer, so Radix portals still paint above it. */
-    z-index: 1;
-    border-bottom: 1px solid ${themeColor('green6')};
-    backdrop-filter: blur(10px);
-`;
+import styles from './Header.module.css';
 
 const Header = () => {
     const { isAuthResolved, isLoggedIn } = useAuthStore(
@@ -87,7 +77,8 @@ const Header = () => {
     const isLoginPage = location.pathname === ROUTES.LOGIN;
 
     return (
-        <StickyBox
+        <Box
+            className={styles.root}
             display={
                 isLoggedIn && !isPublicLegalPage
                     ? {
@@ -168,7 +159,7 @@ const Header = () => {
                     </Flex>
                 </Flex>
             </Container>
-        </StickyBox>
+        </Box>
     );
 };
 

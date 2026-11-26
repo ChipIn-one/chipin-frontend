@@ -2,18 +2,11 @@ import { Box, Button } from '@radix-ui/themes';
 import { CirclePlusIcon, PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import styled from 'styled-components';
 
-import { themeColor } from 'helpers/colors';
 import { useAddExpenseAvailability } from 'hooks/useAddExpenseAvailability';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
-    width: var(--space-9);
-    height: var(--space-9);
-    padding: 0;
-    border: 6px solid ${({ $isSoloMode }) => themeColor($isSoloMode ? 'violet7' : 'grass7')};
-`;
+import styles from './AddExpenseButton.module.css';
 
 interface Props {
     type?: 'mobile' | 'desktop' | 'sidebar';
@@ -36,8 +29,9 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
 
     if (type === 'mobile') {
         return (
-            <ButtonMobile
-                $isSoloMode={isSoloMode}
+            <Button
+                className={styles.root}
+                data-variant={isSoloMode ? 'solo' : 'group'}
                 type="button"
                 size="4"
                 radius="full"
@@ -46,7 +40,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 onClick={onClickAddExpense}
             >
                 <PlusIcon size={28} />
-            </ButtonMobile>
+            </Button>
         );
     }
 
@@ -76,4 +70,4 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     );
 };
 
-export default AddExpenseButton;
+export { AddExpenseButton };

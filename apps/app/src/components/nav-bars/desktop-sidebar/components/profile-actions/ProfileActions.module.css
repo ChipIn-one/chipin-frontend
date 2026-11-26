@@ -1,0 +1,43 @@
+/* Doubled to beat the Radix Button height, padding and alignment (app CSS loads before Radix). */
+.profileButton.profileButton {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    justify-content: space-between;
+    padding: var(--cp-space-2);
+    text-align: left;
+}
+
+.chevron {
+    flex-shrink: 0;
+    transform: rotate(0deg);
+    transition: transform var(--cp-duration-base) var(--cp-easing-standard);
+}
+
+.root[data-expanded='true'] .chevron {
+    transform: rotate(180deg);
+}
+
+.signOutSlot {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+        grid-template-rows var(--cp-duration-base) var(--cp-easing-standard),
+        opacity var(--cp-duration-fast) var(--cp-easing-standard);
+}
+
+.root[data-expanded='true'] .signOutSlot {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.signOutContent {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.signOutContent > button {
+    width: 100%;
+    margin-top: var(--cp-space-2);
+}

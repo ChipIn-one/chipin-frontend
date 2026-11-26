@@ -1,0 +1,5 @@
+/* Doubled to beat the Radix Button alignment (app CSS loads before Radix). */
+.labeledTrigger.labeledTrigger {
+    width: 100%;
+    justify-content: flex-start;
+}

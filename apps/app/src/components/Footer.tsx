@@ -3,7 +3,6 @@ import Logotype from '@chipin/tokens/assets/logo.svg?react';
 import { Avatar, Box, Container, Flex, Link, Separator, Text } from '@radix-ui/themes';
 import { SendIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
@@ -11,10 +10,7 @@ import { matchLocale } from 'helpers/locale';
 import { getPublicPath } from 'helpers/publicRoutes';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 
-const StyledLogotype = styled(Logotype)`
-    width: 28px;
-    height: 28px;
-`;
+import styles from './Footer.module.css';
 
 const MEDIA_LINKS = [
     {
@@ -45,7 +41,7 @@ const Footer = () => {
                     {/* Left — logo + name */}
                     <Flex gap="2" direction="column">
                         <Flex align="center" gap="2">
-                            <StyledLogotype />
+                            <Logotype className={styles.logotype} />
                             <Text size="3" weight="bold" as="span">
                                 {PROJECT_NAME}
                             </Text>

@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { useConnectivityStore } from 'store/connectivityStore';
 
 import { BackendUnavailablePage } from './BackendUnavailablePage';
-import { AppContent } from './styled';
+
+import styles from './BackendUnavailableGate.module.css';
 
 interface BackendUnavailableGateProps {
     children: ReactNode;
@@ -15,13 +16,14 @@ const BackendUnavailableGate = ({ children }: BackendUnavailableGateProps) => {
 
     return (
         <>
-            <AppContent
-                $isUnavailable={isUnavailable}
+            <div
+                className={styles.root}
+                data-unavailable={isUnavailable}
                 aria-hidden={isUnavailable}
                 inert={isUnavailable}
             >
                 {children}
-            </AppContent>
+            </div>
             {isUnavailable && <BackendUnavailablePage />}
         </>
     );

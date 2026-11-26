@@ -1,0 +1,9 @@
+.root {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    /* The root Theme contains this local layer, so Radix portals still paint above it. */
+    z-index: var(--cp-z-raised);
+    border-bottom: 1px solid var(--cp-border-brand);
+    backdrop-filter: blur(10px);
+}

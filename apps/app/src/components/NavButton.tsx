@@ -1,24 +1,16 @@
 import { Button } from '@radix-ui/themes';
-import type { ComponentPropsWithoutRef, MouseEvent } from 'react';
+import type { ComponentProps, ComponentPropsWithoutRef, MouseEvent } from 'react';
 import type { To } from 'react-router-dom';
-import styled from 'styled-components';
 
-import { themeColor } from 'helpers/colors';
+import { cx } from 'helpers/cx';
 import { useAppNavigate } from 'hooks/useAppNavigate';
 
-// Also the base of a plain `<a href>` that looks like the unstyled NavButton (`asChild`).
-export const UnstyledButton = styled(Button)`
-    all: unset;
-    display: inline-flex;
-    cursor: pointer;
-    box-sizing: border-box;
-    position: relative;
+import styles from './NavButton.module.css';
 
-    &:focus-visible {
-        outline: 2px solid var(--cp-focus-ring, ${themeColor('grassA8')});
-        outline-offset: 2px;
-    }
-`;
+// Also the base of a plain `<a href>` that looks like the unstyled NavButton (`asChild`).
+export const UnstyledButton = ({ className, ...props }: ComponentProps<typeof Button>) => (
+    <Button className={cx(styles.root, className)} {...props} />
+);
 
 interface NavButtonProps extends ComponentPropsWithoutRef<typeof Button> {
     to: To;

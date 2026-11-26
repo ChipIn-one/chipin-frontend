@@ -1,6 +1,7 @@
 // Spec 04 §2.3 (04-2a2b): `AuthLayout` replaces `ProtectedRoute`; the assertions of
 // `features/routing/ProtectedRoute.test.tsx` moved here, plus the page kept mounted and hidden
 // under `AuthModal` after an expiry, and the cold load through the loader.
+
 import { useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
@@ -279,7 +280,8 @@ describe('the live session', () => {
         const container = pageContainer();
         expect(container?.getAttribute('aria-hidden')).toBe('true');
         expect(container?.hasAttribute('inert')).toBe(true);
-        expect(container && getComputedStyle(container).visibility).toBe('hidden');
+        // `visibility: hidden` comes from the CSS Module on this state (jsdom does not apply it).
+        expect(container?.getAttribute('data-hidden')).toBe('true');
         expect(screen.getByLabelText('Current route').textContent).toBe(
             '/activity?filter=mine#latest',
         );
@@ -292,6 +294,7 @@ describe('the live session', () => {
         expect(screen.getByLabelText('Draft')).toBe(input);
         expect(pageContainer()?.hasAttribute('aria-hidden')).toBe(false);
         expect(pageContainer()?.hasAttribute('inert')).toBe(false);
+        expect(pageContainer()?.getAttribute('data-hidden')).toBe('false');
     });
 
     test('a session expired before the page was shown: the modal alone, as before', async () => {

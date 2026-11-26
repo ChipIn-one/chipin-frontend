@@ -9,7 +9,7 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { seedSelfUser } from 'test/selfUserSeed';
 
-import ProfileActions from './ProfileActions';
+import { ProfileActions } from './ProfileActions';
 
 import 'i18n/index';
 

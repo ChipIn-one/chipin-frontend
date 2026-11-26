@@ -1,0 +1,79 @@
+/* Dialog.Content: doubled to beat the Radix dialog size, padding and surface (app CSS loads
+   before Radix). */
+.root.root {
+    width: min(calc(100vw - (var(--cp-space-4) * 2)), 620px);
+    max-width: 620px;
+    max-height: calc(100dvh - (var(--cp-space-4) * 2));
+    box-sizing: border-box;
+    overflow: auto;
+    padding: clamp(28px, 6vw, 56px);
+    border: 1px solid var(--cp-border-translucent);
+    border-radius: var(--cp-radius-5);
+    background-color: var(--cp-surface-base);
+    box-shadow: var(--cp-shadow-card);
+    text-align: center;
+}
+
+.icon {
+    display: grid;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 18px;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--cp-status-warning-text);
+    background-color: var(--cp-status-warning-surface);
+}
+
+.eyebrow {
+    margin: 0 0 10px;
+    color: var(--cp-status-warning-text);
+    font-size: var(--cp-font-size-5);
+    font-weight: var(--cp-font-weight-bold);
+}
+
+/* Dialog.Title and Dialog.Description: doubled to beat the Radix Heading/Text size and margin. */
+.title.title {
+    margin: 0;
+    font-size: clamp(26px, 5vw, 38px);
+    line-height: 1.15;
+}
+
+.description.description {
+    max-width: 48ch;
+    margin: 20px auto 0;
+    color: var(--cp-text-secondary);
+    font-size: 17px;
+    line-height: 1.5;
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--cp-space-6);
+}
+
+/* Doubled to beat the Radix Button sizing. */
+.retryButton.retryButton {
+    min-width: 180px;
+    max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* The loading spinner inside the button (its leaves animate). */
+    .retryButton.retryButton * {
+        animation: none;
+    }
+}
+
+.retryMessage {
+    margin: 18px 0 0;
+    visibility: hidden;
+    color: var(--cp-status-warning-text);
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.retryMessage[data-visible='true'] {
+    visibility: visible;
+}
