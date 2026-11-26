@@ -106,6 +106,8 @@ test('signed in on the user client it loads the self user once', async () => {
 
 test('a seeded user is read without a request, over the cached user', async () => {
     const requests = countSelfRequests();
+    // Only the user's own client is read (AUTH-077 review: no reader takes another client's user).
+    mountAsUserClient();
     useAuthStore.setState({ status: 'authenticated' });
     getDefaultTestQueryClient().setQueryData(usersKeys.self(), selfUser);
 
@@ -255,4 +257,41 @@ describe('useSelfUserState', () => {
 
         expect(result.current).toMatchObject({ user: null, isLoading: false, isFetched: false });
     });
+});
+
+describe('AUTH-077 an expired session keeps the cached user on the user client', () => {
+    test("AUTH-077: expired: the settings stay the self user's, but no admin role is derived (D16)", () => {
+        mountAsUserClient();
+        getDefaultTestQueryClient().setQueryData(usersKeys.self(), selfUser);
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
+
+        const { result } = renderHook(() => ({
+            language: useUserSetting(userLanguage),
+            isAdmin: useIsUserAdmin(),
+        }));
+
+        expect(result.current).toEqual({ language: 'en', isAdmin: false });
+    });
+
+    test.each([
+        ['expired', true],
+        ['invalid', true],
+        ['signed_out', false],
+        ['missing', false],
+    ] as const)(
+        'AUTH-077: useSelfUserState with reason %s shows the cached user: %s',
+        (reason, isShown) => {
+            const requests = countSelfRequests();
+            mountAsUserClient();
+            getDefaultTestQueryClient().setQueryData(usersKeys.self(), selfUser);
+            useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+
+            const { result } = renderHook(() => useSelfUserState());
+
+            expect(result.current.user).toEqual(isShown ? selfUser : null);
+            return Promise.resolve().then(() => {
+                expect(requests.count).toBe(0);
+            });
+        },
+    );
 });

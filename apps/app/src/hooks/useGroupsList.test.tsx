@@ -168,3 +168,24 @@ test('waiting for the network without data counts as an error; with data it does
     });
     expect(result.current.groups).toHaveLength(1);
 });
+
+test.each([
+    ['expired', true],
+    ['invalid', true],
+    ['signed_out', false],
+    ['missing', false],
+] as const)(
+    'AUTH-077: with reason %s the cached groups are shown: %s, with no request',
+    async (reason, isShown) => {
+        const requests = serveGroups();
+        mountAsUserClient();
+        seed([group('a')]);
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+
+        const { result } = renderHook(() => useGroupsList());
+
+        expect(result.current.groups?.map(item => item.id)).toEqual(isShown ? ['a'] : undefined);
+        await settle();
+        expect(requests.count).toBe(0);
+    },
+);

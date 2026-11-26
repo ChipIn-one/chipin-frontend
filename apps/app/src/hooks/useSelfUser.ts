@@ -12,6 +12,7 @@ import { canRoleAccessSolo, isAdminRole } from 'entities/users';
 import { getLocalUser, type LocalUser } from 'helpers/localStorage';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectCanReadUserCache } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import {
     getSessionSelfLoad,
@@ -28,6 +29,14 @@ const useIsSelfUserQueryEnabled = (): boolean => {
     const isUserClient = isUserCacheClient(useQueryClient());
 
     return isSignedIn && isUserClient;
+};
+
+// AUTH-077: an expired session keeps the cached user selected (its page is hidden).
+const useIsSelfUserReadable = (): boolean => {
+    const canRead = useAuthStore(selectCanReadUserCache);
+    const isUserClient = isUserCacheClient(useQueryClient());
+
+    return canRead && isUserClient;
 };
 
 const identity = (user: SelfUser): SelfUser => user;
@@ -75,10 +84,11 @@ export const useSessionSelfLoad = (): SessionSelfLoad =>
 export const useSelfUserState = (): SelfUserState => {
     const isSignedIn = useIsSignedIn();
     const isEnabled = useIsSelfUserQueryEnabled();
+    const isReadable = useIsSelfUserReadable();
     const query = useSelfUserQueryResult();
     const sessionLoad = useSessionSelfLoad();
     const isOnAnonymousClient = isSignedIn && !isEnabled;
-    const user = isEnabled ? (query.data ?? null) : null;
+    const user = isReadable ? (query.data ?? null) : null;
     const isError = isEnabled
         ? user === null && (query.isError || query.isPaused)
         : isOnAnonymousClient && sessionLoad.status === 'failed';
@@ -93,33 +103,47 @@ export const useSelfUserState = (): SelfUserState => {
     };
 };
 
+/**
+ * `settings`: readable while signed in or expired/invalid (AUTH-077: the hidden page keeps the
+ * language and theme). `role`: only while signed in (spec 01 §4 D16): after an expiry no admin or
+ * Solo access is derived from the old role, the cached `LocalUser` (role cleared) decides.
+ */
+type SelfReadScope = 'settings' | 'role';
+
 const useSelfOrLocal = <T>(
+    scope: SelfReadScope,
     fromUser: (user: SelfUser) => T,
     fromLocal: (localUser: LocalUser | null) => T,
 ): T => {
     const isSignedIn = useIsSignedIn();
+    const canRead = useAuthStore(selectCanReadUserCache);
+    const isUserClient = isUserCacheClient(useQueryClient());
     const query = useSelfUserQuery({ select: fromUser, enabled: useIsSelfUserQueryEnabled() });
+    const isReadable = (scope === 'role' ? isSignedIn : canRead) && isUserClient;
 
-    // Signed out the cached user decides, whatever the client still holds. While the session
-    // loader reloads the user, the cached entry stays readable.
-    return isSignedIn && query.isSuccess ? query.data : fromLocal(getLocalUser());
+    // Signed out (or on the anonymous client) the cached user decides, whatever the client still
+    // holds. While the session loader reloads the user, the cached entry stays readable.
+    return isReadable && query.isSuccess ? query.data : fromLocal(getLocalUser());
 };
 
 /** One value of the user's settings: pass a module-level picker (it is the query's `select`). */
 export const useUserSetting = <T>(pick: (settings: SelfUserSettings | null) => T): T =>
     useSelfOrLocal(
+        'settings',
         user => pick(user.settings),
         localUser => pick(localUser?.settings ?? null),
     );
 
 export const useIsUserAdmin = (): boolean =>
     useSelfOrLocal(
+        'role',
         user => isAdminRole(user.role),
         localUser => isAdminRole(localUser?.role),
     );
 
 export const useCanAccessSolo = (): boolean =>
     useSelfOrLocal(
+        'role',
         user => canRoleAccessSolo(user.role),
         localUser => canRoleAccessSolo(localUser?.role),
     );

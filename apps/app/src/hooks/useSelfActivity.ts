@@ -11,6 +11,7 @@ import {
 } from 'entities/activity';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectCanReadUserCache } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 const NO_EVENTS: ActivityEvent[] = [];
@@ -47,12 +48,16 @@ export interface SelfActivityLogResult {
 
 export const useSelfActivityLog = (): SelfActivityLogResult => {
     const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
-    const isEnabled = isUserCacheClient(useQueryClient()) && isSignedIn;
+    const canRead = useAuthStore(selectCanReadUserCache);
+    const isUserClient = isUserCacheClient(useQueryClient());
+    const isEnabled = isUserClient && isSignedIn;
+    // AUTH-077: an expired session keeps the cached feed selected (its page is hidden).
+    const isReadable = isUserClient && canRead;
     const query = useSelfActivityEventsQuery({ enabled: isEnabled });
     const { fetchNextPage, refetch } = query;
     // A paused load counts: starting another would cancel it, again and again while offline.
     const isFetching = query.fetchStatus !== 'idle';
-    const data = isEnabled ? query.data : undefined;
+    const data = isReadable ? query.data : undefined;
     const events = useMemo(() => (data ? loadedActivityEvents(data) : NO_EVENTS), [data]);
     const isWaiting = isEnabled && data === undefined;
     // A load paused offline is not a failure: Retry could not send it either.

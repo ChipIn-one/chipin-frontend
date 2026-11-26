@@ -1,11 +1,12 @@
 import { dehydrate, hydrate, QueryClient } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, expect, type MockInstance, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, type MockInstance, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { LS_KEY_THEME } from 'constants/localstorage';
 import { reconcileRestoredSelf, type SelfUser, usersKeys } from 'entities/users';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
+import { cachesByUser } from 'shared/offline/userCaches';
 import { useAuthStore } from 'store/authStore';
 import { type AppearanceStore, resetAppearanceStore, useAppearanceStore } from 'store/ui-prefs';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -63,6 +64,20 @@ beforeEach(() => {
     i18n.resolvedLanguage = undefined;
     pending.language = null;
     saveLocalUser({ role: 'ADMIN', settings });
+    // The self user lives only on the signed-in user's persisted client (`useSelfOrLocal` reads it
+    // only there, AUTH-077): the test client stands in for that client.
+    cachesByUser.set('user-1', {
+        client: getDefaultTestQueryClient(),
+        ready: Promise.resolve(),
+        isReady: true,
+        listeners: new Set(),
+        unsubscribe: null,
+        disposed: false,
+    });
+});
+
+afterEach(() => {
+    cachesByUser.delete('user-1');
 });
 
 const selfUser = (overrides: Partial<UserSettings>): SelfUser => ({

@@ -16,6 +16,7 @@ import {
 } from 'entities/groups';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectCanReadUserCache } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 import { useGroupsList } from './useGroupsList';
@@ -27,6 +28,14 @@ const useIsGroupQueryEnabled = (): boolean => {
     const isUserClient = isUserCacheClient(useQueryClient());
 
     return isSignedIn && isUserClient;
+};
+
+// AUTH-077: the cached data stays selected while the session is expired (the page is hidden).
+const useIsGroupCacheReadable = (): boolean => {
+    const canRead = useAuthStore(selectCanReadUserCache);
+    const isUserClient = isUserCacheClient(useQueryClient());
+
+    return canRead && isUserClient;
 };
 
 export interface GroupDetailResult {
@@ -46,18 +55,20 @@ export interface GroupDetailResult {
 /** The detail of `groupId` (none: nothing is read). */
 export const useGroupDetail = (groupId: string | undefined): GroupDetailResult => {
     const isEnabled = useIsGroupQueryEnabled() && groupId !== undefined;
+    const isReadable = useIsGroupCacheReadable() && groupId !== undefined;
     const { groups } = useGroupsList();
     const listed = groupId === undefined ? undefined : groups?.find(item => item.id === groupId);
     const query = useGroupDetailQuery(groupId, { enabled: isEnabled, placeholder: listed });
-    // A denial wins over the data TanStack keeps from an earlier read.
-    const isDenied = isEnabled && query?.isError === true && isGroupDeniedError(query.error);
+    // A denial (403/404, not a 401 of an expired session) wins over the data TanStack keeps from
+    // an earlier read.
+    const isDenied = isReadable && query?.isError === true && isGroupDeniedError(query.error);
     const detail =
-        isEnabled && !isDenied && query?.isPlaceholderData !== true ? query?.data : undefined;
+        isReadable && !isDenied && query?.isPlaceholderData !== true ? query?.data : undefined;
     const hasDetail = detail !== undefined;
     const isSettled = query?.isError === true || query?.isPaused === true;
 
     return {
-        group: isEnabled && !isDenied ? (detail ?? listed) : undefined,
+        group: isReadable && !isDenied ? (detail ?? listed) : undefined,
         hasDetail,
         isLoading: groupId !== undefined && !hasDetail && !isDenied && !isSettled,
         isDenied,
@@ -102,6 +113,7 @@ export const useGroupActivity = (
 ): GroupActivityResult => {
     const client = useQueryClient();
     const isEnabled = useIsGroupQueryEnabled() && hasDetail;
+    const isReadable = useIsGroupCacheReadable() && hasDetail;
     const embedded = useMemo(() => recent && embeddedPreviews(recent), [recent]);
     const query = useGroupActivityQuery(groupId, { enabled: isEnabled });
     const { fetchNextPage } = query;
@@ -113,7 +125,7 @@ export const useGroupActivity = (
             void fetchNextPage();
         }
     }, [client, fetchNextPage, groupId, isEnabled, isFetching]);
-    const data = isEnabled ? query.data : undefined;
+    const data = isReadable ? query.data : undefined;
     const items = data?.items;
 
     return {

@@ -235,7 +235,9 @@ test('OAuth sign-in of a cached user whose user/friends fetches change nothing: 
     expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
 });
 
-test("expiry: X's client → anonymous; the hint back with the same id → X's memoized client", async () => {
+// AUTH-077 (#836): the expired page stays mounted under `AuthModal`, so the expiry keeps the tree
+// on X's client instead of remounting it on the anonymous one (before: X's client → anonymous).
+test("AUTH-077: expiry keeps X's client mounted, no remount; the hint back with the same id → still X's client", async () => {
     saveLocalUser({ id: 'expiring-user', role: 'USER', settings: user.settings });
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
 
@@ -243,6 +245,7 @@ test("expiry: X's client → anonymous; the hint back with the same id → X's m
     await screen.findByText(DESTINATION_TEXT);
     const userClient = clientFor('expiring-user');
     expect(currentClient()).toBe(userClient);
+    const mountsBefore = mounts;
 
     act(() => {
         useAuthStore.getState().expireSession();
@@ -251,7 +254,8 @@ test("expiry: X's client → anonymous; the hint back with the same id → X's m
 
     expect(hasAuthSessionHint()).toBe(false);
     expect(getTabUserId()).toBe('expiring-user');
-    expect(currentClient()).not.toBe(userClient);
+    expect(currentClient()).toBe(userClient);
+    expect(mounts).toBe(mountsBefore);
 
     act(() => {
         LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
@@ -260,6 +264,7 @@ test("expiry: X's client → anonymous; the hint back with the same id → X's m
     await screen.findByText(DESTINATION_TEXT);
 
     expect(currentClient()).toBe(userClient);
+    expect(mounts).toBe(mountsBefore);
 });
 
 const RETRY_TEXT = 'retry-self';

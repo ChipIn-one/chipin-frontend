@@ -278,6 +278,32 @@ describe('authStore', () => {
             });
     });
 
+    test.each(['expired', 'invalid'] as const)(
+        'AUTH-077: an expiry of a session already %s is a no-op (the hidden page refetches)',
+        reason => {
+            useAuthStore.setState({ status: 'unauthenticated', unauthReason: reason });
+            useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+            saveLocalUser({ id: user.id, settings: { ...user.settings, soloModeByDefault: true } });
+
+            useAuthStore.getState().expireSession();
+
+            expect(authSession.invalidateAuthSession).not.toHaveBeenCalled();
+            // The UI preferences are not reset again (a reset would apply the Solo default).
+            expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.GROUP);
+            expect(useAuthStore.getState()).toMatchObject({
+                status: 'unauthenticated',
+                unauthReason: reason,
+            });
+        },
+    );
+
+    test('AUTH-077: a second expiry after the first ends the session once', () => {
+        useAuthStore.getState().expireSession();
+        useAuthStore.getState().expireSession();
+
+        expect(authSession.invalidateAuthSession).toHaveBeenCalledOnce();
+    });
+
     test('keeps the expense draft when the session expires (expiry is not a logout)', () => {
         useExpenseModalStore.setState({
             isOpened: true,

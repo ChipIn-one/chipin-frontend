@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { type KnownUser, useKnownUsersQuery, usePremiumPromoQuery } from 'entities/users';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectCanReadUserCache } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 const useIsSignedIn = (): boolean =>
@@ -44,8 +45,12 @@ const skipRefetch = (): Promise<undefined> => Promise.resolve(undefined);
 export const useKnownUsers = (): KnownUsersResult => {
     const isSignedIn = useIsSignedIn();
     const isEnabled = useIsUserQueryEnabled();
+    // AUTH-077: an expired session keeps the cached friends selected (its page is hidden).
+    const canRead = useAuthStore(selectCanReadUserCache);
+    const isUserClient = isUserCacheClient(useQueryClient());
+    const isReadable = canRead && isUserClient;
     const query = useKnownUsersQuery({ select: identity, enabled: isEnabled });
-    const friends = isEnabled ? query.data : undefined;
+    const friends = isReadable ? query.data : undefined;
     const isWaiting = isEnabled && friends === undefined;
     const isError = isWaiting && (query.isError || query.isPaused);
 
