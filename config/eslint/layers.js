@@ -43,7 +43,10 @@ export const LAYER_ELEMENTS = [
         description: 'route screens',
         patterns: [
             { pattern: 'pages/*', mode: 'folder', capture: ['slice'] },
-            { pattern: 'pages/*', mode: 'file', capture: ['slice'] },
+            // A flat page's name is its base name before the first dot, so `X.tsx`, `X.module.css`
+            // and `X.test.tsx` share `flatSlice` `X` (`*` captures lazily up to the first `.`); its
+            // own key keeps a flat file apart from a folder page of the same name.
+            { pattern: 'pages/*.*', mode: 'file', capture: ['flatSlice'] },
         ],
     },
     {
@@ -247,11 +250,35 @@ export const boundaryPolicies = () =>
             });
         }
         return policies;
-    }).concat({
-        // Test files may import test support whatever their layer; production files may not.
-        from: { file: { categories: TEST_TYPE } },
-        allow: { to: { element: { type: TEST_TYPE } } },
-    });
+    }).concat(
+        {
+            // A flat page file may import its siblings (`X.tsx` → `X.module.css`): the file
+            // elements differ, so the same `flatSlice` is what allows it. Flat files only.
+            from: { element: { type: 'pages', captured: { flatSlice: '*' } } },
+            allow: {
+                to: {
+                    element: {
+                        type: 'pages',
+                        captured: { flatSlice: '{{ from.element.captured.flatSlice }}' },
+                    },
+                },
+            },
+        },
+        {
+            // ...but a pages file may not import a test file of another pages element, its own flat
+            // sibling included (`X.tsx` → `X.test.tsx`). Imports inside one folder page are not
+            // checked by boundaries at all. Production files have no category to exclude them by,
+            // so pages tests are covered too; no pages test imports another test.
+            from: { element: { type: 'pages' } },
+            disallow: { to: { file: { categories: TEST_TYPE } } },
+            message: `[layers] production code cannot import a test file (${LAYERS_DOC}).`,
+        },
+        {
+            // Test files may import test support whatever their layer; production files may not.
+            from: { file: { categories: TEST_TYPE } },
+            allow: { to: { element: { type: TEST_TYPE } } },
+        },
+    );
 
 /** `boundaries/files` settings: TEST_FILES get the `test` file category. */
 export const boundaryFiles = ({ appDir }) =>

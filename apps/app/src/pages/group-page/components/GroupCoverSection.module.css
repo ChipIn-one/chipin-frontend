@@ -1,0 +1,47 @@
+/* The cover ratio and position come from constants/groupCover through local custom properties. */
+.root {
+    --_cover-ratio: auto;
+    --_cover-position: center center;
+
+    overflow: hidden;
+    aspect-ratio: var(--_cover-ratio);
+    border: 1px solid var(--cp-border-default);
+    border-radius: var(--cp-radius-5);
+}
+
+.root[data-has-cover='true'] {
+    color: var(--cp-media-on);
+}
+
+.gradient,
+.image {
+    position: absolute;
+    inset: 0;
+}
+
+.gradient {
+    background: linear-gradient(
+        to top,
+        var(--cp-media-scrim) 0%,
+        color-mix(in srgb, var(--cp-media-scrim) 72%, transparent) 18%,
+        transparent 34%
+    );
+    pointer-events: none;
+}
+
+.image {
+    color: var(--cp-text-secondary);
+}
+
+/* Doubled to beat the `object-fit` of Image.module.css. */
+.image.image {
+    object-fit: cover;
+    object-position: var(--_cover-position);
+}
+
+/* constants/breakpoints `belowSm` */
+@media (max-width: 767px) {
+    .root {
+        border-radius: 0;
+    }
+}

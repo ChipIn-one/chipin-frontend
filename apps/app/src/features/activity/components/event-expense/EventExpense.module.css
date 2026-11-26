@@ -1,0 +1,5 @@
+/* A reversed expense: its texts and amounts are struck through, nested amount parts included. */
+.reversed,
+.reversed > span {
+    text-decoration: line-through;
+}

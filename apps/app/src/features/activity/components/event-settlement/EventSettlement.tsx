@@ -12,7 +12,8 @@ import { Amount, LedgerScopeBadge } from 'basics';
 import { EventIcon } from '../activity-event/EventIcon';
 
 import { SettlementParticipants } from './components';
-import { AmountText } from './styled';
+
+import styles from './EventSettlement.module.css';
 
 interface Props {
     event: SettlementActivityEvent;
@@ -43,7 +44,11 @@ const EventSettlement = ({ event }: Props) => {
                             toDisplayName={toDisplayName}
                             isReversed={isReversed}
                         />
-                        <AmountText color="gray" size="2" $isReversed={isReversed}>
+                        <Text
+                            color="gray"
+                            size="2"
+                            className={isReversed ? styles.reversed : undefined}
+                        >
                             {t('event.paidAmount', {
                                 payer: isCurrentUserPayer ? t('event.you') : fromDisplayName,
                             })}{' '}
@@ -52,7 +57,7 @@ const EventSettlement = ({ event }: Props) => {
                                 tokenCode={amount.currency}
                                 type="summary"
                             />
-                        </AmountText>
+                        </Text>
                         {isReversed ? (
                             <Text size="2" color="gray">
                                 {t('event.settlementReversedDescription', {

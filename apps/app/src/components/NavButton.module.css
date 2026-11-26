@@ -1,12 +1,12 @@
 /*
- * UnstyledButton. App CSS loads before Radix, and styled-components consumers
- * (`styled(NavButton)`, e.g. the interactive card links) inject after both.
+ * UnstyledButton. App CSS loads before Radix; consumers (e.g. InteractiveCard, the nav bars)
+ * pass a module class whose rules must beat these by specificity.
  * - `.root` (0,1,0) is the base. Radix's later `.rt-reset` (`all: unset`) and `.rt-BaseButton`
  *   rules override it, so the doubled rule below does the real work.
  * - `.root.root` (0,2,0) unsets only what Radix sets on the element, so it beats Radix
  *   without beating the consumers' `display` or `width`. Radix's `display: inline-flex`
- *   equals the base value, so it is left alone. The consumers' `:focus-visible` outline
- *   (0,2,0) injects later, so it still wins.
+ *   equals the base value, so it is left alone. A consumer that replaces the `:focus-visible`
+ *   outline uses (0,3,0) (InteractiveCard's `.root.root:focus-visible`).
  */
 .root {
     all: unset;
@@ -52,7 +52,7 @@
     position: relative;
 }
 
-/* (0,2,0) beats the Radix focus outline (0,1,0); a consumer's `:focus-visible` rule injects later and wins. */
+/* (0,2,0) beats the Radix focus outline (0,1,0); a consumer replacing it needs more (see above). */
 .root:focus-visible {
     outline: 2px solid var(--cp-focus-ring);
     outline-offset: 2px;

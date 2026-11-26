@@ -1,0 +1,42 @@
+/* Doubled to beat the Radix `.rt-BaseCard` `position: relative` (app CSS loads before Radix). */
+.detailsCard.detailsCard {
+    position: sticky;
+    top: calc(var(--cp-space-6) + var(--cp-space-4));
+}
+
+.chevron {
+    flex: 0 0 auto;
+}
+
+.mobileDetails {
+    width: 100%;
+}
+
+.mobileDetails[open] .chevron {
+    transform: rotate(180deg);
+}
+
+.mobileSummary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.mobileSummary::-webkit-details-marker {
+    display: none;
+}
+
+.summarySurface {
+    width: 100%;
+}
+
+.detailRow {
+    border-top: 1px solid var(--cp-subevents-divider);
+}
+
+.participantRow {
+    border-top: 1px solid var(--cp-fill-pressed);
+}
+
+.detailLabel {
+    min-width: 7rem;
+}

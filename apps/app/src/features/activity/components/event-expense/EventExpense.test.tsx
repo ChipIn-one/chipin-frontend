@@ -7,6 +7,8 @@ import { domainExpenseEvent } from 'test/activityFixtures';
 
 import { EventExpense } from './EventExpense';
 
+import styles from './EventExpense.module.css';
+
 vi.mock('basics', importOriginal =>
     importOriginal<typeof import('basics')>().then(basics => ({
         ...basics,
@@ -229,9 +231,10 @@ test('shows reversed expense context and strikes through monetary values', () =>
         />,
     );
 
-    expect(getComputedStyle(screen.getByText('Dinner')).textDecoration).toBe('line-through');
+    // The line-through itself lives in EventExpense.module.css (jsdom applies no CSS Modules).
+    expect(screen.getByText('Dinner').className).toContain(styles.reversed);
     expect(screen.getByText('event.expenseReversedDescription')).toBeTruthy();
-    expect(getComputedStyle(screen.getByText('30 USD')).textDecoration).toBe('line-through');
-    expect(getComputedStyle(screen.getByText('You borrowed')).textDecoration).toBe('line-through');
-    expect(getComputedStyle(screen.getByText('10 USD')).textDecoration).toBe('line-through');
+    expect(screen.getByText('30 USD').className).toContain(styles.reversed);
+    expect(screen.getByText('You borrowed').className).toContain(styles.reversed);
+    expect(screen.getByText('10 USD').className).toContain(styles.reversed);
 });
