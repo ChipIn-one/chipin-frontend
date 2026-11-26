@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
+import { Box, Container, Flex, Grid } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
@@ -9,7 +9,7 @@ import { useUiPrefsStore } from 'store/ui-prefs';
 
 import { GroupsCards } from 'components/GroupsCards';
 
-import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
+import { GroupCoverSection, GroupNotFound, GroupSummary, GroupTabsContent } from './components';
 
 import styles from './GroupPage.module.css';
 
@@ -41,30 +41,32 @@ const GroupPage = () => {
     }, [detail.isDenied, groupId, routeGroup, setLastGroupId]);
 
     if (!groupId) {
-        return (
-            <Container size="4" py="6">
-                <Card>
-                    <Text color="red">{t('group:page.notFound')}</Text>
-                </Card>
-            </Container>
-        );
+        return <GroupNotFound />;
     }
 
     if (!routeGroup) {
+        // The first read of an unlisted group: the cover skeleton in the loaded layout's place.
         if (isGroupDataLoading) {
-            return null;
+            return (
+                <Container size="4" pb={{ initial: '9', sm: '4' }}>
+                    <Grid columns="3" gap="6">
+                        <Box
+                            gridColumn={{ initial: 'span 3', sm: '1 / span 2' }}
+                            gridRow={{ sm: '1' }}
+                        >
+                            <Box className={styles.cover} mb={{ initial: '4', sm: '6' }}>
+                                <GroupCoverSection group={null} isLoading />
+                            </Box>
+                        </Box>
+                    </Grid>
+                </Container>
+            );
         }
 
         // TODO(04): the route's errorElement (spec 04 §2.5) once the data router lands; until then
-        // a denied (403/404) detail, or a failed one of an unlisted group, shows this card, and the
+        // a denied (403/404) detail, or a failed one of an unlisted group, shows this state, and the
         // list drops a denied group.
-        return (
-            <Container size="4" py="6">
-                <Card>
-                    <Text color="red">{t('group:page.notFound')}</Text>
-                </Card>
-            </Container>
-        );
+        return <GroupNotFound />;
     }
 
     return (
