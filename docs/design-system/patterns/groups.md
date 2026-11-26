@@ -1,7 +1,7 @@
 # Groups: avatars, members, roles and group cards
 
 How people and groups look on every screen. Paths are inside `apps/app/src`; check
-[components.md](../components.md) for the full registry.
+[components.md](../components.md) for the full registry. Component cards: [UserAvatar](../components/user-avatar.md), [GroupAvatar](../components/group-avatar.md), [UsersRow](../components/users-row.md), [GroupRoleBadge](../components/group-role-badge.md).
 
 ## Avatars
 
@@ -66,12 +66,9 @@ A card that opens something is a link wrapped around a Radix `Card`:
 - Put `data-interactive-card` on the inner Radix `Card` yourself. It is required: without it the
   keyboard focus is invisible. Selected styling (`data-selected`) belongs to the caller's CSS
   Module (as in `GroupCard`).
-- `InteractiveCard` lands with batch C (ChipIn-one/chipin-frontend#896, PR
-  ChipIn-one/chipin-frontend#917; not on `master` yet) and replaces `interactiveCardLinkStyles`
-  (`helpers/interactiveCardStyles.ts`). Until then, existing cards keep
-  `interactiveCardLinkStyles`. It is a styled-components helper, and a new styled-components file
-  is banned ([tokens.md](../tokens.md#what-is-forbidden)), so a new clickable card waits for
-  `InteractiveCard`.
+- `InteractiveCard` replaced the old styled-components helper `interactiveCardLinkStyles` (batch
+  C, ChipIn-one/chipin-frontend#896). Today `GroupCard` and the activity expense and settlement
+  events use it.
 - A whole card is one link. No nested buttons or links inside it; a secondary action goes next
   to the card, not on it.
 - Never make a card clickable with `onClick` on a `div` or a `Card` (see

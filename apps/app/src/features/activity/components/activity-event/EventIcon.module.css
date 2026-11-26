@@ -1,0 +1,17 @@
+.root {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+/* Doubled to beat the Radix `.rt-AvatarRoot` size (app CSS loads before Radix). */
+.actorAvatar.actorAvatar {
+    position: absolute;
+    right: -7px;
+    bottom: -7px;
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+    box-shadow: 0 0 0 2px var(--cp-surface-base);
+}

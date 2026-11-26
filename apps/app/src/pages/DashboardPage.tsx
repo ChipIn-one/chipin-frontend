@@ -24,7 +24,6 @@ import { CreateUpdateGroupModal } from 'components/modals/create-update-group-mo
 import { OnlineOnly } from 'components/online-only';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
-// eslint-disable-next-line boundaries/dependencies -- the CSS Module of this flat page file is part of the page, not another page slice
 import styles from './DashboardPage.module.css';
 
 const NO_GROUPS: Group[] = [];

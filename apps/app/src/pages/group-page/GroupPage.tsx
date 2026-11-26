@@ -10,7 +10,8 @@ import { useUiPrefsStore } from 'store/ui-prefs';
 import { GroupsCards } from 'components/GroupsCards';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
-import { GroupCoverBox } from './styled';
+
+import styles from './GroupPage.module.css';
 
 const GroupPage = () => {
     const { t } = useTranslation(['group', 'common', 'dashboard']);
@@ -86,9 +87,9 @@ const GroupPage = () => {
                 </Flex>
 
                 <Box gridColumn={{ initial: 'span 3', sm: '1 / span 2' }} gridRow={{ sm: '1' }}>
-                    <GroupCoverBox mb={{ initial: '4', sm: '6' }}>
+                    <Box className={styles.cover} mb={{ initial: '4', sm: '6' }}>
                         <GroupCoverSection group={routeGroup} isLoading={isGroupDataLoading} />
-                    </GroupCoverBox>
+                    </Box>
 
                     <Box display={{ initial: 'block', sm: 'none' }} mb="4">
                         <GroupSummary group={routeGroup} isLoading={isGroupDataLoading} />
@@ -105,4 +106,4 @@ const GroupPage = () => {
     );
 };
 
-export default GroupPage;
+export { GroupPage };

@@ -6,7 +6,7 @@ import { expect, test, vi } from 'vitest';
 import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 
-import GroupCoverSection from './GroupCoverSection';
+import { GroupCoverSection } from './GroupCoverSection';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -74,9 +74,11 @@ test('keeps the group title readable over a cover in the light theme', () => {
         </ThemeProvider>,
     );
 
-    expect(getComputedStyle(screen.getByRole('heading', { name: group.name })).color).toBe(
-        'rgb(255, 255, 255)',
-    );
+    // The heading sits in the cover wrapper marked as having a cover, which sets the
+    // `--cp-media-on` text colour in GroupCoverSection.module.css (jsdom applies no CSS Modules).
+    const heading = screen.getByRole('heading', { name: group.name });
+
+    expect(heading.closest('[data-has-cover]')?.getAttribute('data-has-cover')).toBe('true');
 });
 
 test('keeps group details without member actions inside the hero', () => {
@@ -108,4 +110,10 @@ test('uses the shared image fallback when cover is missing', () => {
 
     expect(screen.queryByAltText('page.coverAlt')).toBeNull();
     expect(screen.getByText('media.noImage')).toBeTruthy();
+    expect(
+        screen
+            .getByRole('heading', { name: group.name })
+            .closest('[data-has-cover]')
+            ?.getAttribute('data-has-cover'),
+    ).toBe('false');
 });

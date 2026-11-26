@@ -1,7 +1,7 @@
 # Forms: fields, buttons, modals and confirmations
 
 How ChipIn takes input. Paths are inside `apps/app/src`; money fields follow
-[money.md](money.md#input-goes-through-amountinput).
+[money.md](money.md#input-goes-through-amountinput). Component cards: [AmountInput](../components/amount-input.md), [Select](../components/select.md), [SegmentedControl](../components/segmented-control.md), [Dropdown](../components/dropdown.md).
 
 ## Field set
 

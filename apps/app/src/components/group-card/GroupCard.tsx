@@ -1,4 +1,4 @@
-import { Badge, Flex, Text, VisuallyHidden } from '@radix-ui/themes';
+import { Badge, Card, Flex, Text, VisuallyHidden } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { GROUP_NET_CONVERSION_STATES } from 'constants/groups';
@@ -8,8 +8,9 @@ import { useUiPrefsStore } from 'store/ui-prefs';
 
 import { Amount } from 'basics/numbers';
 import GroupAvatar from 'components/GroupAvatar';
+import { InteractiveCard } from 'components/interactive-card/InteractiveCard';
 
-import { GroupCardSurface, GroupNavButton } from './styled';
+import styles from './GroupCard.module.css';
 
 interface Props {
     model: GroupCardViewModel;
@@ -67,14 +68,14 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
     }
 
     return (
-        <GroupNavButton
+        <InteractiveCard
             to={`${ROUTES.GROUP}/${group.id}`}
-            unsetStyles
             onClick={() => setLastGroupId(group.id)}
             aria-current={isSelected ? 'page' : undefined}
         >
-            <GroupCardSurface
+            <Card
                 size="1"
+                className={styles.root}
                 data-interactive-card
                 data-selected={isSelected || undefined}
             >
@@ -134,9 +135,9 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
                         )}
                     </Flex>
                 </Flex>
-            </GroupCardSurface>
-        </GroupNavButton>
+            </Card>
+        </InteractiveCard>
     );
 };
 
-export default GroupCard;
+export { GroupCard };

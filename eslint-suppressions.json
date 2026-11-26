@@ -129,11 +129,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/group-card/GroupCard.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/internal-page-layout/InternalPageLayout.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -588,16 +583,6 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/DashboardPage.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/FriendJoinPage.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/FriendJoinPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -608,18 +593,8 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/GroupJoinPage.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/GroupJoinPage.tsx": {
     "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/HomePage.test.tsx": {
-    "boundaries/dependencies": {
       "count": 1
     }
   },
@@ -646,11 +621,6 @@
   "apps/app/src/pages/activity-subevents-page/ActivitySubeventsPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
-    }
-  },
-  "apps/app/src/pages/activity-subevents-page/components/activity-subevents-details/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 3
     }
   },
   "apps/app/src/pages/friends-page/FriendsPage.tsx": {
@@ -708,22 +678,7 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/group-page/GroupPage.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/group-page/components/GroupBalancesTab.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/group-page/components/GroupCoverSection.test.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/group-page/components/GroupCoverSection.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -750,21 +705,6 @@
   },
   "apps/app/src/pages/group-page/components/GroupTabsContent.tsx": {
     "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/group-page/components/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/group-page/index.ts": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/group-page/styled.ts": {
-    "no-restricted-syntax": {
       "count": 1
     }
   },

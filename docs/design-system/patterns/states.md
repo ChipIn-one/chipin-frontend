@@ -1,7 +1,7 @@
 # States: loading, empty, error, offline and toasts
 
 Every screen or block that shows loaded data handles four states besides "data". Paths are inside
-`apps/app/src`.
+`apps/app/src`. Component cards: [EmptyState](../components/empty-state.md), [skeletons](../components/skeletons.md).
 
 ## The four states
 

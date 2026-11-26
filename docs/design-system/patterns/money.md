@@ -1,7 +1,7 @@
 # Money: amounts, debt direction and amount input
 
 Applies [principles.md](../principles.md) 2, 3 and 7 to every place that shows or takes money.
-Paths are inside `apps/app/src`.
+Paths are inside `apps/app/src`. Component cards: [Amount](../components/amount.md), [DebtAmount](../components/debt-amount.md), [OwedStatusText](../components/owed-status-text.md), [BalanceBadges](../components/balance-badges.md), [BalanceSummaryText](../components/balance-summary-text.md), [AmountInput](../components/amount-input.md).
 
 ## Output goes through `Amount`
 

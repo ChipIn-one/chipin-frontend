@@ -1,15 +1,24 @@
 import { Badge, Box, Flex, Heading, IconButton, Skeleton, Text } from '@radix-ui/themes';
 import { PencilIcon } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { GROUP_COVER_OBJECT_POSITION, GROUP_COVER_RATIO } from 'constants/groupCover';
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import type { Group } from 'entities/groups';
 
 import { BackButton } from 'basics';
+import { Image } from 'basics/Image';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 import { OnlineOnly } from 'components/online-only';
 
-import { CoverGradient, CoverWrapper, GroupCoverImage } from './styled';
+import styles from './GroupCoverSection.module.css';
+
+// The cover constants are shared with other covers, so they reach the module as local custom properties.
+const COVER_STYLE: CSSProperties & Record<'--_cover-ratio' | '--_cover-position', string> = {
+    '--_cover-ratio': String(GROUP_COVER_RATIO),
+    '--_cover-position': GROUP_COVER_OBJECT_POSITION,
+};
 
 interface Props {
     group: Group | null;
@@ -21,14 +30,21 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
     const members = group?.members ?? [];
 
     return (
-        <CoverWrapper $hasCover={Boolean(group?.coverUrl)} direction="column" position="relative">
-            <GroupCoverImage
+        <Flex
+            className={styles.root}
+            style={COVER_STYLE}
+            data-has-cover={Boolean(group?.coverUrl)}
+            direction="column"
+            position="relative"
+        >
+            <Image
+                className={styles.image}
                 src={group?.coverUrl ?? undefined}
                 alt={t('page.coverAlt', { name: group?.name ?? '' })}
                 width="100%"
                 height="100%"
             />
-            {group?.coverUrl ? <CoverGradient aria-hidden /> : null}
+            {group?.coverUrl ? <Box className={styles.gradient} aria-hidden /> : null}
 
             <Flex
                 direction="column"
@@ -84,8 +100,8 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                     </Box>
                 )}
             </Flex>
-        </CoverWrapper>
+        </Flex>
     );
 };
 
-export default GroupCoverSection;
+export { GroupCoverSection };

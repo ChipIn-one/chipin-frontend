@@ -29,8 +29,7 @@ Each layer uses only the layer below it. Docs never name a value that is not in
 | [patterns/forms.md](patterns/forms.md)         | Field set, labels and errors, buttons, modals, destructive confirms   |
 | [tokens.md](tokens.md)                         | How to read and add tokens, what is forbidden and which check bans it |
 | [components.md](components.md)                 | Registry of every basic and ChipIn component                          |
-
-Coming later: cards for ChipIn-specific components (ChipIn-one/chipin-frontend#491).
+| [components/](components/)                     | Cards for ChipIn-specific components (props, states, a11y, example)   |
 
 ## If you do X, read Y
 

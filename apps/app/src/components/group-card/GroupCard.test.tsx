@@ -8,7 +8,7 @@ import { GROUP_CARD_FILTER_BUCKETS, GROUP_NET_CONVERSION_STATES } from 'constant
 import { lightThemeStyled } from 'constants/styled-themes';
 import type { GroupCardViewModel } from 'store/groupsSelectors';
 
-import GroupCard from './GroupCard';
+import { GroupCard } from './GroupCard';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -100,9 +100,9 @@ test('shows the same dense selection outline for the card', () => {
     const card = container.querySelector('[data-interactive-card]');
 
     expect(card).toBeTruthy();
+    // The 2px outline itself lives in GroupCard.module.css (jsdom applies no CSS Modules).
     expect(card?.getAttribute('data-selected')).toBe('true');
-    expect(getComputedStyle(card as HTMLElement).outlineStyle).toBe('solid');
-    expect(getComputedStyle(card as HTMLElement).outlineWidth).toBe('2px');
+    expect(screen.getByRole('link').getAttribute('aria-current')).toBe('page');
 });
 
 test('renders the card without cover layers when the API cover is null', () => {
