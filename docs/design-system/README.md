@@ -25,9 +25,9 @@ Each layer uses only the layer below it. Docs never name a value that is not in
 | [patterns/hierarchy.md](patterns/hierarchy.md) | Visibility scale, one screen = one task, navigation, audit list       |
 | [tokens.md](tokens.md)                         | How to read and add tokens, what is forbidden and which check bans it |
 | [components.md](components.md)                 | Registry of every basic and ChipIn component                          |
+| [components/](components/)                     | Cards for ChipIn-specific components (props, states, a11y, example)   |
 
-Coming later: patterns for money, groups, states and forms (ChipIn-one/chipin-frontend#490) and
-cards for ChipIn-specific components (ChipIn-one/chipin-frontend#491).
+Coming later: patterns for money, groups, states and forms (ChipIn-one/chipin-frontend#490).
 
 ## If you do X, read Y
 
