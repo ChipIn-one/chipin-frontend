@@ -24,7 +24,7 @@
 
 .controls {
     opacity: 0.55;
-    transition: opacity 150ms ease;
+    transition: opacity var(--cp-duration-base) var(--cp-easing-standard);
 }
 
 .controls[data-included='true'] {
