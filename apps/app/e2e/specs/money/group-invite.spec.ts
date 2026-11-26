@@ -40,7 +40,11 @@ test.describe('GRP-030 join by invite link', () => {
         expect(joined.status(), 'POST /groups/invite/{inviteToken} status').toBeLessThan(300);
 
         await expect(joinerPage).toHaveURL(new RegExp(`/group/${groupId}$`));
-        await expect(joinerPage.getByText(groupName).first()).toBeVisible();
+        // The cover heading, not a text match: below `sm` the page also renders the groups list
+        // cards (hidden) before the cover, so `getByText(...).first()` can pick a hidden card (#911).
+        await expect(
+            joinerPage.getByRole('heading', { name: groupName, exact: true }),
+        ).toBeVisible();
         const joinerBalances = await selectGroupTab(joinerPage, 'Balances');
         await expectSettledUp(joinerBalances, owner.displayName);
 
