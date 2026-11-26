@@ -13,14 +13,14 @@ changes, and the plan for when a designer joins. Read [README.md](README.md) fir
    presentational components without a store; `apps/app/src/components` holds compositions that
    may read stores, hooks and entities (layer rules: [components.md](components.md#basics-and-components)).
    Styles go to a CSS Module (`Component.module.css`) with `var(--cp-*)` only; Radix `color`
-   props take `PROP_COLOR` ([tokens.md](tokens.md)). A new styled-components file is a lint error.
+   props take `PROP_COLOR` (not linted yet, [tokens.md](tokens.md)). A new styled-components file is a lint error.
 4. **Card and registry row in the same PR.** A new ChipIn-specific component gets a card in
    [`components/`](components/) (purpose, when to use, props, states, accessibility and i18n,
    example) and a row in [components.md](components.md). A changed component updates its card.
    There is no gallery section: ds-gallery was removed (D33, ChipIn-one/chipin-frontend#830).
 5. **A new token lands in `tokens.css` first.** Add it to
    [`packages/tokens/tokens.css`](../../packages/tokens/tokens.css) in the same PR that uses it,
-   then run `tokens.test.ts` ([tokens.md §How to add a token](tokens.md#how-to-add-a-token)).
+   then run `npx vitest run packages/tokens/tokens.test.ts` from the repository root ([tokens.md §How to add a token](tokens.md#how-to-add-a-token)).
    There is no `tokens.json` and no generator (D31).
 
 ## UI PR checklist
@@ -32,7 +32,7 @@ The author checks this before review; the reviewer checks the same list (`AGENTS
       updated.
 - [ ] Colors only through `var(--cp-*)` and `PROP_COLOR`; no raw colors, palette variables or new
       `themeColor()` calls.
-- [ ] A touched styled-components file moved to a CSS Module and left the allowlist
+- [ ] A styled-components file touched as defined in tokens.md moved to a CSS Module and left the allowlist
       ([tokens.md](tokens.md#styled-components-frozen-then-gone)).
 - [ ] A screen has one primary action and a title that says what the screen is for
       ([patterns/hierarchy.md](patterns/hierarchy.md)).
