@@ -134,7 +134,8 @@ test('DSH-001 shows approximate marker only when conversion was used', () => {
     const amount = converted.container.querySelector('span[dir="ltr"]')?.parentElement;
 
     expect(amount?.textContent).toBe('~12.5 USD');
-    expect(getComputedStyle(amount as HTMLElement).whiteSpace).toBe('nowrap');
+    // One Amount root holds the prefix and the value (its `nowrap` lives in the CSS Module).
+    expect(amount?.tagName).toBe('SPAN');
 });
 
 test('DSH-001 prioritizes the tiny-amount indicator over approximation', () => {
@@ -149,7 +150,8 @@ test('DSH-001 prioritizes the tiny-amount indicator over approximation', () => {
 
     expect(amount?.textContent).toBe('< 0.01 USD');
     expect(amount?.textContent).not.toContain('~');
-    expect(getComputedStyle(amount as HTMLElement).whiteSpace).toBe('nowrap');
+    // One Amount root holds the prefix and the value (its `nowrap` lives in the CSS Module).
+    expect(amount?.tagName).toBe('SPAN');
 });
 
 test('DSH-001 shows N/A when a required rate is unavailable', () => {

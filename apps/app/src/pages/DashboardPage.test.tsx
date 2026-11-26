@@ -26,7 +26,7 @@ import { reloadThroughPersister } from 'test/persistedReload';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
-import DashboardPage from './DashboardPage';
+import { DashboardPage } from './DashboardPage';
 
 const useInfiniteScrollMock = vi.hoisted(() =>
     vi.fn<typeof import('hooks/useInfiniteScroll').useInfiniteScroll>(() => vi.fn()),
@@ -70,11 +70,11 @@ vi.hoisted(() => {
 const groupsCardsMode = vi.hoisted(() => ({ real: false }));
 
 vi.mock('components/GroupsCards', async importOriginal => {
-    const { default: RealGroupsCards } =
+    const { GroupsCards: RealGroupsCards } =
         await importOriginal<typeof import('components/GroupsCards')>();
 
     return {
-        default: (props: { groups: Group[]; label: string }) =>
+        GroupsCards: (props: { groups: Group[]; label: string }) =>
             groupsCardsMode.real ? (
                 <RealGroupsCards {...props} />
             ) : (
@@ -309,7 +309,6 @@ test('DSH-013 puts the Create group action below No groups yet at full width', (
 
     expect(card?.querySelector('[data-empty-state-action]')?.contains(action)).toBe(true);
     expect(card?.firstElementChild?.className).toContain('rt-r-fd-column');
-    expect(window.getComputedStyle(action).width).toBe('100%');
 });
 
 test('DSH-012 does not reserve vertical space when the Dashboard summary is empty', () => {

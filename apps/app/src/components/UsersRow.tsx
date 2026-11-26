@@ -1,12 +1,22 @@
 import { Avatar, Flex, Text } from '@radix-ui/themes';
-import styled from 'styled-components';
+import type { CSSProperties, ReactNode } from 'react';
 
 import type { GroupUser } from 'api/chipin.types';
 
+import styles from './UsersRow.module.css';
+
+type StackStyle = CSSProperties & Record<'--_stack-order', number>;
+
 // Flex paints items in order-modified order, so the reverse layout keeps both DOM and visual user order intact.
-export const AvatarWrapper = styled.div<{ $stackOrder: number }>`
-    order: ${({ $stackOrder }) => -$stackOrder};
-`;
+const AvatarWrapper = ({ $stackOrder, children }: { $stackOrder: number; children: ReactNode }) => {
+    const stackStyle: StackStyle = { '--_stack-order': -$stackOrder };
+
+    return (
+        <div className={styles.avatar} style={stackStyle}>
+            {children}
+        </div>
+    );
+};
 
 interface Props {
     members: GroupUser[];
@@ -49,4 +59,4 @@ const UsersRow = ({ members, size = '1', max = 5 }: Props) => {
     );
 };
 
-export default UsersRow;
+export { AvatarWrapper, UsersRow };

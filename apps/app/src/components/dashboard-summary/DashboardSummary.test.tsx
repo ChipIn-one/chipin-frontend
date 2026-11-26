@@ -12,7 +12,7 @@ import { saveLocalUser } from 'helpers/localStorage';
 import { currencyCode, fromUnits } from 'shared/money';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
-import DashboardSummary from './DashboardSummary';
+import { DashboardSummary } from './DashboardSummary';
 
 import 'i18n/index';
 

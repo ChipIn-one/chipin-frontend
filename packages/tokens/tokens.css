@@ -130,6 +130,8 @@
     /* Components */
     --cp-logo-mode-primary: var(--violet-9);
     --cp-logo-mode-secondary: var(--violet-11);
+    /* Invite onboarding card glow */
+    --cp-invite-glow: var(--green-a4);
 
     /* Media: text over a cover and its scrim, the same in both modes */
     --cp-media-on: #ffffff;

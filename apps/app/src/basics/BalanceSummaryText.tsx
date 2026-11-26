@@ -2,19 +2,16 @@ import { Fragment } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { Amount } from './numbers';
+
+import styles from './BalanceSummaryText.module.css';
 
 /** One currency's net balance, structurally the API `BalanceEntry` (basics may not import `api`). */
 interface BalanceSummaryEntry {
     readonly currency: string;
     readonly netBalance: number;
 }
-
-const AmountChunk = styled.span`
-    white-space: nowrap;
-`;
 
 interface Props {
     /** Balances split by sign (entities/balance `legacyPartitionEntries`); zero ones are dropped. */
@@ -45,7 +42,7 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
                     {t('balances.youAreOwed')}{' '}
                     {owedEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>
-                            <AmountChunk>
+                            <span className={styles.amountChunk}>
                                 <Amount
                                     type="summary"
                                     value={Math.abs(entry.netBalance)}
@@ -53,7 +50,7 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
                                     precision={2}
                                 />
                                 {i < owedEntries.length - 1 && ','}
-                            </AmountChunk>
+                            </span>
                             {i < owedEntries.length - 1 && ' '}
                         </Fragment>
                     ))}
@@ -64,7 +61,7 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
                     {t('balances.youOwe')}{' '}
                     {oweEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>
-                            <AmountChunk>
+                            <span className={styles.amountChunk}>
                                 <Amount
                                     type="summary"
                                     value={Math.abs(entry.netBalance)}
@@ -72,7 +69,7 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
                                     precision={2}
                                 />
                                 {i < oweEntries.length - 1 && ','}
-                            </AmountChunk>
+                            </span>
                             {i < oweEntries.length - 1 && ' '}
                         </Fragment>
                     ))}

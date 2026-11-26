@@ -1,0 +1,25 @@
+/* Parity with the old styled Card: the Radix Card ::before (z-index -1 under contain: paint)
+   paints the opaque panel over this layer, so only the 1px edge shows the tint, as before. */
+.root {
+    overflow: hidden;
+    background-image: radial-gradient(circle at top, var(--cp-invite-glow), transparent 68%);
+}
+
+.illustration {
+    display: block;
+    width: min(100%, 20rem);
+    height: auto;
+    margin: 0 auto;
+}
+
+.inviteButton {
+    width: 100%;
+}
+
+.shareDivider::before,
+.shareDivider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--cp-border-translucent);
+}

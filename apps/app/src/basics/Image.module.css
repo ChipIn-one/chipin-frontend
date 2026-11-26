@@ -1,0 +1,19 @@
+/* Defaults; the component sets both from its `width`/`height` props. */
+.root,
+.empty {
+    --_image-width: auto;
+    --_image-height: auto;
+
+    width: var(--_image-width);
+    height: var(--_image-height);
+}
+
+.root {
+    object-fit: contain;
+}
+
+.empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

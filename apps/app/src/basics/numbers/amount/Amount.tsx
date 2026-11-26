@@ -1,16 +1,14 @@
 import { type FC, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
+
+import { cx } from 'helpers/cx';
 
 import type { BaseProps } from '../duck/types';
 
 import { getAmountData, getAmountTypesBool } from './duck/selectors';
 import type { AmountTypes, ClickFuncParams } from './duck/types';
 
-const Wrapper = styled.span`
-    display: inline-block;
-    white-space: nowrap;
-`;
+import styles from './Amount.module.css';
 
 interface Props extends BaseProps {
     type?: AmountTypes;
@@ -57,8 +55,9 @@ const Amount: FC<Props> = ({
     }
 
     return (
-        <Wrapper
-            className={className}
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- styling-only migration (#895): the clickable span is unchanged; callers own the interaction
+        <span
+            className={cx(styles.root, className)}
             onClick={onClick && (() => onClick({ amountString, bigAmount }))}
         >
             {prefixLess}
@@ -66,8 +65,8 @@ const Amount: FC<Props> = ({
             {amountPart}
             <span>{zerosPart}</span>
             {postfix && <> {postfix}</>}
-        </Wrapper>
+        </span>
     );
 };
 
-export default Amount;
+export { Amount };

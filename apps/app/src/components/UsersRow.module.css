@@ -1,0 +1,5 @@
+.avatar {
+    --_stack-order: 0;
+
+    order: var(--_stack-order);
+}

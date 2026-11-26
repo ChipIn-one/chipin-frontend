@@ -14,7 +14,7 @@ import {
     NoGroupsEmptyState,
 } from './empty-states';
 import GroupRoleBadge from './GroupRoleBadge';
-import Image from './Image';
+import { Image } from './Image';
 import { Amount } from './numbers';
 import OwedStatusText from './OwedStatusText';
 import PageLoader from './PageLoader';

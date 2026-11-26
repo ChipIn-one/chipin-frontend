@@ -1,1 +1,1 @@
-export { default as Component } from 'pages/DashboardPage';
+export { DashboardPage as Component } from 'pages/DashboardPage';

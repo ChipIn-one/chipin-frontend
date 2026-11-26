@@ -31,7 +31,7 @@ vi.mock('react-router-dom', () => ({
 }));
 
 vi.mock('components/GroupsCards', () => ({
-    default: ({ groups, selectedGroupId }: { groups: Group[]; selectedGroupId?: string }) => (
+    GroupsCards: ({ groups, selectedGroupId }: { groups: Group[]; selectedGroupId?: string }) => (
         <div
             data-testid="groups-cards"
             data-count={String(groups.length)}

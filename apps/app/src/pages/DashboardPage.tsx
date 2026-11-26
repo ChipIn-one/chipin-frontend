@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react';
 import { Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { loadedActivityPreviews, useSelfActivityPreviewsQuery } from 'entities/activity';
@@ -19,17 +18,16 @@ import { useSelfUserState } from 'hooks/useSelfUser';
 import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
 import { DashboardOnboarding } from 'components/dashboard-onboarding';
 import { DashboardHeader, DashboardSummary } from 'components/dashboard-summary';
-import GroupsCards from 'components/GroupsCards';
+import { GroupsCards } from 'components/GroupsCards';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 import { OnlineOnly } from 'components/online-only';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
-const NO_GROUPS: Group[] = [];
+// eslint-disable-next-line boundaries/dependencies -- the CSS Module of this flat page file is part of the page, not another page slice
+import styles from './DashboardPage.module.css';
 
-const FullWidthButton = styled(Button)`
-    width: 100%;
-`;
+const NO_GROUPS: Group[] = [];
 
 interface Resource {
     fetched: boolean;
@@ -169,10 +167,14 @@ const DashboardPage = () => {
                                             action={ONLINE_ONLY_ACTIONS.groupCreate}
                                             isFullWidth
                                         >
-                                            <FullWidthButton size="2" variant="soft">
+                                            <Button
+                                                className={styles.createGroupButton}
+                                                size="2"
+                                                variant="soft"
+                                            >
                                                 <PlusIcon size={14} />
                                                 {t('common:buttons.createGroup')}
-                                            </FullWidthButton>
+                                            </Button>
                                         </OnlineOnly>
                                     </CreateUpdateGroupModal>
                                 )
@@ -265,4 +267,4 @@ const DashboardPage = () => {
     );
 };
 
-export default DashboardPage;
+export { DashboardPage };
