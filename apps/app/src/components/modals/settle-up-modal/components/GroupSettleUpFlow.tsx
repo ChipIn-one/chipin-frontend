@@ -179,7 +179,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                     <Button
                         size={memberId ? '1' : '2'}
                         color="green"
-                        variant={memberId ? 'soft' : 'solid'}
+                        variant="soft"
                         disabled={debts.length === 0}
                     >
                         <ArrowLeftRightIcon size={15} />
