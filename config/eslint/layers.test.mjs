@@ -104,6 +104,60 @@ describe('layer boundaries (config/eslint/layers.js)', () => {
         expect(errors).toEqual([]);
     });
 
+    test('a flat page file may import its own CSS Module', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/pages/DashboardPage.tsx',
+            "import styles from './DashboardPage.module.css';\nexport const x = styles;\n",
+        );
+
+        expect(errors).toEqual([]);
+    });
+
+    test('a flat page file cannot import another flat page file', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/pages/DashboardPage.tsx',
+            "import HomePage from './HomePage';\nexport const x = HomePage;\n",
+        );
+
+        expect(errors).toEqual(['boundaries/dependencies']);
+    });
+
+    test('a folder page cannot import a flat page file', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/pages/group-page/GroupPage.tsx',
+            "import { DashboardPage } from '../DashboardPage';\nexport const x = DashboardPage;\n",
+        );
+
+        expect(errors).toEqual(['boundaries/dependencies']);
+    });
+
+    test('a folder page cannot import another folder page', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/pages/group-page/GroupPage.tsx',
+            "import SoloPage from '../solo-page/SoloPage';\nexport const x = SoloPage;\n",
+        );
+
+        expect(errors).toEqual(['boundaries/dependencies']);
+    });
+
+    test('a flat page file cannot import its own test file', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/pages/DashboardPage.tsx',
+            "import * as spec from './DashboardPage.test';\nexport const x = spec;\n",
+        );
+
+        expect(errors).toEqual(['boundaries/dependencies']);
+    });
+
+    test('a flat page test may import its page', async () => {
+        const errors = await layerErrors(
+            'apps/app/src/pages/DashboardPage.test.tsx',
+            "import { DashboardPage } from './DashboardPage';\nexport const x = DashboardPage;\n",
+        );
+
+        expect(errors).toEqual([]);
+    });
+
     test('production code cannot import test support', async () => {
         const errors = await layerErrors(
             'apps/app/src/basics/AmountInput.tsx',

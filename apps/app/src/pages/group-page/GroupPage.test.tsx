@@ -18,7 +18,7 @@ import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
-import GroupPage from './GroupPage';
+import { GroupPage } from './GroupPage';
 
 const server = setupMswServer();
 

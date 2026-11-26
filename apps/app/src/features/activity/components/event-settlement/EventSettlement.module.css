@@ -1,0 +1,5 @@
+/* A reversed settlement: the amount line is struck through, the nested amount parts included. */
+.reversed,
+.reversed > span {
+    text-decoration: line-through;
+}
