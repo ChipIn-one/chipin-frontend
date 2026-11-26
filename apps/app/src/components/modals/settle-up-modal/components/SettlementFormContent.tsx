@@ -17,12 +17,13 @@ import {
     getSettlementViewModel,
     selectSettlementBalance,
 } from '../internal';
-import { ModalSurface } from '../styled';
 import type { FriendSettleUpProps } from '../types';
 
-import SettlementAmountField from './SettlementAmountField';
-import SettlementDebtSummary from './SettlementDebtSummary';
+import { SettlementAmountField } from './SettlementAmountField';
+import { SettlementDebtSummary } from './SettlementDebtSummary';
 import SettlementStatus from './SettlementStatus';
+
+import styles from './SettlementFormContent.module.css';
 
 interface Props extends Pick<
     FriendSettleUpProps,
@@ -95,7 +96,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
     return (
         <>
             <OverlayBody>
-                <ModalSurface>
+                <div className={styles.root}>
                     <SettlementDebtSummary
                         friend={friend}
                         summaryUser={settlement.summaryUser}
@@ -139,7 +140,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                         </Callout.Icon>
                         <Callout.Text>{t('friends:settleUp.noMoneyMoves')}</Callout.Text>
                     </Callout.Root>
-                </ModalSurface>
+                </div>
             </OverlayBody>
 
             <OverlayFooter
@@ -165,4 +166,4 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
     );
 };
 
-export default SettlementFormContent;
+export { SettlementFormContent };

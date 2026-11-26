@@ -5,7 +5,7 @@ import { OverlayBody } from '../../components';
 import type { SettlementFormProps } from '../internal';
 import { useSettleUpRefusal } from '../internal/useSettleUpRefusal';
 
-import SettlementFormContent from './SettlementFormContent';
+import { SettlementFormContent } from './SettlementFormContent';
 import { SettleUpQueuedHint } from './SettleUpQueuedHint';
 
 const SettlementForm = ({

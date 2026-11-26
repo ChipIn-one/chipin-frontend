@@ -1,0 +1,28 @@
+.marker {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--cp-border-strong);
+    border-radius: 50%;
+}
+
+.marker::after {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--cp-selection-solid);
+    content: '';
+    opacity: 0;
+}
+
+/* The Radix radio card item carries the checked state. */
+[data-state='checked'] .marker {
+    border-color: var(--cp-selection-solid);
+}
+
+[data-state='checked'] .marker::after {
+    opacity: 1;
+}

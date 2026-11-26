@@ -8,7 +8,7 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import GroupAvatar from 'components/GroupAvatar';
 import { SearchSelect, type SearchSelectItem } from 'components/search-select';
 
-import ExpenseSearchSelectContent from '../../../expense-search-select-content/ExpenseSearchSelectContent';
+import { ExpenseSearchSelectContent } from '../../../expense-search-select-content/ExpenseSearchSelectContent';
 
 const ExpenseGroupSearchSelect = () => {
     const { t } = useTranslation('group');

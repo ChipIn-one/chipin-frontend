@@ -1,0 +1,32 @@
+.participant {
+    display: flex;
+    align-items: center;
+    gap: var(--cp-space-2);
+    min-width: 0;
+    flex: 1;
+    cursor: pointer;
+    color: var(--cp-text-muted);
+}
+
+.participant[data-included='true'] {
+    color: var(--cp-text-primary);
+}
+
+.participant[data-locked='true'] {
+    cursor: default;
+}
+
+.checkSpacer {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.controls {
+    opacity: 0.55;
+    transition: opacity 150ms ease;
+}
+
+.controls[data-included='true'] {
+    opacity: 1;
+}

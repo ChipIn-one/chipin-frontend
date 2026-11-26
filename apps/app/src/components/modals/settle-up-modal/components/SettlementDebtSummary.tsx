@@ -1,4 +1,4 @@
-import { Card, Flex } from '@radix-ui/themes';
+import { Card, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import type { FriendUser } from 'api/chipin.types';
@@ -7,8 +7,9 @@ import type { Money } from 'shared/money';
 
 import { Amount, UserAvatar } from 'basics';
 
-import { DebtAmount, ParticipantName } from '../styled';
 import type { SettlementUser } from '../types';
+
+import styles from './SettlementDebtSummary.module.css';
 
 interface Props {
     friend: FriendUser;
@@ -27,26 +28,26 @@ const SettlementDebtSummary = ({ friend, summaryUser, isFriendPayer, amount, col
             <Flex align="center" justify="between" gap="3">
                 <Flex align="center" gap="3" minWidth="0">
                     <UserAvatar size="3" user={summaryUser} />
-                    <ParticipantName size="3" weight="bold" color={color}>
+                    <Text className={styles.participantName} size="3" weight="bold" color={color}>
                         {t(
                             isFriendPayer
                                 ? 'friends:settleUp.owedToYou'
                                 : 'friends:settleUp.youOwe',
                             { name: friend.displayName },
                         )}
-                    </ParticipantName>
+                    </Text>
                 </Flex>
-                <DebtAmount size="3" weight="bold" color={color}>
+                <Text className={styles.debtAmount} size="3" weight="bold" color={color}>
                     <Amount
                         value={legacyAmountFromMoney(amount)}
                         tokenCode={amount.currency}
                         precision={2}
                         type="summary"
                     />
-                </DebtAmount>
+                </Text>
             </Flex>
         </Card>
     );
 };
 
-export default SettlementDebtSummary;
+export { SettlementDebtSummary };

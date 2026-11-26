@@ -1,8 +1,8 @@
-import { Flex, IconButton } from '@radix-ui/themes';
+import { Flex, IconButton, TextField } from '@radix-ui/themes';
 import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 
-import { InputRoot } from './styled';
+import styles from './ExpenseInputActions.module.css';
 
 interface Props {
     value: string;
@@ -45,7 +45,8 @@ const ExpenseInputActions = ({
             >
                 <MinusIcon size={16} />
             </IconButton>
-            <InputRoot
+            <TextField.Root
+                className={styles.input}
                 value={value}
                 onChange={onInputChange}
                 inputMode={inputMode}

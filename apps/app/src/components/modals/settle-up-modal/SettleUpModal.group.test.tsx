@@ -180,7 +180,13 @@ test('toggles group debts beyond the first three rows within their section', () 
                 name: 'group:page.settleUp.showMore',
             });
 
-            expect(getComputedStyle(showMoreButton).width).toBe('100%');
+            // The full-width toggle lives in DebtSection.module.css (jsdom applies no CSS Modules);
+            // it sits in the debt section, next to its rows.
+            expect(
+                showMoreButton.parentElement?.contains(
+                    screen.getAllByRole('button', { name: /Debtor/ })[0] ?? null,
+                ),
+            ).toBe(true);
 
             return user.click(showMoreButton);
         })

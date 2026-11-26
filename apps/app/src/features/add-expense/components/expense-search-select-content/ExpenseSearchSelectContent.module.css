@@ -1,0 +1,6 @@
+/* App CSS loads before Radix, so the rule on the Radix `Button` is doubled to win by specificity. */
+.root.root {
+    width: 100%;
+    min-width: 0;
+    height: 60px;
+}
