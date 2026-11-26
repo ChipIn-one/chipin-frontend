@@ -1,20 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Dialog } from '@radix-ui/themes';
+import { Button, Dialog } from '@radix-ui/themes';
 import { RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useConnectivityStore } from 'store/connectivityStore';
 
-import {
-    BackendUnavailableActions,
-    BackendUnavailableButton,
-    BackendUnavailableDescription,
-    BackendUnavailableEyebrow,
-    BackendUnavailableIcon,
-    BackendUnavailablePanel,
-    BackendUnavailableRetryMessage,
-    BackendUnavailableTitle,
-} from './styled';
+import styles from './BackendUnavailablePage.module.css';
 
 const BackendUnavailablePage = () => {
     const { t } = useTranslation('errors');
@@ -55,24 +46,26 @@ const BackendUnavailablePage = () => {
 
     return (
         <Dialog.Root open>
-            <BackendUnavailablePanel
+            <Dialog.Content
+                className={styles.root}
                 onEscapeKeyDown={event => event.preventDefault()}
                 onInteractOutside={event => event.preventDefault()}
             >
-                <BackendUnavailableIcon aria-hidden="true">
+                <div className={styles.icon} aria-hidden="true">
                     <TriangleAlertIcon size={34} strokeWidth={2} />
-                </BackendUnavailableIcon>
+                </div>
 
-                <BackendUnavailableEyebrow>
-                    {t('backendUnavailable.eyebrow')}
-                </BackendUnavailableEyebrow>
-                <BackendUnavailableTitle>{t('backendUnavailable.title')}</BackendUnavailableTitle>
-                <BackendUnavailableDescription>
+                <p className={styles.eyebrow}>{t('backendUnavailable.eyebrow')}</p>
+                <Dialog.Title className={styles.title}>
+                    {t('backendUnavailable.title')}
+                </Dialog.Title>
+                <Dialog.Description className={styles.description}>
                     {t('backendUnavailable.description')}
-                </BackendUnavailableDescription>
+                </Dialog.Description>
 
-                <BackendUnavailableActions>
-                    <BackendUnavailableButton
+                <div className={styles.actions}>
+                    <Button
+                        className={styles.retryButton}
                         type="button"
                         size="4"
                         color="gray"
@@ -84,18 +77,19 @@ const BackendUnavailablePage = () => {
                     >
                         <RefreshCwIcon size={19} aria-hidden="true" />
                         {t('backendUnavailable.tryAgain')}
-                    </BackendUnavailableButton>
-                </BackendUnavailableActions>
+                    </Button>
+                </div>
 
-                <BackendUnavailableRetryMessage
+                <p
+                    className={styles.retryMessage}
                     role="status"
                     aria-live="polite"
                     aria-hidden={!hasRetryFailed}
-                    $visible={hasRetryFailed}
+                    data-visible={hasRetryFailed}
                 >
                     {t('backendUnavailable.retryFailed')}
-                </BackendUnavailableRetryMessage>
-            </BackendUnavailablePanel>
+                </p>
+            </Dialog.Content>
         </Dialog.Root>
     );
 };

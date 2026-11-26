@@ -275,7 +275,8 @@ describe('AUTH-077 a remote session revoke keeps the shown page under the sign-i
         const container = heading.closest('[inert]');
         expect(container).not.toBeNull();
         expect(container?.getAttribute('aria-hidden')).toBe('true');
-        expect(container && getComputedStyle(container).visibility).toBe('hidden');
+        // `visibility: hidden` comes from the CSS Module on this state (jsdom does not apply it).
+        expect(container?.getAttribute('data-hidden')).toBe('true');
         expect(dialog.closest('[inert]')).not.toBeNull();
         // The same QueryClient and the same router, the URL kept.
         expect(currentClient()).toBe(client);

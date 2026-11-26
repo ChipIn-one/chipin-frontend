@@ -12,7 +12,7 @@ import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
 import { seedSelfUser } from 'test/selfUserSeed';
 
-import DesktopSidebar from './DesktopSidebar';
+import { DesktopSidebar } from './DesktopSidebar';
 
 import '@radix-ui/themes/styles.css';
 
@@ -87,8 +87,12 @@ test('shows the authenticated navigation and profile actions', () => {
     const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
 
     expect(dashboardLink.getAttribute('aria-current')).toBe('page');
-    expect(getComputedStyle(dashboardLink).marginLeft).toBe('0px');
+    // The active item carries the highlight state (the module CSS is not applied in jsdom).
+    expect(dashboardLink.getAttribute('data-active')).toBe('true');
     expect(screen.getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Activity' }).getAttribute('data-active')).toBe(
+        'false',
+    );
     expect(screen.getByRole('link', { name: 'Friends' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
     expect(screen.queryByRole('switch', { name: 'Group mode' })).toBeNull();

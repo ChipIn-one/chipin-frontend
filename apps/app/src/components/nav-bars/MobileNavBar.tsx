@@ -5,17 +5,12 @@ import { useLocation } from 'react-router-dom';
 import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
 import { useAddExpenseAvailability } from 'hooks/useAddExpenseAvailability';
 
-import AddExpenseButton from 'components/AddExpenseButton';
+import { AddExpenseButton } from 'components/AddExpenseButton';
+import { NavButton } from 'components/NavButton';
 
 import { getNavElements, type NavElement } from './constants';
-import {
-    MobileNavBarWrapper,
-    MobileNavCenterAction,
-    MobileNavContent,
-    MobileNavItemButton,
-    MobileNavItems,
-    MobileNavSurface,
-} from './styled';
+
+import styles from './MobileNavBar.module.css';
 
 const MobileNavBar = () => {
     const location = useLocation();
@@ -31,7 +26,8 @@ const MobileNavBar = () => {
 
         return (
             <Box key={href} flexGrow="1">
-                <MobileNavItemButton
+                <NavButton
+                    className={styles.item}
                     to={href}
                     aria-current={isActive ? 'page' : undefined}
                     color={isActive ? activeColor : 'gray'}
@@ -44,33 +40,34 @@ const MobileNavBar = () => {
                             {t(labelKey)}
                         </Text>
                     </Flex>
-                </MobileNavItemButton>
+                </NavButton>
             </Box>
         );
     };
 
     return (
-        <MobileNavBarWrapper
+        <Box
+            className={styles.root}
             display={{ initial: 'block', sm: 'none' }}
             position="fixed"
             bottom="0"
             left="0"
             right="0"
         >
-            <MobileNavSurface $hasCenterAction={isAddExpenseVisible} />
+            <Box className={styles.surface} data-cutout={isAddExpenseVisible} />
 
-            <MobileNavContent align="stretch">
-                <MobileNavItems justify="between" align="stretch">
+            <Flex className={styles.content} position="relative" align="end">
+                <Flex width="100%" justify="between" align="end">
                     {navElements.map(renderNavItem)}
-                </MobileNavItems>
+                </Flex>
 
                 {isAddExpenseVisible && (
-                    <MobileNavCenterAction>
+                    <Box className={styles.centerAction}>
                         <AddExpenseButton type="mobile" />
-                    </MobileNavCenterAction>
+                    </Box>
                 )}
-            </MobileNavContent>
-        </MobileNavBarWrapper>
+            </Flex>
+        </Box>
     );
 };
 

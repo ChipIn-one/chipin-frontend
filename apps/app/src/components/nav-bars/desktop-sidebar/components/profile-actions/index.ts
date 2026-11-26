@@ -1,3 +1,3 @@
-import ProfileActions from './ProfileActions';
+import { ProfileActions } from './ProfileActions';
 
 export { ProfileActions };

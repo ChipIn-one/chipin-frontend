@@ -1,4 +1,4 @@
-import { Box, Flex, Separator, Text } from '@radix-ui/themes';
+import { Box, Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
@@ -7,7 +7,7 @@ import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
 import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
-import AddExpenseButton from 'components/AddExpenseButton';
+import { AddExpenseButton } from 'components/AddExpenseButton';
 import { DevMenu } from 'components/DevMenu';
 import { ModeLogotype } from 'components/mode-logotype';
 import { NavButton } from 'components/NavButton';
@@ -17,7 +17,8 @@ import { getNavElements } from '../constants';
 
 import { ProfileActions } from './components';
 import { DESKTOP_SIDEBAR_WIDTH } from './constants';
-import { SidebarNavButton, SidebarSurface } from './styled';
+
+import styles from './DesktopSidebar.module.css';
 
 const DesktopSidebar = () => {
     const location = useLocation();
@@ -32,11 +33,13 @@ const DesktopSidebar = () => {
 
     return (
         <Box
+            className={styles.root}
+            data-variant={isSoloMode ? 'solo' : 'group'}
             display={{ initial: 'none', lg: 'block' }}
             width={DESKTOP_SIDEBAR_WIDTH}
             flexShrink="0"
         >
-            <SidebarSurface>
+            <Card className={styles.surface}>
                 <Flex direction="column" gap="4" height="100%">
                     <NavButton
                         to={homeRoute}
@@ -56,10 +59,10 @@ const DesktopSidebar = () => {
                                     );
 
                                     return (
-                                        <SidebarNavButton
+                                        <NavButton
                                             key={href}
-                                            $isActive={isActive}
-                                            $isSoloMode={isSoloMode}
+                                            className={styles.navButton}
+                                            data-active={isActive}
                                             to={href}
                                             aria-current={isActive ? 'page' : undefined}
                                             variant="ghost"
@@ -70,7 +73,7 @@ const DesktopSidebar = () => {
                                             <Text size="3" weight={isActive ? 'bold' : 'medium'}>
                                                 {t(labelKey)}
                                             </Text>
-                                        </SidebarNavButton>
+                                        </NavButton>
                                     );
                                 })}
                             </Flex>
@@ -94,9 +97,9 @@ const DesktopSidebar = () => {
                         <ProfileActions isSoloMode={isSoloMode} />
                     </Flex>
                 </Flex>
-            </SidebarSurface>
+            </Card>
         </Box>
     );
 };
 
-export default DesktopSidebar;
+export { DesktopSidebar };

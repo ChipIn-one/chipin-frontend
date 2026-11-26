@@ -1,0 +1,4 @@
+.root[data-unavailable='true'] {
+    pointer-events: none;
+    user-select: none;
+}

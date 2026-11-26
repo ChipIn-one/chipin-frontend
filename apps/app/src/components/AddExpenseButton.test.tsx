@@ -14,7 +14,7 @@ import { seedGroupsList } from 'test/groupsList';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
 import { clearSeededSelfUser, seedSelfUser } from 'test/selfUserSeed';
 
-import AddExpenseButton from './AddExpenseButton';
+import { AddExpenseButton } from './AddExpenseButton';
 
 import '@radix-ui/themes/styles.css';
 
