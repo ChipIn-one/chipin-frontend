@@ -181,7 +181,7 @@ const milestoneLine = (refs, issueMilestones, { repository }) => {
     const goals = new Map();
     for (const ref of refs) {
         const milestone = ref.repo ? issueMilestones.get(ref.key) : null;
-        const title = oneLine(milestone?.title);
+        const title = typeName(milestone?.title);
         const closed = count(milestone?.closed);
         const total = count(milestone?.total);
         if (!title || closed === null || total === null || !Number.isSafeInteger(milestone.number))
@@ -194,7 +194,8 @@ const milestoneLine = (refs, issueMilestones, { repository }) => {
             closed,
             total,
         });
-        if (!goal.url || sameName(milestone.repo, repository)) goal.url = milestone.url;
+        if (safeUrl(milestone.url) && (!goal.url || sameName(milestone.repo, repository)))
+            goal.url = milestone.url;
         goal.included += 1;
         if (milestone.open === true) goal.open += 1;
     }

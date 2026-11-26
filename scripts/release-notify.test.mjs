@@ -457,6 +457,16 @@ describe('release-notify milestone line (#919)', () => {
             ]),
         });
         expect(milestoneLineOf(text)).toBe(`*Milestone:* <${MS}/4|Telegram TMA> 2/3 done`);
+        const unsafe = decide({
+            releaseBody: body([`${be}#9`, ...refs([1])]),
+            issueMilestones: milestones([
+                [`${be}#9`, ms(4, 'Telegram TMA', 1, 1, true, be)],
+                [fe(1), { ...ms(4, 'Telegram TMA', 0, 2), url: 'http://example.com' }],
+            ]),
+        });
+        expect(milestoneLineOf(unsafe.text)).toBe(
+            '*Milestone:* <https://github.com/ChipIn-one/chipin-backend/milestone/4|Telegram TMA> 2/3 done',
+        );
     });
 
     test('no line without milestones, without the milestone read, or for unusable counts', () => {
@@ -481,6 +491,14 @@ describe('release-notify milestone line (#919)', () => {
             ]),
         });
         expect(milestoneLineOf(text)).toBe('*Milestone:* &lt;!channel&gt; &amp; co 1/2 done');
+        expect(
+            milestoneLineOf(
+                decide({
+                    releaseBody: body(refs([1])),
+                    issueMilestones: milestones([[fe(1), ms(5, '*Bold_ ~x~ `y`', 1, 2)]]),
+                }).text,
+            ),
+        ).toBe(`*Milestone:* <${MS}/5|Bold x y> 1/2 done`);
         expect(text).not.toContain('<!channel>');
     });
 });
@@ -627,6 +645,37 @@ describe('release-notify main', () => {
         expect(log).not.toContain('secret-github-token');
         const text = parseOutput(outputs.join('')).text;
         expect(text).toContain(`*Bug (1):* <${FE}/540|#540>\n*No type (1):* <${FE}/718|#718>`);
+    });
+
+    test('errors with no type but a milestone keep the read: No type group and the milestone line', async () => {
+        const fetchImpl = releaseThen(() =>
+            reply(200, {
+                data: {
+                    r0: {
+                        i0: {
+                            issueType: null,
+                            state: 'OPEN',
+                            milestone: {
+                                number: 7,
+                                title: 'Premium',
+                                url: 'https://github.com/ChipIn-one/chipin-frontend/milestone/7',
+                                closed: { totalCount: 1 },
+                                all: { totalCount: 3 },
+                            },
+                        },
+                        i1: null,
+                    },
+                },
+                errors: [{ type: 'NOT_FOUND', message: 'Could not resolve' }],
+            }),
+        );
+        const { outputs, options } = collect();
+        await main(ENV, { ...options, fetchImpl });
+        const text = parseOutput(outputs.join('')).text;
+        expect(text).toContain(`*No type (2):* <${FE}/540|#540> <${FE}/718|#718>`);
+        expect(text).toContain(
+            '*Milestone:* <https://github.com/ChipIn-one/chipin-frontend/milestone/7|Premium> 2/3 done',
+        );
     });
 
     test('uses GITHUB_GRAPHQL_URL when set', async () => {
