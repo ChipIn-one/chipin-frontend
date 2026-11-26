@@ -33,7 +33,8 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
 ## Empty: `EmptyState`
 
 - `EmptyState` (`basics`) is the only empty screen: icon, title, optional description, one
-  action. The ready variants (`NoActivityEmptyState`, `NoFriendsEmptyState`,
+  action. The ready variants (`NoActivityEmptyState`, `NoFilteredActivityEmptyState`,
+  `NoFriendsEmptyState`,
   `NoGroupExpensesEmptyState`, `NoGroupMembersEmptyState`, `NoGroupsEmptyState`,
   `NoDebtsEmptyState`) live in `basics/empty-states`.
 - A new empty screen is a new variant file there (fixed icon, color and texts, an optional
