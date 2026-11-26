@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from 'react';
 import {
     dehydrate,
+    hashKey,
     hydrate,
     InfiniteQueryObserver,
     onlineManager,
@@ -10,7 +11,7 @@ import {
 } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { expect, test, vi } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
 
 import { ApiError } from 'shared/api/client';
 import { createQueryClient, PAGE_LOADED_AT, refetchIfRestored } from 'shared/api/queryClient';
@@ -20,12 +21,7 @@ import { testGroup, wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
 
 import { flattenGroupActivity, type GroupActivityData } from '../model/groupActivity';
-import {
-    flattenGroupsList,
-    type GroupsListData,
-    removeGroupFromList,
-    upsertGroupInList,
-} from '../model/groupsList';
+import { flattenGroupsList, type GroupsListData, upsertGroupInList } from '../model/groupsList';
 import type { Group } from '../model/types';
 
 import {
@@ -34,8 +30,8 @@ import {
     groupsKeys,
     groupsListQueryOptions,
     isGroupDeniedError,
-    seedGroupActivity,
     useGroupActivityQuery,
+    useGroupDetailQuery,
 } from './queries';
 
 const server = setupMswServer();
@@ -115,18 +111,6 @@ test('replaces a listed group in place and adds an unlisted one at the end', () 
     expect(upsertGroupInList(data, group('d')).pageParams).toBe(data.pageParams);
 });
 
-test('drops a group from every page', () => {
-    const data = listData([group('a'), group('b')], [group('a')]);
-
-    expect(removeGroupFromList(data, 'a').pages.map(page => page.items)).toEqual([
-        [group('b')],
-        [],
-    ]);
-});
-
-const detailGroup = (id: string, name: string) =>
-    wireGroup(id, { name, recentActivities: { items: [], nextCursor: 7 } });
-
 const preview = (parentId: string, seq = 1) => domainPreview(parentId, { seq });
 
 const seededListClient = (groups: Group[], updatedAt: number): QueryClient => {
@@ -135,77 +119,48 @@ const seededListClient = (groups: Group[], updatedAt: number): QueryClient => {
     return client;
 };
 
-test('a group detail read replaces its list entry', async () => {
-    server.use(http.get('*/groups/a', () => HttpResponse.json(detailGroup('a', 'Read'))));
+// The list, the group's activity and every other cache entry but the detail, as a snapshot.
+const otherEntries = (client: QueryClient, groupId: string) =>
+    client
+        .getQueryCache()
+        .getAll()
+        .filter(query => query.queryHash !== hashKey(groupsKeys.detail(groupId)))
+        .map(query => ({
+            key: query.queryKey,
+            data: query.state.data,
+            at: query.state.dataUpdatedAt,
+        }));
+
+test('#669 a group detail read writes no other cache: the list and the activity stay as they were', async () => {
+    server.use(
+        http.get('*/groups/a', () =>
+            HttpResponse.json(
+                wireGroup('a', {
+                    name: 'Read',
+                    recentActivities: { items: [wirePreview('p1')], nextCursor: 7 },
+                }),
+            ),
+        ),
+    );
     const client = seededListClient([group('a'), group('b')], Date.now() - 1_000);
+    const before = otherEntries(client, 'a');
+    const setQueryData = vi.spyOn(client, 'setQueryData');
+    const cancelQueries = vi.spyOn(client, 'cancelQueries');
+    const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
 
     const read = await client.fetchQuery(groupDetailQueryOptions('a'));
 
     expect(read.name).toBe('Read');
     expect(groupDetailQueryOptions('a').staleTime).toBe(30_000);
-    expect(
-        flattenGroupsList(client.getQueryData<GroupsListData>(groupsKeys.list()) ?? listData()),
-    ).toEqual([read, group('b')]);
-});
-
-test('a seed becomes the first activity page, as old as the detail read that carried it', () => {
-    const client = new QueryClient();
-    const page = { items: [preview('p1')], nextCursor: 7 };
-
-    seedGroupActivity(client, 'a', page, 1_000);
-    expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
-        pages: [page],
-        pageParams: [null],
-    });
-    expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(1_000);
-
-    // Cached activity (a newer read) is never replaced.
-    seedGroupActivity(client, 'a', { items: [preview('p2')], nextCursor: null }, Date.now());
-    expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
-        pages: [page],
-        pageParams: [null],
-    });
-});
-
-test('a seed does nothing while the first activity page is loading', async () => {
-    let answer: (() => void) | undefined;
-    server.use(
-        http.get(
-            '*/groups/a/activity-previews',
-            () =>
-                new Promise<Response>(resolve => {
-                    answer = () => {
-                        resolve(
-                            HttpResponse.json({ items: [wirePreview('read')], nextCursor: null }),
-                        );
-                    };
-                }),
-        ),
-    );
-    const client = new QueryClient();
-    const loading = client.fetchInfiniteQuery(groupActivityQueryOptions('a'));
-
-    expect(client.getQueryState(groupsKeys.activity('a'))?.fetchStatus).toBe('fetching');
-    seedGroupActivity(client, 'a', { items: [preview('seed')], nextCursor: 7 }, Date.now());
-    expect(client.getQueryData(groupsKeys.activity('a'))).toBeUndefined();
-
-    await vi.waitFor(() => {
-        expect(answer).toBeDefined();
-    });
-    answer?.();
-    await loading;
-    expect(
-        flattenGroupActivity(
-            client.getQueryData<GroupActivityData>(groupsKeys.activity('a')) ?? {
-                pages: [],
-                pageParams: [],
-            },
-        ),
-    ).toEqual([preview('read')]);
+    expect(otherEntries(client, 'a')).toEqual(before);
+    expect(client.getQueryState(groupsKeys.activity('a'))).toBeUndefined();
+    expect(setQueryData).not.toHaveBeenCalled();
+    expect(cancelQueries).not.toHaveBeenCalled();
+    expect(invalidateQueries).not.toHaveBeenCalled();
 });
 
 test.each([403, 404])(
-    'a detail %i is an ApiError and drops the group from the list',
+    '#669 a detail %i is an ApiError, and the read leaves the list as it was',
     async status => {
         server.use(
             http.get('*/groups/a', () =>
@@ -213,6 +168,7 @@ test.each([403, 404])(
             ),
         );
         const client = seededListClient([group('a'), group('b')], Date.now());
+        const before = otherEntries(client, 'a');
 
         const error: unknown = await client
             .fetchQuery(groupDetailQueryOptions('a'))
@@ -220,9 +176,7 @@ test.each([403, 404])(
 
         expect(error).toBeInstanceOf(ApiError);
         expect(isGroupDeniedError(error)).toBe(true);
-        expect(
-            flattenGroupsList(client.getQueryData<GroupsListData>(groupsKeys.list()) ?? listData()),
-        ).toEqual([group('b')]);
+        expect(otherEntries(client, 'a')).toEqual(before);
     },
 );
 
@@ -249,7 +203,7 @@ test('ACT-023 a group activity continues from the cursor of its seeded first pag
         pages: [{ items: [preview('p1')], nextCursor: 7 }],
         pageParams: [null],
     });
-    const observer = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+    const observer = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
 
     await observer.fetchNextPage();
 
@@ -278,7 +232,7 @@ test('a failed next activity page keeps the loaded pages and retries the same cu
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const firstPage = { pages: [{ items: [preview('p1')], nextCursor: 7 }], pageParams: [null] };
     client.setQueryData(groupsKeys.activity('a'), firstPage);
-    const observer = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+    const observer = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
 
     await observer.fetchNextPage();
     expect(observer.getCurrentResult().isFetchNextPageError).toBe(true);
@@ -311,7 +265,7 @@ test('a failed activity page is an ApiError, retried like the detail on a 5xx', 
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     const error: unknown = await client
-        .fetchInfiniteQuery(groupActivityQueryOptions('a'))
+        .fetchInfiniteQuery(groupActivityQueryOptions('a', client))
         .catch((reason: unknown) => reason);
 
     expect(error).toBeInstanceOf(ApiError);
@@ -331,7 +285,7 @@ test('a group activity page is read through api() into Money; an unreadable prev
     );
     const client = new QueryClient();
 
-    const data = await client.fetchInfiniteQuery(groupActivityQueryOptions('a'));
+    const data = await client.fetchInfiniteQuery(groupActivityQueryOptions('a', client));
 
     expect(data.pages[0]?.items).toEqual([
         preview('p1'),
@@ -341,53 +295,269 @@ test('a group activity page is read through api() into Money; an unreadable prev
     expect(flattenGroupActivity(data)).toEqual([preview('p1'), preview('p2')]);
 });
 
-test('a group detail read seeds the empty activity with the page it carries, as old as the read', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: 50_000 });
-    try {
-        server.use(
-            http.get('*/groups/a', () =>
-                HttpResponse.json(
-                    wireGroup('a', {
-                        recentActivities: { items: [wirePreview('p1')], nextCursor: 7 },
-                    }),
-                ),
-            ),
-        );
-        const client = new QueryClient();
+const providerOf =
+    (client: QueryClient) =>
+    ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children);
 
-        await client.fetchQuery(groupDetailQueryOptions('a'));
+/** The group `a` detail and activity reads, counted; the detail answers `detail`, else `status`. */
+const serveGroupA = (detail: ReturnType<typeof wireGroup> | number) => {
+    const reads = { detail: 0, activity: 0 };
 
-        expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
-            pages: [{ items: [preview('p1')], nextCursor: 7 }],
-            pageParams: [null],
-        });
-        expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(50_000);
-    } finally {
-        vi.useRealTimers();
-    }
+    server.use(
+        http.get('*/groups/a/activity-previews', () => {
+            reads.activity += 1;
+            return HttpResponse.json({ items: [wirePreview('read')], nextCursor: null });
+        }),
+        http.get('*/groups/a', () => {
+            reads.detail += 1;
+            return typeof detail === 'number'
+                ? HttpResponse.json({ code: 'GROUP_NOT_FOUND' }, { status: detail })
+                : HttpResponse.json(detail);
+        }),
+    );
+    return reads;
+};
+
+// A group page: its detail, and its activity enabled once the detail is loaded.
+const useOpenedGroup = (groupId: string) => {
+    const detail = useGroupDetailQuery(groupId, { enabled: true, placeholder: undefined });
+    const activity = useGroupActivityQuery(groupId, { enabled: detail?.isSuccess === true });
+
+    return { detail, activity };
+};
+
+test('#669 opening a group sends one request: the activity starts from the detail page, as old as the detail', async () => {
+    const reads = serveGroupA(
+        wireGroup('a', { recentActivities: { items: [wirePreview('p1')], nextCursor: 7 } }),
+    );
+    const client = createQueryClient();
+    const view = renderHook(() => useOpenedGroup('a'), { wrapper: providerOf(client) });
+
+    await waitFor(() => {
+        expect(view.result.current.activity.isSuccess).toBe(true);
+    });
+    // Time for an activity request, were one sent.
+    await new Promise(resolve => setTimeout(resolve, 20));
+
+    expect(reads).toEqual({ detail: 1, activity: 0 });
+    expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
+        pages: [{ items: [preview('p1')], nextCursor: 7 }],
+        pageParams: [null],
+    });
+    expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(
+        client.getQueryState(groupsKeys.detail('a'))?.dataUpdatedAt,
+    );
+    expect(view.result.current.activity.data?.items).toEqual([preview('p1')]);
+    view.unmount();
 });
 
-test('a group detail read never replaces cached activity, and a denied read seeds nothing', async () => {
+test('#669 cached activity is never replaced by the detail page, and a denied detail seeds nothing', async () => {
+    server.use(http.get('*/groups/b', () => HttpResponse.json({}, { status: 403 })));
     const cached = {
         pages: [{ items: [preview('cached')], nextCursor: null }],
         pageParams: [null],
     };
-    server.use(
-        http.get('*/groups/a', () =>
-            HttpResponse.json(
-                wireGroup('a', { recentActivities: { items: [wirePreview('p1')], nextCursor: 7 } }),
-            ),
-        ),
-        http.get('*/groups/b', () => HttpResponse.json({}, { status: 403 })),
-    );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     client.setQueryData(groupsKeys.activity('a'), cached);
+    client.setQueryData(
+        groupsKeys.detail('a'),
+        testGroup('a', { recentActivities: { items: [wirePreview('p1')], nextCursor: 7 } }),
+    );
+    // Group b: a detail cached from an earlier read, then denied.
+    client.setQueryData(
+        groupsKeys.detail('b'),
+        testGroup('b', { recentActivities: { items: [wirePreview('p2')], nextCursor: null } }),
+    );
+    await client
+        .fetchQuery({ ...groupDetailQueryOptions('b'), staleTime: 0 })
+        .catch(() => undefined);
+    expect(client.getQueryState(groupsKeys.detail('b'))?.status).toBe('error');
 
-    await client.fetchQuery(groupDetailQueryOptions('a'));
-    await client.fetchQuery(groupDetailQueryOptions('b')).catch(() => undefined);
+    const readerA = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
+    const readerB = new InfiniteQueryObserver(client, groupActivityQueryOptions('b', client));
 
+    expect(readerA.getCurrentResult().data).toEqual(cached);
     expect(client.getQueryData(groupsKeys.activity('a'))).toEqual(cached);
+    expect(readerB.getCurrentResult().data).toBeUndefined();
     expect(client.getQueryData(groupsKeys.activity('b'))).toBeUndefined();
+});
+
+test('#669 GRP-011 a denied group page reloads the list once: the server list no longer has the group', async () => {
+    const reads = serveGroupA(403);
+    let listReads = 0;
+    server.use(
+        http.get('*/groups', () => {
+            listReads += 1;
+            return HttpResponse.json({ items: [wireGroup('b')], nextCursor: null });
+        }),
+    );
+    const client = createQueryClient();
+    client.setQueryData(groupsKeys.list(), listData([group('a'), group('b')]));
+    // The list a page shows: its reload is a request.
+    const listReader = new InfiniteQueryObserver(client, groupsListQueryOptions());
+    const stopList = listReader.subscribe(() => undefined);
+    // Two readers of the denied group (the page and its header): one reload.
+    const view = renderHook(
+        () => [
+            useGroupDetailQuery('a', { enabled: true, placeholder: undefined }),
+            useGroupDetailQuery('a', { enabled: true, placeholder: undefined }),
+        ],
+        { wrapper: providerOf(client) },
+    );
+
+    await waitFor(() => {
+        expect(listReads).toBe(1);
+    });
+    await waitFor(() => {
+        expect(client.getQueryState(groupsKeys.list())?.fetchStatus).toBe('idle');
+    });
+    view.rerender();
+    await new Promise(resolve => setTimeout(resolve, 20));
+
+    expect(reads.detail).toBe(1);
+    expect(listReads).toBe(1);
+    expect(
+        flattenGroupsList(client.getQueryData<GroupsListData>(groupsKeys.list()) ?? listData()),
+    ).toEqual([group('b')]);
+    view.unmount();
+    stopList();
+});
+
+/** List loads, counted, answered with group `a` read again. */
+const serveListCounted = (): { count: number } => {
+    const counter = { count: 0 };
+
+    server.use(
+        http.get('*/groups', () => {
+            counter.count += 1;
+            return HttpResponse.json({
+                items: [wireGroup('a', { name: 'Listed again' })],
+                nextCursor: null,
+            });
+        }),
+    );
+    return counter;
+};
+
+const useGroupPageDetail = () =>
+    useGroupDetailQuery('a', { enabled: true, placeholder: undefined });
+
+test('#669 a detail read newer than the list marks it stale without a request; the next list mount reads it', async () => {
+    serveGroupA(wireGroup('a', { name: 'Read' }));
+    const listReads = serveListCounted();
+    const client = createQueryClient();
+    client.setQueryData(groupsKeys.list(), listData([group('a')]), {
+        updatedAt: Date.now() - 1_000,
+    });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    const view = renderHook(useGroupPageDetail, { wrapper: providerOf(client) });
+
+    await waitFor(() => {
+        expect(client.getQueryState(groupsKeys.list())?.isInvalidated).toBe(true);
+    });
+    view.rerender();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    // Once per read, however many renders.
+    expect(invalidate).toHaveBeenCalledOnce();
+    expect(listReads.count).toBe(0);
+    expect(
+        flattenGroupsList(client.getQueryData<GroupsListData>(groupsKeys.list()) ?? listData()),
+    ).toEqual([group('a')]);
+
+    // Back on the list page: its reader mounts and reads it again.
+    const listReader = new InfiniteQueryObserver(client, groupsListQueryOptions());
+    const stopList = listReader.subscribe(() => undefined);
+
+    await waitFor(() => {
+        expect(listReads.count).toBe(1);
+    });
+    stopList();
+    view.unmount();
+});
+
+test('#669 a detail older than the list leaves the list fresh', async () => {
+    // Both read in this page (an entry restored from before the page load is read again, #724).
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(PAGE_LOADED_AT + 60_000);
+    onTestFinished(() => {
+        vi.useRealTimers();
+    });
+    const reads = serveGroupA(wireGroup('a'));
+    const listReads = serveListCounted();
+    const client = createQueryClient();
+    client.setQueryData(groupsKeys.detail('a'), group('a'), { updatedAt: Date.now() - 2_000 });
+    client.setQueryData(groupsKeys.list(), listData([group('a')]), {
+        updatedAt: Date.now() - 1_000,
+    });
+    const view = renderHook(useGroupPageDetail, { wrapper: providerOf(client) });
+
+    await waitFor(() => {
+        expect(view.result.current?.isSuccess).toBe(true);
+    });
+    await new Promise(resolve => setTimeout(resolve, 20));
+
+    expect(reads.detail).toBe(0);
+    expect(client.getQueryState(groupsKeys.list())?.isInvalidated).toBe(false);
+    expect(listReads.count).toBe(0);
+    view.unmount();
+});
+
+test('#669 a failed first activity load keeps its error: the detail page does not replace it', async () => {
+    server.use(
+        http.get('*/groups/a/activity-previews', () => HttpResponse.json({}, { status: 500 })),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    await client.fetchInfiniteQuery(groupActivityQueryOptions('a', client)).catch(() => undefined);
+    client.setQueryData(
+        groupsKeys.detail('a'),
+        testGroup('a', { recentActivities: { items: [wirePreview('p1')], nextCursor: 7 } }),
+    );
+    const reader = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
+
+    expect(reader.getCurrentResult().data).toBeUndefined();
+    expect(client.getQueryState(groupsKeys.activity('a'))?.status).toBe('error');
+});
+
+test('#669 a running first activity load answers over the seed the detail page gave meanwhile', async () => {
+    let answer: (() => void) | undefined;
+    server.use(
+        http.get(
+            '*/groups/a/activity-previews',
+            () =>
+                new Promise<Response>(resolve => {
+                    answer = () => {
+                        resolve(
+                            HttpResponse.json({ items: [wirePreview('read')], nextCursor: null }),
+                        );
+                    };
+                }),
+        ),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const loading = client.fetchInfiniteQuery(groupActivityQueryOptions('a', client));
+
+    await vi.waitFor(() => {
+        expect(answer).toBeDefined();
+    });
+    client.setQueryData(
+        groupsKeys.detail('a'),
+        testGroup('a', { recentActivities: { items: [wirePreview('seed')], nextCursor: 7 } }),
+    );
+    const reader = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
+
+    // The seed shows while the load runs (TanStack applies it to an entry without data).
+    expect(reader.getCurrentResult().data?.pages).toEqual([
+        { items: [preview('seed')], nextCursor: 7 },
+    ]);
+    answer?.();
+    await loading;
+
+    expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
+        pages: [{ items: [preview('read')], nextCursor: null }],
+        pageParams: [null],
+    });
 });
 
 test('the list and the detail are read through api() into domain groups', async () => {
@@ -429,6 +599,8 @@ test('a detail with an unreadable preview carries it as an invalid item, left ou
     const client = new QueryClient();
 
     const detail = await client.fetchQuery(groupDetailQueryOptions('a'));
+    // The activity a group page then reads starts from that page.
+    new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
 
     expect(detail.recentActivities.items).toEqual([preview('p1'), { kind: 'invalid', id: 'bad' }]);
     expect(
@@ -514,7 +686,9 @@ test('#724 a detail read in this page stays fresh for its stale time: a mount re
 
 test('#724 the list balances and the group activity restored from before the reload are read again on mount', () => {
     expect(groupsListQueryOptions().refetchOnMount).toBe(refetchIfRestored);
-    expect(groupActivityQueryOptions('a').refetchOnMount).toBe(refetchIfRestored);
+    expect(groupActivityQueryOptions('a', new QueryClient()).refetchOnMount).toBe(
+        refetchIfRestored,
+    );
 });
 
 /** Activity pages by cursor: none → cursor 1 → cursor 2 → the end, counted. */
@@ -579,7 +753,7 @@ test('a mount refetch of a stale multi-page group activity loads one page', asyn
         expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(loadedAt);
 
         vi.setSystemTime(PAGE_LOADED_AT + 120_000);
-        const remount = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const remount = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
         const unsubscribe = remount.subscribe(() => undefined);
 
         expect(remount.getCurrentResult().isFetching).toBe(true);
@@ -649,7 +823,7 @@ test('#881 a group activity left offline and shown again before the network is b
         onlineManager.setOnline(false);
         unmount();
         await afterCleanup();
-        const shown = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const shown = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
         const unsubscribe = shown.subscribe(() => undefined);
 
         onlineManager.setOnline(true);
@@ -694,7 +868,7 @@ test('a group activity left while another reader still shows it keeps its pages'
         serveThreeActivityPages();
         const client = createQueryClient();
         const unmount = await readThreeActivityPages(client);
-        const other = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const other = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
         const unsubscribe = other.subscribe(() => undefined);
 
         unmount();
@@ -720,7 +894,7 @@ test('a next page loading when the group activity is left is cancelled, and the 
             data =>
                 data && { pages: data.pages.slice(0, 2), pageParams: data.pageParams.slice(0, 2) },
         );
-        const observer = new InfiniteQueryObserver(client, groupActivityQueryOptions('a'));
+        const observer = new InfiniteQueryObserver(client, groupActivityQueryOptions('a', client));
         const unsubscribe = observer.subscribe(() => undefined);
         const nextPage = observer.fetchNextPage();
 

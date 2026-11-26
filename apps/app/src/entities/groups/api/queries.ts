@@ -1,7 +1,9 @@
 // The groups entity (spec 03 §1.2, §6 row 4): the user's groups list (60 s fresh), a group's
 // detail with its balances (30 s) and a group's activity previews (30 s, infinite), all persisted
 // (the infinite ones as their first page only, `trimmingPersister`). All come through `api()` as
-// domain models (`toGroup`, `toActivityItems`: amounts as `Money`).
+// domain models (`toGroup`, `toActivityItems`: amounts as `Money`). Every query function only reads
+// its own resource (#669, `50-api-data.md` §Query Functions): the activity starts from the cached
+// detail's page (`initialData`), and a denied group page reloads the list (a hook effect).
 import { useEffect } from 'react';
 import type {
     FetchStatus,
@@ -26,6 +28,7 @@ import { refetchIfRestored } from 'shared/api/queryClient';
 import { isNetworkUsable, runWhenOnline } from 'shared/offline/network';
 
 import {
+    firstActivityPageParam,
     firstGroupActivityPage,
     type GroupActivityData,
     selectGroupActivity,
@@ -35,16 +38,15 @@ import { toGroup, toGroupsListPage } from '../model/toGroup';
 import type { Group, GroupActivityPage, GroupsListPage } from '../model/types';
 
 import { groupsKeys } from './keys';
-import { dropGroupFromCachedList, putGroupInCachedList } from './listCache';
+import { reloadGroupsList } from './listCache';
 
 export { groupsKeys };
 
 export const GROUPS_LIST_STALE_TIME = 60_000;
 export const GROUP_DETAIL_STALE_TIME = 30_000;
 
-// The first page has no cursor (functions: a typed constant would narrow to `null`).
+// The list's first page has no cursor (a function: a typed constant would narrow to `null`).
 const firstPageParam = (): string | null => null;
-const firstActivityPageParam = (): number | null => null;
 
 // `api()` rejects with an `ApiError`: a 5xx is retried, other 4xx are final.
 const fetchGroupsPage = (cursor: string | null, signal: AbortSignal): Promise<GroupsListPage> =>
@@ -101,62 +103,12 @@ const isReadable = (query: object): boolean => !leavingQueries.has(query);
 export const isGroupDeniedError = (error: unknown): boolean =>
     error instanceof ApiError && (error.status === 403 || error.status === 404);
 
-/**
- * Seeds the first page of a group's activity from the page its detail read carries, when the
- * activity has nothing cached and is not loading, so opening a group sends one request. A seed
- * never replaces cached or loading activity (a newer read wins). It is as old as the detail read
- * that carried it (`updatedAt`, when the read was sent).
- */
-export const seedGroupActivity = (
-    client: QueryClient,
-    groupId: string,
-    page: GroupActivityPage,
-    updatedAt: number,
-): void => {
-    const queryKey = groupsKeys.activity(groupId);
-    const state = client.getQueryState(queryKey);
-
-    if (state?.data !== undefined || (state?.fetchStatus ?? 'idle') !== 'idle') {
-        return;
-    }
-    client.setQueryData<GroupActivityData>(
-        queryKey,
-        { pages: [page], pageParams: [firstActivityPageParam()] },
-        { updatedAt },
+// A pure read (#669): the group, or a rejection with an `ApiError`. It writes no other cache.
+const fetchGroupDetail = (groupId: string, signal: AbortSignal): Promise<Group> =>
+    api('get', '/groups/{id}', { params: { id: groupId }, signal }).then(
+        toGroup,
+        (error: unknown) => Promise.reject(toApiError(error)),
     );
-};
-
-// A group read keeps the cached list current (03-10a race rules, `putGroupInCachedList`) and seeds
-// the first page of its activity (`seedGroupActivity`, as old as the read), and a denied read drops
-// the group from the list. A cancelled read writes nothing, not even a denial: a write confirmed
-// meanwhile (an edit, a rejoin) is newer.
-const fetchGroupDetail = (
-    client: QueryClient,
-    groupId: string,
-    signal: AbortSignal,
-): Promise<Group> => {
-    const readStartedAt = Date.now();
-
-    return api('get', '/groups/{id}', { params: { id: groupId }, signal }).then(
-        response => {
-            const group = toGroup(response);
-
-            if (!signal.aborted) {
-                seedGroupActivity(client, groupId, group.recentActivities, readStartedAt);
-                void putGroupInCachedList(client, group, readStartedAt);
-            }
-            return group;
-        },
-        (error: unknown) => {
-            const apiError = toApiError(error);
-
-            if (!signal.aborted && isGroupDeniedError(apiError)) {
-                void dropGroupFromCachedList(client, groupId);
-            }
-            return Promise.reject(apiError);
-        },
-    );
-};
 
 /** A group with its members' balances; a 403/404 fails with an `ApiError` (never retried). */
 export const groupDetailQueryOptions = (groupId: string) =>
@@ -165,7 +117,7 @@ export const groupDetailQueryOptions = (groupId: string) =>
         staleTime: GROUP_DETAIL_STALE_TIME,
         refetchOnMount: refetchIfRestored,
         enabled: isReadable,
-        queryFn: ({ client, signal }) => fetchGroupDetail(client, groupId, signal),
+        queryFn: ({ signal }) => fetchGroupDetail(groupId, signal),
     });
 
 interface GroupDetailQueryParams extends EnabledParams {
@@ -183,13 +135,47 @@ type GroupDetailOptions = UseQueryOptions<
 const selectFirst = (results: UseQueryResult<Group>[]): UseQueryResult<Group> | undefined =>
     results[0];
 
+// The denials whose list reload has started, per error object: every reader of a group page sees
+// the same error, and its list reloads once.
+const reloadedDenials = new WeakSet<object>();
+
+// Per client and group, the detail `dataUpdatedAt` that last marked the list stale: every reader of
+// a group page sees the same read, and it marks the list once.
+const listMarkedStaleBy = new WeakMap<QueryClient, Map<string, number>>();
+
+// A detail read newer than the cached list: the group's card in the list may show older balances,
+// so the list is marked stale without a request (`refetchType: 'none'`); the next mount of a list
+// reader reads it again. An invalidation from the reader of its own result, never an edit of the
+// list (`50-api-data.md` §Query Functions). A group being left (`forgetGroup`) marks nothing.
+const markListStaleAfterRead = (client: QueryClient, groupId: string, readAt: number): void => {
+    const detail = client
+        .getQueryCache()
+        .find({ queryKey: groupsKeys.detail(groupId), exact: true });
+    const listAt = client.getQueryState(groupsKeys.list())?.dataUpdatedAt;
+    const marked = listMarkedStaleBy.get(client) ?? new Map<string, number>();
+
+    if (!detail || leavingQueries.has(detail) || listAt === undefined || readAt <= listAt) {
+        return;
+    }
+    if (marked.get(groupId) === readAt) {
+        return;
+    }
+    marked.set(groupId, readAt);
+    listMarkedStaleBy.set(client, marked);
+    void client.invalidateQueries({ queryKey: groupsKeys.list(), refetchType: 'none' });
+};
+
 /**
  * No group (`undefined`): no query at all, not even an idle cache entry (the route has no group).
+ * A denied read (403/404) reloads the groups list once per failed read (`reloadGroupsList`): the
+ * server's list no longer has the group. A successful read newer than the list marks the list
+ * stale, without a request (`markListStaleAfterRead`). The list data is never edited here.
  */
 export const useGroupDetailQuery = (
     groupId: string | undefined,
     { enabled, placeholder }: GroupDetailQueryParams,
 ) => {
+    const client = useQueryClient();
     const queries: GroupDetailOptions[] =
         groupId === undefined
             ? []
@@ -201,7 +187,29 @@ export const useGroupDetailQuery = (
                   },
               ];
 
-    return useQueries({ queries, combine: selectFirst });
+    const result = useQueries({ queries, combine: selectFirst });
+    const denial =
+        enabled && result?.isError === true && isGroupDeniedError(result.error)
+            ? result.error
+            : undefined;
+
+    const readAt =
+        enabled && result?.status === 'success' && !result.isPlaceholderData
+            ? result.dataUpdatedAt
+            : undefined;
+
+    useEffect(() => {
+        if (denial !== undefined && !reloadedDenials.has(denial)) {
+            reloadedDenials.add(denial);
+            void reloadGroupsList(client);
+        }
+    }, [client, denial]);
+    useEffect(() => {
+        if (groupId !== undefined && readAt !== undefined) {
+            markListStaleAfterRead(client, groupId, readAt);
+        }
+    }, [client, groupId, readAt]);
+    return result;
 };
 
 // `api()` rejects with an `ApiError`, as the detail's: a 5xx is retried, other 4xx are final.
@@ -296,12 +304,46 @@ const trimGroupActivityIfUnobserved = (client: QueryClient, groupId: string): vo
     }
 };
 
-/** A group's activity previews, newest first, by `nextCursor` until null. */
-export const groupActivityQueryOptions = (groupId: string) =>
+// The detail cached for the group, when its last read succeeded (a denied one seeds nothing) and
+// the group is not being left (`forgetGroup`: its page is about to unmount).
+const readableDetail = (client: QueryClient, groupId: string) => {
+    const detail = client
+        .getQueryCache()
+        .find<Group>({ queryKey: groupsKeys.detail(groupId), exact: true });
+
+    return detail && !leavingQueries.has(detail) && detail.state.status === 'success'
+        ? detail.state
+        : undefined;
+};
+
+// A read-side seed (`50-api-data.md` §Query Functions): the first activity page from the page the
+// cached detail carries, as old as that detail, so opening a group sends one request (the detail).
+// TanStack applies it only while the activity has no data (checked on 5.107.1: at creation and
+// on each observer's options update), so cached or loaded activity always wins. A failed load of
+// the activity keeps its error: the seed does not hide it.
+const activityFromDetail = (
+    client: QueryClient,
+    groupId: string,
+): GroupActivityData | undefined => {
+    if (client.getQueryState(groupsKeys.activity(groupId))?.status === 'error') {
+        return undefined;
+    }
+    const detail = readableDetail(client, groupId)?.data;
+
+    return detail && { pages: [detail.recentActivities], pageParams: [firstActivityPageParam()] };
+};
+
+/**
+ * A group's activity previews, newest first, by `nextCursor` until null. It starts from the first
+ * page the detail cached on `client` carries (`activityFromDetail`).
+ */
+export const groupActivityQueryOptions = (groupId: string, client: QueryClient) =>
     infiniteQueryOptions({
         queryKey: groupsKeys.activity(groupId),
         staleTime: GROUP_DETAIL_STALE_TIME,
         refetchOnMount: refetchIfRestored,
+        initialData: () => activityFromDetail(client, groupId),
+        initialDataUpdatedAt: () => readableDetail(client, groupId)?.dataUpdatedAt,
         initialPageParam: firstActivityPageParam(),
         enabled: isReadable,
         queryFn: ({ pageParam, signal }) => fetchGroupActivityPage(groupId, pageParam, signal),
@@ -314,13 +356,13 @@ export const groupActivityQueryOptions = (groupId: string) =>
     });
 
 /**
- * The previews of all loaded pages, each parent once, with the page count. Enable it once the detail is loaded: the
- * detail then has seeded the first page, and no second request is sent for it.
+ * The previews of all loaded pages, each parent once, with the page count. Enable it once the
+ * detail is loaded: the first page then starts from the cached detail, and no request is sent for it.
  */
 export const useGroupActivityQuery = (groupId: string, { enabled }: EnabledParams) => {
     const client = useQueryClient();
     const query = useInfiniteQuery({
-        ...groupActivityQueryOptions(groupId),
+        ...groupActivityQueryOptions(groupId, client),
         select: selectGroupActivity,
         enabled: enabled ? isReadable : false,
     });

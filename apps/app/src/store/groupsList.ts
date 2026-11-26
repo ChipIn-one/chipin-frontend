@@ -37,9 +37,9 @@ export const getCachedGroups = (): Group[] | undefined => {
 
 /**
  * After a legacy change of a group (an expense, a settlement), on any page: its detail is read
- * again and its activity loads again (`startGroupRefresh`). Settles once the activity has, not
- * waiting for the detail read: offline it waits for the reconnect, and the write's loading flag
- * waits for this. Never rejects.
+ * again, its activity loads again and the list reloads (`startGroupRefresh`). Settles once the
+ * activity has, not waiting for the detail read or the list: offline they wait for the reconnect,
+ * and the write's loading flag waits for this. Never rejects.
  */
 // TODO: the ledger write hooks (`hooks/useLedgerMutations.ts`) call `startGroupRefresh` on the
 // write's own client instead (the activity store that also used it went with 03-12).

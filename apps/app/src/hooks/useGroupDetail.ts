@@ -101,8 +101,8 @@ const embeddedPreviews = (recent: GroupActivityPage): ActivityPreview[] =>
     flattenGroupActivity({ pages: [recent], pageParams: [null] });
 
 /**
- * The activity of `groupId`, read once its detail is loaded (`hasDetail`): the detail read has
- * seeded the first page with the page it carries (`recent`), so opening a group sends one request.
+ * The activity of `groupId`, read once its detail is loaded (`hasDetail`): its first page starts
+ * from the page the cached detail carries (`recent`), so opening a group sends one request.
  * Until the activity has data, `recent` (then the listed group's recent activity) is shown, without
  * more pages.
  */

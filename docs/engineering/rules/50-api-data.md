@@ -92,6 +92,26 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 - Retry reads only when explicitly required and bounded.
 - Old responses after logout must not restore cleared state.
 
+## Query Functions
+
+A `queryFn` writes no other query cache: it reads its own resource and returns its data, or rejects; it never
+writes, removes, invalidates, cancels or fetches another query's cache entry, and it does not take `client`
+from its context. The rule is about TanStack query caches: the self user's `LocalUser` sync (`selfUserQueryOptions`)
+writes `localStorage`, not a query cache, and is outside it. Another query cache changes only:
+
+1. in a mutation (its `onSuccess`/`onSettled` or a documented cache helper it calls, such as `invalidateQueries` or a
+   seed of data the server just confirmed);
+2. by a read-side seed that only reads another query's cached data (`initialData`);
+3. by a reload or an invalidation (`cancelQueries` then `invalidateQueries`) from the reader that observed its own
+   query's result (a hook effect), never by editing another query's data; for example, a denied group page reloads
+   the groups list, and a group page whose detail read is newer than the cached list marks the list
+   stale with `invalidateQueries({ queryKey, refetchType: 'none' })`, and the list's next reader reads it again.
+
+A cross-cache write in a read needs a documented exception with the measurement that justifies it.
+Lint: `no-restricted-syntax` `pure-query-fn` checks an inline `queryFn`. It does not catch a named or passed-through
+`queryFn` (`queryFn: fetchX`, `ctx => helper(ctx)`) or writes through `Query`/`QueryCache` objects; review checks
+them: a helper called from a `queryFn` gets no `QueryClient`.
+
 ## Online-First Domain Mutations
 
 - Backend responses are the only canonical source for financial and domain state. Do not patch balances,

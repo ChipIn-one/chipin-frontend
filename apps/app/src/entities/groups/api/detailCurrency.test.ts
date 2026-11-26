@@ -53,7 +53,7 @@ afterEach(() => {
     userCache.dispose();
 });
 
-test('a detail refresh replaces the cached group, its last used currency included', () => {
+test('a detail refresh replaces the cached group, its last used currency included; the list is left to its own reads (#669)', () => {
     const refreshedGroup = {
         ...group,
         lastUsedCurrency: 'KHR',
@@ -71,7 +71,7 @@ test('a detail refresh replaces the cached group, its last used currency include
         .fetchQuery({ ...groupDetailQueryOptions(group.id), staleTime: 0 })
         .then(result => {
             expect(result).toEqual(toTestGroup(refreshedGroup));
-            expect(cachedGroupsList(userCache.client)).toEqual([toTestGroup(refreshedGroup)]);
+            expect(cachedGroupsList(userCache.client)).toEqual([toTestGroup(group)]);
             expect(userCache.client.getQueryData(groupsKeys.detail(group.id))).toEqual(
                 toTestGroup(refreshedGroup),
             );

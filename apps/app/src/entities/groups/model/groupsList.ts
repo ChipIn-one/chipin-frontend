@@ -41,6 +41,3 @@ export const upsertGroupInList = (data: GroupsListData, group: Group): GroupsLis
 
     return mapPages(data, (items, index) => (index === lastIndex ? [...items, group] : items));
 };
-
-export const removeGroupFromList = (data: GroupsListData, groupId: string): GroupsListData =>
-    mapPages(data, items => items.filter(item => item.id !== groupId));

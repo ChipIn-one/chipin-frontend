@@ -443,6 +443,51 @@ describe('query-key-literal (spec 03 §1.3)', () => {
     });
 });
 
+describe('pure-query-fn (#669, 50-api-data.md §Query Functions)', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax(),
+        ]),
+    ];
+    const source = [
+        // `client` from the context: destructured (arrow, method, in the body) or read.
+        'export const a = queryOptions({ queryKey: k, queryFn: ({ client, signal }) => read(client, signal) });',
+        'export const b = queryOptions({ queryKey: k, queryFn({ client }) { return read(client); } });',
+        'export const c = queryOptions({ queryKey: k, queryFn: context => { const { client } = context; return read(client); } });',
+        'export const d = queryOptions({ queryKey: k, queryFn: context => read(context.client) });',
+        // A cache call inside an inline query function.
+        'export const e = queryOptions({ queryKey: k, queryFn: () => read().then(data => { other.setQueryData(k2, data); return data; }) });',
+        'export const f = queryOptions({ queryKey: k, queryFn: async () => { await qc.invalidateQueries({ queryKey: k2 }); return read(); } });',
+        'export const g = queryOptions({ queryKey: k, queryFn: () => qc.fetchQuery(other) });',
+        // Fine: a pure read; a cache call around (not inside) a query function; a mutation's
+        // `onSuccess` with the client; a seed that only reads (`initialData`).
+        'export const h = queryOptions({ queryKey: k, queryFn: ({ signal, pageParam }) => read(pageParam, signal) });',
+        'export const i = qc.prefetchQuery({ queryKey: k, queryFn: () => read() });',
+        'export const j = mutationOptions({ mutationFn: write, onSuccess: (_d, _v, _c, { client }) => client.invalidateQueries({ queryKey: k }) });',
+        'export const l = queryOptions({ queryKey: k, initialData: () => qc.getQueryData(k2), queryFn: () => read() });',
+    ].join('\n');
+
+    test.each([['src/entities/groups/api/queries.ts'], ['src/store/sessionUser.ts']])(
+        '%s reports each impure query function once (lines 1-7), nothing else',
+        async file => {
+            const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+            const [result] = await eslint.lintText(source, { filePath: file });
+
+            expect(
+                result.messages.map(
+                    message => `${message.message.match(/\[([a-z0-9-]+)\]/)?.[1]}:${message.line}`,
+                ),
+            ).toEqual([1, 2, 3, 4, 5, 6, 7].map(line => `pure-query-fn:${line}`));
+        },
+    );
+});
+
 describe('site-paths (04-2f, spec 04 §2.1)', () => {
     const config = [
         {
