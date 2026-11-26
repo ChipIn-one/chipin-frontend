@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
-import { ChevronsDownIcon, RefreshCwIcon, WifiOffIcon } from 'lucide-react';
+import { ChevronsDownIcon, ClipboardListIcon, RefreshCwIcon, WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
@@ -95,19 +95,21 @@ const ActivityList = ({ activeFilter, onShowAll }: Props) => {
 
     // A type filter that leaves nothing offers Show all (EXP-066); the unfiltered feed, Add Expense
     // (EXP-065).
-    const emptyState = (
-        <NoActivityEmptyState
-            action={
-                activeFilter === 'all' ? (
-                    addExpenseAction
-                ) : (
+    const emptyState =
+        activeFilter === 'all' ? (
+            <NoActivityEmptyState action={addExpenseAction} />
+        ) : (
+            <EmptyState
+                icon={<ClipboardListIcon size={20} />}
+                title={t('filteredEmptyTitle')}
+                description={t('filteredEmptyDescription')}
+                action={
                     <Button type="button" variant="soft" onClick={onShowAll}>
                         {t('showAllAction')}
                     </Button>
-                )
-            }
-        />
-    );
+                }
+            />
+        );
 
     return (
         <>

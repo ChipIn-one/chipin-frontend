@@ -568,6 +568,8 @@ test.each(['expenses', 'settlements'] as const)(
 
         const empty = screen.getByTestId('empty-state');
 
+        expect(within(empty).getByText('filteredEmptyTitle')).toBeTruthy();
+        expect(within(empty).queryByText('emptyTitle')).toBeNull();
         expect(
             within(empty).queryByRole('button', { name: 'common:buttons.addExpense' }),
         ).toBeNull();
