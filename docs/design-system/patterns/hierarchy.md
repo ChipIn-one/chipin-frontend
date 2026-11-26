@@ -35,11 +35,11 @@ Every screen does one job. Its title answers "what am I doing here".
 
 ## Button -> outcome map
 
-| Outcome                          | Looks like                                             |
-| -------------------------------- | ------------------------------------------------------ |
-| Destructive (delete, remove)     | Red action inside an `AlertDialog` (`BaseAlertDialog`) |
-| Navigation (opens a page)        | A link or a card (`interactiveCardLinkStyles`)         |
-| Mutation (creates, saves, sends) | A button                                               |
+| Outcome                          | Looks like                                                          |
+| -------------------------------- | ------------------------------------------------------------------- |
+| Destructive (delete, remove)     | Red action inside an `AlertDialog` (`BaseAlertDialog`)              |
+| Navigation (opens a page)        | A link or a card ([interactive cards](groups.md#interactive-cards)) |
+| Mutation (creates, saves, sends) | A button                                                            |
 
 `BaseAlertDialog` ([`components/modals/base-alert-dialog`](../../../apps/app/src/components/modals/base-alert-dialog/BaseAlertDialog.tsx))
 is the confirmation for every destructive action: the remove/delete dialogs pass

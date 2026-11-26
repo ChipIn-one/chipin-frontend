@@ -11,11 +11,13 @@ How people and groups look on every screen. Paths are inside `apps/app/src`; che
 | One group             | `GroupAvatar` (`components/GroupAvatar`) | The group cover, else a users icon                       |
 | Several group members | `UsersRow` (`components/UsersRow`)       | Overlapping avatars, then `+N`                           |
 
-- Never draw an avatar with a raw `<img>` or a hand-made circle; a picture goes through these
-  components (Radix `Avatar` inside), and other images through `basics/Image`.
+- A user or group picture goes through these components (Radix `Avatar` inside), never a raw
+  `<img>` or a hand-made circle; other images go through `basics/Image`.
+- Icon tiles (a Radix `Avatar` with an icon `fallback`, as in `EmptyState` and the summary cards)
+  are not avatars and may use Radix `Avatar` directly.
 - Sizes are the Radix `Avatar` `size` prop. In use today: `1`-`2` in rows and `UsersRow`, `3` in
-  debt and member lists, `4` on cards (`GroupCard`, `EmptyState`) and the friend header. There
-  are no avatar component tokens yet; pick the size of the same place on another screen.
+  debt and member lists, `4` on group cards and in `RemoveFriendAlertDialog`. There are no avatar
+  component tokens yet; pick the size of the same place on another screen.
 - `UsersRow` shows at most `max` avatars (default `5`, all callers pass `5`) and one `+N` avatar
   for the rest. Do not list members as a wrapped avatar grid on cards.
 - `GroupAvatar` and `UsersRow` pass the name as `alt`. `UserAvatar` takes `alt` from its caller
@@ -27,6 +29,10 @@ How people and groups look on every screen. Paths are inside `apps/app/src`; che
   nothing for other members. Do not add a "Member" badge.
 - The badge sits right after the display name in member rows (members, balances and settings tabs
   of the group page). It only labels; it is not a permission check.
+
+Today those three tabs (`GroupMembersTab`, `GroupBalancesTab`, `GroupSettingsTab` in
+`pages/group-page/components`) draw member pictures with a raw Radix `Avatar`; they move to
+`UserAvatar` when touched.
 
 ## Group card: fixed order
 
@@ -46,7 +52,7 @@ Rules:
 - Lists of groups render `GroupCard` (through `GroupsCards`, with its loading skeleton
   `GroupsCardsSkeleton`); do not compose a new group row.
 - New data on the card goes into the existing slots; do not reorder or add a fourth column.
-- The selected group (desktop sidebar) is marked with `aria-current="page"` and
+- The selected group (the group list in the group page's side column, from `sm` up) is marked with `aria-current="page"` and
   `data-selected`, not a different card.
 
 ## Interactive cards
@@ -54,12 +60,17 @@ Rules:
 A card that opens something is a link wrapped around a Radix `Card`:
 
 - Use `InteractiveCard` from `components/interactive-card/InteractiveCard`. It is an unstyled
-  `NavButton` (a real link with `to`) with a CSS Module that draws hover, pressed and focus on the
-  inner `Card`, which carries `data-interactive-card` (and `data-selected` when selected).
+  `NavButton` (a real link with `to`) whose CSS Module hides the link outline and draws hover,
+  pressed and focus on the inner element marked `data-interactive-card`.
+- Put `data-interactive-card` on the inner Radix `Card` yourself. It is required: without it the
+  keyboard focus is invisible. Selected styling (`data-selected`) belongs to the caller's CSS
+  Module (as in `GroupCard`).
 - `InteractiveCard` lands with batch C (ChipIn-one/chipin-frontend#896, PR
-  ChipIn-one/chipin-frontend#917) and replaces `interactiveCardLinkStyles` from
-  `helpers/interactiveCardStyles.ts`. Until it is on `master`, the code still uses
-  `interactiveCardLinkStyles`; do not add new callers of it.
+  ChipIn-one/chipin-frontend#917; not on `master` yet) and replaces `interactiveCardLinkStyles`
+  (`helpers/interactiveCardStyles.ts`). Until then, existing cards keep
+  `interactiveCardLinkStyles`. It is a styled-components helper, and a new styled-components file
+  is banned ([tokens.md](../tokens.md#what-is-forbidden)), so a new clickable card waits for
+  `InteractiveCard`.
 - A whole card is one link. No nested buttons or links inside it; a secondary action goes next
   to the card, not on it.
 - Never make a card clickable with `onClick` on a `div` or a `Card` (see
@@ -67,8 +78,8 @@ A card that opens something is a link wrapped around a Radix `Card`:
 
 ## Forbidden
 
-- A member list or avatar stack outside `UsersRow`, or an avatar outside `UserAvatar` /
+- An avatar stack outside `UsersRow`, or a user or group picture outside `UserAvatar` /
   `GroupAvatar`.
 - A role badge other than `GroupRoleBadge`.
 - A group row that is not `GroupCard`, or a `GroupCard` with its slots reordered.
-- A clickable card that is not `InteractiveCard` (or, until it lands, `interactiveCardLinkStyles`).
+- A new clickable card that is not `InteractiveCard`.

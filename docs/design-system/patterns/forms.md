@@ -5,40 +5,48 @@ How ChipIn takes input. Paths are inside `apps/app/src`; money fields follow
 
 ## Field set
 
-Use these and nothing hand-made:
+Use these; a new field type is added here first:
 
-| Input                 | Component                                                                |
-| --------------------- | ------------------------------------------------------------------------ |
-| Text, one line        | `TextInput` (`basics`)                                                   |
-| Text, several lines   | `TextArea` (`basics`)                                                    |
-| Money                 | `AmountInput` (`basics`)                                                 |
-| One of a short list   | `SegmentedControl` (`basics/SegmentedControl`), 2-4 options              |
-| One of a few, rich    | `RadioCards` (`basics`), options with a title and a description          |
-| One of a long list    | `Select` (`basics/Select`); searchable: `SearchSelect`, `CurrencySelect` |
-| Yes/no, several picks | Radix `Checkbox` (as in the expense participants list)                   |
-| On/off setting        | Radix `Switch` (settings page, group settings)                           |
+| Input                 | Component                                                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Text, one line        | `TextInput` (`basics`)                                                                                                              |
+| Text, several lines   | `TextArea` (`basics`)                                                                                                               |
+| Money                 | `AmountInput` (`basics`)                                                                                                            |
+| One of a short list   | `SegmentedControl` (`basics/SegmentedControl`)                                                                                      |
+| One of a few, rich    | `RadioCards` (`basics`), options with a title and a description                                                                     |
+| One of a long list    | `Select` (`basics/Select`); searchable: `SearchSelect` (`components/search-select`), `CurrencySelect` (`components/CurrencySelect`) |
+| Search box            | Radix `TextField.Root` with a search icon slot and a translated `aria-label` (`GroupsCards`, `FriendsSearchBar`, `SearchSelect`)    |
+| Date                  | Radix `TextField.Root` with a visible label (`ExpenseDateField`)                                                                    |
+| Yes/no, several picks | Radix `Checkbox` (as in the expense participants list)                                                                              |
+| On/off setting        | Radix `Switch` (settings page, group settings)                                                                                      |
 
-- Radix `RadioGroup` is allowed for a plain vertical choice; there is no wrapper yet.
 - A field that none of these covers: extend the nearest basic, then add it to
   [components.md](../components.md).
 
 ## Label above, error below
 
 - Every field has a visible label above it, tied to the control (`TextInput`/`TextArea` render a
-  `<label htmlFor>` from their `label` prop). A placeholder is never the label.
+  `<label htmlFor>` from their `label` prop). A placeholder is never the label. A search box is
+  the one exception: its icon and `aria-label` name it.
 - Help text goes in `description`, under the label; it is linked by `aria-describedby`.
-- Validation text is shown after the field is touched (on blur), in red with `role="alert"`, and
-  the control gets `aria-invalid`. It comes from i18n.
-- Target position: the message sits below the field. Today `TextInput` and `TextArea` show it in
-  the label row, in place of the label; moving it is a change to those two basics, not to each
-  form. Forms never draw their own error line.
+- The control's `aria-invalid` follows its validity from the first render. The validation text
+  (only when `validationMessage` is passed) shows after the field is touched (on blur), in red with
+  `role="alert"`. It comes from i18n.
+- Target position: the message sits below the field, linked by `aria-describedby`, as
+  `SettlementAmountField` (settle-up) already does. Today `TextInput` and `TextArea` show it in the
+  label row, in place of the label; moving it is a change to those two basics, not to each form.
+
+Today the expense description field (`expense-amount-fields`) has only a placeholder and an
+`aria-label`, no visible label; fix it when touched.
+
 - Required fields pass `isRequired` to the basic, which sets `required` and checks for an empty
   value.
 
 ## Buttons
 
 - One primary button per form: Radix `Button` `variant="solid"`, the verb of the result
-  ("Create group", "Save", "Settle up"). Cancel is `variant="soft"` `color="gray"`.
+  ("Create group", "Save", "Settle up"). Cancel is `variant="soft"` with
+  `color={PROP_COLOR.neutral}` (code today passes the literal `"gray"`).
   [principles.md](../principles.md) 3 applies inside modals too.
 - The primary button shows progress with `loading` and is `disabled` while the form is invalid or
   saving. Do not hide it.
@@ -63,15 +71,19 @@ Use these and nothing hand-made:
   done straight from a button and never in a plain `Dialog`.
 - Use a ready one (`RemoveGroupAlertDialog`, `RemoveFriendAlertDialog`,
   `RemoveLedgerEntryAlertDialog`, `LeaveGroupAlertDialog`, `KickGroupMemberAlertDialog`) or add a
-  new one next to them in `components/modals`.
-- The action button says what happens ("Remove group"), with `actionColor="red"`
-  (leave and kick use `orange` today, [hierarchy.md](hierarchy.md#button---outcome-map)). Radix
+  new one on `BaseAlertDialog`. Most live in `components/modals`; `useSignOutConfirm`,
+  `AccountSwitchDialog` (`pages/oauth-callback-page`) and `OutboxItemRow` (`features/offline-queue`)
+  use it in place.
+- The action button says what happens ("Remove group"), with `actionColor={PROP_COLOR.danger}`
+  (code today passes the literal `"red"`; leave and kick use `orange`, which has no role yet, see
+  [hierarchy.md](hierarchy.md#button---outcome-map)). Radix
   `AlertDialog` focuses Cancel on open; keep it that way.
 
 ## Mobile first
 
 - One column. Fields stack full width; two fields side by side only from `sm` up, through Radix
-  responsive props (`{ initial, sm }`).
+  responsive props (`{ initial, sm }`). The one pair allowed side by side on phones is an amount
+  and its currency ([money.md](money.md#input-goes-through-amountinput)).
 - On phones (below `sm`) `BaseModal` fills the screen, the header and footer are sticky, and
   `OverlayFooter` puts the buttons at the bottom in a `1fr 2fr` grid (cancel, then the wider
   primary) above the safe area. A single button takes the full width.
@@ -80,8 +92,9 @@ Use these and nothing hand-made:
 
 ## Forbidden
 
-- A raw `<input>`, `<select>`, `<textarea>` or an unlabeled Radix `TextField` in product UI.
+- A raw `<input>`, `<select>` or `<textarea>` in product UI, or a Radix `TextField` without a
+  visible label (search boxes aside).
 - Two solid buttons in one form, or a primary button named with a noun.
 - A second `BaseModal` or `Dialog.Root` opened from inside a modal step.
 - A destructive action without `AlertDialog`.
-- Side-by-side fields on phones.
+- Side-by-side fields on phones (amount + currency aside).

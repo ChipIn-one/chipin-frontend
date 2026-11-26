@@ -16,9 +16,8 @@ The seven principles every ChipIn screen follows. The rest of `docs/design-syste
    primary. Two solid buttons on one screen is a review blocker.
 
 4. **Clarity.** Interactive things look interactive: buttons are buttons; cards that open
-   something use `interactiveCardLinkStyles` from
-   [`helpers/interactiveCardStyles.ts`](../../apps/app/src/helpers/interactiveCardStyles.ts) with
-   hover and focus states; no clickable `div`/`span`. Icon-only controls only for universally known
+   something are one link with hover and focus states
+   ([patterns/groups.md](patterns/groups.md#interactive-cards)); no clickable `div`/`span`. Icon-only controls only for universally known
    actions (close, back, add), and they still get an `aria-label`. Action labels are verbs
    ("Add expense", not "Expense").
 

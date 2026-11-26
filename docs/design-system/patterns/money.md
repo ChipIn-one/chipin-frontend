@@ -31,30 +31,46 @@ The three debt roles exist once, in [`tokens.css`](../../../packages/tokens/toke
 - The direction comes from `getBalanceDirection` (`helpers/currencies`), not from a local
   `> 0` check.
 
-Today (origin/master) the money components still pass Radix literals and no lint checks this yet:
-`DebtAmount`, `OwedStatusText` and `GroupCard` use `green`/`red`/`gray`;
-`DashboardSummary`, `OwedToYouCard` and `YouOweCard` use `grass`/`tomato`. They move to
-`PROP_COLOR` when a design-system task touches them.
+Today (origin/master) no money component meets these two rules yet, and no lint checks them:
+
+- Radix literals: `DebtAmount`, `GroupCard`, `BalanceSummaryText` use `green`/`red`/`gray`;
+  `OwedStatusText` and `EventExpense` (`features/activity`) use `green`/`red`;
+  `DashboardSummary`, `dashboard-summary/summary.ts` (the `BalanceBadges` items), `OwedToYouCard`
+  and `YouOweCard` use `grass`/`tomato`.
+- Local sign checks: `OwedStatusText` (`value >= 0`), `GroupCard`, `EventExpense`. Only
+  `DebtAmount` calls `getBalanceDirection`.
+
+They move to `PROP_COLOR` and `getBalanceDirection` when a design-system task touches them.
 
 ## Direction in words and color together
 
-- A debt is never told by sign or color alone. The words "You are owed", "You owe" or
-  "Settled up" (`common:balances.*`) stand next to the amount.
-- Reference: [`OwedStatusText`](../../../apps/app/src/basics/OwedStatusText.tsx) shows the words
-  and the absolute amount in one colored line.
-- Where the words are already visible nearby (a column titled "You owe", a card header),
-  the amount may carry them for screen readers only, through `VisuallyHidden`. `DebtAmount` and
-  `GroupCard` do this. A bare signed number with only a color is not allowed.
+- A debt is never told by sign or color alone. Visible words stand next to the amount: "You are
+  owed", "You owe" or "Settled up" (`common:balances.*`) for balances; activity events use their
+  own verbs ("You lent", "You borrowed").
+- Reference for the layout: [`OwedStatusText`](../../../apps/app/src/basics/OwedStatusText.tsx)
+  shows the words and the absolute amount in one colored line (its color and sign check are
+  legacy, see above).
+- `VisuallyHidden` words (as in `DebtAmount`) serve screen readers only; on their own they do not
+  meet this rule. They are enough only when the same words are visible nearby (a column or card
+  titled "You owe").
+
+Today `GroupCard`, `DashboardSummary` (total and its owed/owing lines) and `FriendListItem`
+(`pages/friends-page`) show direction to sighted users by color only, with hidden words. Fix them
+when a task touches them.
+
 - Show the absolute value next to the words (`Math.abs`, or `Amount`'s default `isAbsolute`);
   `+` is used only for "owed" (`DebtAmount withPlus`). Never show a minus sign to mean "you owe".
 
 ## One large amount per screen
 
-- A screen has at most one key amount: size `7`, weight `bold` (the total balance in
-  `DashboardSummary` and `TotalBalanceCard`). It is level 3 of the
-  [visibility scale](hierarchy.md#visibility-scale).
-- Other amounts on the same screen use size `2`-`4` (list rows `2`-`3`, summary cards `4`).
-- Sizes are Radix `size` props from the token scale, never a `font-size` in CSS.
+- A screen has at most one key amount shown: size `7`, weight `bold` (the total balance in
+  `DashboardSummary`). It is level 3 of the [visibility scale](hierarchy.md#visibility-scale).
+- Other shown amounts on the same screen use size `2`-`4` (list rows `2`-`3`, summary cards `4`).
+- Sizes of shown amounts are Radix `size` props, never a `font-size` in CSS.
+
+Today the two large amount inputs (`expense-amount-fields/styled.ts`, `settle-up-modal/styled.ts`)
+set `font-size` and `font-weight` in styled CSS; that moves to a CSS Module with
+`var(--cp-font-size-*)` when they are touched.
 
 ## Input goes through `AmountInput`
 
@@ -62,8 +78,9 @@ Today (origin/master) the money components still pass Radix literals and no lint
   `parseAmountInput` (`helpers/numbers`) and limits fraction digits (`maxFractionDigits`, default
   `2`, `null` for none). Do not use a raw `TextField` or `type="number"` for money. If its
   contract does not fit, extend `AmountInput`; do not fork it in a feature.
-- The label sits above the field (see [forms.md](forms.md)); the currency code is visible next
-  to the field (a `TextField.Slot` or the `CurrencySelect` beside it).
+- The label sits above the field (see [forms.md](forms.md)); the currency is visible next to the
+  field: a currency `Select` or the static code beside it, as in `SettlementAmountField`
+  (settle-up). The amount and its currency are one pair and may sit side by side on phones.
 - Split rows keep a fixed control width (`120px` today) so the values line up down the list.
 
 Today the expense amount and the settle-up amount use `AmountInput`; the split rows
