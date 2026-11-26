@@ -1,7 +1,7 @@
 import { Flex, RadioCards as RadixRadioCards } from '@radix-ui/themes';
 import type { ComponentProps, ReactNode } from 'react';
 
-import { RadioMarker } from './styled';
+import styles from './RadioCards.module.css';
 
 interface RadioCardsItem {
     value: string;
@@ -18,7 +18,7 @@ const RadioCards = ({ items, ...rootProps }: Props) => (
         {items.map(item => (
             <RadixRadioCards.Item key={item.value} value={item.value} disabled={item.isDisabled}>
                 <Flex align="center" gap="2">
-                    <RadioMarker aria-hidden="true" />
+                    <span className={styles.marker} aria-hidden="true" />
                     {item.label}
                 </Flex>
             </RadixRadioCards.Item>

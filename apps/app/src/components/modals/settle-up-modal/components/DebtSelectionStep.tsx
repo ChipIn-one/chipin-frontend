@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { DebtOption } from '../internal';
 
-import DebtSection from './DebtSection';
+import { DebtSection } from './DebtSection';
 
 interface Props {
     youOwe: DebtOption[];

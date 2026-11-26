@@ -1,0 +1,42 @@
+/* App CSS loads before Radix, so the rules on Radix parts are doubled to win by specificity. */
+.amountField {
+    min-width: 0;
+    flex: 1;
+}
+
+.amountInput.amountInput {
+    width: 100%;
+    height: 72px;
+    align-items: center;
+}
+
+.amountInput.amountInput input {
+    height: 100%;
+    padding: 0 var(--cp-space-3);
+    text-align: center;
+    font-size: var(--cp-font-size-8);
+    font-weight: var(--cp-font-weight-bold);
+    line-height: 1;
+}
+
+.currencyField {
+    display: flex;
+    min-width: 96px;
+    align-items: stretch;
+}
+
+.currencyField.currencyField > button {
+    width: 100%;
+    height: 72px;
+    justify-content: center;
+    font-size: var(--cp-font-size-5);
+    font-weight: var(--cp-font-weight-bold);
+}
+
+.staticCurrency.staticCurrency {
+    display: flex;
+    min-width: 96px;
+    height: 72px;
+    align-items: center;
+    justify-content: center;
+}

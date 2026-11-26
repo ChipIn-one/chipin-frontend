@@ -19,7 +19,7 @@ import { useSettleUpRefusal } from '../internal/useSettleUpRefusal';
 import type { GroupSettleUpProps } from '../types';
 
 import DebtSelectionStep from './DebtSelectionStep';
-import SettlementFormContent from './SettlementFormContent';
+import { SettlementFormContent } from './SettlementFormContent';
 import { SettleUpQueuedHint } from './SettleUpQueuedHint';
 
 const SETTLEMENT_ROUTES = {

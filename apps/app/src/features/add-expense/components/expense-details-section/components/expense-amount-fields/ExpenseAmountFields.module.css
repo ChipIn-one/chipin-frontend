@@ -1,0 +1,49 @@
+.root {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cp-space-2);
+    min-width: 0;
+    padding: var(--cp-space-4);
+    border: 2px solid var(--cp-selection-border);
+    border-radius: var(--cp-radius-5);
+}
+
+/*
+ * Borderless Radix text fields inside the box. App CSS loads before Radix, so the rules are
+ * doubled to win by specificity; the Radix custom properties turn off its border and focus ring.
+ */
+.amountInput.amountInput,
+.descriptionInput.descriptionInput {
+    --text-field-border-width: 0px;
+    --text-field-focus-color: transparent;
+
+    height: auto;
+    padding: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.amountInput.amountInput:focus-within,
+.descriptionInput.descriptionInput:focus-within {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.amountInput.amountInput input,
+.descriptionInput.descriptionInput input {
+    height: auto;
+    padding: 0;
+    background: transparent;
+    text-indent: 0;
+}
+
+.amountInput.amountInput input {
+    font-size: var(--cp-font-size-8);
+    font-weight: var(--cp-font-weight-bold);
+    line-height: 1.05;
+}
+
+.descriptionInput.descriptionInput input {
+    color: var(--cp-text-secondary);
+}

@@ -1,0 +1,31 @@
+/* App CSS loads before Radix, so the rules on Radix parts are doubled to win by specificity. */
+.content.content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.options.options {
+    height: fit-content;
+    max-height: 240px;
+    min-height: 0;
+    flex-shrink: 1;
+    background-color: var(--cp-fill-hover);
+}
+
+.options.options [data-radix-scroll-area-viewport] {
+    height: 100%;
+}
+
+/* The viewport's inner wrapper is a Radix inline style (`display: table`), so it needs `!important`. */
+.options.options [data-radix-scroll-area-viewport] > div {
+    display: block !important;
+    width: 100%;
+    min-width: 0 !important;
+    flex-grow: 0;
+}
+
+.option.option {
+    width: 100%;
+    min-width: 0;
+}

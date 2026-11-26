@@ -1,0 +1,13 @@
+/* App CSS loads before Radix, so the rules on Radix `Button` are doubled to win by specificity. */
+.debtButton.debtButton {
+    width: 100%;
+    height: auto;
+    justify-content: stretch;
+    padding-block: var(--cp-space-3);
+    white-space: normal;
+}
+
+.showMoreButton.showMoreButton {
+    width: 100%;
+    justify-content: center;
+}

@@ -4,10 +4,12 @@ import {
     forwardRef,
     type ReactNode,
 } from 'react';
-import { type Button, Flex, Text } from '@radix-ui/themes';
+import { Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 
-import { TriggerButton } from './styled';
+import { cx } from 'helpers/cx';
+
+import styles from './ExpenseSearchSelectContent.module.css';
 
 interface Props extends Omit<ComponentPropsWithoutRef<typeof Button>, 'children' | 'value'> {
     icon?: ReactNode;
@@ -17,11 +19,12 @@ interface Props extends Omit<ComponentPropsWithoutRef<typeof Button>, 'children'
 }
 
 const ExpenseSearchSelectContent = forwardRef<ComponentRef<typeof Button>, Props>(
-    ({ icon, title, value, isLoading = false, ...triggerProps }, ref) => {
+    ({ icon, title, value, isLoading = false, className, ...triggerProps }, ref) => {
         return (
-            <TriggerButton
+            <Button
                 {...triggerProps}
                 ref={ref}
+                className={cx(styles.root, className)}
                 type="button"
                 variant="surface"
                 color="gray"
@@ -43,11 +46,11 @@ const ExpenseSearchSelectContent = forwardRef<ComponentRef<typeof Button>, Props
 
                     <ChevronDownIcon size={18} />
                 </Flex>
-            </TriggerButton>
+            </Button>
         );
     },
 );
 
 ExpenseSearchSelectContent.displayName = 'ExpenseSearchSelectContent';
 
-export default ExpenseSearchSelectContent;
+export { ExpenseSearchSelectContent };

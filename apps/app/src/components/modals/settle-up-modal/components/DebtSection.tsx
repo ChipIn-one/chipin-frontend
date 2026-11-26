@@ -1,4 +1,4 @@
-import { Flex, Text } from '@radix-ui/themes';
+import { Button, Flex, Text } from '@radix-ui/themes';
 import {
     ArrowDownLeftIcon,
     ArrowUpRightIcon,
@@ -13,7 +13,8 @@ import { legacyAmountFromMoney } from 'entities/balance';
 import { Amount, UserAvatar } from 'basics';
 
 import type { DebtOption } from '../internal';
-import { DebtButton, ShowMoreButton } from '../styled';
+
+import styles from './DebtSection.module.css';
 
 const COLLAPSED_DEBT_COUNT = 3;
 
@@ -54,8 +55,9 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
             </Flex>
 
             {visibleDebts.map(debt => (
-                <DebtButton
+                <Button
                     key={`${debt.user.id}-${debt.balance.net.currency}`}
+                    className={styles.debtButton}
                     type="button"
                     size="3"
                     variant="soft"
@@ -82,11 +84,12 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                             <ChevronRightIcon size={18} />
                         </Flex>
                     </Flex>
-                </DebtButton>
+                </Button>
             ))}
 
             {hasCollapsibleDebts && (
-                <ShowMoreButton
+                <Button
+                    className={styles.showMoreButton}
                     type="button"
                     size="4"
                     variant="soft"
@@ -97,10 +100,10 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                         ? t('group:page.settleUp.showLess')
                         : t('group:page.settleUp.showMore', { count: hiddenDebtCount })}
                     {isExpanded ? <ChevronUpIcon size={18} /> : <ChevronDownIcon size={18} />}
-                </ShowMoreButton>
+                </Button>
             )}
         </Flex>
     );
 };
 
-export default DebtSection;
+export { DebtSection };
