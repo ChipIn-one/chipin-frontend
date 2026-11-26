@@ -1,6 +1,7 @@
+import { Separator } from '@radix-ui/themes';
 import type { ReactNode } from 'react';
 
-import { Footer, FooterContainer, FooterSeparator } from './styled';
+import styles from './OverlayFooter.module.css';
 
 interface Props {
     cancelAction: ReactNode;
@@ -9,14 +10,14 @@ interface Props {
 
 const OverlayFooter = ({ cancelAction, primaryAction }: Props) => {
     return (
-        <FooterContainer>
-            <FooterSeparator orientation="horizontal" size="4" />
-            <Footer>
+        <div className={styles.root}>
+            <Separator className={styles.separator} orientation="horizontal" size="4" />
+            <div className={styles.footer}>
                 {cancelAction}
                 {primaryAction}
-            </Footer>
-        </FooterContainer>
+            </div>
+        </div>
     );
 };
 
-export default OverlayFooter;
+export { OverlayFooter };

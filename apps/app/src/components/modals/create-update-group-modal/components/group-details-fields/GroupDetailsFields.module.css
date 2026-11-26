@@ -1,0 +1,13 @@
+/* Doubled to beat the Radix Button width (app CSS loads before Radix). */
+.descriptionToggle.descriptionToggle {
+    width: fit-content;
+}
+
+.descriptionToggleIcon {
+    display: inline-flex;
+    transition: transform var(--cp-duration-base) var(--cp-easing-standard);
+}
+
+.descriptionToggleIcon[data-expanded='true'] {
+    transform: rotate(180deg);
+}

@@ -16,3 +16,4 @@
 @import '@radix-ui/themes/utilities.css';
 @import '@chipin/tokens/tokens.css';
 @import './radixStylesOverwrite.css';
+@import './modal-overlay.css';

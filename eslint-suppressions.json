@@ -154,11 +154,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/modals/auth-modal/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/modals/base-alert-dialog/BaseAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -169,47 +164,12 @@
       "count": 1
     }
   },
-  "apps/app/src/components/modals/components/overlay-layout/OverlayBody.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/components/overlay-layout/OverlayFooter.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/components/overlay-layout/OverlayHeader.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/components/overlay-layout/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 10
-    }
-  },
   "apps/app/src/components/modals/create-update-group-modal/CreateUpdateGroupModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
   },
   "apps/app/src/components/modals/create-update-group-modal/components/create-group-form/CreateGroupForm.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/GroupCoverField.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/create-update-group-modal/components/group-cover-field/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
-  "apps/app/src/components/modals/create-update-group-modal/components/group-details-fields/GroupDetailsFields.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -300,16 +260,6 @@
     }
   },
   "apps/app/src/components/modals/settle-up-modal/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
-  "apps/app/src/components/modals/user-avatar-modal/UserAvatarModal.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/user-avatar-modal/styled.ts": {
     "no-restricted-syntax": {
       "count": 3
     }

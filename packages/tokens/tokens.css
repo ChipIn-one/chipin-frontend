@@ -142,6 +142,11 @@
     /* Media: text over a cover and its scrim, the same in both modes */
     --cp-media-on: #ffffff;
     --cp-media-scrim: #000000;
+
+    /* component tokens: modals (#897) */
+    --cp-avatar-placeholder-from: var(--jade-7);
+    --cp-avatar-placeholder-to: var(--mint-7);
+    --cp-auth-illustration-glow: var(--grass-a5);
 }
 
 @media (prefers-reduced-motion: reduce) {

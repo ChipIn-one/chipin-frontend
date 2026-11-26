@@ -164,10 +164,19 @@ test('reveals an optional description in create mode', () => {
             });
 
             expect(descriptionButton.classList.contains('rt-variant-outline')).toBe(true);
+            expect(
+                descriptionButton.querySelector('[data-expanded]')?.getAttribute('data-expanded'),
+            ).toBe('false');
 
             return interaction.click(descriptionButton);
         })
         .then(() => {
+            expect(
+                screen
+                    .getByRole('button', { name: 'modal.fields.addDescription' })
+                    .querySelector('[data-expanded]')
+                    ?.getAttribute('data-expanded'),
+            ).toBe('true');
             const descriptionInput = screen.getByRole('textbox', {
                 name: 'common:fields.description',
             });
@@ -233,7 +242,11 @@ test('keeps the cover picker in the field row when the update cover is null', ()
     return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
         const picker = screen.getByLabelText('modal.cover.pickerLabel');
 
-        expect(getComputedStyle(picker.parentElement as HTMLElement).position).not.toBe('absolute');
+        // `position: absolute` comes from the CSS Module on this state (jsdom does not apply it).
+        expect(picker.parentElement?.getAttribute('data-overlay')).toBe('false');
+        // Radix styles any `[data-disabled]` button as disabled: the enabled picker has none.
+        expect(picker.parentElement?.hasAttribute('data-disabled')).toBe(false);
+        expect(picker.parentElement?.getAttribute('data-unavailable')).toBe('false');
     });
 });
 
@@ -541,6 +554,7 @@ test('NET-006: flag off, offline: the cover picker is disabled with the hint; ba
 
     expect(picker()).toHaveProperty('disabled', true);
     expect(blocked).not.toBeNull();
+    expect(picker().parentElement?.getAttribute('data-unavailable')).toBe('true');
     await interaction.hover(blocked ?? picker());
     expect((await screen.findByRole('tooltip')).textContent).toContain(
         'common:outbox.onlineRequired',
@@ -551,6 +565,8 @@ test('NET-006: flag off, offline: the cover picker is disabled with the hint; ba
     });
     expect(picker()).toHaveProperty('disabled', false);
     expect(picker().closest('[data-online-only]')).toBeNull();
+    expect(picker().parentElement?.getAttribute('data-unavailable')).toBe('false');
+    expect(picker().parentElement?.hasAttribute('data-disabled')).toBe(false);
 });
 
 test('an update refused offline keeps the modal open and says the network is offline', async () => {

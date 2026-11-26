@@ -1,0 +1,21 @@
+.preview {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    /* Set from GROUP_COVER_RATIO (constants/groupCover.ts). */
+    --_cover-ratio: auto;
+
+    aspect-ratio: var(--_cover-ratio);
+    border: 1px solid var(--cp-border-default);
+    border-radius: var(--cp-radius-4);
+    background-color: var(--cp-surface-muted);
+}
+
+.image {
+    display: block;
+}
+
+/* Doubled to beat the `object-fit: contain` of `basics/Image`. */
+.image.image {
+    object-fit: cover;
+}
