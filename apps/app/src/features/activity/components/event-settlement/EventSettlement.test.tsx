@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
@@ -7,6 +6,9 @@ import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { domainSettlementEvent } from 'test/activityFixtures';
 
 import { EventSettlement } from './EventSettlement';
+
+import participantStyles from './components/settlement-participants/SettlementParticipants.module.css';
+import styles from './EventSettlement.module.css';
 
 vi.mock('basics', importOriginal =>
     importOriginal<typeof import('basics')>().then(basics => ({
@@ -25,17 +27,6 @@ vi.mock('basics', importOriginal =>
             </span>
         ),
         RelativeTime: () => <time data-testid="relative-time" />,
-    })),
-);
-
-vi.mock('./styled', importOriginal =>
-    importOriginal<typeof import('./styled')>().then(styledComponents => ({
-        ...styledComponents,
-        AmountText: ({ children, $isReversed }: { children: ReactNode; $isReversed: boolean }) => (
-            <span data-testid="settlement-amount" data-is-reversed={String($isReversed)}>
-                {children}
-            </span>
-        ),
     })),
 );
 
@@ -167,9 +158,12 @@ test('strikes reversed settlement values and shows deletion context', () => {
         />,
     );
 
-    expect(getComputedStyle(screen.getByText('Ilya Govor')).textDecoration).toBe('line-through');
-    expect(getComputedStyle(screen.getByText('event.paidTo')).textDecoration).toBe('line-through');
-    expect(getComputedStyle(screen.getByText('Huek')).textDecoration).toBe('line-through');
-    expect(screen.getByTestId('settlement-amount').dataset.isReversed).toBe('true');
+    // The line-through itself lives in the CSS Modules (jsdom applies none).
+    expect(screen.getByText('Ilya Govor').className).toContain(participantStyles.reversed);
+    expect(screen.getByText('event.paidTo').className).toContain(participantStyles.reversed);
+    expect(screen.getByText('Huek').className).toContain(participantStyles.reversed);
+    expect(screen.getByTestId('settlement-full-amount').parentElement?.className).toContain(
+        styles.reversed,
+    );
     expect(screen.getByText('event.settlementReversedDescription')).toBeTruthy();
 });

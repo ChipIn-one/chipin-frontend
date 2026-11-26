@@ -7,18 +7,13 @@ import { legacyAmountFromMoney } from 'entities/balance';
 import { useSelfUser } from 'hooks/useSelfUser';
 import { abs, fromUnits, isZero, negate, sign, sub } from 'shared/money';
 
-import { LedgerScopeBadge } from 'basics';
+import { Amount, LedgerScopeBadge } from 'basics';
 
 import { EventIcon } from '../activity-event/EventIcon';
 
 import { ExpenseIcon } from './components';
-import {
-    ExpenseAmount,
-    ExpenseDebtAmount,
-    ExpenseDebtText,
-    ExpenseDescription,
-    ExpensePaidAmountText,
-} from './styled';
+
+import styles from './EventExpense.module.css';
 
 interface Props {
     event: ExpenseActivityEvent;
@@ -42,6 +37,7 @@ const EventExpense = ({ event }: Props) => {
     const isUserLender = sign(userExpenseDebt) > 0;
     const debtColor = isUserLender ? 'green' : 'red';
     const description = event.metadata.description;
+    const reversedClassName = isReversed ? styles.reversed : undefined;
 
     return (
         <Card size="1" mb="2" data-interactive-card>
@@ -59,28 +55,24 @@ const EventExpense = ({ event }: Props) => {
                         </EventIcon>
                         <Flex direction="column" align="start" gap="1">
                             {description ? (
-                                <ExpenseDescription
-                                    size="3"
-                                    weight="medium"
-                                    $isReversed={isReversed}
-                                >
+                                <Text size="3" weight="medium" className={reversedClassName}>
                                     {description}
-                                </ExpenseDescription>
+                                </Text>
                             ) : null}
 
-                            <ExpensePaidAmountText size="2" color="gray" $isReversed={isReversed}>
+                            <Text size="2" color="gray" className={reversedClassName}>
                                 {t('event.paidAmount', {
                                     payer: isCurrentUserPayer
                                         ? t('event.you')
                                         : event.metadata.payerDisplayName,
                                 })}{' '}
-                                <ExpenseAmount
-                                    $isReversed={isReversed}
+                                <Amount
+                                    className={reversedClassName}
                                     value={legacyAmountFromMoney(amount)}
                                     tokenCode={amount.currency}
                                     type="summary"
                                 />
-                            </ExpensePaidAmountText>
+                            </Text>
                             {isReversed ? (
                                 <Text size="2" color="gray">
                                     {t('event.expenseReversedDescription', {
@@ -95,18 +87,18 @@ const EventExpense = ({ event }: Props) => {
                 <Flex direction="column" gap="1" align="end" flexShrink="0" maxWidth="50%">
                     {isZero(userExpenseDebt) ? null : (
                         <>
-                            <ExpenseDebtText $isReversed={isReversed} color={debtColor} size="1">
+                            <Text className={reversedClassName} color={debtColor} size="1">
                                 {t(isUserLender ? 'event.youLent' : 'event.youBorrowed')}
-                            </ExpenseDebtText>
-                            <ExpenseDebtText $isReversed={isReversed} color={debtColor} size="2">
-                                <ExpenseDebtAmount
-                                    $isReversed={isReversed}
+                            </Text>
+                            <Text className={reversedClassName} color={debtColor} size="2">
+                                <Amount
+                                    className={reversedClassName}
                                     value={legacyAmountFromMoney(abs(userExpenseDebt))}
                                     tokenCode={amount.currency}
                                     precision={2}
                                     type="summary"
                                 />
-                            </ExpenseDebtText>
+                            </Text>
                         </>
                     )}
                     <LedgerScopeBadge

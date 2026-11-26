@@ -2,6 +2,8 @@ import { ACTIVITY_ACTIONS } from 'constants/activity';
 import type { ActivityEvent as ActivityEventModel } from 'entities/activity';
 import { buildActivitySubeventsRoute } from 'helpers/url';
 
+import { InteractiveCard } from 'components/interactive-card/InteractiveCard';
+
 import { EventExpense } from '../event-expense';
 import { EventExpenseTransferred } from '../event-expense-transferred';
 import { EventMemberKicked } from '../event-member-kicked';
@@ -12,8 +14,6 @@ import { EventGroupUpdated } from '../EventGroupUpdated';
 import { EventMemberJoin } from '../EventMemberJoin';
 import { EventMemberLeft } from '../EventMemberLeft';
 import { EventUnknown } from '../EventUnknown';
-
-import { ActivityEventLink } from './styled';
 
 interface Props {
     event: ActivityEventModel;
@@ -36,9 +36,9 @@ const ActivityEvent = ({ event, isNavigable = true, parentActivityId }: Props) =
             return isNavigable &&
                 (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
                     event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED) ? (
-                <ActivityEventLink to={buildActivitySubeventsRoute(activityId)} unsetStyles>
+                <InteractiveCard to={buildActivitySubeventsRoute(activityId)}>
                     {expenseCard}
-                </ActivityEventLink>
+                </InteractiveCard>
             ) : (
                 expenseCard
             );
@@ -51,12 +51,9 @@ const ActivityEvent = ({ event, isNavigable = true, parentActivityId }: Props) =
             const settlementCard = <EventSettlement event={event} />;
 
             return isNavigable && event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ? (
-                <ActivityEventLink
-                    to={buildActivitySubeventsRoute(parentActivityId ?? event.id)}
-                    unsetStyles
-                >
+                <InteractiveCard to={buildActivitySubeventsRoute(parentActivityId ?? event.id)}>
                     {settlementCard}
-                </ActivityEventLink>
+                </InteractiveCard>
             ) : (
                 settlementCard
             );

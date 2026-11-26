@@ -28,8 +28,8 @@ vi.mock('../event-settlement', () => ({
     EventSettlement: () => <article data-testid="settlement-event" />,
 }));
 
-vi.mock('./styled', () => ({
-    ActivityEventLink: ({
+vi.mock('components/interactive-card/InteractiveCard', () => ({
+    InteractiveCard: ({
         children,
         to,
         onClick,

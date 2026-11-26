@@ -1,0 +1,12 @@
+.root {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Doubled like the styled `&&` it replaces, to stay above the Radix card rules. */
+.root.root[data-selected='true'] {
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--cp-accent-solid);
+    outline-offset: -2px;
+}

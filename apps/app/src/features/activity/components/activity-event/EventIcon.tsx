@@ -1,7 +1,6 @@
 import { useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import type { ActivityEvent } from 'entities/activity';
 
@@ -9,22 +8,7 @@ import { UserAvatar } from 'basics';
 
 import { FullActivityFeedContext } from './ActivityFeedContext';
 
-const EventIconContainer = styled.span`
-    position: relative;
-    display: inline-flex;
-    flex-shrink: 0;
-    line-height: 0;
-`;
-
-const ActorAvatarImage = styled(UserAvatar)`
-    position: absolute;
-    right: -7px;
-    bottom: -7px;
-    width: 24px;
-    height: 24px;
-    pointer-events: none;
-    box-shadow: 0 0 0 2px var(--cp-surface-base);
-`;
+import styles from './EventIcon.module.css';
 
 type EventActor = Pick<ActivityEvent, 'actorSnapshot' | 'actorUserId'>;
 
@@ -42,7 +26,8 @@ const ActorAvatar = ({ event, isActorInText }: ActorAvatarProps) => {
     }
 
     return (
-        <ActorAvatarImage
+        <UserAvatar
+            className={styles.actorAvatar}
             size="1"
             user={event.actorSnapshot}
             role={isActorInText ? undefined : 'img'}
@@ -86,10 +71,10 @@ interface Props {
 }
 
 const EventIcon = ({ event, children, isActorInText = false }: Props) => (
-    <EventIconContainer>
+    <span className={styles.root}>
         {children}
         <ActorAvatar event={event} isActorInText={isActorInText} />
-    </EventIconContainer>
+    </span>
 );
 
 export { EventActorInlineAvatar, EventIcon };

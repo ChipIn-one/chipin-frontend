@@ -1,0 +1,8 @@
+/* Below `sm` the cover bleeds to the screen edges (constants/breakpoints `belowSm`). */
+@media (max-width: 767px) {
+    .cover {
+        margin-top: calc(-1 * var(--cp-space-4));
+        margin-right: calc(-1 * var(--cp-space-4));
+        margin-left: calc(-1 * var(--cp-space-4));
+    }
+}

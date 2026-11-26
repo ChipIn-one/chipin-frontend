@@ -5,7 +5,7 @@ import { loaderArgs } from 'test/loaderArgs';
 
 import { loader } from './route';
 
-vi.mock('./GroupPage', () => ({ default: () => null }));
+vi.mock('./GroupPage', () => ({ GroupPage: () => null }));
 
 const call = (groupId: string) => loader(loaderArgs({ groupId }));
 

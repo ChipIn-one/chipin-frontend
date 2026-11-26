@@ -1,0 +1,42 @@
+/*
+ * The link is an unstyled NavButton. Its own rules (`all: unset`, `inline-flex`, the focus
+ * outline) go up to (0,2,0) and may load later (styled-components today, or a CSS Module after
+ * #916), so these root rules win by specificity alone: (0,2,0) for layout, (0,3,0) for focus.
+ * The inner card draws the focus ring, so the link hides its own.
+ */
+.root.root {
+    display: block;
+    width: 100%;
+}
+
+.root.root:focus-visible {
+    /* Transparent, not none: forced-colors mode still draws it (spec 05 §4). */
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+/* The surface is the caller's Radix Card; Radix sets none of these on the card element. */
+.root [data-interactive-card] {
+    transition:
+        background-color var(--cp-duration-fast) var(--cp-easing-standard),
+        box-shadow var(--cp-duration-fast) var(--cp-easing-standard),
+        transform var(--cp-duration-fast) var(--cp-easing-standard);
+}
+
+.root:hover [data-interactive-card] {
+    background-color: var(--cp-fill-pressed);
+    box-shadow: inset 0 0 0 1px var(--cp-border-translucent);
+    transform: translateY(-1px);
+}
+
+.root:active [data-interactive-card] {
+    background-color: var(--cp-fill-pressed);
+    box-shadow: inset 0 0 0 1px var(--cp-border-translucent);
+    transform: none;
+}
+
+.root:focus-visible [data-interactive-card] {
+    box-shadow:
+        inset 0 0 0 1px var(--cp-border-translucent),
+        0 0 0 2px var(--cp-focus-ring);
+}

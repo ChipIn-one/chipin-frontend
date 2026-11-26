@@ -7,6 +7,8 @@ import type { AppEvent } from 'api/activity.types';
 import { FullActivityFeedContext } from './ActivityFeedContext';
 import { EventActorInlineAvatar, EventIcon } from './EventIcon';
 
+import styles from './EventIcon.module.css';
+
 vi.mock('basics', () => ({
     UserAvatar: ({
         className,
@@ -112,13 +114,11 @@ test('does not render the actor badge for compact activity consumers', () => {
 test('renders the actor badge at 24px with reduced icon overlap', () => {
     renderIcon(eventWithActor);
 
+    // The 24px size and the -7px offsets live in EventIcon.module.css (jsdom applies no CSS Modules).
     const actorAvatar = screen.getByTestId('activity-actor-avatar');
-    const style = getComputedStyle(actorAvatar);
 
-    expect(style.width).toBe('24px');
-    expect(style.height).toBe('24px');
-    expect(style.right).toBe('-7px');
-    expect(style.bottom).toBe('-7px');
+    expect(actorAvatar.className).toContain(styles.actorAvatar);
+    expect(actorAvatar.parentElement?.className).toContain(styles.root);
 });
 
 test('exposes actor identity when event text does not identify the actor', () => {
