@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { onlineManager } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -29,7 +30,9 @@ vi.mock('components/page-breadcrumb', () => ({
 
 vi.mock('./components', () => ({
     ActivitySubeventsDetails: () => <span data-testid="subevents-details" />,
-    ActivitySubeventsFeed: () => <span data-testid="subevents-feed" />,
+    ActivitySubeventsFeed: ({ history }: { history: { isOffline: boolean } }) => (
+        <span data-testid="subevents-feed" data-offline={String(history.isOffline)} />
+    ),
     ActivitySubeventsHeader: ({ isUnavailable }: { isUnavailable: boolean }) =>
         isUnavailable ? (
             <span data-testid="parent-unavailable" />
@@ -131,7 +134,7 @@ const renderPage = (parentEvent: AppEvent | null) => {
 test('ACT-025 a direct visit reads the history once, without a category filter', async () => {
     const { requests } = renderPage(expenseParentEvent);
 
-    await screen.findByTestId('page-breadcrumb');
+    await screen.findByText('subeventsExpenseHistoryTitle');
     expect(requests).toEqual(['activity-1?limit=20']);
 });
 
@@ -141,13 +144,14 @@ test('shows a parent fallback when the chain is not found, and still shows the f
     expect(await screen.findByTestId('parent-unavailable')).toBeTruthy();
     expect(screen.queryByTestId('subevents-details')).toBeTruthy();
     expect(screen.getByTestId('subevents-feed')).toBeTruthy();
-    expect(screen.queryByTestId('page-breadcrumb')).toBeNull();
+    // Issue #929: the generic title stays when the chain cannot be loaded.
+    expect(screen.getByTestId('page-breadcrumb').textContent).toBe('subeventsTitle');
 });
 
 test('renders the expense breadcrumb before the details column', async () => {
     renderPage(expenseParentEvent);
 
-    const breadcrumb = await screen.findByTestId('page-breadcrumb');
+    const breadcrumb = await screen.findByText('subeventsExpenseHistoryTitle');
     const details = screen.getByTestId('subevents-details');
 
     expect(breadcrumb.textContent).toBe('subeventsExpenseHistoryTitle');
@@ -159,7 +163,36 @@ test('renders the expense breadcrumb before the details column', async () => {
 test('preserves the settlement breadcrumb title', async () => {
     renderPage(settlementParentEvent);
 
-    expect((await screen.findByTestId('page-breadcrumb')).textContent).toBe(
-        'subeventsSettlementHistoryTitle',
+    expect((await screen.findByText('subeventsSettlementHistoryTitle')).dataset.testid).toBe(
+        'page-breadcrumb',
     );
+});
+
+// Issue #929: the page title shows while the history is loading, before the chain is known.
+test('shows the generic breadcrumb while the history is loading', async () => {
+    const { requests } = renderPage(expenseParentEvent);
+
+    expect(screen.getByTestId('page-breadcrumb').textContent).toBe('subeventsTitle');
+    expect(screen.getByTestId('subevents-header')).toBeTruthy();
+    await screen.findByText('subeventsExpenseHistoryTitle');
+    expect(requests).toHaveLength(1);
+});
+
+// Issue #929: offline with nothing cached the load waits for the network; the title still shows.
+test('shows the generic breadcrumb offline without a cached history', async () => {
+    onlineManager.setOnline(false);
+
+    const { requests, unmount } = renderPage(expenseParentEvent);
+
+    try {
+        await waitFor(() => {
+            expect(screen.getByTestId('subevents-feed').dataset.offline).toBe('true');
+        });
+        expect(screen.getByTestId('page-breadcrumb').textContent).toBe('subeventsTitle');
+        expect(requests).toHaveLength(0);
+        expect(screen.queryByTestId('parent-unavailable')).toBeNull();
+    } finally {
+        unmount();
+        onlineManager.setOnline(true);
+    }
 });

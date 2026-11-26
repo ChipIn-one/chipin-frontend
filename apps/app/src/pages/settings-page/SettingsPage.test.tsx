@@ -85,3 +85,20 @@ test.each(['USER', 'ADMIN'] as const)('hides Solo preferences for a $role user',
 
     expect(screen.queryByText('Solo Preferences')).toBeNull();
 });
+
+// Issue #929: the page title was wrapped in `display={{ initial: 'block', lg: 'none' }}`, so wide
+// screens had no title. Radix renders a hidden breakpoint as a `<bp>:rt-r-display-none` class.
+test('renders the Settings heading once, not hidden at any breakpoint', () => {
+    saveLocalUser({ role: 'USER', settings });
+    renderSettings();
+
+    // The self user is not fetched here: the title text sits in an aria-hidden skeleton, so the
+    // heading is matched by its level and text, not by its accessible name.
+    const heading = screen.getByRole('heading', { level: 1 });
+
+    expect(heading.textContent).toBe('Settings');
+    expect(screen.getAllByText('Settings')).toHaveLength(1);
+    for (let node = heading.parentElement; node; node = node.parentElement) {
+        expect(node.className).not.toMatch(/rt-r-display-none/);
+    }
+});

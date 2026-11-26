@@ -21,18 +21,21 @@ const ActivitySubeventsPage = () => {
     const history = useActivityHistory(parentActivityId);
     const activityView = getActivitySubeventsView(history.parent, history.events);
     const activityCategory = getActivityCategory(activityView?.originalEvent);
-    const breadcrumbTitle =
-        activityCategory === ACTIVITY_CATEGORIES.SETTLEMENT
+    // Before the chain is known (loading, offline or failed with nothing cached) the title is generic.
+    const getBreadcrumbTitle = () => {
+        if (!activityView) {
+            return t('subeventsTitle');
+        }
+        return activityCategory === ACTIVITY_CATEGORIES.SETTLEMENT
             ? t('subeventsSettlementHistoryTitle')
             : t('subeventsExpenseHistoryTitle');
+    };
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
-            {activityView ? (
-                <Box mb="2">
-                    <PageBreadcrumb title={breadcrumbTitle} />
-                </Box>
-            ) : null}
+            <Box mb="2">
+                <PageBreadcrumb title={getBreadcrumbTitle()} />
+            </Box>
 
             <InternalPageColumnsFromSm
                 sidePanel={
