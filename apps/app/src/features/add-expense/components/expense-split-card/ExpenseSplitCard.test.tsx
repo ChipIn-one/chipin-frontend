@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
@@ -7,10 +8,14 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { i18n } from 'i18n';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
+import fillStyles from 'basics/SegmentedControl.module.css';
+
 import { ExpenseButtons } from '../expense-buttons/ExpenseButtons';
 import { ExpensePayerSearchSelect } from '../expense-payer-search-select/ExpensePayerSearchSelect';
 
 import ExpenseSplitCard from './ExpenseSplitCard';
+
+import controlStyles from './components/expense-split-mode-control/ExpenseSplitModeControl.module.css';
 
 const currentUser = { id: 'user-1', displayName: 'You', picture: null };
 const friend = { id: 'user-2', displayName: 'Friend', picture: null };
@@ -116,4 +121,63 @@ test.each([
         expect(name).toContain(participant.displayName);
         expect(screen.getByRole('textbox', { name })).toBeTruthy();
     }
+});
+
+const SPLIT_MODE_LABELS = [
+    [EXPENSE_SPLIT_MODES.EQUAL, 'equal'],
+    [EXPENSE_SPLIT_MODES.PERCENT, 'percent'],
+    [EXPENSE_SPLIT_MODES.AMOUNTS, 'amounts'],
+    [EXPENSE_SPLIT_MODES.SHARES, 'shares'],
+] as const;
+
+const splitModeLabel = (key: (typeof SPLIT_MODE_LABELS)[number][1]) =>
+    i18n.t(`group:expenses.modal.split.${key}`);
+
+const renderGroupSplitCard = () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser, friend] }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    });
+    renderSplitCard();
+};
+
+test('#970 the split-mode control fills the card, keeps the phone tap target and all four labels', () => {
+    renderGroupSplitCard();
+
+    const root = screen
+        .getByRole('radio', { name: splitModeLabel('equal') })
+        .closest('.rt-SegmentedControlRoot');
+    if (!(root instanceof HTMLElement)) {
+        throw new Error('SegmentedControl root not found');
+    }
+
+    expect(fillStyles.fill).toBeTruthy();
+    expect(controlStyles.splitControl).toBeTruthy();
+    expect(root.classList).toContain(fillStyles.fill);
+    expect(root.classList).toContain(controlStyles.splitControl);
+    expect(root.classList).toContain('rt-r-size-2');
+    expect(root.classList).toContain('sm:rt-r-size-3');
+    for (const [, key] of SPLIT_MODE_LABELS) {
+        expect(screen.getByRole('radio', { name: splitModeLabel(key) })).toBeTruthy();
+    }
+});
+
+test('#970 switching the split mode by click and keyboard still updates the store', async () => {
+    const user = userEvent.setup();
+    renderGroupSplitCard();
+
+    await user.click(screen.getByRole('radio', { name: splitModeLabel('shares') }));
+    expect(useExpenseModalStore.getState().splitMode).toBe(EXPENSE_SPLIT_MODES.SHARES);
+
+    const percent = screen.getByRole('radio', { name: splitModeLabel('percent') });
+    act(() => percent.focus());
+    await user.keyboard('{Enter}');
+    expect(useExpenseModalStore.getState().splitMode).toBe(EXPENSE_SPLIT_MODES.PERCENT);
+    expect(percent.getAttribute('aria-checked')).toBe('true');
 });
