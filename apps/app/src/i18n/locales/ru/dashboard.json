@@ -47,8 +47,7 @@
     "solo": {
         "summaryTitle": "Сводка Solo",
         "activityTitle": "Активность Solo",
-        "inDevelopment": "Ещё в разработке.",
-        "goToDashboard": "На дашборд"
+        "inDevelopment": "Ещё в разработке."
     },
     "onboarding": {
         "welcome": {

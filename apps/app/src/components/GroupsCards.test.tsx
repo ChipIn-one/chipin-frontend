@@ -550,6 +550,13 @@ test('DSH-006: Show all resets the debt filter and search', () => {
         });
 });
 
+test('DSH-006: offers no Show all when neither a filter nor a search is active', () => {
+    renderGroups([]);
+
+    expect(screen.getByText('groups.filterEmptyTitle')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'activity:showAllAction' })).toBeNull();
+});
+
 test('returns focus to the search trigger on Escape', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const group = createGroup({

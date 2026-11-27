@@ -36,7 +36,7 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
   action. The ready variants (`NoActivityEmptyState`, `NoFilteredActivityEmptyState`,
   `NoFriendsEmptyState`,
   `NoGroupExpensesEmptyState`, `NoGroupMembersEmptyState`, `NoGroupsEmptyState`,
-  `NoDebtsEmptyState`, and for errors and offline `LoadErrorEmptyState` and `OfflineEmptyState`)
+  `NoMatchingGroupsEmptyState`, `NoDebtsEmptyState`, `SoloInDevelopmentEmptyState`, and for errors and offline `LoadErrorEmptyState` and `OfflineEmptyState`)
   live in `basics/empty-states`.
 - A new empty screen is a new variant file there (fixed icon, color and texts, an optional
   `action` prop), never new markup in the page.
@@ -45,8 +45,8 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
   full-width button.
 - Empty is only for "loaded, and there is nothing". It never stands in for an error or for
   offline with nothing cached.
-- Today two places render an inline `EmptyState` instead of a variant: the filter result in
-  `GroupsCards` and `ActivitySubeventsFeed`. Move them to variants when touched.
+- Today `ActivitySubeventsFeed` still renders an inline `EmptyState` instead of a variant. Move
+  it to a variant when touched.
 - First-run screens use the onboarding compositions (`DashboardOnboarding`, `InviteOnboarding`),
   which are built on the same rules.
 

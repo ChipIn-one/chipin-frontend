@@ -43,8 +43,7 @@
     "solo": {
         "summaryTitle": "Solo summary",
         "activityTitle": "Solo activity",
-        "inDevelopment": "Still in development.",
-        "goToDashboard": "Go to dashboard"
+        "inDevelopment": "Still in development."
     },
     "onboarding": {
         "welcome": {

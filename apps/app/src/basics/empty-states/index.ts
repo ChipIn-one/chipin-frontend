@@ -7,4 +7,6 @@ export { default as NoFriendsEmptyState } from './NoFriendsEmptyState';
 export { default as NoGroupExpensesEmptyState } from './NoGroupExpensesEmptyState';
 export { default as NoGroupMembersEmptyState } from './NoGroupMembersEmptyState';
 export { default as NoGroupsEmptyState } from './NoGroupsEmptyState';
+export { NoMatchingGroupsEmptyState } from './NoMatchingGroupsEmptyState';
 export { OfflineEmptyState } from './OfflineEmptyState';
+export { SoloInDevelopmentEmptyState } from './SoloInDevelopmentEmptyState';

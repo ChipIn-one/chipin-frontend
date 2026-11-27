@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button, Text } from '@radix-ui/themes';
+import { Badge, Button, Flex, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -170,10 +170,13 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     // BAL-023: a member with nothing left to settle gets a status badge, not a disabled action. An
     // open flow stays mounted (a payment that just settled the debt finishes and closes it).
     if (isSettledMember && !isOpened) {
+        // The wrapper takes the row's stretch on mobile, so the badge keeps its own width.
         return (
-            <Badge size="1" color="gray" variant="soft">
-                {t('group:page.balances.settledBadge')}
-            </Badge>
+            <Flex flexShrink="0">
+                <Badge size="1" color="gray" variant="soft">
+                    {t('group:page.balances.settledBadge')}
+                </Badge>
+            </Flex>
         );
     }
 

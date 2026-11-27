@@ -4,7 +4,6 @@ import {
     ChevronDownIcon,
     ChevronUpIcon,
     CircleCheckIcon,
-    FilterXIcon,
     PlusIcon,
     SearchIcon,
     XIcon,
@@ -22,7 +21,7 @@ import { useGroupsList } from 'hooks/useGroupsList';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { selectGroupsCardsView } from 'store/groupsSelectors';
 
-import { EmptyState } from 'basics/empty-states';
+import { NoMatchingGroupsEmptyState } from 'basics/empty-states';
 import { OnlineOnly } from 'components/online-only';
 
 import { GroupCard } from './group-card';
@@ -73,9 +72,9 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const searchButtonLabel = hasSearchQuery
         ? t('groups.searchActiveLabel', { query: searchQuery.trim() })
         : t('groups.searchLabel');
-    const emptyStateDescription = hasSearchQuery
-        ? t('groups.searchEmptyDescription')
-        : t('groups.filterEmptyDescription');
+    // Show all only when there is something to reset: an unfiltered empty list (an empty or failed
+    // list on the group page) has no next step here.
+    const canShowAll = activeFilter !== GROUP_DEBT_FILTERS.ALL || hasSearchQuery;
 
     useEffect(() => {
         if (!isSearchOpen && shouldRestoreSearchButtonFocusRef.current) {
@@ -227,14 +226,14 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
             </Flex>
 
             {showEmptyState && (
-                <EmptyState
-                    icon={<FilterXIcon size={16} />}
-                    title={t('groups.filterEmptyTitle')}
-                    description={emptyStateDescription}
+                <NoMatchingGroupsEmptyState
+                    hasSearchQuery={hasSearchQuery}
                     action={
-                        <Button type="button" variant="soft" onClick={onShowAll}>
-                            {t('activity:showAllAction')}
-                        </Button>
+                        canShowAll ? (
+                            <Button type="button" variant="soft" onClick={onShowAll}>
+                                {t('activity:showAllAction')}
+                            </Button>
+                        ) : undefined
                     }
                 />
             )}
