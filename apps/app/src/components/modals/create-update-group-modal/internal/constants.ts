@@ -1,0 +1,5 @@
+// GRP-002: the API accepts group names of up to 100 characters.
+const GROUP_NAME_MAX_LENGTH = 100;
+const GROUP_DESCRIPTION_MAX_LENGTH = 160;
+
+export { GROUP_DESCRIPTION_MAX_LENGTH, GROUP_NAME_MAX_LENGTH };

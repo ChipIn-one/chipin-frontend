@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import { TextArea, TextInput } from 'basics';
 
+import { GROUP_DESCRIPTION_MAX_LENGTH, GROUP_NAME_MAX_LENGTH } from '../../internal';
+
 import styles from './GroupDetailsFields.module.css';
 
 const DESCRIPTION_FIELD_ID = 'group-description-field';
@@ -41,7 +43,7 @@ const GroupDetailsFields = ({
                     <TextInput
                         label={t('common:fields.groupName')}
                         initialValue={name}
-                        maxLength={50}
+                        maxLength={GROUP_NAME_MAX_LENGTH}
                         isRequired
                         size="3"
                         radius="large"
@@ -84,7 +86,7 @@ const GroupDetailsFields = ({
                             initialValue={description}
                             size="3"
                             radius="large"
-                            maxLength={160}
+                            maxLength={GROUP_DESCRIPTION_MAX_LENGTH}
                             placeholder={t('modal.fields.descriptionPlaceholder')}
                             disabled={isSaving}
                             onValueChange={({ value }) => onDescriptionChange(value)}

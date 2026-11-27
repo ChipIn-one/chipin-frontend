@@ -17,6 +17,7 @@ import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
 import CreateUpdateGroupModal from './CreateUpdateGroupModal';
+import { GROUP_NAME_MAX_LENGTH } from './internal';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -184,6 +185,96 @@ test('reveals an optional description in create mode', () => {
             expect(descriptionInput.getAttribute('maxlength')).toBe('160');
             expect(screen.getByText('0 / 160')).toBeTruthy();
         });
+});
+
+test('GRP-002: the group name input allows 100 characters', () => {
+    const interaction = userEvent.setup();
+
+    renderModal('create');
+
+    return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
+        const nameInput = screen.getByRole('textbox', { name: 'common:fields.groupName' });
+
+        expect(GROUP_NAME_MAX_LENGTH).toBe(100);
+        expect(nameInput.getAttribute('maxlength')).toBe('100');
+        expect(screen.getByText('0 / 100')).toBeTruthy();
+    });
+});
+
+test('GRP-002: creates a group with a 100-character name', () => {
+    const interaction = userEvent.setup();
+    const longName = 'a'.repeat(100);
+
+    createGroup.mockResolvedValue({ ...group, name: longName });
+    renderModal('create');
+
+    return interaction
+        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
+        .then(() => interaction.click(screen.getByPlaceholderText('modal.fields.namePlaceholder')))
+        .then(() => interaction.paste(longName))
+        .then(() => {
+            expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
+                'value',
+                longName,
+            );
+            return interaction.click(
+                screen.getByRole('button', { name: 'common:buttons.createGroup' }),
+            );
+        })
+        .then(() =>
+            waitFor(() => {
+                expect(createGroup).toHaveBeenCalledWith({ name: longName });
+            }),
+        );
+});
+
+test('GRP-002: caps a 101-character group name at 100 characters', () => {
+    const interaction = userEvent.setup();
+
+    renderModal('create');
+
+    return interaction
+        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
+        .then(() => interaction.click(screen.getByPlaceholderText('modal.fields.namePlaceholder')))
+        .then(() => interaction.paste('b'.repeat(101)))
+        .then(() => {
+            expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
+                'value',
+                'b'.repeat(100),
+            );
+            expect(screen.getByText('100 / 100')).toBeTruthy();
+        });
+});
+
+test('GRP-002: update keeps and submits an existing name longer than 50 characters', () => {
+    const interaction = userEvent.setup();
+    const longName = 'Long group name '.repeat(5).trim();
+    const groupWithLongName = { ...group, name: longName } satisfies Group;
+
+    expect(longName.length).toBeGreaterThan(50);
+    expect(longName.length).toBeLessThanOrEqual(100);
+    updateGroup.mockResolvedValue(groupWithLongName);
+    renderModal('update', groupWithLongName);
+
+    return interaction
+        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
+        .then(() => {
+            expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
+                'value',
+                longName,
+            );
+            return interaction.click(
+                screen.getByRole('button', { name: 'common:buttons.saveGroup' }),
+            );
+        })
+        .then(() =>
+            waitFor(() => {
+                expect(updateGroup).toHaveBeenCalledWith(group.id, {
+                    name: longName,
+                    description: group.description,
+                });
+            }),
+        );
 });
 
 test('preserves the description draft while its field is collapsed', () => {
