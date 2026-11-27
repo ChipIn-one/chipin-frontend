@@ -48,7 +48,7 @@
         },
         "quickExpense": {
             "title": "Quick Expense Entry",
-            "description": "Add expenses in seconds. Split equally or by custom amounts. Attach receipts and categorize for better tracking."
+            "description": "Add expenses in seconds. Split equally or by custom amounts, and sort them by category."
         },
         "autoCalc": {
             "title": "Auto Calculations",
