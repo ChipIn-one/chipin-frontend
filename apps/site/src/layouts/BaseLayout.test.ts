@@ -2,7 +2,13 @@ import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import { type DefaultTreeAdapterTypes, parse } from 'parse5';
 import { describe, expect, test } from 'vitest';
 
+import HomePage from '../components/landing/HomePage.astro';
+import { SUPPORTED_LOCALES } from '../i18n/locales';
+import NotFoundPage from '../pages/404.astro';
+import FriendPage from '../pages/join/friend.astro';
 import GroupPage from '../pages/join/group.astro';
+
+import BaseLayout from './BaseLayout.astro';
 
 // Issue 852 (spec 04 A-28): every site page links the ChipIn favicon, emitted by Astro as a
 // hashed file (`import ... ?url`), so the root domain shows an icon once chipin.one is the site.
@@ -62,5 +68,57 @@ describe('BaseLayout social preview', () => {
         expect(meta('name', 'twitter:description')).toBe(meta('property', 'og:description'));
         expect(meta('name', 'twitter:image')).toBe('https://chipin.one/og-image.png');
         expect(meta('name', 'twitter:image:alt')).toBe(meta('property', 'og:image:alt'));
+    });
+});
+
+// #941: the home page of each locale carries one JSON-LD block; no other page has one.
+describe('BaseLayout structured data', () => {
+    const jsonLd = (html: string): string[] =>
+        elements(parse(html))
+            .filter(
+                element =>
+                    element.tagName === 'script' &&
+                    element.attrs.some(
+                        ({ name, value }) => name === 'type' && value === 'application/ld+json',
+                    ),
+            )
+            .map(element =>
+                element.childNodes.map(child => ('value' in child ? child.value : '')).join(''),
+            );
+
+    test.each(SUPPORTED_LOCALES)('the %s home page has the JSON-LD and it parses', async locale => {
+        const container = await AstroContainer.create();
+        const blocks = jsonLd(await container.renderToString(HomePage, { props: { locale } }));
+
+        expect(blocks).toHaveLength(1);
+        const data: unknown = JSON.parse(blocks[0] ?? '');
+
+        expect(data).toMatchObject({
+            '@context': 'https://schema.org',
+            '@graph': [
+                { '@type': 'Organization' },
+                { '@type': 'WebSite', inLanguage: ['en', 'ru'] },
+                { '@type': 'WebApplication', applicationCategory: 'FinanceApplication' },
+            ],
+        });
+    });
+
+    test.each([
+        ['404', NotFoundPage],
+        ['join/group', GroupPage],
+        ['join/friend', FriendPage],
+    ])('the %s page has no JSON-LD', async (_name, page) => {
+        const container = await AstroContainer.create();
+
+        expect(jsonLd(await container.renderToString(page))).toEqual([]);
+    });
+
+    test('a content page (privacy) has no JSON-LD', async () => {
+        const container = await AstroContainer.create();
+        const html = await container.renderToString(BaseLayout, {
+            props: { locale: 'en', slug: 'privacy', title: 'Privacy', description: 'Privacy' },
+        });
+
+        expect(jsonLd(html)).toEqual([]);
     });
 });

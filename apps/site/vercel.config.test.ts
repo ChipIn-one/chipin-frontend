@@ -308,6 +308,7 @@ describe('paths the site never redirects (§4.2)', () => {
         '/favicon.svg',
         '/favicon.ico',
         '/robots.txt',
+        '/llms.txt',
         '/not-found',
         '/manifest.webmanifest',
         '/pwa-192x192.png',
