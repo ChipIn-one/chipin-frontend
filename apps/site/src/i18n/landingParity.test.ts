@@ -169,4 +169,17 @@ describe.each(SUPPORTED_LOCALES)('%s home page parity with the app landing', loc
 
         expect(texts.filter(text => /convert|conversion|конверт/iu.test(String(text)))).toEqual([]);
     });
+
+    test('#986: site and app landing texts and llms.txt make no join-without-signup claim', () => {
+        const texts = [
+            ...[siteJson(locale, 'landing'), appJson(locale, 'landing')].flatMap(tree =>
+                leaves(tree).map(([, text]) => text),
+            ),
+            readFileSync(new URL('apps/site/public/llms.txt', REPO), 'utf8'),
+        ];
+        const noSignup =
+            /no sign-?up|without sign(ing)?[ -]?up|sign-?up (is )?not required|регистрац\S* не нужн|без регистрац|no account (is )?(needed|required)|без аккаунт|не нужно регистр/iu;
+
+        expect(texts.filter(text => noSignup.test(String(text)))).toEqual([]);
+    });
 });
