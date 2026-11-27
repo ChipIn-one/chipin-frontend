@@ -5,7 +5,8 @@
 
 ## Purpose
 
-The animated brand loader (SVG circle); `PageLoader` centers it on a full-height page.
+The animated brand loader (SVG circle) with a translated status text; `PageLoader` centers it on
+a full-height page.
 
 ## When to use
 
@@ -37,11 +38,16 @@ Source: [`basics/ChipInLoader.tsx`](../../../apps/app/src/basics/ChipInLoader.ts
 ## Accessibility and i18n
 
 - The stroke is `var(--cp-brand-loader)` (a D23 raw-color exception).
-- The SVG has no `role`, `aria-label` or title, so screen readers get nothing. Where the wait
-  matters, put a `VisuallyHidden` status text next to it.
-- The animation is SVG `<animate>` with fixed durations; it does not follow
-  `prefers-reduced-motion` (the `--cp-duration-*` tokens do not reach it).
-- i18n: none.
+- The loader is one `role="status"` region: the SVG is `aria-hidden`, and a `VisuallyHidden`
+  text (`common:loader.label`, "Loading…") is what a screen reader announces. Do not wrap it in
+  another `role="status"` or `aria-live` region, and do not add a second loading text next to
+  it; `PageLoader` and `GuardLoader` add none.
+- The animation is SVG SMIL (`<animate>`, `<animateTransform>`), which CSS media queries and the
+  `--cp-duration-*` tokens do not reach. The component reads
+  `matchMedia('(prefers-reduced-motion: reduce)')` (and follows its changes): under reduce it
+  renders a static arc without the animate elements. Without `matchMedia` (SSR, the prerender) it
+  renders the animated loader.
+- i18n: `common:loader.label` in every locale.
 
 ## Example
 

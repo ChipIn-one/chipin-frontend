@@ -28,7 +28,12 @@ const DashboardHeader: React.FC = () => {
                         variant="ghost"
                         radius="full"
                     >
-                        <UserAvatar size="3" user={user ?? undefined} isLoading={isUserLoading} />
+                        <UserAvatar
+                            size="3"
+                            user={user ?? undefined}
+                            isLoading={isUserLoading}
+                            decorative
+                        />
                     </NavButton>
                 </Box>
 

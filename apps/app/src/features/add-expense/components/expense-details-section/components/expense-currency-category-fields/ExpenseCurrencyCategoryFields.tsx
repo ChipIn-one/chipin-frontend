@@ -7,7 +7,7 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import CurrencySelect from 'components/CurrencySelect';
 import { CategorySearchSelect } from 'components/search-select';
 
-import ExpensePayerSearchSelect from '../../../expense-payer-search-select/ExpensePayerSearchSelect';
+import { ExpensePayerSearchSelect } from '../../../expense-payer-search-select/ExpensePayerSearchSelect';
 import { ExpenseSearchSelectContent } from '../../../expense-search-select-content/ExpenseSearchSelectContent';
 
 const ExpenseCurrencyCategoryFields = () => {

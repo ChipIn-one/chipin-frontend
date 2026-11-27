@@ -222,7 +222,8 @@ describe('the live session', () => {
         renderLayout('/dashboard');
 
         // Offline: one screen with the banner and its Retry above the loader, not the PageLoader.
-        expect(await screen.findByRole('status')).toBeTruthy();
+        // The banner and the loader are one status region each.
+        expect(await screen.findAllByRole('status')).toHaveLength(2);
         expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
         expect(screen.queryByTestId('page-loader')).toBeNull();
         expect(screen.queryByLabelText('Draft')).toBeNull();
@@ -492,8 +493,9 @@ describe('with the loader (the whole tree)', () => {
 
         renderApp('/dashboard');
 
-        // The loader waits up to 5 s here (no cache to start on, no network to refresh).
-        expect(await screen.findByRole('status')).toBeTruthy();
+        // The loader waits up to 5 s here (no cache to start on, no network to refresh). The banner
+        // and the loader are one status region each.
+        expect(await screen.findAllByRole('status')).toHaveLength(2);
         expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
         expect(screen.queryByTestId('page-loader')).toBeNull();
         expect(screen.queryByText('dashboard')).toBeNull();
