@@ -41,9 +41,7 @@ const lookup = (tree: unknown, key: string): unknown =>
 // App `landing` keys the app landing does not render, so the site does not copy them. A new app
 // key fails "the site copies every rendered app landing text" until it is ported or listed here.
 const NOT_RENDERED: Record<string, string> = {
-    'features.soloBudget': 'FeaturesSection lists five cards without it',
     'sections.groups.cta': 'ShowcaseSection has no button',
-    'sections.expenses': 'ShowcaseSections renders only the groups showcase',
     'cta.openApp': 'CtaSection does not render it',
     promo: 'the early-supporter modal of the app, not the landing',
 };
@@ -181,5 +179,16 @@ describe.each(SUPPORTED_LOCALES)('%s home page parity with the app landing', loc
             /no sign-?up|without sign(ing)?[ -]?up|sign-?up (is )?not required|регистрац\S* не нужн|без регистрац|no account (is )?(needed|required)|без аккаунт|не нужно регистр/iu;
 
         expect(texts.filter(text => noSignup.test(String(text)))).toEqual([]);
+    });
+
+    test('#987: site and app landing texts and llms.txt make no budget claim', () => {
+        const texts = [
+            ...[siteJson(locale, 'landing'), appJson(locale, 'landing')].flatMap(tree =>
+                leaves(tree).map(([, text]) => text),
+            ),
+            readFileSync(new URL('apps/site/public/llms.txt', REPO), 'utf8'),
+        ];
+
+        expect(texts.filter(text => /budget|бюджет/iu.test(String(text)))).toEqual([]);
     });
 });
