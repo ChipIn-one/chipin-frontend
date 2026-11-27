@@ -10,7 +10,7 @@
 import { create } from 'zustand';
 
 import { LS_KEY_THEME } from 'constants/localstorage';
-import { getLocalUser, LocalStorage } from 'helpers/localStorage';
+import { LocalStorage } from 'helpers/localStorage';
 import type { ThemeName } from 'helpers/theme';
 
 export type AppearancePreference = ThemeName;
@@ -61,18 +61,9 @@ const parseSavedPreference = (saved: string | null | undefined): AppearancePrefe
     return PREFERENCES.find(preference => preference === saved) ?? 'light';
 };
 
-/**
- * One-time migration (spec 05 §2): before the key existed for every user, the theme was read from
- * the cached user's settings (`resolveStoredTheme`). Remove this after 2 releases. Tracked by #825.
- */
-const legacyPreference = (): AppearancePreference | undefined => getLocalUser()?.settings.theme;
-
-/** The saved preference; reads only (the migration write is `initAppearance`'s). */
-const readStoredPreference = (): AppearancePreference => {
-    const saved = LocalStorage.tryGetRaw(LS_KEY_THEME);
-
-    return (saved === null ? legacyPreference() : undefined) ?? parseSavedPreference(saved);
-};
+/** The saved preference (LS_KEY_THEME only). */
+const readStoredPreference = (): AppearancePreference =>
+    parseSavedPreference(LocalStorage.tryGetRaw(LS_KEY_THEME));
 
 // The system scheme subscription, live only while the preference is `system`.
 let stopFollowingSystem: (() => void) | null = null;
@@ -138,8 +129,8 @@ const onStorage = (event: StorageEvent): void => {
 let isInitialized = false;
 
 /**
- * The SPA only, before its first render (`main`): migrates the old key, applies the class to
- * `<html>`, follows the system scheme while the preference is `system`, and other tabs. Idempotent.
+ * The SPA only, before its first render (`main`): applies the class to `<html>`, follows the
+ * system scheme while the preference is `system`, and other tabs. Idempotent.
  */
 export const initAppearance = (): void => {
     if (isInitialized) {
@@ -147,13 +138,6 @@ export const initAppearance = (): void => {
     }
     isInitialized = true;
 
-    if (LocalStorage.tryGetRaw(LS_KEY_THEME) === null) {
-        const legacy = legacyPreference();
-
-        if (legacy !== undefined) {
-            LocalStorage.setRaw(LS_KEY_THEME, legacy);
-        }
-    }
     const preference = readStoredPreference();
 
     useAppearanceStore.setState({ preference, resolved: followPreference(preference) });

@@ -1,6 +1,6 @@
 // Spec 05 §2 (05-3): the appearance store is the single theme mechanism: the html class always
-// equals `resolved`, `system` follows the OS scheme while it is the preference, and the cached
-// user's theme moves once into LS_KEY_THEME.
+// equals `resolved`, `system` follows the OS scheme while it is the preference, and only
+// LS_KEY_THEME is read (the cached user's theme is not).
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
@@ -212,28 +212,19 @@ describe('system preference', () => {
     });
 });
 
-describe('key migration (remove after 2 releases)', () => {
-    test('without the key, the cached user theme is written to the key once', () => {
+describe('the cached user theme', () => {
+    test('is ignored without the key: the preference is system and nothing is written', () => {
+        installMatchMedia(false);
         saveLocalUser({ id: 'user-1', role: 'USER', settings: { ...settings, theme: 'dark' } });
 
         startAppearance();
 
-        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('dark');
+        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBeNull();
         expect(useAppearanceStore.getState()).toMatchObject({
-            preference: 'dark',
-            resolved: 'dark',
+            preference: 'system',
+            resolved: 'light',
         });
         expectHtmlMatchesStore();
-    });
-
-    test('an existing key wins over the cached user theme', () => {
-        saveLocalUser({ id: 'user-1', role: 'USER', settings: { ...settings, theme: 'dark' } });
-        LocalStorage.setRaw(LS_KEY_THEME, 'light');
-
-        startAppearance();
-
-        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('light');
-        expect(useAppearanceStore.getState().preference).toBe('light');
     });
 });
 
@@ -250,17 +241,6 @@ describe('initAppearance', () => {
         initAppearance();
         initAppearance();
         expectHtmlMatchesStore();
-    });
-
-    test('the migration writes the key only in initAppearance', () => {
-        saveLocalUser({ id: 'user-1', role: 'USER', settings: { ...settings, theme: 'dark' } });
-
-        resetAppearanceStore();
-        expect(useAppearanceStore.getState().preference).toBe('dark');
-        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBeNull();
-
-        initAppearance();
-        expect(LocalStorage.getRaw(LS_KEY_THEME)).toBe('dark');
     });
 
     test('an unreadable storage reads as light, as THEME_INIT_SCRIPT does', () => {
