@@ -59,6 +59,12 @@
             "noGroups": "No groups found",
             "noKnownFriends": "No known friends yet",
             "includeInSolo": "Add to Solo",
+            "currencySource": {
+                "group": "Your last selected currency in this group",
+                "friend": "Your last selected currency with this friend",
+                "global": "Your last selected currency overall",
+                "default": "Your default currency"
+            },
             "categories": {
                 "food": "Food & Dining",
                 "transport": "Transport",
@@ -163,6 +169,12 @@
             "directZeroDebtWarning": "This expense creates no debt. Assign a positive amount to the person who did not pay.",
             "splitHint": "Split equally among the group.",
             "noMembers": "No group members available yet.",
+            "directNoFriend": {
+                "title": "No friends for a direct expense yet",
+                "description": "A direct expense is for you and one friend. It becomes available once a person you invite accepts the invite and you are both friends in ChipIn.",
+                "inviteAction": "Invite a friend",
+                "groupAction": "Split in a group instead"
+            },
             "tabs": {
                 "group": "Group",
                 "friends": "Friends"

@@ -27,6 +27,7 @@ import {
     toUnits,
 } from 'shared/money';
 
+import { resolveExpenseModalCurrency } from './expenseModalCurrency';
 import type { ExpenseModalState, ExpenseParticipant } from './expenseModalTypes';
 import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
@@ -635,9 +636,42 @@ export const selectIsSubmitDisabled = (state: ExpenseModalState) => {
     );
 };
 
+/**
+ * KB EXP-067: a new direct expense with no mutual known user to pick. The editor shows one empty
+ * state (an invite) in place of the payer and split controls and of the submit feedback.
+ */
+export const selectIsDirectExpenseWithoutFriend = (state: ExpenseModalState): boolean =>
+    state.mode === 'create' &&
+    state.targetMode === 'friends' &&
+    state.source.knownFriends.length === 0;
+
+/**
+ * KB EXP-067: the group the no-friend empty state offers instead, '' when none: the chosen group
+ * if it can take an expense (two or more members), else the first such group. Only where the
+ * editor can switch its target (the dashboard's Group/Friends control).
+ */
+export const selectDirectExpenseFallbackGroupId = (state: ExpenseModalState): string => {
+    if (state.source.context !== 'dashboard') {
+        return '';
+    }
+
+    const eligibleGroups = state.source.groups.filter(
+        group => group.members.length >= MIN_GROUP_EXPENSE_PARTICIPANTS,
+    );
+
+    return (
+        (eligibleGroups.find(group => group.id === state.groupId) ?? eligibleGroups[0])?.id ?? ''
+    );
+};
+
 export const selectExpenseSubmitFeedback = (
     state: ExpenseModalState,
 ): ExpenseSubmitFeedback | null => {
+    // KB EXP-067 / EXP-064: the no-friend empty state is the one explanation.
+    if (selectIsDirectExpenseWithoutFriend(state)) {
+        return null;
+    }
+
     const { split, payerId, hasNoDebt, hasValidCurrency, isDirectValid } = getSubmitState(state);
 
     if (sign(split.total) <= 0) {
@@ -793,4 +827,41 @@ export const selectSplitSummary = (state: ExpenseModalState) => {
         progressPercent: split.progressPercent,
         yourShareAmount: toDisplayNumber(split.yourShare),
     };
+};
+
+/** The source of an automatic expense currency that the editor names (KB EXP-074). */
+export type ExpenseCurrencySourceNote = 'group' | 'friend' | 'global' | 'default';
+
+/**
+ * The source of the currency of a new expense while it is automatic (EXP-073), from the one
+ * EXP-072 resolver: null after a manual pick, in edit mode, for the app's fallback, for a direct
+ * target without a friend, and when the stored currency is not the one the resolver gives (a
+ * restored draft), so a note never names a source the currency did not come from.
+ */
+export const selectCurrencySourceNote = (
+    state: ExpenseModalState,
+): ExpenseCurrencySourceNote | null => {
+    if (
+        state.mode !== 'create' ||
+        state.isCurrencyManuallyEdited ||
+        (state.targetMode === 'friends' && !state.selectedFriendId)
+    ) {
+        return null;
+    }
+
+    const { currency, source } = resolveExpenseModalCurrency(state.source, state);
+
+    if (currency !== state.currency) {
+        return null;
+    }
+
+    switch (source) {
+        case 'context':
+            return state.targetMode === 'friends' ? 'friend' : 'group';
+        case 'global':
+        case 'default':
+            return source;
+        case 'fallback':
+            return null;
+    }
 };

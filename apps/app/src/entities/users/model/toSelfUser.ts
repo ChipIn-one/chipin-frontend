@@ -28,6 +28,7 @@ export const toSelfUser = (response: SelfUserResponse): SelfUser => ({
         saveGroupExpensesToSolo: response.settings.saveGroupExpensesToSolo,
         sex: response.settings.sex,
     },
+    lastSelectedCurrency: response.lastSelectedCurrency ?? null,
     createdAt: response.createdAt,
     updatedAt: response.updatedAt,
 });

@@ -56,7 +56,7 @@
         },
         "multiCurrency": {
             "title": "Multi-currency",
-            "description": "Travelling abroad? Add expenses in any currency. Chipin handles conversion automatically so everyone pays the right amount."
+            "description": "Travelling abroad? Add expenses in any currency. Chipin keeps balances separately for each currency, so amounts are never mixed up."
         },
         "settleUp": {
             "title": "Settle Up",
@@ -70,7 +70,7 @@
             "titleHighlight": "without the chaos",
             "description": "Organise trips, households, or events. Share an invite link, and keep everyone’s balances visible in one place. No more chasing people for money.",
             "bullets": {
-                "shareableLink": "Invite via shareable link — no signup required for members",
+                "shareableLink": "Invite via shareable link — members sign in to join",
                 "realTimeBalances": "See real-time balances for every person",
                 "debtSimplification": "Smart debt simplification reduces the number of payments",
                 "multiCurrency": "Multi-currency support for international groups"
@@ -91,7 +91,7 @@
     "cta": {
         "badge": "Free forever · No credit card required",
         "title": "Ready to stop stressing about money?",
-        "subtitle": "Use Chipin to split bills and track budgets — completely free.",
+        "subtitle": "Use Chipin to split bills with friends — completely free.",
         "getStartedFree": "Get started for free",
         "bullets": {
             "noCard": "No credit card",

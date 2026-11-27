@@ -54,13 +54,9 @@
             "title": "Auto Calculations",
             "description": "See who owes whom instantly. Our smart algorithm minimises the number of transactions needed to settle up."
         },
-        "soloBudget": {
-            "title": "Solo Budget Mode",
-            "description": "Track personal expenses without a group. Set budgets, monitor spending by category, and stay on top of your finances."
-        },
         "multiCurrency": {
             "title": "Multi-currency",
-            "description": "Travelling abroad? Add expenses in any currency. Chipin handles conversion automatically so everyone pays the right amount."
+            "description": "Travelling abroad? Add expenses in any currency. Chipin keeps balances separately for each currency, so amounts are never mixed up."
         },
         "settleUp": {
             "title": "Settle Up",
@@ -74,7 +70,7 @@
             "titleHighlight": "without the chaos",
             "description": "Organise trips, households, or events. Share an invite link, and keep everyone’s balances visible in one place. No more chasing people for money.",
             "bullets": {
-                "shareableLink": "Invite via shareable link — no signup required for members",
+                "shareableLink": "Invite via shareable link — members sign in to join",
                 "realTimeBalances": "See real-time balances for every person",
                 "debtSimplification": "Smart debt simplification reduces the number of payments",
                 "multiCurrency": "Multi-currency support for international groups"
@@ -91,28 +87,12 @@
                     "tickets": "Train tickets"
                 }
             }
-        },
-        "expenses": {
-            "badge": "Solo mode",
-            "titlePart1": "Track your own budget",
-            "titleHighlight": "your way",
-            "description": "You don’t need a group to benefit from Chipin. Use solo mode to track personal expenses, set category budgets, and get a clear picture of where your money goes.",
-            "bullets": {
-                "logExpenses": "Log personal expenses in seconds",
-                "setBudgets": "Set budgets per category and monitor progress",
-                "monthlySummaries": "Monthly summaries and spending trends",
-                "worksAlongside": "Works alongside your group expenses seamlessly"
-            },
-            "cta": "Start tracking",
-            "preview": {
-                "label": "Solo page preview"
-            }
         }
     },
     "cta": {
         "badge": "Free forever · No credit card required",
         "title": "Ready to stop stressing about money?",
-        "subtitle": "Use Chipin to split bills and track budgets — completely free.",
+        "subtitle": "Use Chipin to split bills with friends — completely free.",
         "getStartedFree": "Get started for free",
         "openApp": "Open the app",
         "bullets": {

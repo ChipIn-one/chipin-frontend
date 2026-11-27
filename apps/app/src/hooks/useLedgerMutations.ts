@@ -47,7 +47,7 @@ import {
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { invalidateGroup } from 'store/groupsList';
 import { invalidateDashboard } from 'store/internal/dashboardQueryBridge';
-import { invalidateKnownUsers } from 'store/sessionUser';
+import { invalidateKnownUsers, invalidateSelfUser } from 'store/sessionUser';
 
 import { toastWriteRefusal, useIsUserWriteEnabled } from './useUserMutations';
 
@@ -107,9 +107,11 @@ export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): 
 // (`invalidateAfterLedgerOp`, §2.2). The user's own activity feeds and the open expense history
 // are queries of `entities/activity`; the dashboard, the group and the friends are refreshed by the
 // functions the legacy stores use, until they are queries of their own entities. `ledger.entry(id)`
-// is cached only with offline writes on: otherwise its invalidation matches nothing.
+// is cached only with offline writes on: otherwise its invalidation matches nothing. A new entry
+// also reloads the self user: its `lastSelectedCurrency` starts the next new expense (EXP-073; the
+// group or the known user carry their own and are reloaded above).
 const invalidateViews = (
-    { groupId, parentActivityId, entryId }: LedgerWriteContext,
+    { groupId, parentActivityId, entryId, isCreate }: LedgerWriteContext,
     client: QueryClient,
 ): Promise<void>[] => [
     invalidateDashboard(),
@@ -117,6 +119,7 @@ const invalidateViews = (
     invalidateSelfActivity(client),
     ...(parentActivityId ? [invalidateActivityChildren(client, parentActivityId)] : []),
     ...(entryId ? [client.invalidateQueries({ queryKey: ledgerKeys.entry(entryId) })] : []),
+    ...(isCreate ? [invalidateSelfUser(client)] : []),
 ];
 
 const storeEffects: LedgerWriteEffects = {

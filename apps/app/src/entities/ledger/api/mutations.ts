@@ -42,6 +42,11 @@ export interface LedgerWriteContext {
     parentActivityId?: string;
     /** The written entry, when its id is known: `ledger.entry(id)` is read again (§2.2). */
     entryId?: string;
+    /**
+     * A new entry: the user's own last selected currencies (overall, and in its group or with its
+     * known user) may have changed, so the next new expense reads them again (KB EXP-073).
+     */
+    isCreate?: boolean;
 }
 
 export interface CreateExpenseParams {
@@ -139,6 +144,7 @@ export const createExpenseMutationOptions = (effects: LedgerWriteEffects) =>
             refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.expense.groupId,
                 parentActivityId: variables.parentActivityId,
+                isCreate: true,
             }),
     });
 
@@ -154,6 +160,7 @@ export const createSettlementMutationOptions = (effects: LedgerWriteEffects) =>
         onSettled: (_data, error, variables, _context, { client }) =>
             refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.settlement.groupId,
+                isCreate: true,
             }),
     });
 

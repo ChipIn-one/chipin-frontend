@@ -2,6 +2,7 @@ import { Card, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
+import { selectIsDirectExpenseWithoutFriend } from 'store/expenseModalSelectors';
 import { type ExpenseTargetMode, useExpenseModalStore } from 'store/expenseModalStore';
 
 import { SegmentedControl } from 'basics/SegmentedControl';
@@ -13,18 +14,26 @@ import ExpenseScopeContext from './components/expense-scope-context/ExpenseScope
 
 const ExpenseTargetSection = () => {
     const { t } = useTranslation('group');
-    const { targetMode, mode, isTabsVisible, isGroupSelectVisible, skipCategory, setTargetMode } =
-        useExpenseModalStore(
-            useShallow(state => ({
-                targetMode: state.targetMode,
-                mode: state.mode,
-                isTabsVisible: state.source.context === 'dashboard',
-                isGroupSelectVisible:
-                    state.source.context === 'dashboard' && state.targetMode === 'group',
-                skipCategory: state.source.skipCategory,
-                setTargetMode: state.setTargetMode,
-            })),
-        );
+    const {
+        targetMode,
+        mode,
+        isTabsVisible,
+        isGroupSelectVisible,
+        isPayerSelectVisible,
+        setTargetMode,
+    } = useExpenseModalStore(
+        useShallow(state => ({
+            targetMode: state.targetMode,
+            mode: state.mode,
+            isTabsVisible: state.source.context === 'dashboard',
+            isGroupSelectVisible:
+                state.source.context === 'dashboard' && state.targetMode === 'group',
+            // KB EXP-067: with no friend to pick, the no-friend empty state replaces the payer.
+            isPayerSelectVisible:
+                !state.source.skipCategory && !selectIsDirectExpenseWithoutFriend(state),
+            setTargetMode: state.setTargetMode,
+        })),
+    );
 
     if (mode === 'edit') {
         return (
@@ -60,9 +69,9 @@ const ExpenseTargetSection = () => {
                 </Card>
             )}
 
-            {!skipCategory && <ExpensePayerSearchSelect />}
+            {isPayerSelectVisible && <ExpensePayerSearchSelect />}
         </>
     );
 };
 
-export default ExpenseTargetSection;
+export { ExpenseTargetSection };

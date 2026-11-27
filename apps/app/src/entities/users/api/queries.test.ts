@@ -41,6 +41,7 @@ const wireUser = {
     subscriptionUntil: null,
     inviteToken: 'invite-token',
     settings: wireSettings,
+    lastSelectedCurrency: 'VND',
     createdAt: 1,
     updatedAt: 2,
 };
@@ -73,7 +74,7 @@ test("the users keys start with 'users' and follow the defaults table", () => {
     expect(options.refetchOnReconnect).toBeUndefined();
 });
 
-test('loads the self user as the domain model and keeps it in the persisted cache', async () => {
+test('EXP-072 loads the self user as the domain model (its last selected currency apart from the settings) and keeps it in the persisted cache', async () => {
     serveSelf(wireUser);
     const client = new QueryClient();
 
@@ -88,12 +89,23 @@ test('loads the self user as the domain model and keeps it in the persisted cach
         subscriptionUntil: null,
         inviteToken: 'invite-token',
         settings: wireSettings,
+        lastSelectedCurrency: 'VND',
         createdAt: 1,
         updatedAt: 2,
     });
     expect(dehydrate(client, dehydrateOptions).queries.map(query => query.queryKey)).toEqual([
         usersKeys.self(),
     ]);
+});
+
+test('EXP-072 a self user without a last selected currency (an older backend) reads it as null', async () => {
+    const { lastSelectedCurrency: _absent, ...olderUser } = wireUser;
+
+    serveSelf(olderUser);
+
+    const user = await new QueryClient().fetchQuery(selfUserQueryOptions());
+
+    expect(user.lastSelectedCurrency).toBeNull();
 });
 
 test('an unknown theme reads as system', async () => {

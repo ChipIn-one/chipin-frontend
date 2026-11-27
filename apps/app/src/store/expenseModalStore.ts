@@ -17,6 +17,10 @@ import {
 } from 'shared/money';
 
 import {
+    type ExpenseModalCurrencyTarget,
+    resolveExpenseModalCurrency,
+} from './expenseModalCurrency';
+import {
     selectAllUsersSelected,
     selectAmountShare,
     selectIncludedUsers,
@@ -33,10 +37,18 @@ import type {
 } from './expenseModalTypes';
 
 export type {
+    ExpenseModalCurrencyTarget,
+    InputCurrencyCandidates,
+    InputCurrencyResolution,
+    InputCurrencySource,
+} from './expenseModalCurrency';
+export { resolveExpenseModalCurrency, resolveInputCurrency } from './expenseModalCurrency';
+export type {
     ExpenseModalContext,
     ExpenseModalDraft,
     ExpenseModalEditContext,
     ExpenseModalEditInitialization,
+    ExpenseModalFriend,
     ExpenseModalGroup,
     ExpenseModalMode,
     ExpenseModalOpenOptions,
@@ -50,7 +62,7 @@ export type {
 const EMPTY_SOURCE: ExpenseModalSource = {
     context: 'dashboard',
     currentUser: null,
-    defaultCurrency: '',
+    defaultCurrency: null,
     defaultCategory: DEFAULT_EXPENSE_CATEGORY,
     skipCategory: false,
     groups: [],
@@ -102,19 +114,58 @@ const getDefaultFriendId = (source: ExpenseModalSource) => {
     return source.knownFriends[0]?.id ?? '';
 };
 
-const getDefaultCurrency = (
+// EXP-073: the automatic currency of a new expense follows its target; a picked one stays.
+const getAutomaticCurrency = (
+    state: Pick<ExpenseModalState, 'currency' | 'isCurrencyManuallyEdited'>,
     source: ExpenseModalSource,
-    targetMode: ExpenseTargetMode,
-    groupId: string,
-) => {
-    if (targetMode === 'friends') {
-        return source.defaultCurrency;
-    }
+    target: ExpenseModalCurrencyTarget,
+): string =>
+    // A direct target without a friend (deselected) keeps the automatic currency it had.
+    state.isCurrencyManuallyEdited || (target.targetMode === 'friends' && !target.selectedFriendId)
+        ? state.currency
+        : resolveExpenseModalCurrency(source, target).currency;
 
-    return (
-        source.groups.find(group => group.id === groupId)?.lastUsedCurrency ??
-        source.defaultCurrency
+const samePreference = (a?: string | null, b?: string | null): boolean =>
+    (a ?? null) === (b ?? null);
+
+/**
+ * The stored source with the preferences of the live one (EXP-073): the default currency, the
+ * overall last selected currency, and that of each stored group and friend the live source has.
+ * The stored source itself when nothing changed.
+ */
+const refreshPreferences = (
+    stored: ExpenseModalSource,
+    live: ExpenseModalSource,
+): ExpenseModalSource => {
+    const liveGroups = new Map(live.groups.map(group => [group.id, group]));
+    const liveFriends = new Map(live.knownFriends.map(friend => [friend.id, friend]));
+    let isChanged =
+        stored.defaultCurrency !== live.defaultCurrency ||
+        !samePreference(stored.lastSelectedCurrency, live.lastSelectedCurrency);
+    const refresh = <Item extends { lastSelectedCurrency?: string | null }>(
+        item: Item,
+        liveItem: Item | undefined,
+    ): Item => {
+        if (!liveItem || samePreference(item.lastSelectedCurrency, liveItem.lastSelectedCurrency)) {
+            return item;
+        }
+        isChanged = true;
+        return { ...item, lastSelectedCurrency: liveItem.lastSelectedCurrency ?? null };
+    };
+    const groups = stored.groups.map(group => refresh(group, liveGroups.get(group.id)));
+    const knownFriends = stored.knownFriends.map(friend =>
+        refresh(friend, liveFriends.get(friend.id)),
     );
+
+    return isChanged
+        ? {
+              ...stored,
+              defaultCurrency: live.defaultCurrency,
+              lastSelectedCurrency: live.lastSelectedCurrency ?? null,
+              groups,
+              knownFriends,
+          }
+        : stored;
 };
 
 const createUserValues = <Value extends string | boolean>(
@@ -223,7 +274,8 @@ const getInitializedState = (source: ExpenseModalSource): ExpenseModalState => {
         targetMode,
         groupId,
         selectedFriendId,
-        currency: getDefaultCurrency(source, targetMode, groupId),
+        currency: resolveExpenseModalCurrency(source, { targetMode, groupId, selectedFriendId })
+            .currency,
         category: source.skipCategory ? '' : source.defaultCategory,
         date: getUnixTimestampInSec(),
     };
@@ -301,45 +353,123 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
                 return state;
             }
 
+            // EXP-073: refreshed preferences (a reload after a create, a late self user or known
+            // users) reach the stored source even when the groups are the same ones.
+            const refreshed: ExpenseModalState = {
+                ...state,
+                source: refreshPreferences(state.source, source),
+            };
             const storedGroupIds = new Set(state.source.groups.map(group => group.id));
             const hasNewGroups = source.groups.some(group => !storedGroupIds.has(group.id));
             // A friend target or a chosen group is the user's (or the opening's) choice: kept.
             const needsGroup = state.targetMode === 'group' && !state.groupId;
+            // The group select lists the live groups: the store keeps the same list, so a group
+            // picked later has its members.
+            const withGroups: ExpenseModalState =
+                hasNewGroups || needsGroup
+                    ? {
+                          ...refreshed,
+                          source: {
+                              ...refreshed.source,
+                              groups: hasNewGroups ? source.groups : refreshed.source.groups,
+                              // A modal opened on a group page keeps that page's group, even after
+                              // a navigation away changed the source.
+                              defaultGroupId:
+                                  state.source.context === 'group'
+                                      ? state.source.defaultGroupId
+                                      : source.defaultGroupId,
+                          },
+                      }
+                    : refreshed;
+            const groupId = needsGroup ? getDefaultGroupId(withGroups.source) : '';
 
-            if (!hasNewGroups && !needsGroup) {
+            // Nothing refreshed and no group or target to change: the draft stays as it is.
+            if (!hasNewGroups && !groupId && refreshed.source === state.source) {
                 return state;
             }
 
-            // The group select lists the live groups: the store keeps the same list, so a group
-            // picked later has its members.
-            const withGroups: ExpenseModalState = {
-                ...state,
-                source: {
-                    ...state.source,
-                    groups: hasNewGroups ? source.groups : state.source.groups,
-                    // A modal opened on a group page keeps that page's group, even after a
-                    // navigation away changed the source.
-                    defaultGroupId:
-                        state.source.context === 'group'
-                            ? state.source.defaultGroupId
-                            : source.defaultGroupId,
-                },
+            // Nothing new to pick from: only the refreshed preferences are kept.
+            const withTarget: ExpenseModalState = groupId
+                ? { ...withGroups, groupId }
+                : hasNewGroups
+                  ? withGroups
+                  : refreshed;
+            const next: ExpenseModalState = {
+                ...withTarget,
+                // An untouched currency follows the newest data for the current target; a picked
+                // one stays.
+                currency: getAutomaticCurrency(state, withTarget.source, withTarget),
             };
-            const groupId = needsGroup ? getDefaultGroupId(withGroups.source) : '';
 
-            if (!groupId) {
-                return hasNewGroups ? withGroups : state;
+            return groupId ? { ...next, ...getSplitDefaults(next) } : next;
+        });
+    },
+    applyLateKnownFriends: source => {
+        set(state => {
+            if (!state.isOpened || state.mode !== 'create') {
+                return state;
+            }
+
+            const storedFriendIds = state.source.knownFriends.map(friend => friend.id);
+            const isSameList =
+                storedFriendIds.length === source.knownFriends.length &&
+                source.knownFriends.every((friend, index) => friend.id === storedFriendIds[index]);
+
+            if (isSameList) {
+                return state;
+            }
+
+            const withFriends: ExpenseModalState = {
+                ...state,
+                source: { ...state.source, knownFriends: source.knownFriends },
+            };
+            // EXP-073: an untouched currency follows the friends' own preferences (the known users
+            // are taken only here; `applyLateGroups` refreshes the stored ones).
+            const withCurrency = (next: ExpenseModalState): ExpenseModalState => ({
+                ...next,
+                currency: getAutomaticCurrency(state, next.source, next),
+            });
+
+            if (state.targetMode !== 'friends') {
+                return withFriends;
+            }
+
+            const isSelectedFriendKnown =
+                state.selectedFriendId !== '' &&
+                source.knownFriends.some(friend => friend.id === state.selectedFriendId);
+
+            if (isSelectedFriendKnown) {
+                // The chosen friend stays included (also when the stored list was empty, as in a
+                // draft restored before the friends loaded); a newly known friend joins the list
+                // unselected (EXP-006: exactly the current user and one friend).
+                const storedIds = new Set(storedFriendIds);
+                const currentUserId = state.source.currentUser?.id;
+
+                return withCurrency({
+                    ...withFriends,
+                    includedParticipantIds: {
+                        ...state.includedParticipantIds,
+                        ...Object.fromEntries(
+                            source.knownFriends
+                                .filter(
+                                    friend =>
+                                        !storedIds.has(friend.id) &&
+                                        friend.id !== state.selectedFriendId,
+                                )
+                                .map(friend => [friend.id, false]),
+                        ),
+                        ...(currentUserId ? { [currentUserId]: true } : {}),
+                        [state.selectedFriendId]: true,
+                    },
+                });
             }
 
             const next: ExpenseModalState = {
-                ...withGroups,
-                groupId,
-                currency: state.isCurrencyManuallyEdited
-                    ? state.currency
-                    : getDefaultCurrency(withGroups.source, 'group', groupId),
+                ...withFriends,
+                selectedFriendId: getDefaultFriendId(withFriends.source),
             };
 
-            return { ...next, ...getSplitDefaults(next) };
+            return withCurrency({ ...next, ...getSplitDefaults(next) });
         });
     },
     initializeEdit: initialization => {
@@ -401,9 +531,11 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
                 ...state,
                 targetMode,
                 selectedFriendId,
-                currency: state.isCurrencyManuallyEdited
-                    ? state.currency
-                    : getDefaultCurrency(state.source, targetMode, state.groupId),
+                currency: getAutomaticCurrency(state, state.source, {
+                    targetMode,
+                    groupId: state.groupId,
+                    selectedFriendId,
+                }),
                 ...getSplitDefaults({
                     ...state,
                     targetMode,
@@ -417,9 +549,11 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             ...state,
             targetMode: 'group',
             groupId,
-            currency: state.isCurrencyManuallyEdited
-                ? state.currency
-                : getDefaultCurrency(state.source, 'group', groupId),
+            currency: getAutomaticCurrency(state, state.source, {
+                targetMode: 'group',
+                groupId,
+                selectedFriendId: state.selectedFriendId,
+            }),
             ...getSplitDefaults({
                 ...state,
                 targetMode: 'group',
@@ -470,6 +604,11 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
                 return {
                     ...state,
                     selectedFriendId,
+                    currency: getAutomaticCurrency(state, state.source, {
+                        targetMode: 'friends',
+                        groupId: state.groupId,
+                        selectedFriendId,
+                    }),
                     includedParticipantIds,
                     paidById: includedParticipantIds[state.paidById]
                         ? state.paidById

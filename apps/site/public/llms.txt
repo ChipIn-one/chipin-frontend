@@ -9,7 +9,7 @@ ChipIn helps people who share costs (trips, roommates, households, events and gr
 - Smart Groups: create groups for trips, households or events, invite members via shareable links, and keep everyone in sync with real-time balance updates.
 - Quick Expense Entry: add expenses in seconds, split equally or by custom amounts, and categorize them.
 - Auto Calculations: see who owes whom instantly; debt simplification minimises the number of payments needed to settle up.
-- Multi-currency: add expenses in any currency; ChipIn handles the conversion so everyone pays the right amount.
+- Multi-currency: add expenses in any currency; ChipIn keeps balances separately for each currency.
 - Settle Up: record settlements in one tap; ChipIn marks debts as cleared and keeps a history of all payments.
 
 ## Pricing

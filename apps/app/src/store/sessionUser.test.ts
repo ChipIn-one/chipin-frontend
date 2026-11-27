@@ -26,7 +26,12 @@ import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
 import { useAuthStore } from './authStore';
-import { getSessionSelfLoad, loadSelfUserForSession, resetSessionSelfLoad } from './sessionUser';
+import {
+    getSessionSelfLoad,
+    invalidateSelfUser,
+    loadSelfUserForSession,
+    resetSessionSelfLoad,
+} from './sessionUser';
 
 import 'fake-indexeddb/auto';
 
@@ -54,6 +59,7 @@ const userOf = (id: string, theme: 'light' | 'dark' = 'light'): SelfUser => ({
     subscriptionUntil: null,
     inviteToken: `invite-${id}`,
     settings: { ...settings, theme },
+    lastSelectedCurrency: null,
     createdAt: 1,
     updatedAt: 1,
 });
@@ -402,5 +408,61 @@ describe('the session load state ends with the session', () => {
         await loaded;
 
         expect(getSessionSelfLoad()).toEqual({ status: 'idle', user: null });
+    });
+});
+
+describe('EXP-073 the self user reload after a new ledger entry', () => {
+    // A self write (the `users.self` scope) held until `release`.
+    const holdSelfWrite = (client: QueryClient) => {
+        let release: () => void = () => undefined;
+        const observer = new MutationObserver(client, {
+            scope: { id: 'users.self' },
+            mutationFn: () =>
+                new Promise<void>(resolve => {
+                    release = resolve;
+                }),
+        });
+        const done = observer.mutate();
+
+        return { release: () => release(), done };
+    };
+    const isSelfStale = (client: QueryClient): boolean =>
+        client.getQueryState(usersKeys.self())?.isInvalidated === true;
+
+    test('EXP-073 waits for a pending self write, then marks the self user stale', async () => {
+        const client = mountAsUserClient('user-x', createTestQueryClient());
+        client.setQueryData(usersKeys.self(), userOf('user-x'));
+        const write = holdSelfWrite(client);
+        await settle();
+
+        await invalidateSelfUser(client);
+        expect(isSelfStale(client)).toBe(false);
+
+        write.release();
+        await write.done;
+        await settle();
+        expect(isSelfStale(client)).toBe(true);
+    });
+
+    test('EXP-073 a reload waiting for a self write is dropped once the session ended', async () => {
+        const client = mountAsUserClient('user-x', createTestQueryClient());
+        client.setQueryData(usersKeys.self(), userOf('user-x'));
+        const write = holdSelfWrite(client);
+        await settle();
+
+        await invalidateSelfUser(client);
+        invalidateAuthSession();
+        write.release();
+        await write.done;
+        await settle();
+        expect(isSelfStale(client)).toBe(false);
+    });
+
+    test('EXP-073 without a pending self write the self user is marked stale at once', async () => {
+        const client = mountAsUserClient('user-x', createTestQueryClient());
+        client.setQueryData(usersKeys.self(), userOf('user-x'));
+
+        await invalidateSelfUser(client);
+        expect(isSelfStale(client)).toBe(true);
     });
 });

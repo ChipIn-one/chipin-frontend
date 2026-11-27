@@ -50,7 +50,7 @@ const response = (overrides: Partial<GroupResponse> = {}): GroupResponse => ({
 });
 
 test('GRP maps a group to the domain with exact Money member balances, also beyond 2^39', () => {
-    const group = toGroup(response());
+    const group = toGroup(response({ lastSelectedCurrency: 'VND' }));
 
     expect(group).toMatchObject({
         id: 'g-1',
@@ -58,6 +58,8 @@ test('GRP maps a group to the domain with exact Money member balances, also beyo
         coverUrl: null,
         role: 'OWNER',
         lastUsedCurrency: 'USD',
+        // EXP-072: the viewer's own preference, kept apart from the shared ledger recency.
+        lastSelectedCurrency: 'VND',
         recentActivities: { items: [], nextCursor: null },
     });
     expect(group.creator).toEqual({

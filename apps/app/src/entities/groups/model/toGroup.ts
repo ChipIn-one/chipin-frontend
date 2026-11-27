@@ -73,6 +73,7 @@ export const toGroup = (response: GroupResponse): Group => ({
     role: response.role,
     status: response.status,
     lastUsedCurrency: response.lastUsedCurrency,
+    lastSelectedCurrency: response.lastSelectedCurrency ?? null,
     recentActivities: {
         items: toActivityItems(response.recentActivities.items),
         nextCursor: response.recentActivities.nextCursor ?? null,
