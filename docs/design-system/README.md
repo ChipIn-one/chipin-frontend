@@ -31,6 +31,7 @@ Each layer uses only the layer below it. Docs never name a value that is not in
 | [components.md](components.md)                 | Registry of every basic and ChipIn component                          |
 | [components/](components/)                     | Cards for ChipIn-specific components (props, states, a11y, example)   |
 | [process.md](process.md)                       | Adding or changing a component, UI PR checklist, rule changes         |
+| [screens.md](screens.md)                       | Every screen, modal and state, how to reach it, user flows (manifest) |
 
 ## If you do X, read Y
 
@@ -42,4 +43,6 @@ Each layer uses only the layer below it. Docs never name a value that is not in
 - A form, a modal or a destructive action: [patterns/forms.md](patterns/forms.md).
 - A color, spacing, radius, font, shadow or z-index: [tokens.md](tokens.md).
 - A new component, or you need one: [components.md](components.md) first; reuse before you create.
+- A new route, page, modal or reachable state: add its rows to [screens.md](screens.md) and
+  [screens.manifest.json](screens.manifest.json).
 - Styling a component (Radix props, CSS Modules, styled-components): [tokens.md](tokens.md#what-is-forbidden).
