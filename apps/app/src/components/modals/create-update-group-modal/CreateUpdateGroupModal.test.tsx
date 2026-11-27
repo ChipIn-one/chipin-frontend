@@ -163,6 +163,7 @@ test('#966 GRP-002 shows the required group name message below the field after i
     await interaction.tab();
 
     const message = screen.getByText('modal.fields.nameRequired');
+    expect(message.getAttribute('role')).toBe('alert');
     expect(nameInput.getAttribute('aria-invalid')).toBe('true');
     expect(nameInput.getAttribute('aria-describedby')).toBe(message.id);
     expect(message.compareDocumentPosition(nameInput)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
