@@ -174,6 +174,59 @@ test('waiting for the network without data counts as an error; with data it does
     expect(result.current.friends).toHaveLength(1);
 });
 
+test('USR-013 isOffline marks a first load paused offline, not a failed one or one with data', async () => {
+    serveKnownUsers(500);
+    mountAsUserClient();
+    useAuthStore.setState({ status: 'authenticated' });
+
+    const { result } = renderHook(() => useKnownUsers());
+
+    await waitFor(() => {
+        expect(result.current).toMatchObject({ isError: true, isOffline: false });
+    });
+
+    act(() => {
+        getDefaultTestQueryClient().removeQueries({ queryKey: usersKeys.known() });
+        onlineManager.setOnline(false);
+    });
+    const offline = renderHook(() => useKnownUsers());
+
+    await waitFor(() => {
+        expect(offline.result.current).toMatchObject({ isError: true, isOffline: true });
+    });
+
+    act(() => {
+        getDefaultTestQueryClient().setQueryData(usersKeys.known(), [createKnownUser('f')]);
+    });
+
+    await waitFor(() => {
+        expect(offline.result.current).toMatchObject({ isError: false, isOffline: false });
+    });
+});
+
+test('USR-013 a failed first load, then a refetch while offline, is offline', async () => {
+    serveKnownUsers(500);
+    mountAsUserClient();
+    useAuthStore.setState({ status: 'authenticated' });
+
+    const { result } = renderHook(() => useKnownUsers());
+
+    await waitFor(() => {
+        expect(result.current).toMatchObject({ isError: true, isOffline: false });
+    });
+
+    act(() => {
+        onlineManager.setOnline(false);
+    });
+    act(() => {
+        void result.current.refetch();
+    });
+
+    await waitFor(() => {
+        expect(result.current).toMatchObject({ isError: true, isOffline: true });
+    });
+});
+
 test.each(['online', 'offline-cached'] as const)(
     'a reconnect of an %s session loads stale friends once, the session start included',
     async sessionMode => {

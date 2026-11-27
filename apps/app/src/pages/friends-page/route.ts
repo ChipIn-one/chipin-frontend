@@ -1,1 +1,1 @@
-export { default as Component } from './FriendsPage';
+export { FriendsPage as Component } from './FriendsPage';

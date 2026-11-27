@@ -5,6 +5,10 @@
     "searchPlaceholder": "Поиск друзей",
     "emptyTitle": "Друзей пока нет",
     "emptyDescription": "Добавляйте друзей, чтобы отслеживать общие расходы и легко рассчитываться.",
+    "loadErrorTitle": "Не удалось загрузить друзей",
+    "loadErrorDescription": "Попробуйте загрузить друзей ещё раз.",
+    "inviteLoadErrorTitle": "Не удалось загрузить ссылку-приглашение",
+    "inviteLoadErrorDescription": "Попробуйте загрузить ссылку-приглашение ещё раз.",
     "filter": {
         "allCurrencies": "Все валюты",
         "byFriends": "По друзьям"

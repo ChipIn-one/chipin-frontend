@@ -28,6 +28,11 @@ export interface KnownUsersResult {
     friends: KnownUser[] | undefined;
     /** The first load failed, or it waits for the network, with nothing cached. */
     isError: boolean;
+    /**
+     * The first load waits for the network (paused offline) with nothing cached, also a retry of
+     * a failed one: a subset of `isError`, for screens that show the offline notice instead.
+     */
+    isOffline: boolean;
     /** Signed in, nothing cached yet and no error: the first load is pending. */
     isLoading: boolean;
     /** A refetch failed while data is shown (not a paused one: offline the banner says so). */
@@ -57,6 +62,7 @@ export const useKnownUsers = (): KnownUsersResult => {
     return {
         friends,
         isError,
+        isOffline: isWaiting && query.isPaused,
         // Signed in on the anonymous client (a first sign-in before the remount onto the user's
         // client) the friends are still to come: loading, never read from that client.
         isLoading: isSignedIn && friends === undefined && !isError,
