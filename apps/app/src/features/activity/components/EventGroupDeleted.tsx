@@ -31,7 +31,7 @@ const EventGroupDeleted = ({ event }: Props) => {
                         />
                     </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">
-                        <EventActorInlineAvatar event={event} />
+                        <EventActorInlineAvatar event={event} isActorInText />
 
                         <Text size="3" as="p">
                             <Text size="3" as="span" weight="medium">

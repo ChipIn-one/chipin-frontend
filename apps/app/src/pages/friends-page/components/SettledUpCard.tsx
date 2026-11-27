@@ -29,7 +29,11 @@ const SettledUpCard = ({ friends }: Props) => {
                         {index === 0 && <Separator size="4" />}
                         <Flex justify="between" align="center">
                             <Flex align="center" gap="3">
-                                <UserAvatar user={friend.user} size={{ initial: '1', sm: '2' }} />
+                                <UserAvatar
+                                    user={friend.user}
+                                    size={{ initial: '1', sm: '2' }}
+                                    decorative
+                                />
                                 <Text as="span" weight="medium" size={{ initial: '2', sm: '3' }}>
                                     {friend.user.displayName}
                                 </Text>
@@ -43,4 +47,4 @@ const SettledUpCard = ({ friends }: Props) => {
     );
 };
 
-export default SettledUpCard;
+export { SettledUpCard };

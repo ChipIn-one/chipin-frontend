@@ -7,7 +7,7 @@ import type { FriendCurrencyGroup } from 'entities/users';
 import DebtAmount from 'basics/DebtAmount';
 import { OutboxBalanceCaption } from 'components/outbox-balance-caption';
 
-import FriendListItem from './FriendListItem';
+import { FriendListItem } from './FriendListItem';
 
 const CurrencyGroupCard = ({ currency, net, friends }: FriendCurrencyGroup) => {
     const { t } = useTranslation('common');

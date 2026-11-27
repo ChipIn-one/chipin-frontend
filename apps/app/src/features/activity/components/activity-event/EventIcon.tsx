@@ -30,15 +30,8 @@ const ActorAvatar = ({ event, isActorInText }: ActorAvatarProps) => {
             className={styles.actorAvatar}
             size="1"
             user={event.actorSnapshot}
-            role={isActorInText ? undefined : 'img'}
-            aria-hidden={isActorInText || undefined}
-            aria-label={
-                isActorInText
-                    ? undefined
-                    : t('event.actorAvatarLabel', {
-                          actor: event.actorSnapshot.displayName,
-                      })
-            }
+            decorative={isActorInText}
+            alt={t('event.actorAvatarLabel', { actor: event.actorSnapshot.displayName })}
             data-testid="activity-actor-avatar"
         />
     );
@@ -46,9 +39,12 @@ const ActorAvatar = ({ event, isActorInText }: ActorAvatarProps) => {
 
 interface EventActorInlineAvatarProps {
     event: Pick<ActivityEvent, 'actorSnapshot'>;
+    // The event text names the actor: the avatar is decorative, so the name is not read twice.
+    isActorInText?: boolean;
 }
 
-const EventActorInlineAvatar = ({ event }: EventActorInlineAvatarProps) => {
+const EventActorInlineAvatar = ({ event, isActorInText = false }: EventActorInlineAvatarProps) => {
+    const { t } = useTranslation('activity');
     const isFullActivityFeed = useContext(FullActivityFeedContext);
 
     if (isFullActivityFeed) {
@@ -59,6 +55,8 @@ const EventActorInlineAvatar = ({ event }: EventActorInlineAvatarProps) => {
         <UserAvatar
             size="1"
             user={event.actorSnapshot}
+            decorative={isActorInText}
+            alt={t('event.actorAvatarLabel', { actor: event.actorSnapshot.displayName })}
             data-testid="activity-inline-actor-avatar"
         />
     );

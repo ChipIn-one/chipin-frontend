@@ -5,7 +5,7 @@ import { expect, test } from 'vitest';
 import type { UserSummary } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 
-import UserProfileSummary from './UserProfileSummary';
+import { UserProfileSummary } from './UserProfileSummary';
 
 import 'i18n/index';
 

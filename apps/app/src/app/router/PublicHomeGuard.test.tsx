@@ -169,6 +169,8 @@ test('an unresolved session offline shows the offline banner instead of a bare l
 
     renderGuard();
 
-    expect(screen.getByRole('status')).toBeTruthy();
+    // The offline banner and the loader under it are one status region each.
+    expect(screen.getAllByRole('status')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
     expect(screen.queryByLabelText('Current route')).toBeNull();
 });

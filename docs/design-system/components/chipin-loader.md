@@ -1,11 +1,12 @@
 # ChipInLoader
 
-`import { ChipInLoader, PageLoader } from 'basics';` (`ChipInLoader` named export;
-`PageLoader` default export of `basics/PageLoader.tsx`, re-exported by name).
+`import { ChipInLoader, PageLoader } from 'basics';` (both are named exports of their files,
+re-exported from `basics`).
 
 ## Purpose
 
-The animated brand loader (SVG circle); `PageLoader` centers it on a full-height page.
+The animated brand loader (SVG circle) with a translated status text; `PageLoader` centers it on
+a full-height page.
 
 ## When to use
 
@@ -21,13 +22,16 @@ Source: [`basics/ChipInLoader.tsx`](../../../apps/app/src/basics/ChipInLoader.ts
 
 `ChipInLoader`:
 
-| Prop          | Type     | Default | Description                     |
-| ------------- | -------- | ------- | ------------------------------- |
-| `size`        | `number` | `64`    | SVG width and height, in pixels |
-| `strokeWidth` | `number` | `2`     | Stroke width in SVG units       |
+| Prop          | Type      | Default | Description                                                         |
+| ------------- | --------- | ------- | ------------------------------------------------------------------- |
+| `size`        | `number`  | `64`    | SVG width and height, in pixels                                     |
+| `strokeWidth` | `number`  | `2`     | Stroke width in SVG units                                           |
+| `announce`    | `boolean` | `true`  | `false` hides the loader from assistive tech (a status line nearby) |
 
-`PageLoader`: no props. Renders `ChipInLoader` at default size in a `Container size="4"` and a
-`Flex` with `minHeight="100vh"`.
+`PageLoader`: optional `children`, shown under the loader (e.g. a `role="status"` line that says
+what is loading; then the loader passes `announce={false}`, so the children must carry the
+status announcement). Renders `ChipInLoader` at default
+size in a `Container size="4"` and a `Flex` with `minHeight="100vh"`.
 
 ## States
 
@@ -37,11 +41,18 @@ Source: [`basics/ChipInLoader.tsx`](../../../apps/app/src/basics/ChipInLoader.ts
 ## Accessibility and i18n
 
 - The stroke is `var(--cp-brand-loader)` (a D23 raw-color exception).
-- The SVG has no `role`, `aria-label` or title, so screen readers get nothing. Where the wait
-  matters, put a `VisuallyHidden` status text next to it.
-- The animation is SVG `<animate>` with fixed durations; it does not follow
-  `prefers-reduced-motion` (the `--cp-duration-*` tokens do not reach it).
-- i18n: none.
+- The loader is one `role="status"` region: the SVG is `aria-hidden`, and a `VisuallyHidden`
+  text (`common:loader.label`, "Loading…") is what a screen reader announces. Do not wrap it in
+  another `role="status"` or `aria-live` region, and do not add a second loading text next to
+  it. When a status line next to it already says what is loading, pass `announce={false}`: the
+  loader is then `aria-hidden` with no status text. `PageLoader` does this when it gets children
+  (e.g. "Signing you in…" on the login and OAuth callback pages); `GuardLoader` adds no text.
+- The animation is SVG SMIL (`<animate>`, `<animateTransform>`), which CSS media queries and the
+  `--cp-duration-*` tokens do not reach. The component reads
+  `matchMedia('(prefers-reduced-motion: reduce)')` (and follows its changes): under reduce it
+  renders a static arc without the animate elements. Without `matchMedia` (SSR, the prerender) it
+  renders the animated loader.
+- i18n: `common:loader.label` in every locale.
 
 ## Example
 

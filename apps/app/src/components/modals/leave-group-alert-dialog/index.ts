@@ -1,3 +1,3 @@
-import LeaveGroupAlertDialog from './LeaveGroupAlertDialog';
+import { LeaveGroupAlertDialog } from './LeaveGroupAlertDialog';
 
 export { LeaveGroupAlertDialog };

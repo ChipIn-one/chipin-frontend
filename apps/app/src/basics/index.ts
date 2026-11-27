@@ -22,7 +22,7 @@ import { RadioCards, type RadioCardsItem } from './radio-cards';
 import { RelativeTime } from './RelativeTime';
 import { TextArea, type TextAreaValueState } from './text-area';
 import { TextInput, type TextInputValueState } from './text-input';
-import UserAvatar from './UserAvatar';
+import { UserAvatar } from './UserAvatar';
 
 export {
     Amount,
