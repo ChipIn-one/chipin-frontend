@@ -14,6 +14,7 @@ import {
 import { messages } from '../i18n/ui';
 import { ANALYTICS_REDACT_SCRIPT } from '../lib/analyticsRedact';
 import { resolveAppOrigin } from '../lib/appOrigin';
+import { homeStructuredData, serializeJsonLd } from '../lib/structuredData';
 
 import '@chipin/tokens/radix-colors.css';
 import '@chipin/tokens/tokens.css';
@@ -76,6 +77,10 @@ const alternates =
 // One social preview for every page, absolute on `site` (#940); source: src/assets/og-image.svg.
 const ogImage = new URL('/og-image.png', site).href;
 const ogImageAlt = messages(locale).meta.ogImageAlt;
+// #941: the JSON-LD only on the locale home pages (`/`, `/ru/`). A data block the browser does
+// not execute: the CSP script-src does not apply to it, so it needs no hash (seoGuard).
+const structuredData =
+    landing && slug === '' ? serializeJsonLd(homeStructuredData({ locale, site })) : null;
 const xDefault =
     slug !== null && translations.includes(DEFAULT_LOCALE) ? absolute(DEFAULT_LOCALE, slug) : null;
 ---
@@ -111,6 +116,11 @@ const xDefault =
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
         <meta name="twitter:image:alt" content={ogImageAlt} />
+        {
+            structuredData && (
+                <script is:inline type="application/ld+json" set:html={structuredData} />
+            )
+        }
         <!-- Before the analytics scripts: redacts invite tokens from reported URLs (§3.6). -->
         <script is:inline set:html={ANALYTICS_REDACT_SCRIPT} />
         {

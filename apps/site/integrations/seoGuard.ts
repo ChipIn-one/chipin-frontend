@@ -65,6 +65,14 @@ const SOCIAL_META = [
 // Crawlers fetch the image without a page context: the URL is absolute, on https.
 const SOCIAL_IMAGES = ['property="og:image"', 'name="twitter:image"'] as const;
 
+// #941: JSON-LD is valid JSON and carries no rating or review markup (no real data behind it).
+const JSON_LD_TYPE = 'application/ld+json';
+const REVIEW_KEYS = new Set(['aggregateRating', 'review', 'reviews']);
+// Rating and Review and their subtypes (AggregateRating, CriticReview, EmployerAggregateRating…).
+const REVIEW_TYPE = /(?:Rating|Review)$/;
+// A schema.org term may be written as an IRI or a compact IRI: `https://schema.org/Review`.
+const SCHEMA_PREFIX = /^(?:https?:\/\/schema\.org\/|schema:)/;
+
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
 const VERCEL_SCRIPT = /^\/_vercel\//;
 
@@ -96,6 +104,8 @@ interface ParsedPage {
     tags: Tag[];
     /** Inline scripts the CSP checks against `script-src`. */
     inlineScripts: InlineScript[];
+    /** The bodies of `<script type="application/ld+json">` without `src`. */
+    jsonLd: string[];
     /** Same-origin and other script URLs the page loads, untrimmed. */
     scriptSources: (string | undefined)[];
     /** The text of the first HTML `<title>` outside `<template>`. */
@@ -148,6 +158,10 @@ const scriptType = (attributes: Attributes): string => {
     return type.replace(ASCII_WHITESPACE, '').toLowerCase();
 };
 
+/** The MIME type essence of a script type: before any `;` parameters, trimmed, lowercased. */
+const mimeEssence = (type: string): string =>
+    (type.split(';')[0] ?? '').replace(ASCII_WHITESPACE, '').toLowerCase();
+
 const isTemplate = (
     node: DefaultTreeAdapterTypes.Element,
 ): node is DefaultTreeAdapterTypes.Template => 'content' in node;
@@ -158,6 +172,7 @@ const parsePage = (source: string): ParsedPage => {
         elements: [],
         tags: [...scripting.tags, ...parseDocument(source, false).tags],
         inlineScripts: [],
+        jsonLd: [],
         scriptSources: [],
         title: undefined,
         description: undefined,
@@ -225,6 +240,8 @@ const parsePage = (source: string): ParsedPage => {
                         page.scriptSources.push(src);
                     } else if (CSP_INLINE_TYPES.has(type)) {
                         page.inlineScripts.push({ body: childText(), javascript });
+                    } else if (mimeEssence(type) === JSON_LD_TYPE) {
+                        page.jsonLd.push(childText());
                     }
                 }
                 if (node.tagName === 'link') {
@@ -375,6 +392,41 @@ const isAbsoluteHttpsUrl = (value: string): boolean => {
     }
 };
 
+const schemaTerm = (term: string): string => term.replace(SCHEMA_PREFIX, '');
+
+/** A rating or review anywhere in parsed JSON-LD: a key or an `@type` (or an item of one). */
+const hasReviewMarkup = (value: unknown): boolean => {
+    if (Array.isArray(value)) {
+        return value.some(hasReviewMarkup);
+    }
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+    return Object.entries(value).some(
+        ([key, child]) =>
+            REVIEW_KEYS.has(schemaTerm(key)) ||
+            (key === '@type' &&
+                [child]
+                    .flat()
+                    .some(
+                        type => typeof type === 'string' && REVIEW_TYPE.test(schemaTerm(type)),
+                    )) ||
+            hasReviewMarkup(child),
+    );
+};
+
+/** The problems of one JSON-LD block: not JSON, or rating/review markup. */
+const checkJsonLd = (body: string): string | undefined => {
+    let data: unknown;
+
+    try {
+        data = JSON.parse(body);
+    } catch {
+        return 'invalid JSON-LD';
+    }
+    return hasReviewMarkup(data) ? 'rating or review markup in JSON-LD' : undefined;
+};
+
 /** The rule violations of one built page. */
 const checkPage = ({ file, html, script }: PageInput): string[] => {
     const problems: string[] = [];
@@ -412,6 +464,13 @@ const checkPage = ({ file, html, script }: PageInput): string[] => {
 
     if (FORBIDDEN_TEXT.test(text) || JWT.test(text) || JWT.test(html)) {
         problems.push(`${file}: token-like or session content in the HTML`);
+    }
+    for (const body of documentsOf(page).flatMap(({ jsonLd }) => jsonLd)) {
+        const problem = checkJsonLd(body);
+
+        if (problem !== undefined) {
+            problems.push(`${file}: ${problem}`);
+        }
     }
     // The invite token must not reach analytics (A-15). The raw HTML is searched: any mention,
     // even in a comment or script text, fails.

@@ -1,0 +1,29 @@
+# ChipIn
+
+> ChipIn is a free web app for splitting shared expenses: create a group, add expenses, and see who owes whom.
+
+ChipIn helps people who share costs (trips, roommates, households, events and group activities) keep a clear balance without a spreadsheet. Members join a group through a shareable invite link, log expenses as they happen, and settle up when it is time to pay back. ChipIn runs in the browser and works on all devices. The site and the app are available in English and Russian.
+
+## Features
+
+- Smart Groups: create groups for trips, households or events, invite members via shareable links, and keep everyone in sync with real-time balance updates.
+- Quick Expense Entry: add expenses in seconds, split equally or by custom amounts, and categorize them.
+- Auto Calculations: see who owes whom instantly; debt simplification minimises the number of payments needed to settle up.
+- Multi-currency: add expenses in any currency; ChipIn handles the conversion so everyone pays the right amount.
+- Settle Up: record settlements in one tap; ChipIn marks debts as cleared and keeps a history of all payments.
+
+## Pricing
+
+- ChipIn is free forever.
+- No credit card required.
+- Unlimited groups.
+
+## Pages
+
+- [Home (English)](https://chipin.one/): what ChipIn does, its features and how it works
+- [Home (Russian)](https://chipin.one/ru/): the same page in Russian
+- [Privacy](https://chipin.one/privacy)
+- [Terms of Service](https://chipin.one/terms)
+- [Privacy (Russian)](https://chipin.one/ru/privacy)
+- [Terms of Service (Russian)](https://chipin.one/ru/terms)
+- [Open ChipIn](https://app.chipin.one/login): sign in or create an account in the web app
