@@ -10,12 +10,15 @@
     "inviteLoadErrorTitle": "Не удалось загрузить ссылку-приглашение",
     "inviteLoadErrorDescription": "Попробуйте загрузить ссылку-приглашение ещё раз.",
     "filter": {
+        "all": "Все",
         "allCurrencies": "Все валюты",
-        "byFriends": "По друзьям"
+        "byFriends": "По друзьям",
+        "byCurrency": "Фильтр по валюте: {{value}}"
     },
     "actions": {
         "remind": "Напомнить",
-        "removeFriend": "Удалить друга"
+        "removeFriend": "Удалить друга",
+        "moreFor": "Действия с другом {{name}}"
     },
     "removeModal": {
         "title": "Удалить друга",

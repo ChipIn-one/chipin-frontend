@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -11,7 +12,9 @@ import { OAuthCallbackPage } from './OAuthCallbackPage';
 import 'i18n/index';
 
 vi.mock('basics/PageLoader', () => ({
-    default: () => <div data-testid="page-loader" />,
+    PageLoader: ({ children }: { children?: ReactNode }) => (
+        <div data-testid="page-loader">{children}</div>
+    ),
 }));
 
 vi.mock('sonner', () => ({
@@ -47,6 +50,15 @@ beforeEach(() => {
         status: 'unauthenticated',
         unauthReason: 'missing',
     });
+});
+
+test('#950: while the exchange runs the loader says "Signing you in…" in a status', () => {
+    const exchangeGoogleOAuthCode = vi.fn(() => new Promise<void>(() => {}));
+    useAuthStore.setState({ exchangeGoogleOAuthCode });
+
+    renderCallback('/oauth/callback?code=pending-code');
+
+    expect(screen.getByRole('status').textContent).toBe('Signing you in…');
 });
 
 test('AUTH-074 a callback without a code (consent cancelled) goes back to /login with the sanitized returnTo', () => {

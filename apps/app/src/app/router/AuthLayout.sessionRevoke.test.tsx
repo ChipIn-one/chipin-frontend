@@ -47,7 +47,7 @@ vi.mock('shared/api/health', async importOriginal => ({
     ...(await importOriginal<typeof import('shared/api/health')>()),
     probeBackendHealth: vi.fn(() => Promise.resolve('ok')),
 }));
-vi.mock('basics/PageLoader', () => ({ default: () => null }));
+vi.mock('basics/PageLoader', () => ({ PageLoader: () => null }));
 vi.mock('components/nav-bars', () => ({
     DESKTOP_SHELL_MAX_WIDTH: '1200px',
     DesktopSidebar: () => null,

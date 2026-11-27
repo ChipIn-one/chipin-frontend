@@ -15,6 +15,8 @@ const FriendsFilterDropdown = ({ currencies, filterKey, onFilterChange }: Props)
     const { t } = useTranslation('friends');
 
     const label = filterKey === 'all' ? t('filter.allCurrencies') : filterKey;
+    // Below `sm` the button shares the row with the search field, so it shows the short value.
+    const shortLabel = filterKey === 'all' ? t('filter.all') : filterKey;
 
     const sections: DropdownMenuSection[] = [
         {
@@ -39,16 +41,20 @@ const FriendsFilterDropdown = ({ currencies, filterKey, onFilterChange }: Props)
             onValueChange={onFilterChange}
             align="end"
             trigger={
-                <Button variant="soft" color="gray" size="3">
+                <Button
+                    variant="soft"
+                    color="gray"
+                    size="3"
+                    aria-label={t('filter.byCurrency', { value: label })}
+                >
                     <FilterIcon size={16} />
+                    <Box display={{ initial: 'contents', sm: 'none' }}>{shortLabel}</Box>
                     <Box display={{ initial: 'none', sm: 'contents' }}>{label}</Box>
-                    <Box display={{ initial: 'none', sm: 'contents' }}>
-                        <ChevronDownIcon size={16} />
-                    </Box>
+                    <ChevronDownIcon size={16} />
                 </Button>
             }
         />
     );
 };
 
-export default FriendsFilterDropdown;
+export { FriendsFilterDropdown };

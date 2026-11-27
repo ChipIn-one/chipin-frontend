@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -8,12 +9,12 @@ import { loginPathFor, resolveOAuthReturnTo } from 'helpers/url';
 import { isUnsentOpsConfirmOn } from 'hooks/unsentOpsConfirm';
 import { useAuthStore } from 'store/authStore';
 
-import PageLoader from 'basics/PageLoader';
+import { PageLoader } from 'basics/PageLoader';
 
 import { AccountSwitchDialog } from './AccountSwitchDialog';
 
 export const OAuthCallbackPage = () => {
-    const { t } = useTranslation('errors');
+    const { t } = useTranslation(['errors', 'auth']);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const hasStartedExchange = useRef(false);
@@ -51,13 +52,21 @@ export const OAuthCallbackPage = () => {
             });
     }, [exchangeGoogleOAuthCode, navigate, searchParams, setUnauthenticated, t]);
 
+    const loader = (
+        <PageLoader>
+            <Text role="status" size="2" color="gray" align="center">
+                {t('auth:signingIn')}
+            </Text>
+        </PageLoader>
+    );
+
     // §1.5: the exchange may wait for the account-switch answer (offline writes on only).
     return isUnsentOpsConfirmOn() ? (
         <>
-            <PageLoader />
+            {loader}
             <AccountSwitchDialog />
         </>
     ) : (
-        <PageLoader />
+        loader
     );
 };

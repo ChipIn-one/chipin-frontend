@@ -24,7 +24,7 @@ const DashboardHeader: React.FC = () => {
                 <Box flexShrink="0">
                     <NavButton
                         to={ROUTES.SETTINGS}
-                        aria-label={t('common:nav.settings')}
+                        aria-label={t('header.openSettings')}
                         variant="ghost"
                         radius="full"
                     >

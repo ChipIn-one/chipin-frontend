@@ -17,7 +17,7 @@ import GroupRoleBadge from './GroupRoleBadge';
 import { Image } from './Image';
 import { Amount } from './numbers';
 import OwedStatusText from './OwedStatusText';
-import PageLoader from './PageLoader';
+import { PageLoader } from './PageLoader';
 import { RadioCards, type RadioCardsItem } from './radio-cards';
 import { RelativeTime } from './RelativeTime';
 import { TextArea, type TextAreaValueState } from './text-area';

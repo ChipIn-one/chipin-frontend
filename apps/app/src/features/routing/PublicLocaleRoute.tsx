@@ -10,7 +10,7 @@ import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import type { PublicLocale } from 'types/publicRoutes';
 
-import PageLoader from 'basics/PageLoader';
+import { PageLoader } from 'basics/PageLoader';
 
 const pickLanguage = (settings: SelfUserSettings | null) => settings?.language;
 

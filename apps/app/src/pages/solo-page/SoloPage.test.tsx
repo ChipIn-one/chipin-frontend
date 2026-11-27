@@ -71,7 +71,7 @@ test('uses the shared profile shortcut to open Settings from Solo', () => {
         </MemoryRouter>,
     );
 
-    return interaction.click(screen.getByRole('link', { name: 'Settings' })).then(() => {
+    return interaction.click(screen.getByRole('link', { name: 'Open settings' })).then(() => {
         expect(screen.getByLabelText('Current route').textContent).toBe('/settings');
     });
 });

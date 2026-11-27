@@ -2,7 +2,7 @@ import { Box, Flex, Skeleton, TextField } from '@radix-ui/themes';
 import { SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import FriendsFilterDropdown from './FriendsFilterDropdown';
+import { FriendsFilterDropdown } from './FriendsFilterDropdown';
 
 interface Props {
     search: string;
@@ -29,6 +29,7 @@ const FriendsSearchBar = ({
                 <Box flexGrow="1">
                     <TextField.Root
                         placeholder={t('searchPlaceholder')}
+                        aria-label={t('searchPlaceholder')}
                         value={search}
                         onChange={e => onSearchChange(e.target.value)}
                         size="3"
@@ -50,4 +51,4 @@ const FriendsSearchBar = ({
     );
 };
 
-export default FriendsSearchBar;
+export { FriendsSearchBar };

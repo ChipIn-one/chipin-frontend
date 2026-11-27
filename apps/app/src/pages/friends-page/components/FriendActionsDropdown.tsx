@@ -104,7 +104,14 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
             <Dropdown
                 items={actions}
                 trigger={
-                    <IconButton variant="ghost" size="2" color="gray">
+                    <IconButton
+                        variant="ghost"
+                        size="2"
+                        color="gray"
+                        aria-label={t('friends:actions.moreFor', {
+                            name: friend.user.displayName,
+                        })}
+                    >
                         <MoreVerticalIcon size={16} />
                     </IconButton>
                 }

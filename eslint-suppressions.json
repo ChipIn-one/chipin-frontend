@@ -39,11 +39,6 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/PageLoader.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/UserAvatar.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -543,22 +538,7 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/friends-page/components/FriendsFilterDropdown.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/friends-page/components/FriendsPageHeader.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/components/FriendsSearchBar.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/components/FriendsSidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
