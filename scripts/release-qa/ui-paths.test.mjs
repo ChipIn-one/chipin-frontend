@@ -19,14 +19,12 @@ test('application code, static assets, entry HTML, locales, Vercel, PWA and Vite
         'apps/app/src/app/pwa/ServiceWorkerManager.tsx',
         'packages/tokens/assets/favicon.svg',
         'apps/app/index.html',
-        'apps/app/app.html',
         'apps/app/vercel.json',
         'apps/app/vite.config.ts',
         'apps/app/pwa.config.ts',
         'apps/app/pwa-assets.config.ts',
         'apps/app/scripts/generate-pwa-icons.mjs',
         'apps/app/scripts/brand-plugin.ts',
-        'apps/app/scripts/prerender-before-workbox.mjs',
         'apps/app/scripts/private-spa-navigation.ts',
     ])
         expect(isUiAffecting(path), path).toBe(true);

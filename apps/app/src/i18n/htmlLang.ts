@@ -1,6 +1,5 @@
 // #708: `<html lang>` follows the active UI language, for screen readers, hyphenation and browser
-// translation. It is the only writer of it in the SPA; `index.html` ships `en`, and the SSG
-// prerender writes the route locale at build time.
+// translation. It is the only writer of it in the SPA; `index.html` ships `en`.
 import type { i18n as I18n } from 'i18next';
 
 // Only a resolved (supported) language: `cimode` or an unknown code leaves the attribute as is.

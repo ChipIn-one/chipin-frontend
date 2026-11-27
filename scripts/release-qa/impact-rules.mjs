@@ -31,10 +31,9 @@ export const SMOKE_SHORT = {
     id: 'SMOKE-SHORT',
     sourceUrl: 'https://github.com/ChipIn-one/chipin-frontend/issues/543',
     prefixes: [
-        'apps/app/src/features/routing/', // public locale route and guard loader
+        'apps/app/src/features/routing/', // guard loader and offline load error
         'apps/app/src/app/router/', // route tree, protected routes and their layouts
         'apps/app/src/app/auth/', // session gate: requireSession, sessionAccess
-        'apps/app/src/public-routes/', // public route tree and prerendered entry
         'apps/app/src/api/', // API client, interceptors and resources
         'apps/app/src/bootstrap/', // API and Sentry bootstrap
         'apps/app/src/app/pwa/', // service worker registration and update policy
@@ -68,8 +67,7 @@ export const SMOKE_SHORT = {
         'apps/app/vite.config.ts',
         'apps/app/pwa.config.ts',
         'apps/app/pwa-assets.config.ts',
-        'apps/app/scripts/prerender-before-workbox.mjs',
-        'apps/app/app.html',
+        'apps/app/index.html',
         // theme switching
         'apps/app/src/helpers/theme.ts',
         'apps/app/src/constants/styled-themes.ts',

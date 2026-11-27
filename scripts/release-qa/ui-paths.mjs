@@ -9,16 +9,13 @@ export const UI_PATH_PREFIXES = Object.freeze([
 ]);
 
 export const UI_PATH_FILES = new Set([
-    'apps/app/index.html', // public entry HTML
-    'apps/app/app.html', // private SPA shell and service-worker navigate fallback
+    'apps/app/index.html', // the SPA shell and service-worker navigate fallback
     'apps/app/vercel.json', // routing, headers and rewrites
     'apps/app/vite.config.ts', // build, VitePWA and workbox configuration
     'apps/app/pwa.config.ts', // VitePWA options: manifest, precache, navigate fallback
     'apps/app/pwa-assets.config.ts', // PWA icon generation
     'apps/app/scripts/generate-pwa-icons.mjs', // PWA icon generation into public/ (icons:generate)
     'apps/app/scripts/brand-plugin.ts', // favicon.svg in dev/dist and <meta name="theme-color"> (05-2b)
-    'apps/app/scripts/prerender-before-workbox.mjs', // prerender step that runs before workbox precache
-    'apps/app/scripts/prerender-public.mjs', // public page prerender
     'apps/app/scripts/private-spa-navigation.ts', // service-worker navigate fallback allowlist
 ]);
 

@@ -26,8 +26,6 @@
             "i18n": ["./src/i18n"],
             "i18n/*": ["./src/i18n/*"],
             "types/*": ["./src/types/*"],
-            "public-routes": ["./src/public-routes"],
-            "public-routes/*": ["./src/public-routes/*"],
             "test/*": ["./src/test/*"],
             "components/*": ["./src/components/*"],
             "basics": ["./src/basics"],

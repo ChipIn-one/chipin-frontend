@@ -174,7 +174,7 @@ export default defineConfig(({ command, mode }) => {
                       }),
                   ]
                 : []),
-            // The anti-FOUC theme script becomes the first element of `<head>` in app.html: its hook
+            // The anti-FOUC theme script becomes the first element of `<head>` in index.html: its hook
             // runs late (`order: 'post'`), and no hook after it prepends to `<head>`.
             themeInitPlugin(),
         ],
@@ -190,7 +190,7 @@ export default defineConfig(({ command, mode }) => {
             // Emit hidden source maps only for the Sentry upload, which deletes them from dist afterwards.
             sourcemap: sentryUploadConfig ? 'hidden' : false,
             rolldownOptions: {
-                input: ['index.html', 'app.html'],
+                input: 'index.html',
                 output: {
                     // Keep long-lived framework dependencies cacheable here.
                     // Application areas are split by route/modal dynamic imports instead of

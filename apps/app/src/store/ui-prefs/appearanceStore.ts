@@ -4,9 +4,8 @@
 // class on `<html>`, `<Theme appearance>` (AppTheme) and the Toaster. THEME_INIT_SCRIPT of
 // `@chipin/tokens/theme-init` reads the same key before the app starts (no light frame in dark).
 //
-// Importing this module has no side effects: the public pages (and their SSR/SSG in Node) import
-// it through shared components, and they control the `<html>` class themselves (`PublicApp`).
-// Only the SPA calls `initAppearance()`, before its first render.
+// Importing this module has no side effects: only the SPA calls `initAppearance()`, before its
+// first render.
 import { create } from 'zustand';
 
 import { LS_KEY_THEME } from 'constants/localstorage';

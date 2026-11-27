@@ -151,8 +151,8 @@ beforeAll(() => {
     startCacheRestore(undefined);
 });
 
-// The real i18n instance: the OAuth callback returns to `/`, whose `PublicLocaleRoute` switches the
-// language before `PublicHomeGuard` sends the signed-in user on.
+// The real i18n instance: the OAuth callback returns to `/`, whose `home` loader sends the
+// signed-in user on to the preferred mode.
 beforeEach(() => i18n.changeLanguage('en').then(() => undefined));
 
 beforeEach(() => {
@@ -213,7 +213,7 @@ test('a fresh OAuth sign-in across the remount: the code is exchanged once', asy
     await waitFor(() => {
         expect(probe.mounts).toBe(2);
     });
-    // The end of the chain (callback → `/` → `PublicHomeGuard` → `/dashboard`), so no navigation or
+    // The end of the chain (callback → `/` → the `home` loader → `/dashboard`), so no navigation or
     // effect outlives the test.
     expect(await screen.findByText('dashboard')).toBeTruthy();
     expect(window.location.pathname).toBe('/dashboard');

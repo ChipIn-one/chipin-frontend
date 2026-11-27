@@ -72,8 +72,7 @@
         "src/pages/group-page/components/index.ts",
         "src/pages/settings-page/components/expense-preferences-section/index.ts",
         "src/pages/settings-page/components/index.ts",
-        "src/pages/settings-page/components/solo-preferences-section/index.ts",
-        "src/public-routes/index.ts"
+        "src/pages/settings-page/components/solo-preferences-section/index.ts"
     ],
     "use-connect": []
 }

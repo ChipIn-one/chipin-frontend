@@ -6,7 +6,7 @@
 // hosts and never written; 04-5a dropped them with the kill-switch.
 import { expect, type Page, type Request, test } from '@playwright/test';
 
-const APP_SHELL_PATH = '/app.html';
+const APP_SHELL_PATH = '/index.html';
 const PRIVATE_PATH = '/dashboard';
 const UPDATE_TOAST_TEXT = 'New version available';
 const SIGN_IN_BUTTON_NAME = 'Sign in with Google';
@@ -114,7 +114,7 @@ test.describe('app service worker (spec 04 §2.11)', () => {
             { scope: `${origin}/`, active: `${origin}/sw.js`, waiting: null, installing: null },
         ]);
 
-        // The worker precached what the host serves at /app.html: the same bytes come back offline.
+        // The worker precached what the host serves at /index.html: the same bytes come back offline.
         const shellResponse = await page.request.get(APP_SHELL_PATH);
         expect(shellResponse.ok()).toBe(true);
         const shell = await shellResponse.text();

@@ -6,6 +6,8 @@ const allowsPrivateFallback = (pathname: string): boolean =>
     PRIVATE_SPA_NAVIGATION_ALLOWLIST.some(pattern => pattern.test(pathname));
 
 test.each([
+    // The `home` index (04-5a).
+    '/',
     '/dashboard',
     '/solo',
     '/group/123',
@@ -21,7 +23,8 @@ test.each([
 });
 
 test.each([
-    '/',
+    '//',
+    '/index',
     '/privacy',
     '/terms',
     '/ru/',
@@ -35,6 +38,6 @@ test.each([
     '/not-foundish',
     '/loginx',
     '/login/x',
-])('never substitutes the private app shell for public or unknown %s', pathname => {
+])('never substitutes the app shell for an unknown or asset-like %s', pathname => {
     expect(allowsPrivateFallback(pathname)).toBe(false);
 });

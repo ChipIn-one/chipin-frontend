@@ -8,11 +8,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vi
 
 import type { UserSettings } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, SS_KEY_ROUTE_CHUNK_RELOAD } from 'constants/localstorage';
-import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRoutes';
 import { checkForServiceWorkerUpdate, reloadApp, updateServiceWorker } from 'helpers/appUpdate';
 import { LocalStorage } from 'helpers/localStorage';
 import { i18n } from 'i18n';
-import { syncHtmlLang } from 'i18n/htmlLang';
 import { startCacheRestore } from 'shared/offline/restore';
 import { UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
@@ -215,7 +213,8 @@ describe('the route tree', () => {
 
         expect([...paths].sort()).toEqual(
             [
-                ...PUBLIC_ROUTE_ENTRIES.map(route => route.path),
+                // The `home` index (04-5a).
+                '/',
                 '/login',
                 '/oauth/callback',
                 '/dashboard',
@@ -233,7 +232,7 @@ describe('the route tree', () => {
         );
     });
 
-    test('has no basename; the only loaders are the guards of 04-2a2b (D31)', () => {
+    test('has no basename; the only loaders are the guards of 04-2a2b (D31) and the home redirect', () => {
         const withLoader = (routes: RouteObject[]): RouteObject[] =>
             routes.flatMap(route => [
                 ...(route.loader ? [route] : []),
@@ -243,15 +242,22 @@ describe('the route tree', () => {
         const guarded = withLoader(buildAppRoutes(createTestQueryClient()));
 
         expect(router.basename).toBe('/');
-        expect(guarded.map(route => route.loader)).toHaveLength(2);
-        // `requireSession` on `AuthLayout` (every protected route), the Solo guard under it.
+        expect(guarded.map(route => route.loader)).toHaveLength(3);
+        // `requireSession` on `AuthLayout` (every protected route), under it the `home` redirect
+        // (04-5a) and the Solo guard.
         expect(getOrThrow(guarded, 0).id).toBe('auth');
-        expect(leafPaths(getOrThrow(guarded, 0).children ?? []).sort()).toEqual(
-            APP_ROUTES.filter(route => route.access === 'protected' && !route.transitional)
+        // The index adds no path: under the pathless `AuthLayout` it is `''`, that is `/`.
+        expect(
+            leafPaths(getOrThrow(guarded, 0).children ?? [])
+                .map(path => path || '/')
+                .sort(),
+        ).toEqual(
+            APP_ROUTES.filter(route => route.access === 'protected')
                 .map(route => `/${route.path}`)
                 .sort(),
         );
-        expect(leafPaths(getOrThrow(guarded, 1).children ?? [])).toEqual(['/solo']);
+        expect(getOrThrow(guarded, 1)).toMatchObject({ id: 'home', index: true });
+        expect(leafPaths(getOrThrow(guarded, 2).children ?? [])).toEqual(['/solo']);
     });
 });
 
@@ -350,7 +356,7 @@ describe('navigation', () => {
         expect(router.state.location.pathname).toBe('/dashboard');
     });
 
-    test('a signed-in user at / goes to the preferred mode through PublicHomeGuard', async () => {
+    test('04-5a: a signed-in user at / goes to the preferred mode through the home loader', async () => {
         signIn();
         const router = renderAt('/');
 
@@ -358,12 +364,13 @@ describe('navigation', () => {
         expect(router.state.location.pathname).toBe('/dashboard');
     });
 
-    test('a localized public path renders through PublicLocaleRoute', async () => {
+    test('04-5a: a never-signed-in user at / goes to /login', async () => {
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
-        renderAt('/ru/privacy');
+        const router = renderAt('/');
 
-        expect(await screen.findByText('publicPrivacy')).toBeTruthy();
-        expect(i18n.resolvedLanguage).toBe('ru');
+        expect(await screen.findByText('login')).toBeTruthy();
+        expect(router.state.location.pathname).toBe('/login');
+        expect(router.state.location.search).toBe('?returnTo=%2F');
     });
 
     test('the internal layout stays mounted between internal pages', async () => {
@@ -376,61 +383,6 @@ describe('navigation', () => {
 
         expect(await screen.findByText('activity')).toBeTruthy();
         expect(screen.getByRole('complementary', { name: 'Desktop navigation' })).toBe(sidebar);
-    });
-});
-
-// The public pages and the UI language, through the route tree (moved from the former
-// `features/routing/AppRouter.test.tsx`). `<html lang>` is written only by the i18next listener
-// (`syncHtmlLang`, wired at boot), so after a public page it is the UI language (#708).
-describe('public pages and the UI language', () => {
-    let stopHtmlLang: () => void = () => undefined;
-
-    beforeEach(() => {
-        stopHtmlLang = syncHtmlLang(i18n);
-        document.documentElement.lang = 'en';
-        useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
-    });
-
-    afterEach(() => {
-        stopHtmlLang();
-    });
-
-    test('an English public URL corrects a stale Russian SPA language before rendering', async () => {
-        await i18n.changeLanguage('ru');
-        renderAt('/privacy');
-
-        expect(await screen.findByText('publicPrivacy')).toBeTruthy();
-        expect(i18n.resolvedLanguage).toBe('en');
-    });
-
-    test('a public URL updates html lang, and after leaving it is the UI language', async () => {
-        const router = renderAt('/ru/privacy');
-
-        await waitFor(() => {
-            expect(i18n.resolvedLanguage).toBe('ru');
-            expect(document.documentElement.lang).toBe('ru');
-        });
-
-        await act(() => router.navigate('/not-found'));
-
-        expect(await screen.findByText('notFound')).toBeTruthy();
-        expect(document.documentElement.lang).toBe(i18n.resolvedLanguage);
-    });
-
-    // Signed out with the Russian UI, the logo leads to an English public page and back.
-    test('a round trip through an English public page leaves html lang equal to the UI language', async () => {
-        await i18n.changeLanguage('ru');
-        expect(document.documentElement.lang).toBe('ru');
-        const router = renderAt('/privacy');
-
-        expect(await screen.findByText('publicPrivacy')).toBeTruthy();
-        expect(document.documentElement.lang).toBe('en');
-
-        await act(() => router.navigate('/not-found'));
-
-        expect(await screen.findByText('notFound')).toBeTruthy();
-        expect(i18n.resolvedLanguage).toBe('en');
-        expect(document.documentElement.lang).toBe('en');
     });
 });
 
@@ -587,8 +539,9 @@ describe('route parameter validation (04-2a3, spec 04 §2.4)', () => {
 /** A concrete URL of a manifest path: a UUID for the validated ids, else `x`. */
 const urlOf = (path: string) =>
     `/${path.replace(/:(\w+)/g, (_, name: string) => (name === 'groupId' || name === 'parentActivityId' ? UUID : 'x'))}`;
-// Solo is unreleased: its guard redirects every user (covered above).
-const regularRoutes = APP_ROUTES.filter(route => !route.transitional && route.guard !== 'solo');
+// Solo is unreleased: its guard redirects every user (covered above); `home` only redirects
+// (covered above).
+const regularRoutes = APP_ROUTES.filter(route => route.id !== 'home' && route.guard !== 'solo');
 
 describe('the guard and layout chain of every manifest route', () => {
     test.each(regularRoutes)('signed in, $id renders inside its layout ($layout)', async route => {
@@ -622,31 +575,21 @@ describe('the guard and layout chain of every manifest route', () => {
         expect(screen.queryByRole('complementary', SIDEBAR)).toBeNull();
     });
 
-    test.each(PUBLIC_ROUTE_ENTRIES)('signed out, the public $path renders $page', async entry => {
-        useAuthStore.setState({ status: 'unauthenticated', unauthReason: UNAUTH_REASON.MISSING });
-        const router = renderAt(entry.path);
-
-        const id = APP_ROUTES.find(
-            route => route.transitional && route.path === (entry.page === 'home' ? '' : entry.page),
-        )?.id;
-        expect(await screen.findByText(id ?? 'no route')).toBeTruthy();
-        expect(router.state.location.pathname).toBe(entry.path);
-    });
-
-    test.each(['/privacy', '/terms', '/ru/privacy', '/ru/terms'])(
-        'signed in, %s stays: PublicHomeGuard is only on the home pages',
+    // 04-5a: the public pages live on the site; in the app their old paths are unknown.
+    test.each(['/privacy', '/terms', '/ru/', '/ru/privacy'])(
+        'signed in, %s ends at /not-found',
         async path => {
             signIn();
             const router = renderAt(path);
 
-            await screen.findByRole('main');
-            expect(router.state.location.pathname).toBe(path);
+            expect(await screen.findByText('notFound')).toBeTruthy();
+            expect(router.state.location.pathname).toBe('/not-found');
         },
     );
 
-    test.each(['/', '/ru/'])('signed in, %s goes to the preferred mode', async path => {
+    test('signed in, / goes to the preferred mode', async () => {
         signIn();
-        const router = renderAt(path);
+        const router = renderAt('/');
 
         expect(await screen.findByText('dashboard')).toBeTruthy();
         expect(router.state.location.pathname).toBe('/dashboard');

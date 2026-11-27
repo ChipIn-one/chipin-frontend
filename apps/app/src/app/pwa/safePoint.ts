@@ -1,7 +1,6 @@
 // Spec 04 §2.11 item 3 (04-2d): the "safe point" of a forced update. The service worker manager is
 // mounted once per page (above the per-user router), so the app shell reports its route changes and
-// its safety check here (`ServiceWorkerSafePoints`). Nothing here imports the app's stores: the
-// prerendered landing mounts the manager too and stays without them.
+// its safety check here (`ServiceWorkerSafePoints`). Nothing here imports the app's stores.
 type SafePointCheck = () => boolean;
 
 let safePointCheck: SafePointCheck | null = null;
