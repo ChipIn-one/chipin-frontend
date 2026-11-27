@@ -13,25 +13,24 @@ vi.mock('basics', () => ({
     UserAvatar: ({
         className,
         user,
-        role,
-        'aria-hidden': ariaHidden,
-        'aria-label': ariaLabel,
+        decorative,
+        alt,
         'data-testid': testId,
     }: {
         className?: string;
         user?: { displayName: string; picture?: string | null };
-        role?: string;
-        'aria-hidden'?: boolean;
-        'aria-label'?: string;
+        decorative?: boolean;
+        alt?: string;
         'data-testid'?: string;
     }) => (
+        // The `UserAvatar` contract: a named image by default, hidden when decorative.
         <span
             className={className}
             data-picture={user?.picture ?? ''}
             data-testid={testId}
-            role={role}
-            aria-hidden={ariaHidden}
-            aria-label={ariaLabel}
+            role={decorative ? undefined : 'img'}
+            aria-hidden={decorative || undefined}
+            aria-label={decorative ? undefined : (alt ?? user?.displayName)}
         >
             {user?.displayName.charAt(0)}
         </span>
@@ -150,4 +149,19 @@ test('keeps the existing inline actor avatar in compact activity consumers', () 
     render(<EventActorInlineAvatar event={eventWithActor} />);
 
     expect(screen.getByTestId('activity-inline-actor-avatar').textContent).toBe('M');
+});
+
+test('names the inline actor avatar when the event text does not identify the actor', () => {
+    render(<EventActorInlineAvatar event={eventWithActor} />);
+
+    expect(screen.getByRole('img', { name: 'Performed by Misha' })).toBeTruthy();
+});
+
+test('hides the inline actor avatar when the event text names the actor', () => {
+    render(<EventActorInlineAvatar event={eventWithActor} isActorInText />);
+
+    const inlineAvatar = screen.getByTestId('activity-inline-actor-avatar');
+
+    expect(inlineAvatar.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.queryByRole('img')).toBeNull();
 });

@@ -1,3 +1,1 @@
-import SoloPage from './SoloPage';
-
-export { SoloPage };
+export { SoloPage } from './SoloPage';

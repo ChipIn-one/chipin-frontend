@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Box, Flex } from '@radix-ui/themes';
+import { Box, Button, Flex } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TextArea, TextInput } from 'basics';
 
-import { DescriptionToggleButton, DescriptionToggleIcon } from './styled';
+import styles from './GroupDetailsFields.module.css';
 
 const DESCRIPTION_FIELD_ID = 'group-description-field';
 
@@ -55,7 +55,8 @@ const GroupDetailsFields = ({
 
             <Flex direction="column" gap="2">
                 {isDescriptionCollapsible && (
-                    <DescriptionToggleButton
+                    <Button
+                        className={styles.descriptionToggle}
                         type="button"
                         size="2"
                         variant="outline"
@@ -65,11 +66,14 @@ const GroupDetailsFields = ({
                         aria-controls={DESCRIPTION_FIELD_ID}
                         onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
                     >
-                        <DescriptionToggleIcon $isExpanded={isDescriptionExpanded}>
+                        <span
+                            className={styles.descriptionToggleIcon}
+                            data-expanded={isDescriptionExpanded}
+                        >
                             <ChevronDownIcon size={16} aria-hidden />
-                        </DescriptionToggleIcon>
+                        </span>
                         {t('modal.fields.addDescription')}
-                    </DescriptionToggleButton>
+                    </Button>
                 )}
 
                 {isDescriptionVisible && (
@@ -92,4 +96,4 @@ const GroupDetailsFields = ({
     );
 };
 
-export default GroupDetailsFields;
+export { GroupDetailsFields };

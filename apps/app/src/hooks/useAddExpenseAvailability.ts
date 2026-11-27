@@ -32,6 +32,10 @@ const useAddExpenseAvailability = (pathname: string) => {
     const hasResolvedFriendTarget = (friends?.length ?? 0) > 0;
     const hasResolvedGroupTarget = isGroupListResolved && hasGroupExpenseTarget(groups);
 
+    // No target means no button. The Dashboard `welcome` view (no group at all and no friend)
+    // never has a target, so its solid "Create group" stays the one primary action (#927).
+    // The converse does not hold: a 1-member group is no target, yet the Dashboard is not
+    // `welcome`. If the shell button is ever shown without a target, make it soft on `welcome`.
     let isTargetAvailable: boolean;
 
     if (isFriendsPage) {

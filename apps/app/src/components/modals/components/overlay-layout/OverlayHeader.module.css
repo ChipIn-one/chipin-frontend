@@ -1,0 +1,20 @@
+.root {
+    flex-shrink: 0;
+    background: inherit;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cp-space-3);
+    padding-bottom: var(--cp-space-4);
+}
+
+@media (max-width: 767px) {
+    .root {
+        position: sticky;
+        top: 0;
+        padding: var(--cp-space-4) var(--cp-space-4) 0;
+    }
+}

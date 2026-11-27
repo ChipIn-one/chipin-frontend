@@ -15,9 +15,10 @@ import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { useKnownUsers } from 'hooks/useKnownUsers';
 import { useSelfUserState } from 'hooks/useSelfUser';
 
-import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
+import { EmptyState, NoActivityEmptyState, NoGroupsEmptyState } from 'basics/empty-states';
 import { DashboardOnboarding } from 'components/dashboard-onboarding';
 import { DashboardHeader, DashboardSummary } from 'components/dashboard-summary';
+import { useEmptyStateAddExpenseAction } from 'components/EmptyStateAddExpenseButton';
 import { GroupsCards } from 'components/GroupsCards';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
@@ -54,6 +55,7 @@ const DashboardPage = () => {
     const knownUsers = useKnownUsers();
     const friends = knownUsers.friends ?? [];
     const selfUser = useSelfUserState();
+    const addExpenseAction = useEmptyStateAddExpenseAction();
     const currentUser = selfUser.user;
 
     const activityItems = useMemo(
@@ -147,40 +149,36 @@ const DashboardPage = () => {
                     hasExpenseHistory={hasExpenseHistory}
                 />
 
-                <Flex
-                    gap="4"
-                    direction="column"
-                    display={
-                        dashboardView === 'welcome' ? { initial: 'none', sm: 'flex' } : undefined
-                    }
-                    data-testid="dashboard-groups-section"
-                >
-                    {!isDashboardFetched || groupsList.isLoading || hasGroups ? (
-                        <GroupsCards groups={groups} label={t('groups.title')} />
-                    ) : (
-                        <NoGroupsEmptyState
-                            action={
-                                dashboardView !== 'dashboard' ? undefined : (
-                                    <CreateUpdateGroupModal type="create">
-                                        <OnlineOnly
-                                            action={ONLINE_ONLY_ACTIONS.groupCreate}
-                                            isFullWidth
-                                        >
-                                            <Button
-                                                className={styles.createGroupButton}
-                                                size="2"
-                                                variant="soft"
+                {/* The welcome hero already offers Create group: no side groups section (DSH-011). */}
+                {dashboardView !== 'welcome' && (
+                    <Flex gap="4" direction="column" data-testid="dashboard-groups-section">
+                        {!isDashboardFetched || groupsList.isLoading || hasGroups ? (
+                            <GroupsCards groups={groups} label={t('groups.title')} />
+                        ) : (
+                            <NoGroupsEmptyState
+                                action={
+                                    dashboardView !== 'dashboard' ? undefined : (
+                                        <CreateUpdateGroupModal type="create">
+                                            <OnlineOnly
+                                                action={ONLINE_ONLY_ACTIONS.groupCreate}
+                                                isFullWidth
                                             >
-                                                <PlusIcon size={14} />
-                                                {t('common:buttons.createGroup')}
-                                            </Button>
-                                        </OnlineOnly>
-                                    </CreateUpdateGroupModal>
-                                )
-                            }
-                        />
-                    )}
-                </Flex>
+                                                <Button
+                                                    className={styles.createGroupButton}
+                                                    size="2"
+                                                    variant="soft"
+                                                >
+                                                    <PlusIcon size={14} />
+                                                    {t('common:buttons.createGroup')}
+                                                </Button>
+                                            </OnlineOnly>
+                                        </CreateUpdateGroupModal>
+                                    )
+                                }
+                            />
+                        )}
+                    </Flex>
+                )}
             </Flex>
         );
 
@@ -224,7 +222,12 @@ const DashboardPage = () => {
                         }
                     />
                 ) : (
-                    <ActivityEventsList previews={activityEvents} isShowSummary isNavigable>
+                    <ActivityEventsList
+                        previews={activityEvents}
+                        emptyState={<NoActivityEmptyState action={addExpenseAction} />}
+                        isShowSummary
+                        isNavigable
+                    >
                         <>
                             {isNextPageLoading && (
                                 <Flex justify="center" py="4">

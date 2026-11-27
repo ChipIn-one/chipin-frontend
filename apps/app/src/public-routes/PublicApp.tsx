@@ -11,8 +11,6 @@ import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import { isPreferredPublicThemeDark } from 'helpers/theme';
 import type { PublicRoute } from 'types/publicRoutes';
 
-import { ModalOverlayGlobalStyles } from 'components/modals/components';
-
 import { PublicContent } from './PublicContent';
 
 interface PublicAppProps {
@@ -62,7 +60,6 @@ const PublicApp = ({ route, i18nInstance, server = false }: PublicAppProps) => {
         <QueryProvider>
             <I18nextProvider i18n={i18nInstance}>
                 <ThemeProvider theme={isDark ? darkThemeStyled : lightThemeStyled}>
-                    <ModalOverlayGlobalStyles />
                     <Theme {...RADIX_THEME} appearance={isDark ? 'dark' : 'light'} hasBackground>
                         {routerContent}
                     </Theme>

@@ -189,6 +189,30 @@ test('EXP-060 hides the global action when resolved targets are empty', () => {
     expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
+test.each(['mobile', 'desktop', 'sidebar'] as const)(
+    'EXP-060 hides the %s Add Expense action on the welcome Dashboard',
+    type => {
+        // Welcome state: groups and known users both resolved as empty.
+        resolveGlobalTargets();
+        seedKnownUsers([]);
+
+        renderButton(ROUTES.DASHBOARD, type);
+
+        expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+    },
+);
+
+test('EXP-060 keeps the shown sidebar Add Expense solid on the non-welcome Dashboard', () => {
+    resolveGlobalTargets();
+    seedGroupsList([readyGroup]);
+
+    renderButton(ROUTES.DASHBOARD, 'sidebar');
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button.classList.contains('rt-variant-solid')).toBe(true);
+});
+
 test('EXP-060 shows Add Expense for a two-member group', () => {
     resolveGlobalTargets();
     seedGroupsList([readyGroup]);

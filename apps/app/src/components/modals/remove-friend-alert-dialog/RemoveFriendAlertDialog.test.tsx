@@ -9,7 +9,7 @@ import { useAuthStore } from 'store/authStore';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
-import RemoveFriendAlertDialog from './RemoveFriendAlertDialog';
+import { RemoveFriendAlertDialog } from './RemoveFriendAlertDialog';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({

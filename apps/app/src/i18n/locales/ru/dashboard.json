@@ -42,7 +42,8 @@
     },
     "header": {
         "greeting": "Привет, {{name}}",
-        "overview": "Вот твоя сводка"
+        "overview": "Вот твоя сводка",
+        "openSettings": "Открыть настройки"
     },
     "solo": {
         "summaryTitle": "Сводка Solo",

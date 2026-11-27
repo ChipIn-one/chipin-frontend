@@ -1,8 +1,8 @@
 # EmptyState
 
 `import { EmptyState, NoGroupsEmptyState } from 'basics';` (default exports of
-`basics/empty-states/*`, re-exported by name). `NoDebtsEmptyState` is imported from
-`basics/empty-states` only.
+`basics/empty-states/*`, re-exported by name). `NoDebtsEmptyState`, `LoadErrorEmptyState` and
+`OfflineEmptyState` (named exports) are imported from `basics/empty-states` only.
 
 ## Purpose
 
@@ -16,7 +16,8 @@ without data.
   new markup.
 - First-run onboarding of the whole dashboard: `DashboardOnboarding`; inviting the first friend:
   `InviteOnboarding` (both in `components/`).
-- Not for errors: show an inline error with retry.
+- Not for errors or offline as "no data": a failed first load uses `LoadErrorEmptyState`, offline
+  with nothing cached uses `OfflineEmptyState` (below).
 
 ## Props
 
@@ -33,25 +34,42 @@ Source: [`basics/empty-states/EmptyState.tsx`](../../../apps/app/src/basics/empt
 
 ### Variants
 
-Each variant takes only `action?: ReactNode`.
+Each variant takes `action?: ReactNode`.
 
-| Variant                     | Namespace: title / description keys                                    | Icon, `iconColor`         |
-| --------------------------- | ---------------------------------------------------------------------- | ------------------------- |
-| `NoActivityEmptyState`      | `activity`: `emptyTitle` / `emptyDescription`                          | `ClipboardListIcon`, gray |
-| `NoDebtsEmptyState`         | `common`: `noDebtsTitle` / `noDebtsDescription`                        | `BanknoteXIcon`, gray     |
-| `NoFriendsEmptyState`       | `friends`: `emptyTitle` / `emptyDescription`                           | `UserPlusIcon`, cyan      |
-| `NoGroupExpensesEmptyState` | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription` | `ReceiptIcon`, jade       |
-| `NoGroupMembersEmptyState`  | `group`: `page.balances.empty` / none                                  | `UserPlusIcon`, teal      |
-| `NoGroupsEmptyState`        | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`           | `UsersIcon`, indigo       |
+| Variant                        | Namespace: title / description keys                                                                         | Icon, `iconColor`                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `NoActivityEmptyState`         | `activity`: `emptyTitle` / `emptyDescription`                                                               | `ClipboardListIcon`, gray               |
+| `NoDebtsEmptyState`            | `common`: `noDebtsTitle` / `noDebtsDescription`                                                             | `BanknoteXIcon`, gray                   |
+| `NoFilteredActivityEmptyState` | `activity`: `filteredEmptyTitle` / `filteredEmptyDescription`                                               | `ClipboardListIcon`, gray               |
+| `NoFriendsEmptyState`          | `friends`: `emptyTitle` / `emptyDescription`                                                                | `UserPlusIcon`, cyan                    |
+| `NoGroupExpensesEmptyState`    | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription`                                      | `ReceiptIcon`, jade                     |
+| `NoGroupMembersEmptyState`     | `group`: `page.balances.empty` / none                                                                       | `UserPlusIcon`, teal                    |
+| `NoGroupsEmptyState`           | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`                                                | `UsersIcon`, indigo                     |
+| `NoMatchingGroupsEmptyState`   | `dashboard`: `groups.filterEmptyTitle` / `groups.filterEmptyDescription` or `groups.searchEmptyDescription` | `FilterXIcon`, gray                     |
+| `SoloInDevelopmentEmptyState`  | `dashboard`: `solo.summaryTitle` or `solo.activityTitle` / `solo.inDevelopment`                             | `WalletCardsIcon` or `ListIcon`, violet |
 
-`NoGroupsEmptyState` sets `actionPosition="below"` when it has an action.
+`NoGroupsEmptyState` sets `actionPosition="below"` when it has an action. Two variants take one
+more prop: `NoMatchingGroupsEmptyState` takes `hasSearchQuery` (the description names the search
+rather than the debt filter), and `SoloInDevelopmentEmptyState` takes `section`
+(`'summary' | 'activity'`).
+
+### Error and offline variants
+
+For a block whose first load failed, or waits for the network, with nothing cached
+([patterns/states.md](../patterns/states.md)). Never a `No*` variant in these cases.
+
+| Variant               | Props                                                         | Texts                                                                             | Icon, action                                                            |
+| --------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `LoadErrorEmptyState` | `title: string`, `description: string`, `onRetry: () => void` | The block's own translated title and description; Retry is `activity:retryAction` | `RefreshCwIcon`, gray; a fixed `soft` Retry button that calls `onRetry` |
+| `OfflineEmptyState`   | none                                                          | `errors:network.offline`                                                          | `WifiOffIcon`, gray; no action (the page's `OfflineBanner` has Retry)   |
 
 ## States
 
 - Empty: this component is the empty state.
 - Default (with action): one action only; without `action` it is text only.
-- Loading, error, disabled: n/a. Show a skeleton while loading ([skeletons.md](skeletons.md)), not
-  an empty state.
+- Loading, disabled: n/a. Show a skeleton while loading ([skeletons.md](skeletons.md)), not an
+  empty state.
+- Error and offline: `LoadErrorEmptyState` and `OfflineEmptyState` (above).
 
 ## Accessibility and i18n
 

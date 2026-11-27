@@ -45,7 +45,7 @@ const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
                     <Card size="2" variant="surface">
                         <Flex align="center" justify="between" gap="4">
                             <Flex align="center" gap="3" minWidth="0">
-                                <UserAvatar user={friend} size="4" />
+                                <UserAvatar user={friend} size="4" decorative />
 
                                 <Flex direction="column" minWidth="0">
                                     <Text size="1" color="gray">
@@ -76,4 +76,4 @@ const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
     );
 };
 
-export default RemoveFriendAlertDialog;
+export { RemoveFriendAlertDialog };

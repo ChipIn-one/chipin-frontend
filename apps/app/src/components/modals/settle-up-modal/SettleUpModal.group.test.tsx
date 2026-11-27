@@ -128,6 +128,53 @@ test('disables the group settle-up trigger when every member is settled', () => 
     );
 });
 
+test('BAL-023: a settled member shows a non-interactive Settled badge, not a button', () => {
+    const settledGroup: Group = {
+        ...group,
+        members: group.members.map(member => ({ ...member, balancesByCurrency: {} })),
+    };
+
+    render(<SettleUpModal source="group" group={settledGroup} memberId="user-2" />);
+
+    expect(screen.getByText('group:page.balances.settledBadge')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
+});
+
+test('BAL-023: an open member flow stays open when its debt settles, then shows the badge', () => {
+    const user = userEvent.setup();
+    const view = render(<SettleUpModal source="group" group={group} memberId="user-2" />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => {
+            const dialog = screen.getByRole('dialog');
+            const settledGroup: Group = {
+                ...group,
+                members: group.members.map(member => ({ ...member, balancesByCurrency: {} })),
+            };
+
+            view.rerender(<SettleUpModal source="group" group={settledGroup} memberId="user-2" />);
+
+            expect(screen.getByRole('dialog')).toBe(dialog);
+            expect(screen.queryByText('group:page.balances.settledBadge')).toBeNull();
+
+            return user.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+        })
+        .then(() => {
+            expect(screen.queryByRole('dialog')).toBeNull();
+            expect(screen.getByText('group:page.balances.settledBadge')).toBeTruthy();
+        });
+});
+
+test('renders the group header settle-up trigger as a soft button', () => {
+    render(<SettleUpModal source="group" group={group} />);
+
+    const trigger = screen.getByRole('button', { name: 'common:buttons.settleUp' });
+
+    expect(trigger.classList.contains('rt-variant-soft')).toBe(true);
+    expect(trigger.classList.contains('rt-variant-solid')).toBe(false);
+});
+
 test('lists one row per group debt with display names and two-digit precision', () => {
     const user = userEvent.setup();
 
@@ -232,7 +279,10 @@ test('keeps a single constrained scroll body for group debt selection', () => {
 
         expect(scrollViewports).toHaveLength(1);
         expect(scrollRoot).not.toBeNull();
-        expect(getComputedStyle(scrollRoot as HTMLElement).maxHeight).not.toBe('none');
+        // The `max-height` comes from the CSS Module through this custom property (jsdom does not
+        // apply it).
+        expect((scrollRoot as HTMLElement).style.getPropertyValue('--_max-height')).not.toBe('');
+        expect(scrollViewports[0]?.getAttribute('data-max-height')).toBe('true');
     });
 });
 

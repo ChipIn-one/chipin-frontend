@@ -63,8 +63,9 @@ test.describe('SMOKE-SHORT', () => {
         await openGroupWithGroupsList(page, groupId);
         const balancesBefore = await selectGroupTab(page, 'Balances');
         await expect(balancesBefore.getByText(friend.displayName)).toBeVisible();
-        // "Settled up" is both the friend's row status and the disabled settle button's name.
-        await expect(balancesBefore.getByRole('button', { name: 'Settled up' })).toBeDisabled();
+        // BAL-023: the settled friend shows a `Settled` status badge, not a settle button.
+        await expect(balancesBefore.getByText('Settled', { exact: true })).toBeVisible();
+        await expect(balancesBefore.getByRole('button', { name: 'Settle up' })).toHaveCount(0);
 
         // The button of the layout shown at this viewport (desktop sidebar, floating or mobile bar).
         const addExpense = page
@@ -90,6 +91,7 @@ test.describe('SMOKE-SHORT', () => {
         await page.getByRole('tab', { name: 'Balances' }).click();
         const balancesAfter = page.getByRole('tabpanel', { name: 'Balances' });
         await expect(balancesAfter.getByText('Settled up')).toHaveCount(0);
+        await expect(balancesAfter.getByText('Settled', { exact: true })).toHaveCount(0);
         await expect(balancesAfter.getByText(/^You are owed/)).toHaveText(
             exactBalance('You are owed', '5'),
         );

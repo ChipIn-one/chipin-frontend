@@ -4,7 +4,7 @@ import { type Balance, legacyAmountFromMoney } from 'entities/balance';
 import type { KnownUser } from 'entities/users';
 
 import DebtAmount from 'basics/DebtAmount';
-import UserAvatar from 'basics/UserAvatar';
+import { UserAvatar } from 'basics/UserAvatar';
 
 import { FriendActionsDropdown } from './FriendActionsDropdown';
 
@@ -17,7 +17,7 @@ const FriendListItem = ({ friend, balance }: Props) => {
     return (
         <Flex justify="between" align="center">
             <Flex align="center" gap="3">
-                <UserAvatar user={friend.user} size={{ initial: '1', sm: '2' }} />
+                <UserAvatar user={friend.user} size={{ initial: '1', sm: '2' }} decorative />
                 <Text as="span" weight="medium" size={{ initial: '2', sm: '3' }}>
                     {friend.user.displayName}
                 </Text>
@@ -35,4 +35,4 @@ const FriendListItem = ({ friend, balance }: Props) => {
     );
 };
 
-export default FriendListItem;
+export { FriendListItem };

@@ -1,13 +1,20 @@
 import { Callout, Flex, Text } from '@radix-ui/themes';
 import { CircleAlertIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { GROUP_COVER_RATIO } from 'constants/groupCover';
 import type { ImageFileValidationError } from 'helpers/imageFile';
 
+import { Image } from 'basics/Image';
 import { ProgressBar } from 'basics/progress-bar/ProgressBar';
 
-import { CoverPreview, CoverPreviewImage } from './styled';
+import styles from './GroupCoverField.module.css';
+
+// The ratio constant reaches the module as a local custom property (one source with the group page).
+const COVER_RATIO_STYLE: CSSProperties & Record<'--_cover-ratio', string> = {
+    '--_cover-ratio': String(GROUP_COVER_RATIO),
+};
 
 interface Props {
     coverUrl?: string | null;
@@ -33,15 +40,16 @@ const GroupCoverField = ({
     return (
         <Flex direction="column" gap="2">
             {coverUrl && (
-                <CoverPreview>
-                    <CoverPreviewImage
+                <div className={styles.preview} style={COVER_RATIO_STYLE}>
+                    <Image
+                        className={styles.image}
                         src={coverUrl}
                         alt={t('modal.cover.previewLabel')}
                         width="100%"
                         height="100%"
                     />
                     {pickerControl}
-                </CoverPreview>
+                </div>
             )}
 
             {coverValidationError && (
@@ -74,4 +82,4 @@ const GroupCoverField = ({
     );
 };
 
-export default GroupCoverField;
+export { GroupCoverField };

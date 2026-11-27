@@ -32,7 +32,7 @@ const ExpensePayerSearchSelect = () => {
         items.push({
             value: member.id,
             label,
-            icon: <UserAvatar size="1" user={member} />,
+            icon: <UserAvatar size="1" user={member} decorative />,
             searchFields: [label, member.displayName],
         });
 
@@ -63,7 +63,11 @@ const ExpensePayerSearchSelect = () => {
             emptyText={t('expenses.modal.noMembers')}
             triggerElement={
                 <ExpenseSearchSelectContent
-                    icon={resolvedMember ? <UserAvatar size="2" user={resolvedMember} /> : null}
+                    icon={
+                        resolvedMember ? (
+                            <UserAvatar size="2" user={resolvedMember} decorative />
+                        ) : null
+                    }
                     title={t('common:fields.paidBy')}
                     value={selectedLabel}
                 />
@@ -73,4 +77,4 @@ const ExpensePayerSearchSelect = () => {
     );
 };
 
-export default ExpensePayerSearchSelect;
+export { ExpensePayerSearchSelect };

@@ -4,7 +4,6 @@ import {
     ChevronDownIcon,
     ChevronUpIcon,
     CircleCheckIcon,
-    FilterXIcon,
     PlusIcon,
     SearchIcon,
     XIcon,
@@ -22,7 +21,7 @@ import { useGroupsList } from 'hooks/useGroupsList';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { selectGroupsCardsView } from 'store/groupsSelectors';
 
-import { EmptyState } from 'basics/empty-states';
+import { NoMatchingGroupsEmptyState } from 'basics/empty-states';
 import { OnlineOnly } from 'components/online-only';
 
 import { GroupCard } from './group-card';
@@ -44,8 +43,9 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const [searchQuery, setSearchQuery] = useState('');
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchButtonRef = useRef<HTMLButtonElement>(null);
+    const allFilterButtonRef = useRef<HTMLButtonElement>(null);
     const shouldRestoreSearchButtonFocusRef = useRef(false);
-    const { t } = useTranslation('dashboard');
+    const { t } = useTranslation(['dashboard', 'activity']);
     const [nowTimestamp] = useState(() => getUnixTimestampInSec());
     // The list has data, or its first load has settled (a failed one included).
     const { isLoading: isGroupListLoading } = useGroupsList();
@@ -72,9 +72,9 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const searchButtonLabel = hasSearchQuery
         ? t('groups.searchActiveLabel', { query: searchQuery.trim() })
         : t('groups.searchLabel');
-    const emptyStateDescription = hasSearchQuery
-        ? t('groups.searchEmptyDescription')
-        : t('groups.filterEmptyDescription');
+    // Show all only when there is something to reset: an unfiltered empty list (an empty or failed
+    // list on the group page) has no next step here.
+    const canShowAll = activeFilter !== GROUP_DEBT_FILTERS.ALL || hasSearchQuery;
 
     useEffect(() => {
         if (!isSearchOpen && shouldRestoreSearchButtonFocusRef.current) {
@@ -116,6 +116,14 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const onClearSearch = () => {
         searchInputRef.current?.focus();
         setSearchQuery('');
+    };
+
+    // `Show all` of an empty result (DSH-006): the All filter and no query. The action unmounts with
+    // the empty state, so focus moves to the All filter instead of falling back to the page.
+    const onShowAll = () => {
+        setActiveFilter(GROUP_DEBT_FILTERS.ALL);
+        setSearchQuery('');
+        allFilterButtonRef.current?.focus();
     };
 
     return (
@@ -205,6 +213,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                 {filterItems.map(item => (
                     <Button
                         key={item.value}
+                        ref={item.value === GROUP_DEBT_FILTERS.ALL ? allFilterButtonRef : undefined}
                         size="3"
                         variant="soft"
                         color={activeFilter === item.value ? 'grass' : 'gray'}
@@ -217,10 +226,15 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
             </Flex>
 
             {showEmptyState && (
-                <EmptyState
-                    icon={<FilterXIcon size={16} />}
-                    title={t('groups.filterEmptyTitle')}
-                    description={emptyStateDescription}
+                <NoMatchingGroupsEmptyState
+                    hasSearchQuery={hasSearchQuery}
+                    action={
+                        canShowAll ? (
+                            <Button type="button" variant="soft" onClick={onShowAll}>
+                                {t('activity:showAllAction')}
+                            </Button>
+                        ) : undefined
+                    }
                 />
             )}
 

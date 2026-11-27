@@ -45,6 +45,9 @@
         "shares": "Shares"
     },
     "retryAction": "Retry",
+    "filteredEmptyTitle": "Nothing matches this filter",
+    "filteredEmptyDescription": "Try another filter or show all activity.",
+    "showAllAction": "Show all",
     "loadErrorTitle": "Couldn't load your activity",
     "loadErrorDescription": "Try loading your activity again.",
     "dateDivider": {

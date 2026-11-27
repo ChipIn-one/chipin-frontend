@@ -1,29 +1,19 @@
 import { Box, Flex, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { useShallow } from 'zustand/react/shallow';
 
-import { getPreferredModeRoute } from 'helpers/routes';
 import { useCanAccessSolo, useSelfUserState } from 'hooks/useSelfUser';
+import { useSwitchAppMode } from 'hooks/useSwitchAppMode';
 import { APP_MODES, selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
 const ViewModeSwitch = () => {
     const { t } = useTranslation('common');
-    const navigate = useNavigate();
+    const switchAppMode = useSwitchAppMode();
     const isUserLoading = useSelfUserState().isLoading;
     const canAccessSolo = useCanAccessSolo();
-    const { isSoloMode, setAppMode } = useUiPrefsStore(
-        useShallow(state => ({
-            isSoloMode: selectIsSoloMode(state),
-            setAppMode: state.setAppMode,
-        })),
-    );
+    const isSoloMode = useUiPrefsStore(selectIsSoloMode);
 
     const onModeChange = (isGroup: boolean) => {
-        const nextAppMode = isGroup ? APP_MODES.GROUP : APP_MODES.SOLO;
-
-        setAppMode(nextAppMode);
-        void navigate(getPreferredModeRoute(nextAppMode === APP_MODES.SOLO));
+        switchAppMode(isGroup ? APP_MODES.GROUP : APP_MODES.SOLO);
     };
 
     if (!canAccessSolo) {
@@ -67,4 +57,4 @@ const ViewModeSwitch = () => {
     );
 };
 
-export default ViewModeSwitch;
+export { ViewModeSwitch };

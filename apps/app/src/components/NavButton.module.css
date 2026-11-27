@@ -1,5 +1,8 @@
 /*
- * UnstyledButton. App CSS loads before Radix; consumers (e.g. InteractiveCard, the nav bars)
+ * UnstyledButton. NavButton renders it as an `<a href>` (`asChild` around a router Link); Radix's
+ * `.rt-reset:where(a)` is also `all: unset`, so the UA underline and link/visited colours never
+ * apply, and `.rt-BaseButton` restores `inline-flex` over the anchor's `inline`.
+ * App CSS loads before Radix; consumers (e.g. InteractiveCard, the nav bars)
  * pass a module class whose rules must beat these by specificity.
  * - `.root` (0,1,0) is the base. Radix's later `.rt-reset` (`all: unset`) and `.rt-BaseButton`
  *   rules override it, so the doubled rule below does the real work.

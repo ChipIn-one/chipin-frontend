@@ -104,7 +104,7 @@ vi.mock('store/sessionUser', async importOriginal => ({
 }));
 
 vi.mock('basics/PageLoader', () => ({
-    default: () => <div data-testid="page-loader" />,
+    PageLoader: () => <div data-testid="page-loader" />,
 }));
 
 vi.mock('components/nav-bars', () => ({

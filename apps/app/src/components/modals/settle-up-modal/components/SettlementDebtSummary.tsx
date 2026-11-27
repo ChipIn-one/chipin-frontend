@@ -27,7 +27,7 @@ const SettlementDebtSummary = ({ friend, summaryUser, isFriendPayer, amount, col
         <Card size="1">
             <Flex align="center" justify="between" gap="3">
                 <Flex align="center" gap="3" minWidth="0">
-                    <UserAvatar size="3" user={summaryUser} />
+                    <UserAvatar size="3" user={summaryUser} decorative />
                     <Text className={styles.participantName} size="3" weight="bold" color={color}>
                         {t(
                             isFriendPayer

@@ -1,6 +1,7 @@
-import { MutationObserver } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { MutationObserver, onlineManager } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
@@ -26,8 +27,11 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('react-router-dom', () => ({
-    useParams: () => ({ groupId: 'group-1' }),
+const routeParams = vi.hoisted((): { groupId?: string } => ({ groupId: 'group-1' }));
+
+vi.mock('react-router-dom', async importOriginal => ({
+    ...(await importOriginal<typeof import('react-router-dom')>()),
+    useParams: () => routeParams,
 }));
 
 vi.mock('components/GroupsCards', () => ({
@@ -41,11 +45,20 @@ vi.mock('components/GroupsCards', () => ({
 }));
 
 // The sections render what the page hands them: the page's own readers (the detail and activity
-// queries) run for real.
-vi.mock('./components', () => ({
-    GroupCoverSection: ({ group }: { group: Group }) => (
-        <div data-testid="group-cover-hero" data-name={group.name} />
+// queries) run for real, and so does the not-found state.
+vi.mock('./components', async () => ({
+    GroupCoverSection: ({ group, isLoading }: { group: Group | null; isLoading: boolean }) => (
+        <div
+            data-testid="group-cover-hero"
+            data-name={group?.name}
+            data-loading={String(isLoading)}
+        />
     ),
+    GroupNotFound: (
+        await vi.importActual<typeof import('./components/GroupNotFound')>(
+            './components/GroupNotFound',
+        )
+    ).GroupNotFound,
     GroupSummary: (props: { group: Group }) => (
         <div
             data-testid="group-summary"
@@ -141,7 +154,26 @@ const SETTINGS = {
     sex: 'male',
 } as const;
 
+const renderPage = () =>
+    render(
+        <MemoryRouter>
+            <GroupPage />
+        </MemoryRouter>,
+    );
+
+const coverWrapper = (): HTMLElement | null => screen.getByTestId('group-cover-hero').parentElement;
+
+const expectNotFound = async (): Promise<void> => {
+    expect(
+        await screen.findByRole('heading', { level: 1, name: 'group:page.notFoundTitle' }),
+    ).not.toBeNull();
+    expect(
+        screen.getByRole('link', { name: 'common:buttons.goToDashboard' }).getAttribute('href'),
+    ).toBe('/dashboard');
+};
+
 beforeEach(() => {
+    routeParams.groupId = 'group-1';
     useAuthStore.setState({ status: 'authenticated' });
     useUiPrefsStore.getState().resetUiPrefs();
     seedGroupsList([group]);
@@ -150,7 +182,7 @@ beforeEach(() => {
 test('renders the seeded group detail and its activity without a request', () => {
     seedDetail(detail);
 
-    render(<GroupPage />);
+    renderPage();
 
     const summaries = screen.getAllByTestId('group-summary');
     const tabs = screen.getByTestId('group-tabs');
@@ -185,7 +217,7 @@ test('shows the listed group while its detail loads, then the detail and its fir
         }),
     );
 
-    render(<GroupPage />);
+    renderPage();
 
     expect(screen.getByTestId('group-tabs').dataset.name).toBe(group.name);
     expect(screen.getByTestId('group-tabs').dataset.loading).toBe('true');
@@ -199,18 +231,83 @@ test('shows the listed group while its detail loads, then the detail and its fir
     expect(requests).toEqual(['detail']);
 });
 
-test('renders nothing while an unlisted group loads for the first time', () => {
+test('GRP-017 shows the cover skeleton while an unlisted group loads for the first time', () => {
     getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
     server.use(http.get('*/groups/group-1', () => new Promise<never>(() => undefined)));
 
-    render(<GroupPage />);
+    renderPage();
 
+    expect(screen.getByTestId('group-cover-hero').dataset.loading).toBe('true');
+    expect(coverWrapper()?.getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByTestId('group-tabs')).toBeNull();
-    expect(screen.queryByText('group:page.notFound')).toBeNull();
+    expect(screen.queryByText('group:page.notFoundTitle')).toBeNull();
+});
+
+test('GRP-017 a failed first read of an unlisted group shows Retry, not the not-found state', async () => {
+    getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
+    let isBack = false;
+    server.use(
+        http.get('*/groups/group-1', () =>
+            isBack ? HttpResponse.json(detail) : HttpResponse.json({}, { status: 500 }),
+        ),
+    );
+
+    renderPage();
+
+    const retry = await screen.findByRole('button', { name: 'activity:retryAction' });
+    expect(screen.getByText('group:page.loadErrorTitle')).not.toBeNull();
+    expect(screen.getByText('group:page.loadErrorDescription')).not.toBeNull();
+    expect(screen.queryByText('group:page.notFoundTitle')).toBeNull();
+    expect(screen.queryByTestId('group-tabs')).toBeNull();
+    expect(coverWrapper()?.getAttribute('aria-busy')).toBe('false');
+
+    isBack = true;
+    fireEvent.click(retry);
+
+    await waitFor(() => {
+        expect(screen.getByTestId('group-tabs').dataset.name).toBe(detail.name);
+    });
+    expect(screen.queryByText('group:page.loadErrorTitle')).toBeNull();
+});
+
+test('GRP-017 an unlisted group read offline shows the offline notice, not the not-found state', async () => {
+    getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
+    let reads = 0;
+    server.use(
+        http.get('*/groups/group-1', () => {
+            reads += 1;
+            return HttpResponse.json(detail);
+        }),
+    );
+    onlineManager.setOnline(false);
+
+    try {
+        renderPage();
+
+        expect(await screen.findByText('errors:network.offline')).not.toBeNull();
+        expect(screen.queryByRole('button', { name: 'activity:retryAction' })).toBeNull();
+        expect(screen.queryByText('group:page.notFoundTitle')).toBeNull();
+        expect(screen.queryByTestId('group-tabs')).toBeNull();
+        expect(reads).toBe(0);
+    } finally {
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+    }
+});
+
+test('GRP-017 shows the not-found state with a way to the dashboard when the route has no group id', async () => {
+    routeParams.groupId = undefined;
+
+    renderPage();
+
+    await expectNotFound();
+    expect(screen.queryByTestId('group-cover-hero')).toBeNull();
+    expect(screen.queryByTestId('group-tabs')).toBeNull();
 });
 
 test.each([403, 404])(
-    'GRP-011 shows the not-found card on a %i detail and reloads the list, which no longer has the group',
+    'GRP-011 GRP-017 shows the not-found state on a %i detail and reloads the list, which no longer has the group',
     async status => {
         useUiPrefsStore.getState().setLastGroupId(group.id);
         let listReads = 0;
@@ -224,9 +321,9 @@ test.each([403, 404])(
             }),
         );
 
-        render(<GroupPage />);
+        renderPage();
 
-        expect(await screen.findByText('group:page.notFound')).not.toBeNull();
+        await expectNotFound();
         expect(screen.queryByTestId('group-tabs')).toBeNull();
         // #669: the denied read itself writes no other cache; the page reloads the list once.
         await waitFor(() => {
@@ -242,13 +339,13 @@ test('never renders the detail of another group for the route group', async () =
     seedDetail({ ...detail, id: 'group-2' });
     server.use(http.get('*/groups/group-1', () => HttpResponse.json({}, { status: 404 })));
 
-    render(<GroupPage />);
+    renderPage();
 
-    expect(await screen.findByText('group:page.notFound')).not.toBeNull();
+    await expectNotFound();
     expect(screen.queryByTestId('group-tabs')).toBeNull();
 });
 
-test('a denial on a refetch replaces the shown group with the not-found card', async () => {
+test('GRP-017 a denial on a refetch replaces the shown group with the not-found state', async () => {
     seedDetail(detail);
     server.use(
         http.get('*/groups/group-1', () =>
@@ -256,7 +353,7 @@ test('a denial on a refetch replaces the shown group with the not-found card', a
         ),
     );
 
-    render(<GroupPage />);
+    renderPage();
     expect(screen.getByTestId('group-tabs').dataset.name).toBe(detail.name);
     expect(useUiPrefsStore.getState().lastGroupId).toBe(group.id);
 
@@ -264,7 +361,7 @@ test('a denial on a refetch replaces the shown group with the not-found card', a
         getDefaultTestQueryClient().refetchQueries({ queryKey: groupsKeys.detail(group.id) }),
     );
 
-    expect(await screen.findByText('group:page.notFound')).not.toBeNull();
+    await expectNotFound();
     expect(screen.queryByTestId('group-tabs')).toBeNull();
     expect(useUiPrefsStore.getState().lastGroupId).toBeNull();
 });
@@ -277,14 +374,14 @@ test('a failed detail read keeps showing the listed group and its recent activit
     seedGroupsList([toTestGroup(listedWithActivity)]);
     server.use(http.get('*/groups/group-1', () => HttpResponse.json({}, { status: 500 })));
 
-    render(<GroupPage />);
+    renderPage();
 
     await waitFor(() => {
         expect(screen.getByTestId('group-tabs').dataset.loading).toBe('false');
     });
     expect(screen.getByTestId('group-tabs').dataset.name).toBe(group.name);
     expect(screen.getByTestId('group-tabs').dataset.activity).toBe('listed');
-    expect(screen.queryByText('group:page.notFound')).toBeNull();
+    expect(screen.queryByText('group:page.notFoundTitle')).toBeNull();
 });
 
 test('a group just joined opens without a detail or activity request', async () => {
@@ -311,7 +408,7 @@ test('a group just joined opens without a detail or activity request', async () 
             sessionVersion: getAuthSessionVersion(),
         });
 
-        render(<GroupPage />);
+        renderPage();
 
         expect(screen.getByTestId('group-tabs').dataset.name).toBe(detail.name);
         expect(screen.getByTestId('group-tabs').dataset.activity).toBe('p1');

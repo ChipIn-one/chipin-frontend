@@ -7,7 +7,7 @@ import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { IMAGE_FILE_ACCEPT } from 'helpers/imageFile';
 import { useRequiresOnline } from 'hooks/useRequiresOnline';
 
-import { CoverPickerLabel, HiddenFileInput } from './styled';
+import styles from './GroupCoverPickerControl.module.css';
 
 interface Props {
     isOverlay?: boolean;
@@ -23,9 +23,10 @@ const GroupCoverPickerControl = ({ isOverlay = false, isSaving, onCoverChange }:
 
     const picker = (
         <IconButton asChild variant="surface" color="gray" size="2">
-            <CoverPickerLabel
-                $isDisabled={isDisabled}
-                $isOverlay={isOverlay}
+            <label
+                className={styles.root}
+                data-unavailable={isDisabled}
+                data-overlay={isOverlay}
                 // KB NET-006: blocked, the tooltip says why (no native title next to it).
                 title={isBlocked ? undefined : t('modal.cover.action')}
                 // Blocked, the file input is disabled: the label takes focus for the tooltip.
@@ -33,14 +34,15 @@ const GroupCoverPickerControl = ({ isOverlay = false, isSaving, onCoverChange }:
                 data-online-only={isBlocked ? ONLINE_ONLY_ACTIONS.groupCover : undefined}
             >
                 <ImageUpIcon size={20} aria-hidden />
-                <HiddenFileInput
+                <input
+                    className={styles.hiddenInput}
                     type="file"
                     accept={IMAGE_FILE_ACCEPT}
                     aria-label={t('modal.cover.pickerLabel')}
                     disabled={isDisabled}
                     onChange={onCoverChange}
                 />
-            </CoverPickerLabel>
+            </label>
         </IconButton>
     );
 

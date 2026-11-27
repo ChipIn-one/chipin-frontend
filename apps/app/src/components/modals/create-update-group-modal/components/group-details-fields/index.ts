@@ -1,3 +1,3 @@
-import GroupDetailsFields from './GroupDetailsFields';
+import { GroupDetailsFields } from './GroupDetailsFields';
 
 export { GroupDetailsFields };

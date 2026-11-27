@@ -73,7 +73,9 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 | `CopyButton`            | `basics/buttons`                         | Button that copies a value and confirms with a tooltip                                              |
 | `DebtAmount`            | `basics/DebtAmount`                      | `Amount` colored by debt direction (owed/owe/settled) ([card](components/debt-amount.md))           |
 | `Dropdown`              | `basics/Dropdown`                        | Radix dropdown menu from items or sections (icon, hint, disabled) ([card](components/dropdown.md))  |
+| `LoadErrorEmptyState`   | `basics/empty-states`                    | `EmptyState` for a failed first load, with one `soft` Retry ([card](components/empty-state.md))     |
 | `NoDebtsEmptyState`     | `basics/empty-states`                    | `EmptyState` for "no debts" ([card](components/empty-state.md))                                     |
+| `OfflineEmptyState`     | `basics/empty-states`                    | `EmptyState` for offline with nothing cached, no action ([card](components/empty-state.md))         |
 | `ProgressBar`           | `basics/progress-bar/ProgressBar`        | Radix `Progress` with the value clamped to `0..max` ([card](components/progress-bar.md))            |
 | `SegmentedControl`      | `basics/SegmentedControl`                | Radix segmented control from items, responsive size fixed ([card](components/segmented-control.md)) |
 | `Select`                | `basics/Select`                          | Radix select from items, with a custom item render ([card](components/select.md))                   |
@@ -92,7 +94,7 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 | `GroupsSectionHeader`         | `components/GroupsSectionHeader` | "Groups" section title with the create-group button                             |
 | `Header`                      | `components/Header`              | Sticky top header                                                               |
 | `LanguageSelector`            | `components/LanguageSelector`    | Language picker (compact or full)                                               |
-| `NavButton`, `UnstyledButton` | `components/NavButton`           | Navigation button; unstyled button base with a focus ring                       |
+| `NavButton`, `UnstyledButton` | `components/NavButton`           | Router link (`<a href>`) styled as a button; unstyled base with a focus ring    |
 | `OfflineQRCode`               | `components/OfflineQRCode`       | QR code drawn locally on a canvas (works offline)                               |
 | `UsersRow`                    | `components/UsersRow`            | Overlapping member avatars, up to `max` ([card](components/users-row.md))       |
 | `ViewModeSwitch`              | `components/ViewModeSwitch`      | Switch between group and solo mode                                              |

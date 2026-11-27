@@ -2,6 +2,7 @@ import { Flex, Heading, Text } from '@radix-ui/themes';
 import { ShieldLockIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Image } from 'basics/Image';
 import { AuthButtons } from 'components/AuthButtons';
 
 import SharedExpensesIllustration from 'assets/auth-shared-expenses.webp';
@@ -9,7 +10,7 @@ import SharedExpensesIllustration from 'assets/auth-shared-expenses.webp';
 import { BaseModal } from '../base-modal';
 import { OverlayBody } from '../components';
 
-import { IllustrationPanel, SharedExpensesImage } from './styled';
+import styles from './AuthModal.module.css';
 
 interface Props {
     children?: React.ReactNode;
@@ -24,21 +25,23 @@ const AuthModal = ({ children, isOpened, onOpenChange }: Props) => {
         <OverlayBody fillHeight>
             <Flex direction="column" align="center" gap="5" height="100%">
                 <Flex direction="column" align="center" gap="2" width="100%">
-                    <IllustrationPanel
+                    <Flex
+                        className={styles.illustrationPanel}
                         align="center"
                         justify="center"
                         width="100%"
                         p={{ initial: '2', sm: '3' }}
                         aria-hidden="true"
                     >
-                        <SharedExpensesImage
+                        <Image
+                            className={styles.illustration}
                             src={SharedExpensesIllustration}
                             alt=""
                             width="100%"
                             height="auto"
                             decoding="async"
                         />
-                    </IllustrationPanel>
+                    </Flex>
 
                     <Heading as="h2" size={{ initial: '7', sm: '8' }} align="center">
                         {t('modal.headlinePrimary')} <br />

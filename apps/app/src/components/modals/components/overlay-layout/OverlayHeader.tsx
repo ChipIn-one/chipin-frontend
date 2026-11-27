@@ -1,7 +1,7 @@
 import { Flex, Separator } from '@radix-ui/themes';
 import type { ReactNode } from 'react';
 
-import { Header, HeaderContainer } from './styled';
+import styles from './OverlayHeader.module.css';
 
 interface Props {
     title: ReactNode;
@@ -11,8 +11,8 @@ interface Props {
 
 const OverlayHeader = ({ title, closeControl, backControl }: Props) => {
     return (
-        <HeaderContainer>
-            <Header>
+        <div className={styles.root}>
+            <div className={styles.header}>
                 {backControl ? (
                     <Flex align="center" gap="3" minWidth="0" flexGrow="1">
                         {backControl}
@@ -22,10 +22,10 @@ const OverlayHeader = ({ title, closeControl, backControl }: Props) => {
                     title
                 )}
                 {closeControl}
-            </Header>
+            </div>
             <Separator orientation="horizontal" size="4" />
-        </HeaderContainer>
+        </div>
     );
 };
 
-export default OverlayHeader;
+export { OverlayHeader };

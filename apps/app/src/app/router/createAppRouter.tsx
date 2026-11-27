@@ -7,7 +7,7 @@ import { PUBLIC_ROUTE_ENTRIES, type PublicPage } from 'constants/publicRoutes';
 import { ROUTES } from 'constants/routes';
 import { GuardLoader, PublicLocaleRoute } from 'features/routing';
 
-import PageLoader from 'basics/PageLoader';
+import { PageLoader } from 'basics/PageLoader';
 
 import { AuthLayout } from './AuthLayout';
 import { BareLayout, InternalLayout } from './InternalLayout';

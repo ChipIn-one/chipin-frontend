@@ -1,0 +1,40 @@
+/*
+ * The modal overlay shell (spec 05 §3: global styles only in `styles/*.css`; formerly the
+ * `ModalOverlayGlobalStyles` createGlobalStyle of `overlay-layout/styled.ts`).
+ * `.modal-overlay-content` is the class of the `Dialog.Content` of `BaseModal` and
+ * `BaseAlertDialog`. Imported after the Radix CSS in `index.css`, so it wins on equal specificity.
+ * Below `sm` the dialog becomes a full-screen sheet; the content scrolls inside `OverlayBody`.
+ */
+.modal-overlay-content {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - var(--cp-space-6) - max(var(--cp-space-6), 6vh));
+    overflow: hidden;
+}
+
+@media (max-width: 767px) {
+    :has(> .modal-overlay-content) {
+        padding: 0;
+        margin: 0;
+        flex-grow: unset;
+    }
+
+    .modal-overlay-content {
+        position: fixed !important;
+        display: flex;
+        flex-direction: column;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        transform: none !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden;
+    }
+}

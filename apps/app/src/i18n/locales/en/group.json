@@ -199,7 +199,10 @@
         "members": "members",
         "loadingGroup": "Loading group...",
         "shareWarning": "Share invite link with trusted people only.",
-        "notFound": "No group id or group not found",
+        "notFoundTitle": "Group not found",
+        "notFoundDescription": "It may have been deleted, or you are no longer a member.",
+        "loadErrorTitle": "Couldn't load this group",
+        "loadErrorDescription": "Try loading the group again.",
         "activityStubTitle": "Group activity",
         "activityStubDescription": "Full activity history is available on the Activity page.",
         "expenses": {
@@ -233,6 +236,7 @@
         },
         "balances": {
             "settled": "Settled up",
+            "settledBadge": "Settled",
             "empty": "No balances to show yet."
         },
         "settleUp": {

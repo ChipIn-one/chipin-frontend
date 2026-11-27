@@ -127,7 +127,7 @@ test('keeps the existing no-members state after the group has expense history', 
     expect(screen.getByText('page.balances.empty')).toBeTruthy();
 });
 
-test('shows member debts by direction and disables settlement when there are none', () => {
+test('BAL-023: shows member debts by direction and a Settled badge when there are none', () => {
     render(<GroupBalancesTab group={group} showInviteOnboarding={false} />);
 
     expect(screen.getByText('balances.youOwe')).toBeTruthy();
@@ -144,8 +144,7 @@ test('shows member debts by direction and disables settlement when there are non
         'disabled',
         false,
     );
-    expect(screen.getByRole('button', { name: 'group:page.balances.settled' })).toHaveProperty(
-        'disabled',
-        true,
-    );
+    expect(screen.getAllByRole('button', { name: 'common:buttons.settleUp' })).toHaveLength(1);
+    expect(screen.getByText('group:page.balances.settledBadge')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /settled/i })).toBeNull();
 });

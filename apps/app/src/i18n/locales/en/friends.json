@@ -5,13 +5,20 @@
     "searchPlaceholder": "Search friends",
     "emptyTitle": "No friends yet",
     "emptyDescription": "Add friends to track shared expenses and settle up easily.",
+    "loadErrorTitle": "Couldn't load your friends",
+    "loadErrorDescription": "Try loading your friends again.",
+    "inviteLoadErrorTitle": "Couldn't load your invite link",
+    "inviteLoadErrorDescription": "Try loading your invite link again.",
     "filter": {
+        "all": "All",
         "allCurrencies": "All currencies",
-        "byFriends": "By friends"
+        "byFriends": "By friends",
+        "byCurrency": "Filter by currency: {{value}}"
     },
     "actions": {
         "remind": "Remind",
-        "removeFriend": "Remove friend"
+        "removeFriend": "Remove friend",
+        "moreFor": "More actions for {{name}}"
     },
     "removeModal": {
         "title": "Remove friend",

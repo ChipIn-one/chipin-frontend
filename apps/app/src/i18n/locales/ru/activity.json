@@ -45,6 +45,9 @@
         "shares": "Доли"
     },
     "retryAction": "Повторить",
+    "filteredEmptyTitle": "По этому фильтру ничего нет",
+    "filteredEmptyDescription": "Выберите другой фильтр или покажите всю активность.",
+    "showAllAction": "Показать все",
     "loadErrorTitle": "Не удалось загрузить активность",
     "loadErrorDescription": "Попробуйте загрузить активность ещё раз.",
     "dateDivider": {
