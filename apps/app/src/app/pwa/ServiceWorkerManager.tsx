@@ -13,7 +13,6 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 
 import { TOASTS_IDS } from 'constants/toasts';
 import { reloadApp, setServiceWorkerControls, updateServiceWorker } from 'helpers/appUpdate';
-import { shouldRegisterServiceWorker } from 'helpers/serviceWorkerHost';
 import { isNetworkUsable } from 'shared/offline/network';
 import { usePwaStore } from 'store/pwaStore';
 
@@ -173,10 +172,6 @@ export const ServiceWorkerManager = () => {
     }, []);
 
     if (!isCommitted) {
-        return null;
-    }
-    // The legacy hosts serve the kill-switch at /sw.js: register nothing there (04-4a1).
-    if (!shouldRegisterServiceWorker(window.location.hostname)) {
         return null;
     }
 

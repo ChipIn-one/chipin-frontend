@@ -107,8 +107,6 @@ test('mounts the existing session-feedback and scroll-restoration hooks on publi
     expect(useCheckSignIn).toHaveBeenCalledOnce();
 });
 
-// 04-4a2 (spec 04 §4.5 step 1): on a legacy host the landing makes no auth call; a visitor with a
-// session hint goes straight to the app host of the same environment.
 const renderPageOn = (hostname: string, path: string) => {
     const replace = vi.fn();
     vi.stubGlobal('location', { ...window.location, hostname, replace });
@@ -126,125 +124,8 @@ const renderPageOn = (hostname: string, path: string) => {
 };
 const renderHomeOn = (hostname: string) => renderPageOn(hostname, '/');
 
-test.each([
-    ['chipin.one', 'https://app.chipin.one/dashboard'],
-    ['dev.chipin.one', 'https://app-dev.chipin.one/dashboard'],
-])('on %s a visitor with a session hint goes to %s without a session check', (host, target) => {
-    useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
-    const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
-    useAuthStore.setState({ refreshAuthTokens });
-    setAuthSessionHint(true);
-
-    const replace = renderHomeOn(host);
-
-    expect(replace).toHaveBeenCalledExactlyOnceWith(target);
-    expect(useCheckSignIn).not.toHaveBeenCalled();
-    expect(refreshAuthTokens).not.toHaveBeenCalled();
-});
-
-test.each(['chipin.one', 'dev.chipin.one'])(
-    'on %s the Russian home also hands a visitor with a hint to the app host',
-    host => {
-        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
-        setAuthSessionHint(true);
-
-        const replace = renderPageOn(host, '/ru/');
-
-        expect(replace).toHaveBeenCalledOnce();
-        expect(useCheckSignIn).not.toHaveBeenCalled();
-    },
-);
-
-// M2 of the 04-4a2 review: the legal pages stay readable for a former user with a hint (store
-// listing, OAuth consent and mail link there); the visitor is anonymous locally, with no request.
-test.each(
-    ['chipin.one', 'dev.chipin.one'].flatMap(host =>
-        ['/privacy', '/terms', '/ru/privacy', '/ru/terms'].map(path => [host, path]),
-    ),
-)('on %s%s a visitor with a hint stays, anonymous, with no check', (host, path) => {
-    useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
-    const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
-    useAuthStore.setState({ refreshAuthTokens });
-    setAuthSessionHint(true);
-
-    const replace = renderPageOn(host, path);
-
-    expect(replace).not.toHaveBeenCalled();
-    expect(useCheckSignIn).not.toHaveBeenCalled();
-    expect(refreshAuthTokens).not.toHaveBeenCalled();
-    expect(useAuthStore.getState()).toMatchObject({
-        status: 'unauthenticated',
-        unauthReason: 'missing',
-    });
-});
-
-test('on a legacy host a visitor without a hint stays on the landing, anonymous, with no check', () => {
-    useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
-    const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
-    useAuthStore.setState({ refreshAuthTokens });
-    setAuthSessionHint(false);
-
-    const replace = renderHomeOn('chipin.one');
-
-    expect(replace).not.toHaveBeenCalled();
-    expect(useCheckSignIn).not.toHaveBeenCalled();
-    expect(refreshAuthTokens).not.toHaveBeenCalled();
-    expect(useAuthStore.getState()).toMatchObject({
-        status: 'unauthenticated',
-        unauthReason: 'missing',
-    });
-});
-
-// #758: in an icon installed from a legacy host the app host would open in an in-app sheet whose
-// session never reaches the icon, so the home page stays (with the notice), anonymous, no check.
-const stubStandaloneDisplayMode = () => {
-    vi.stubGlobal(
-        'matchMedia',
-        vi.fn((query: string) => ({
-            matches: query === '(display-mode: standalone)',
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-        })),
-    );
-};
-
-test.each(['chipin.one', 'dev.chipin.one'])(
-    'on %s in standalone mode a visitor with a hint stays on the home page, with no check',
-    host => {
-        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
-        const refreshAuthTokens = vi.fn(() => Promise.resolve('token'));
-        useAuthStore.setState({ refreshAuthTokens });
-        setAuthSessionHint(true);
-        stubStandaloneDisplayMode();
-
-        const replace = renderHomeOn(host);
-
-        expect(replace).not.toHaveBeenCalled();
-        expect(useCheckSignIn).not.toHaveBeenCalled();
-        expect(refreshAuthTokens).not.toHaveBeenCalled();
-        expect(useAuthStore.getState()).toMatchObject({
-            status: 'unauthenticated',
-            unauthReason: 'missing',
-        });
-    },
-);
-
 test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
-    'on %s in standalone mode the session check runs as before',
-    host => {
-        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
-        setAuthSessionHint(true);
-        stubStandaloneDisplayMode();
-
-        const replace = renderHomeOn(host);
-
-        expect(useCheckSignIn).toHaveBeenCalled();
-        expect(replace).not.toHaveBeenCalled();
-    },
-);
-
-test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app'])(
-    'on %s the session check runs as before',
+    'on %s the session check runs',
     host => {
         useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
         setAuthSessionHint(true);

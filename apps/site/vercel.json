@@ -11,80 +11,8 @@
     },
     "redirects": [
         {
-            "source": "/group/join/:token",
-            "destination": "/join/group/:token",
-            "statusCode": 302
-        },
-        {
-            "source": "/friends/join/:token",
-            "destination": "/join/friend/:token",
-            "statusCode": 302
-        },
-        {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
-            "has": [
-                {
-                    "type": "host",
-                    "value": {
-                        "eq": "chipin.one"
-                    }
-                }
-            ],
-            "destination": "https://app.chipin.one/:path",
-            "statusCode": 302
-        },
-        {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
-            "has": [
-                {
-                    "type": "host",
-                    "value": {
-                        "eq": "www.chipin.one"
-                    }
-                }
-            ],
-            "destination": "https://app.chipin.one/:path",
-            "statusCode": 302
-        },
-        {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
-            "has": [
-                {
-                    "type": "host",
-                    "value": {
-                        "eq": "dev.chipin.one"
-                    }
-                }
-            ],
-            "destination": "https://app-dev.chipin.one/:path",
-            "statusCode": 302
-        },
-        {
-            "source": "/:path((?:dashboard|solo|activity|settings|group|friends|oauth|login)(?:/.*)?)",
-            "has": [
-                {
-                    "type": "host",
-                    "value": {
-                        "eq": "site-dev.chipin.one"
-                    }
-                }
-            ],
-            "destination": "https://app-dev.chipin.one/:path",
-            "statusCode": 302
-        },
-        {
             "source": "/sitemap.xml",
             "destination": "/sitemap-index.xml",
-            "statusCode": 302
-        },
-        {
-            "source": "/index.html",
-            "destination": "/",
-            "statusCode": 302
-        },
-        {
-            "source": "/app.html",
-            "destination": "/",
             "statusCode": 302
         },
         {
@@ -276,15 +204,6 @@
                 {
                     "key": "X-Robots-Tag",
                     "value": "noindex, nofollow"
-                }
-            ]
-        },
-        {
-            "source": "/sw.js",
-            "headers": [
-                {
-                    "key": "Cache-Control",
-                    "value": "no-cache"
                 }
             ]
         },

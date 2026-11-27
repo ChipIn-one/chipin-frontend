@@ -7,10 +7,8 @@ import { persistedUserId } from 'app/providers/persistedUserId';
 import { ServiceWorkerManager } from 'app/pwa/ServiceWorkerManager';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
-import { getLegacyHostAppUrl, removeLegacyHostWebAppHeadTags } from 'helpers/legacyHost';
 import { getLocalUser } from 'helpers/localStorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
-import { checkIsPwaInstalled } from 'helpers/pwa';
 import { applyLanguage } from 'helpers/setAppLanguage';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
 import { i18n, i18nReady } from 'i18n';
@@ -22,9 +20,6 @@ import { GlobalErrorBoundary } from 'components/global-error-boundary';
 
 import 'styles/index.css';
 
-// #758: first thing on a legacy host, drop the manifest link and the web-app metas of the shared
-// HTML, so the landing there is never installed as the app (no-op on every other host).
-removeLegacyHostWebAppHeadTags(document, window.location.hostname);
 initializeSentry();
 initializeApi();
 // #708: `<html lang>` follows the UI language from the first frame on.
@@ -54,22 +49,8 @@ const rootElement = document.getElementById('root')!;
 const publicBuildYear = Number(rootElement.dataset.publicBuildYear);
 const prerenderedRoute =
     rootElement.dataset.publicSsg === 'true' ? getPublicRoute(window.location.pathname) : null;
-// Spec 04 §4.1, §4.5 step 1 (04-4a2): the full app never boots on a legacy host. Its session check
-// would refresh there and rotate the old host-only cookie; `vercel.json` already redirects the
-// private paths and `/index.html`-style URLs, this covers any other way to reach the SPA shell.
-const legacyHostAppUrl = prerenderedRoute ? null : getLegacyHostAppUrl(window.location);
 
-if (legacyHostAppUrl) {
-    // #758: in an icon installed from the legacy host (standalone) the app host would open in an
-    // in-app sheet whose session never reaches the icon; the landing of the same host shows the
-    // reinstall notice instead. At `/` itself (never the SPA shell in a real deploy) nothing boots,
-    // so the page cannot loop.
-    if (!checkIsPwaInstalled()) {
-        window.location.replace(legacyHostAppUrl);
-    } else if (window.location.pathname !== '/') {
-        window.location.replace('/');
-    }
-} else if (prerenderedRoute) {
+if (prerenderedRoute) {
     // Hydration preserves static, indexable React markup from the build. The route language is
     // loaded first (spec 04 §2.10: lazy locale chunks), so hydration never renders raw keys.
     Promise.all([import('public-routes'), i18nSettled])

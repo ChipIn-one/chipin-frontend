@@ -104,9 +104,6 @@ export const buildPwaOptions = ({ appName }: PwaOptionsInput): Partial<VitePWAOp
         // Only explicitly private SPA paths may use offline app.html.
         // All public URLs use exact precache entries, and unknown URLs retain 404.
         navigateFallbackAllowlist: PRIVATE_SPA_NAVIGATION_ALLOWLIST,
-        // The legacy-host kill-switch is never precached (04-4a1); the first entry is
-        // the Workbox default that an explicit list would otherwise drop.
-        globIgnores: ['**/node_modules/**/*', 'sw-kill.js'],
         sourcemap: false,
         cleanupOutdatedCaches: true,
         clientsClaim: true,

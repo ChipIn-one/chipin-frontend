@@ -19,11 +19,10 @@ afterEach(async () => {
 
 test('renames sw.js to sw-app.js and leaves no file at sw.js', async () => {
     await writeFile(path.join(outDir, 'sw.js'), 'precacheAndRoute([]);');
-    await writeFile(path.join(outDir, 'sw-kill.js'), 'kill();');
 
     await renameAppServiceWorker(outDir);
 
-    expect((await readdir(outDir)).sort()).toEqual(['sw-app.js', 'sw-kill.js']);
+    expect((await readdir(outDir)).sort()).toEqual(['sw-app.js']);
     expect(await readFile(path.join(outDir, 'sw-app.js'), 'utf8')).toBe('precacheAndRoute([]);');
 });
 

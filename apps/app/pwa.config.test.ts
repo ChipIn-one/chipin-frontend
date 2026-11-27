@@ -66,10 +66,6 @@ describe('buildPwaOptions: the table of spec 04 §2.11', () => {
         expect(workbox?.navigateFallback).toBe(APP_SHELL);
         expect(workbox?.navigateFallbackAllowlist).toBe(PRIVATE_SPA_NAVIGATION_ALLOWLIST);
     });
-
-    test('the legacy-host kill-switch is never precached (04-4a1)', () => {
-        expect(workbox?.globIgnores).toEqual(['**/node_modules/**/*', 'sw-kill.js']);
-    });
 });
 
 describe('buildPwaOptions: the common options', () => {

@@ -1,8 +1,7 @@
 // Spec 04 §2.11 (04-4a1, 04-2d): there is a single service worker registration call site,
-// `useRegisterSW` in `src/app/pwa/ServiceWorkerManager.tsx`, gated by `shouldRegisterServiceWorker`,
-// and it registers `/sw.js` with scope `/` (the VitePWA options of `pwa.config.ts`). The scan fails
-// when a new call site appears, when it loses its gate, or when it would register another URL or
-// scope. The gate itself is exercised by `ServiceWorkerManager.test.tsx`.
+// `useRegisterSW` in `src/app/pwa/ServiceWorkerManager.tsx`, and it registers `/sw.js` with scope
+// `/` (the VitePWA options of `pwa.config.ts`). The scan fails when a new call site appears or when
+// it would register another URL or scope.
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -51,9 +50,6 @@ const findRegistrationCalls = source => {
 };
 
 const CALL_SITE = 'src/app/pwa/ServiceWorkerManager.tsx';
-// The component returns before rendering the registering child on a legacy host (04-4a1).
-const GATE =
-    /if\s*\(\s*!shouldRegisterServiceWorker\(\s*window\.location\.hostname\s*\)\s*\)\s*\{\s*return null;?\s*\}/;
 
 const sources = Object.fromEntries(
     listSourceFiles(SOURCE_ROOT).map(file => [
@@ -71,12 +67,9 @@ describe('service worker registration call sites', () => {
         expect(callSites).toEqual([CALL_SITE]);
     });
 
-    test('it is one useRegisterSW call of virtual:pwa-register/react behind the host gate', () => {
+    test('it is one useRegisterSW call of virtual:pwa-register/react', () => {
         const source = sources[CALL_SITE];
 
-        expect(source).toMatch(
-            /import\s*\{[^}]*\bshouldRegisterServiceWorker\b[^}]*\}\s*from\s*'helpers\/serviceWorkerHost'/,
-        );
         expect(source).toMatch(
             /import\s*\{\s*useRegisterSW\s*\}\s*from\s*'virtual:pwa-register\/react'/,
         );
@@ -85,7 +78,6 @@ describe('service worker registration call sites', () => {
 
         expect(calls).toHaveLength(1);
         expect(source.slice(calls[0])).toMatch(/^useRegisterSW\s*\(/);
-        expect(source).toMatch(GATE);
         // No scope or URL is passed at the call site: both come from the VitePWA options.
         const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 

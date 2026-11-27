@@ -46,7 +46,6 @@ const NOT_RENDERED: Record<string, string> = {
     'sections.expenses': 'ShowcaseSections renders only the groups showcase',
     'cta.openApp': 'CtaSection does not render it',
     promo: 'the early-supporter modal of the app, not the landing',
-    legacyHostStandaloneNotice: 'the legacy-host notice of the app shell, not the landing',
 };
 
 const isNotRendered = (key: string): boolean =>

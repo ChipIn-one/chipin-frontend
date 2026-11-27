@@ -131,9 +131,5 @@
         "benefit": "Premium is yours for 1 year — free.",
         "expires": "Expires on {{date}}",
         "button": "Thank you"
-    },
-    "legacyHostStandaloneNotice": {
-        "title": "This Home Screen icon is out of date.",
-        "description": "To keep using ChipIn, open {{appHost}} in your browser (Safari on iPhone) and add it to the Home Screen again. Then you can remove this icon."
     }
 }
