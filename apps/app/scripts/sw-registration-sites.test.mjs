@@ -82,7 +82,7 @@ describe('service worker registration call sites', () => {
         const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
         expect(code).not.toMatch(/\bscope\s*:/);
-        expect(code).not.toMatch(/['"`]\/sw(?:-app)?\.js['"`]/);
+        expect(code).not.toMatch(/['"`]\/sw\.js['"`]/);
     });
 
     test('the registration is /sw.js with scope / (pwa.config.ts)', () => {
@@ -94,18 +94,16 @@ describe('service worker registration call sites', () => {
         expect(options.strategies).toBeUndefined();
     });
 
-    test('vite.config.ts uses buildPwaOptions, with the rename plugin after VitePWA', () => {
+    test('vite.config.ts uses buildPwaOptions, and nothing renames the worker (04-5b)', () => {
         const viteConfig = readFileSync(path.join(APP_ROOT, 'vite.config.ts'), 'utf8');
-        const pwaIndex = viteConfig.indexOf('VitePWA(buildPwaOptions(');
-        const renameIndex = viteConfig.indexOf('swAppPlugin()');
 
         // No PWA option is set beside the pure function, and the base stays `/`.
         expect(viteConfig).not.toMatch(/\b(?:filename|buildBase|srcDir|strategies|scope)\s*:/);
         expect(Array.from(viteConfig.matchAll(/\bbase\s*:\s*([^,\n]+)/g), m => m[1])).toEqual([
             "'/'",
         ]);
-        // The rename plugin comes after VitePWA (spec 04 §2.11 option (a)).
-        expect(pwaIndex).toBeGreaterThan(-1);
-        expect(renameIndex).toBeGreaterThan(pwaIndex);
+        expect(viteConfig).toContain('VitePWA(buildPwaOptions(');
+        // The worker stays `dist/sw.js`, served at its registration URL `/sw.js` (spec 04 §2.11).
+        expect(viteConfig).not.toMatch(/\brename/);
     });
 });

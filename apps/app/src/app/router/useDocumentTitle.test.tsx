@@ -35,7 +35,7 @@ const renderAt = (path: string) => {
                             },
                         },
                     },
-                    { path: '/privacy' },
+                    { path: '/without-meta' },
                 ],
             },
         ],
@@ -64,8 +64,8 @@ test('04-2a3: the title of an app route comes from its handle.meta', () => {
     expect(document.title).toBe(i18n.t('dashboard.title', { ns: 'meta' }));
 });
 
-test('04-2a3: a route without handle.meta leaves the title to useRoutesMeta', () => {
-    renderAt('/privacy');
+test('04-2a3: a route without handle.meta keeps the current title', () => {
+    renderAt('/without-meta');
 
     expect(document.title).toBe('initial');
 });

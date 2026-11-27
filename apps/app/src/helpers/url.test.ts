@@ -205,13 +205,13 @@ describe('the sign-in started from /login', () => {
     );
 });
 
-test('Google OAuth uses a prefixed URL before conflicting browser language', () => {
+test('04-5b: the app path is never a locale, Google OAuth takes the browser language', () => {
     window.history.replaceState({}, '', '/ru/privacy');
     vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
-    expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('ru');
+    expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('en');
 });
 
-test('English SSG homepage uses supported browser language for signup', () => {
+test('a sign-up without ?locale uses the supported browser language', () => {
     vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ja-JP', 'ru-RU']);
     expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('ru');
 });

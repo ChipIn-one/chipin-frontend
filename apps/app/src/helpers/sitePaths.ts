@@ -1,7 +1,9 @@
-import type { SupportedLocale } from 'constants/locales';
+import { DEFAULT_LOCALE, type SupportedLocale } from 'constants/locales';
 import { SITE_PAGE_PATHS } from 'constants/sitePaths';
 
 import { getSiteOrigin } from './env';
+import { matchLocale } from './locale';
+import { getLocalUser } from './localStorage';
 
 // Spec 04 §2.1 (04-2g): absolute links from the app to the site pages, `getSiteOrigin()` + path.
 // Functions, not values: the origin depends on the environment, resolved at call time (never at
@@ -15,4 +17,15 @@ const SITE_PATHS = {
         `${getSiteOrigin()}${SITE_PAGE_PATHS.localeHome(locale)}`,
 } as const;
 
-export { SITE_PATHS };
+/**
+ * The site landing path in the language of the last account on this device (spec 04 §2.3): an
+ * explicit sign-out leaves for `getSiteOrigin()` + this path. Read before the user data is cleared.
+ * The spec places it in `app/auth`; it lives here because `store/authStore` calls it and `store`
+ * cannot import `app` (`LAYER_GRAPH`).
+ */
+const getLastAccountLandingPath = (): string =>
+    SITE_PAGE_PATHS.localeHome(
+        matchLocale(getLocalUser()?.settings.language ?? '') ?? DEFAULT_LOCALE,
+    );
+
+export { getLastAccountLandingPath, SITE_PATHS };

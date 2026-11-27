@@ -10,7 +10,6 @@ import { PROJECT_NAME } from 'constants/chipin';
 import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
-import { isPublicLocaleSuggestionSuppressed } from 'helpers/publicLocaleSuggestion';
 import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
@@ -122,7 +121,7 @@ test('opens the Group route when the logo is clicked from another page with stal
     });
 });
 
-test('hides the mode badge on the landing page', () => {
+test('hides the mode badge when signed out', () => {
     useAuthStore.setState({ status: 'unauthenticated' });
 
     render(
@@ -156,30 +155,6 @@ test('hides the dev menu after authentication ends even with a cached admin role
     expect(screen.queryByRole('button', { name: i18n.t('header.devMenu') })).toBeNull();
 });
 
-test('manual public language selection does not change SSG content or persist language', () => {
-    const interaction = userEvent.setup();
-    useAuthStore.setState({ status: 'unauthenticated' });
-
-    render(
-        <MemoryRouter initialEntries={['/']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
-        </MemoryRouter>,
-    );
-
-    return interaction
-        .click(screen.getByRole('button', { name: 'Interface language' }))
-        .then(() => interaction.click(screen.getByRole('link', { name: 'Russian' })))
-        .then(() => {
-            expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('');
-            expect(i18n.language).toBe('en');
-            expect(isPublicLocaleSuggestionSuppressed()).toBe(true);
-        });
-});
-
 test('does not show a separate authenticated avatar shortcut in the global header', () => {
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -195,91 +170,12 @@ test('does not show a separate authenticated avatar shortcut in the global heade
     expect(screen.getAllByRole('link')).toHaveLength(5);
 });
 
-test('public legal pages expose equivalent language URLs in the search dropdown', () => {
-    const interaction = userEvent.setup();
-    useAuthStore.setState({ status: 'unauthenticated' });
-
-    render(
-        <MemoryRouter initialEntries={['/privacy']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
-        </MemoryRouter>,
-    );
-
-    return interaction
-        .click(screen.getByRole('button', { name: 'Interface language' }))
-        .then(() => {
-            expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe(
-                '/privacy',
-            );
-            expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe(
-                '/ru/privacy',
-            );
-        });
-});
-
-test('signed-in visitors retain the public legal language selector', () => {
-    const interaction = userEvent.setup();
-    useAuthStore.setState({ status: 'authenticated' });
-
-    render(
-        <MemoryRouter initialEntries={['/ru/terms']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
-        </MemoryRouter>,
-    );
-
-    return interaction
-        .click(screen.getByRole('button', { name: 'Interface language' }))
-        .then(() => {
-            expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe(
-                '/terms',
-            );
-            expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe(
-                '/ru/terms',
-            );
-        });
-});
-
-test('on an app host the landing sign-in opens the auth modal', () => {
-    const interaction = userEvent.setup();
-    const assign = vi.fn();
-    vi.stubGlobal('location', { ...window.location, hostname: 'app.chipin.one', assign });
-    useAuthStore.setState({ status: 'unauthenticated' });
-
-    render(
-        <MemoryRouter initialEntries={['/']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
-        </MemoryRouter>,
-    );
-
-    return interaction
-        .click(screen.getByRole('button', { name: i18n.t('header.signIn') }))
-        .then(() => {
-            expect(assign).not.toHaveBeenCalled();
-            expect(screen.getByRole('dialog')).toBeTruthy();
-        })
-        .finally(() => {
-            vi.unstubAllGlobals();
-        });
-});
-
-// 04-2g: off the transitional in-app public pages the logo leads to the site origin (tests run on
-// localhost, the development environment); on those pages it stays on their own locale home.
+// 04-2g: signed out the logo leads to the site origin (tests run on localhost, the development
+// environment); 04-5b: the app serves no public page of its own.
 test.each([
     ['/login', 'https://site-dev.chipin.one/'],
     ['/not-found', 'https://site-dev.chipin.one/'],
-    ['/ru/privacy', '/ru/'],
+    ['/ru/privacy', 'https://site-dev.chipin.one/'],
 ])('04-2f site paths: signed out on %s the logo is a plain link to %s', (path, href) => {
     useAuthStore.setState({ status: 'unauthenticated' });
 
@@ -312,4 +208,25 @@ test('04-2f login: the sign-in page has no header sign-in button', () => {
     );
 
     expect(screen.queryByRole('button', { name: i18n.t('header.signIn') })).toBeNull();
+});
+
+test('signed out off the sign-in page the header sign-in opens the auth modal', () => {
+    const interaction = userEvent.setup();
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    render(
+        <MemoryRouter initialEntries={['/not-found']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    return interaction
+        .click(screen.getByRole('button', { name: i18n.t('header.signIn') }))
+        .then(() => {
+            expect(screen.getByRole('dialog')).toBeTruthy();
+        });
 });

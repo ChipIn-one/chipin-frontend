@@ -390,7 +390,7 @@ export const projectRules = ({ appDir }) => [
         ].join(', '),
         ignores: [appGlob(appDir, 'src/entities/*/api/queries.ts')],
         message:
-            'Build query keys with the entity key factory (`statsKeys.all`, `groupKeys.detail(id)`) from entities/<entity>/api/queries.ts.',
+            'Build query keys with the entity key factory (`dashboardKeys.all`, `groupsKeys.list()`) from entities/<entity>/api/queries.ts.',
     },
     {
         // #669 (docs/engineering/rules/50-api-data.md §Query Functions): a query function reads its

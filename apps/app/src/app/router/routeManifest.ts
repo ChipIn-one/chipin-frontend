@@ -111,7 +111,7 @@ const APP_ROUTES: readonly AppRouteDef[] = [
         path: 'friends/join/:inviteToken',
         access: 'protected',
         layout: 'bare',
-        // As ROUTE_META today: the meta namespace has no friend-join key.
+        // The meta namespace has no friend-join key.
         meta: { titleKey: 'friends.title' },
     },
     {

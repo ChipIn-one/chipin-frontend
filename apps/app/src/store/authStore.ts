@@ -31,7 +31,7 @@ import {
     saveLocalUser,
     SessionStorage,
 } from 'helpers/localStorage';
-import { getLastAccountLandingPath } from 'helpers/publicRoutes';
+import { getLastAccountLandingPath } from 'helpers/sitePaths';
 import { clearUserData, deleteUserKeys, detachUserData } from 'shared/offline/clearUserData';
 import { isOfflineWritesFlagOn } from 'shared/offline/offlineWrites';
 import { readOutboxCount, readOutboxCountsOrUnknown } from 'shared/offline/outboxCount';
