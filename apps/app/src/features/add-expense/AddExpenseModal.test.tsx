@@ -76,6 +76,8 @@ test('does not render a single-member notice in the modal', () => {
     );
 
     expect(screen.getByRole('status').textContent).toBe('');
+    // #966 EXP-064: the always-visible blocker is polite; nothing is announced assertively on open.
+    expect(screen.queryByRole('alert')).toBeNull();
     // #966 EXP-064: the one amount explanation is linked to the amount field, not the form.
     const [amountMessage] = screen.getAllByText('Enter an amount greater than zero.');
     expect(screen.getAllByText('Enter an amount greater than zero.')).toHaveLength(1);

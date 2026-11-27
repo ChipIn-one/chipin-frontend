@@ -1,3 +1,12 @@
+/*
+ * The picker stays level with the bottom of the name input, also while its error shows below:
+ * label line 20px + label gap 8px + (40px size-3 input - 32px size-2 icon button) = 36px.
+ */
+.coverPicker {
+    flex: none;
+    margin-top: calc(var(--cp-space-6) + var(--cp-space-1));
+}
+
 /* Doubled to beat the Radix Button width (app CSS loads before Radix). */
 .descriptionToggle.descriptionToggle {
     width: fit-content;

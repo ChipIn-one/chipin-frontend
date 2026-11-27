@@ -116,14 +116,16 @@ test('#966 EXP-064 shows the zero-amount blocker below the amount field and link
     renderFields();
     fireEvent.change(amountInput(), { target: { value: '0' } });
 
-    const message = screen.getByRole('alert');
-    expect(message.textContent).toBe(i18n.t('group:expenses.modal.submitFeedback.amount'));
+    const message = screen.getByText(i18n.t('group:expenses.modal.submitFeedback.amount'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(message.parentElement?.getAttribute('aria-live')).toBe('polite');
+    expect(message.parentElement?.getAttribute('aria-atomic')).toBe('true');
     expect(amountInput().getAttribute('aria-invalid')).toBe('true');
     expect(amountInput().getAttribute('aria-describedby')).toBe(message.id);
     expect(message.compareDocumentPosition(amountInput())).toBe(Node.DOCUMENT_POSITION_PRECEDING);
 
     fireEvent.change(amountInput(), { target: { value: '10' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(i18n.t('group:expenses.modal.submitFeedback.amount'))).toBeNull();
     expect(amountInput().getAttribute('aria-invalid')).toBe('false');
     expect(amountInput().getAttribute('aria-describedby')).toBeNull();
 });
@@ -136,7 +138,7 @@ test('#966 EXP-064 leaves another first blocker off the amount field', () => {
         store.setAmount('10');
     });
 
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(i18n.t('group:expenses.modal.submitFeedback.amount'))).toBeNull();
     expect(amountInput().getAttribute('aria-invalid')).toBe('false');
     expect(amountInput().getAttribute('aria-describedby')).toBeNull();
 });

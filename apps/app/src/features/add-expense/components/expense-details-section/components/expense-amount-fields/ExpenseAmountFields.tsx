@@ -19,22 +19,22 @@ const ExpenseAmountFields = () => {
     const { t } = useTranslation('group');
     const amountId = useId();
     const amountErrorId = `${amountId}-error`;
-    const { amount, fractionDigits, description, setAmount, setDescription } = useExpenseModalStore(
-        useShallow(state => ({
-            amount: state.amount,
-            // The currency minor units; more only while the text already has more (an edit of a
-            // scale-4 amount, a currency switch), so the value is kept and can still be erased.
-            fractionDigits: selectInputFractionDigits(state, state.amount),
-            description: state.description,
-            setAmount: state.setAmount,
-            setDescription: state.setDescription,
-        })),
-    );
-    // KB EXP-064: when the amount is the first blocking condition, its one explanation sits
-    // below the amount field (ExpenseButtons leaves it out of the form-level message).
-    const isAmountBlocking = useExpenseModalStore(
-        state => selectExpenseSubmitFeedback(state)?.reason === EXPENSE_SUBMIT_BLOCKERS.AMOUNT,
-    );
+    const { amount, fractionDigits, description, isAmountBlocking, setAmount, setDescription } =
+        useExpenseModalStore(
+            useShallow(state => ({
+                amount: state.amount,
+                // The currency minor units; more only while the text already has more (an edit of a
+                // scale-4 amount, a currency switch), so the value is kept and can still be erased.
+                fractionDigits: selectInputFractionDigits(state, state.amount),
+                description: state.description,
+                // KB EXP-064: when the amount is the first blocking condition, its one explanation
+                // sits below the amount field (ExpenseButtons leaves it out of the form-level status).
+                isAmountBlocking:
+                    selectExpenseSubmitFeedback(state)?.reason === EXPENSE_SUBMIT_BLOCKERS.AMOUNT,
+                setAmount: state.setAmount,
+                setDescription: state.setDescription,
+            })),
+        );
 
     return (
         <div className={styles.root}>
@@ -55,11 +55,15 @@ const ExpenseAmountFields = () => {
                 autoFocus
             />
 
-            {isAmountBlocking && (
-                <Text id={amountErrorId} size="2" color={PROP_COLOR.danger} role="alert">
-                    {t('expenses.modal.submitFeedback.amount')}
-                </Text>
-            )}
+            {/* Polite and always mounted: the blocker is visible from open, and an alert would be
+                announced assertively when the dialog mounts and again with the focused input. */}
+            <div className={styles.amountMessage} aria-live="polite" aria-atomic="true">
+                {isAmountBlocking && (
+                    <Text as="p" id={amountErrorId} size="2" color={PROP_COLOR.danger} m="0">
+                        {t('expenses.modal.submitFeedback.amount')}
+                    </Text>
+                )}
+            </div>
 
             <TextField.Root
                 className={styles.descriptionInput}

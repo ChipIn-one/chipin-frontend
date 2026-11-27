@@ -162,14 +162,13 @@ test('#966 GRP-002 shows the required group name message below the field after i
     expect(screen.queryByText('modal.fields.nameRequired')).toBeNull();
     await interaction.tab();
 
-    const message = screen.getByRole('alert');
-    expect(message.textContent).toBe('modal.fields.nameRequired');
+    const message = screen.getByText('modal.fields.nameRequired');
     expect(nameInput.getAttribute('aria-invalid')).toBe('true');
     expect(nameInput.getAttribute('aria-describedby')).toBe(message.id);
     expect(message.compareDocumentPosition(nameInput)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
 
     await interaction.type(nameInput, 'Trip');
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('modal.fields.nameRequired')).toBeNull();
     expect(nameInput.getAttribute('aria-invalid')).toBe('false');
     expect(nameInput.getAttribute('aria-describedby')).toBeNull();
 });
