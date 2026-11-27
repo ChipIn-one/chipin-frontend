@@ -24,8 +24,12 @@ import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
+import fillStyles from 'basics/SegmentedControl.module.css';
+
 import AppSettingsSection from './AppSettingsSection';
 import RegionalSection from './RegionalSection';
+
+import styles from './AppSettingsSection.module.css';
 
 type ThemeName = SelfUser['settings']['theme'];
 
@@ -248,4 +252,82 @@ test('a newer server value with no newer local change still applies', async () =
     expect(backend.patches).toEqual([]);
     expect(cachedTheme(client)).toBe('light');
     expect(htmlTheme()).toBe('light');
+});
+
+// #316: the theme control fills the card (basics `fill`), so it never overflows a narrow phone; the
+// icons carry the class the container query hides below 360px. jsdom has no layout: the widths are
+// in AppSettingsSection.module.css, here the structure and the behaviour.
+const THEME_LABELS = {
+    en: ['Dark', 'Light', 'System'],
+    ru: ['Тёмная', 'Светлая', 'Системная'],
+} as const;
+
+/** The settings card alone, with the self user restored and the session load answered. */
+const renderThemeCard = async (): Promise<Backend> => {
+    const backend = serveBackend({ current: userWith('dark') });
+    const client = mountAsUserClient('user-1', getDefaultTestQueryClient());
+
+    restoreSelf(client, userWith('dark'));
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    const loaded = loadSelfUserForSession();
+
+    render(
+        <Theme>
+            <AppSettingsSection isLoading={false} />
+        </Theme>,
+    );
+    await settle();
+    backend.answerLoad();
+    await loaded;
+    await settle();
+    return backend;
+};
+
+const themeRootOf = (label: string): HTMLElement => {
+    const root = screen.getByRole('radio', { name: label }).closest('.rt-SegmentedControlRoot');
+    if (!(root instanceof HTMLElement)) {
+        throw new Error('SegmentedControl root not found');
+    }
+    return root;
+};
+
+test.each(['en', 'ru'] as const)(
+    '#316: the theme control fills the card with its three options in %s',
+    async language => {
+        await i18n.changeLanguage(language);
+        await renderThemeCard();
+
+        const labels = THEME_LABELS[language];
+        const root = themeRootOf(labels[0]);
+
+        expect(fillStyles.fill).toBeTruthy();
+        expect(root.classList).toContain(fillStyles.fill);
+        expect(styles.themeControl).toBeTruthy();
+        expect(root.classList).toContain(styles.themeControl);
+        expect(screen.getAllByRole('radio')).toHaveLength(labels.length);
+        for (const label of labels) {
+            const option = screen.getByRole('radio', { name: label });
+
+            expect(root.contains(option)).toBe(true);
+            // Each label (active and inactive copy) has its icon with the hide-on-narrow class.
+            expect(option.querySelectorAll(`svg.${styles.themeIcon}`).length).toBeGreaterThan(0);
+            expect(option.querySelector(`.${styles.themeLabelText}`)?.textContent).toBe(label);
+        }
+        expect(screen.getByRole('radio', { name: labels[0] }).getAttribute('aria-checked')).toBe(
+            'true',
+        );
+    },
+);
+
+test('#316: switching the theme in ru still saves it', async () => {
+    await i18n.changeLanguage('ru');
+    const backend = await renderThemeCard();
+
+    await userEvent.setup().click(screen.getByRole('radio', { name: 'Системная' }));
+    await settle();
+
+    expect(backend.patches).toEqual([{ settings: { theme: 'system' } }]);
+    expect(screen.getByRole('radio', { name: 'Системная' }).getAttribute('aria-checked')).toBe(
+        'true',
+    );
 });
