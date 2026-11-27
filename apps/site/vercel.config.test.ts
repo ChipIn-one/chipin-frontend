@@ -216,7 +216,6 @@ const OLD_APP_PATHS = [
     '/oauth/callback?code=x&returnTo=%2Fgroup%2F1',
     `/group/join/${TOKEN}`,
     `/friends/join/${TOKEN}`,
-    '/index.html',
     '/app.html',
 ];
 
@@ -239,6 +238,7 @@ describe('site redirects (§3.2, §4.2, 04-5a)', () => {
 
     test.each([
         ['/sitemap.xml', '/sitemap-index.xml'],
+        ['/index.html', '/'],
         ['/privacy/index.html', '/privacy'],
         ['/es', '/'],
         ['/es/privacy', '/privacy'],
@@ -251,12 +251,12 @@ describe('site redirects (§3.2, §4.2, 04-5a)', () => {
     });
 
     // Only the removed locales (#609) and the trailing-slash rows (§3.2) are permanent.
-    test('the only 302 rows are /sitemap.xml and /<page>/index.html', () => {
+    test('the only 302 rows are /sitemap.xml, /index.html and /<page>/index.html', () => {
         const permanent = redirects.filter(redirect => redirect.statusCode !== 302);
 
         expect(
             redirects.filter(redirect => redirect.statusCode === 302).map(({ source }) => source),
-        ).toEqual(['/sitemap.xml', '/:path([^/\\\\].*?)/index.html']);
+        ).toEqual(['/sitemap.xml', '/index.html', '/:path([^/\\\\].*?)/index.html']);
         for (const redirect of permanent) {
             expect(redirect.statusCode).toBe(301);
         }
@@ -360,6 +360,7 @@ describe('paths the site never redirects (§4.2)', () => {
     test('the redirect rows are the same-site ones', () => {
         expect(redirects.map(({ source }) => source)).toEqual([
             '/sitemap.xml',
+            '/index.html',
             '/:path([^/\\\\].*?)/index.html',
             '/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/\\\\].*?)}?{/}?',
             // The trailing-slash 301 rows, pinned by "the trailing-slash 301 rows are LOCALE_PATH × pages".

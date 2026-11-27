@@ -1,7 +1,8 @@
 // Validate the final public HTML was actually scanned by Workbox after SSG.
 // Also checks the worker files of 04-4a1 (spec 04 §2.11 option (a)): the app worker is
-// `sw-app.js` and no file sits at `sw.js` (vercel.json rewrites `/sw.js` to `/sw-app.js`). The Workbox runtime is inlined (04-2d,
-// `inlineWorkboxRuntime`): no `workbox-*.js` next to the worker and no `importScripts` in it.
+// `sw-app.js` and no file sits at `sw.js` (vercel.json rewrites `/sw.js` to `/sw-app.js`). The
+// Workbox runtime is inlined (04-2d, `inlineWorkboxRuntime`): no `workbox-*.js` next to the worker
+// and no `importScripts` in it.
 import { createHash } from 'node:crypto';
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';

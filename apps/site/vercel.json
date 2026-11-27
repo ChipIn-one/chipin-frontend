@@ -16,6 +16,11 @@
             "statusCode": 302
         },
         {
+            "source": "/index.html",
+            "destination": "/",
+            "statusCode": 302
+        },
+        {
             "source": "/:path([^/\\\\].*?)/index.html",
             "destination": "/:path",
             "statusCode": 302

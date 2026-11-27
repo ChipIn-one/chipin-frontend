@@ -227,14 +227,17 @@ users) removed every move-era rule instead of switching it to `301`:
   rows and its headers. The app code has no legacy-host gate, handoff or notice.
 - `apps/site/vercel.json` no longer redirects old app URLs (`/dashboard`,
   `/oauth/callback`, …) to the app host, nor `/group/join/<t>` and
-  `/friends/join/<t>` to the invite landing, nor `/index.html` and `/app.html`
-  to `/`: on the site these paths now answer its `404`. The site keeps its
-  locale and trailing-slash `301` rows, `/sitemap.xml` → `/sitemap-index.xml`,
-  `/<page>/index.html` → `/<page>`, the `/join/group|friend/<t>` landing and the
-  `/api/stats` proxy.
+  `/friends/join/<t>` to the invite landing, nor `/app.html` to `/`: the old app
+  paths and `/app.html` now answer the site's `404`. The site keeps its locale
+  and trailing-slash `301` rows, `/sitemap.xml` → `/sitemap-index.xml`,
+  `/index.html` → `/`, `/<page>/index.html` → `/<page>`, the
+  `/join/group|friend/<t>` landing and the `/api/stats` proxy.
 - The worker kill-switch is gone (the site's `/sw.js` and the app's
-  `sw-kill.js`). An old app worker still registered on `chipin.one` is dropped
-  by the browser at its next update check, when `/sw.js` answers `404`.
+  `sw-kill.js`). An old app worker still registered on `chipin.one` stays (a
+  failed update fetch keeps the active registration) and keeps serving its
+  precache until the visitor clears the site data. The owner decision of
+  2026-11-27 (the old hosts have almost no users) accepts this residual effect
+  instead of the 6-month kill-switch window of spec 04 §3.6.
 
 Only the app hosts are installable as the app: the site has no
 `manifest.webmanifest`, no `<link rel="manifest">` and no

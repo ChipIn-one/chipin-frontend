@@ -124,7 +124,7 @@ The offline banner flake (#746) was a bug in the app, fixed by #749: a response 
 
 The browser's own fetch of `/sw.js` during `registration.update()` reaches no Playwright event, so the `visible` and hourly checks count the app's `update()` calls instead. Each test starts in a fresh context, so the worker first precaches the whole build (about 125 files, fetched one after another): a few seconds in CI, up to a minute or two on a slow link; the test timeout is 4 minutes. There are no fixed sleeps: the tests wait on `navigator.serviceWorker.ready`, the controller and `expect.poll`.
 
-Not covered yet: the prompt, "Later" and the forced update after 24 h need a second deploy with a newer worker. Scenarios (b) to (d) of criterion 5 covered the worker kill-switch, which 04-5a removed.
+Not covered yet: the prompt, "Later" and the forced update after 24 h need a second deploy with a newer worker. Scenarios (b) to (d) of criterion 5 were planned for the worker kill-switch and never written; 04-5a dropped them with it.
 
 Agents do not run e2e or builds locally; CI runs them (`.github/workflows/e2e-smoke.yml`, `e2e-sw.yml`). The commands below are for humans.
 
