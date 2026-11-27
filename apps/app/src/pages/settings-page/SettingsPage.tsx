@@ -26,9 +26,7 @@ const SettingsPage = () => {
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
-            <Box display={{ initial: 'block', lg: 'none' }}>
-                <SettingsPageHeader isLoading={isLoading} />
-            </Box>
+            <SettingsPageHeader isLoading={isLoading} />
             <Flex direction="column" gap="6">
                 {isSettingsBlocked && (
                     <Callout.Root color="gray" size="1" role="status">
