@@ -1,9 +1,10 @@
 import { Theme } from '@radix-ui/themes';
 import type { QueryClient } from '@tanstack/react-query';
 import { onlineManager } from '@tanstack/react-query';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { ActivityEvent, SelfActivityEventsData } from 'entities/activity';
@@ -36,10 +37,26 @@ vi.mock('components/skeletons', () => ({
     ActivityFeedSkeleton: () => <div data-testid="activity-skeleton" />,
 }));
 
+const addExpenseAction = vi.hoisted(() => ({ isVisible: true }));
+
+vi.mock('components/EmptyStateAddExpenseButton', () => ({
+    useEmptyStateAddExpenseAction: () => {
+        const label = 'common:buttons.addExpense';
+
+        return addExpenseAction.isVisible ? <button type="button">{label}</button> : undefined;
+    },
+}));
+
 vi.mock('./components', () => ({
-    ActivityEventsList: ({ log }: { log: readonly ActivityEvent[] }) =>
+    ActivityEventsList: ({
+        log,
+        emptyState,
+    }: {
+        log: readonly ActivityEvent[];
+        emptyState?: ReactNode;
+    }) =>
         log.length === 0 ? (
-            <div data-testid="empty-state" />
+            <div data-testid="empty-state">{emptyState}</div>
         ) : (
             <ul>
                 {log.map(event => (
@@ -80,6 +97,7 @@ let client: QueryClient;
 
 beforeEach(() => {
     vi.clearAllMocks();
+    addExpenseAction.isVisible = true;
     client = createTestQueryClient();
     mountAsUserClient('user-1', client);
     useAuthStore.setState({ status: 'authenticated' });
@@ -116,10 +134,12 @@ const serveFeed = (respond: (cursor: string | null) => Response | Promise<Respon
 const badRequest = () =>
     HttpResponse.json({ code: 'SYSTEM.BAD_REQUEST', message: 'Unavailable' }, { status: 400 });
 
+const onShowAll = vi.fn<() => void>();
+
 const renderList = (activeFilter: ActivityFilter = 'all', on: QueryClient = client) =>
     renderWithQueryClient(
         <Theme>
-            <ActivityList activeFilter={activeFilter} />
+            <ActivityList activeFilter={activeFilter} onShowAll={onShowAll} />
         </Theme>,
         on,
     );
@@ -517,3 +537,45 @@ test("after an account switch, a client that is not the user's own is never read
     expect(screen.getByTestId('activity-skeleton')).toBeTruthy();
     expect(cursors).toEqual([]);
 });
+
+test('EXP-065: an empty unfiltered Activity offers Add Expense, not Show all', () => {
+    seedFeed([]);
+    renderList('all');
+
+    const empty = screen.getByTestId('empty-state');
+
+    expect(within(empty).getByText('emptyTitle')).toBeTruthy();
+    expect(within(empty).getByRole('button', { name: 'common:buttons.addExpense' })).toBeTruthy();
+    expect(within(empty).queryByRole('button', { name: 'showAllAction' })).toBeNull();
+});
+
+test('EXP-065: without the shell Add Expense action the empty Activity has no action', () => {
+    addExpenseAction.isVisible = false;
+    seedFeed([]);
+    renderList('all');
+
+    const empty = screen.getByTestId('empty-state');
+
+    expect(within(empty).getByText('emptyTitle')).toBeTruthy();
+    expect(empty.querySelector('[data-empty-state-action]')).toBeNull();
+});
+
+test.each(['expenses', 'settlements'] as const)(
+    'EXP-066: the %s filter with nothing left offers Show all, which resets the filter',
+    async filter => {
+        seedFeed(filter === 'expenses' ? [settlement('s-1')] : [expense('e-1')]);
+        renderList(filter);
+
+        const empty = screen.getByTestId('empty-state');
+
+        expect(within(empty).getByText('filteredEmptyTitle')).toBeTruthy();
+        expect(within(empty).queryByText('emptyTitle')).toBeNull();
+        expect(
+            within(empty).queryByRole('button', { name: 'common:buttons.addExpense' }),
+        ).toBeNull();
+
+        await userEvent.click(within(empty).getByRole('button', { name: 'showAllAction' }));
+
+        expect(onShowAll).toHaveBeenCalledTimes(1);
+    },
+);

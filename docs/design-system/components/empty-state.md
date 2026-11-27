@@ -35,14 +35,15 @@ Source: [`basics/empty-states/EmptyState.tsx`](../../../apps/app/src/basics/empt
 
 Each variant takes only `action?: ReactNode`.
 
-| Variant                     | Namespace: title / description keys                                    | Icon, `iconColor`         |
-| --------------------------- | ---------------------------------------------------------------------- | ------------------------- |
-| `NoActivityEmptyState`      | `activity`: `emptyTitle` / `emptyDescription`                          | `ClipboardListIcon`, gray |
-| `NoDebtsEmptyState`         | `common`: `noDebtsTitle` / `noDebtsDescription`                        | `BanknoteXIcon`, gray     |
-| `NoFriendsEmptyState`       | `friends`: `emptyTitle` / `emptyDescription`                           | `UserPlusIcon`, cyan      |
-| `NoGroupExpensesEmptyState` | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription` | `ReceiptIcon`, jade       |
-| `NoGroupMembersEmptyState`  | `group`: `page.balances.empty` / none                                  | `UserPlusIcon`, teal      |
-| `NoGroupsEmptyState`        | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`           | `UsersIcon`, indigo       |
+| Variant                        | Namespace: title / description keys                                    | Icon, `iconColor`         |
+| ------------------------------ | ---------------------------------------------------------------------- | ------------------------- |
+| `NoActivityEmptyState`         | `activity`: `emptyTitle` / `emptyDescription`                          | `ClipboardListIcon`, gray |
+| `NoDebtsEmptyState`            | `common`: `noDebtsTitle` / `noDebtsDescription`                        | `BanknoteXIcon`, gray     |
+| `NoFilteredActivityEmptyState` | `activity`: `filteredEmptyTitle` / `filteredEmptyDescription`          | `ClipboardListIcon`, gray |
+| `NoFriendsEmptyState`          | `friends`: `emptyTitle` / `emptyDescription`                           | `UserPlusIcon`, cyan      |
+| `NoGroupExpensesEmptyState`    | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription` | `ReceiptIcon`, jade       |
+| `NoGroupMembersEmptyState`     | `group`: `page.balances.empty` / none                                  | `UserPlusIcon`, teal      |
+| `NoGroupsEmptyState`           | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`           | `UsersIcon`, indigo       |
 
 `NoGroupsEmptyState` sets `actionPosition="below"` when it has an action.
 

@@ -20,6 +20,10 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+vi.mock('components/EmptyStateAddExpenseButton', () => ({
+    useEmptyStateAddExpenseAction: () => undefined,
+}));
+
 vi.mock('components/skeletons', () => ({
     ActivityFeedSkeleton: () => <div data-testid="activity-skeleton" />,
 }));
@@ -115,7 +119,7 @@ const renderSettlements = (client = createTestQueryClient()) => {
     mountAsUserClient('user-1', client);
     return renderWithQueryClient(
         <Theme>
-            <ActivityList activeFilter="settlements" />
+            <ActivityList activeFilter="settlements" onShowAll={vi.fn()} />
         </Theme>,
         client,
     );
@@ -220,7 +224,7 @@ test('a next page paused offline is requested once while offline, then appended 
     try {
         renderWithQueryClient(
             <Theme>
-                <ActivityList activeFilter="all" />
+                <ActivityList activeFilter="all" onShowAll={vi.fn()} />
             </Theme>,
             client,
         );

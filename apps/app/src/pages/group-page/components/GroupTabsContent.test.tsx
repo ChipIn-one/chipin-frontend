@@ -70,6 +70,16 @@ vi.mock('features/activity', () => ({
     }) => (previews.length === 0 ? <>{emptyState}</> : <>{children}</>),
 }));
 
+const addExpenseAction = vi.hoisted(() => ({ isVisible: true }));
+
+vi.mock('components/EmptyStateAddExpenseButton', () => ({
+    useEmptyStateAddExpenseAction: () => {
+        const label = 'common:buttons.addExpense';
+
+        return addExpenseAction.isVisible ? <button type="button">{label}</button> : undefined;
+    },
+}));
+
 vi.mock('./GroupBalancesTab', () => ({ default: () => null }));
 vi.mock('./GroupSettingsTab', () => ({ GroupSettingsTab: () => null }));
 
@@ -190,6 +200,7 @@ const renderTabs = (
 
 beforeEach(() => {
     vi.clearAllMocks();
+    addExpenseAction.isVisible = true;
 });
 
 test('renders member actions on the left and settle up on the right before tabs', () => {
@@ -318,6 +329,32 @@ test('renders the group expenses empty state once the group has another member',
 
     expect(screen.getByText('page.expenses.emptyTitle')).not.toBeNull();
     expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
+});
+
+test('EXP-065: the empty group Expenses tab offers the Add Expense action', () => {
+    renderTabs(groupWithTwoMembers);
+
+    const card = screen.getByText('page.expenses.emptyTitle').closest('[data-empty-state]');
+
+    expect(card?.querySelector('[data-empty-state-action]')?.textContent).toBe(
+        'common:buttons.addExpense',
+    );
+});
+
+test('EXP-065: without the shell Add Expense action the empty Expenses tab has no action slot', () => {
+    addExpenseAction.isVisible = false;
+    renderTabs(groupWithTwoMembers);
+
+    const card = screen.getByText('page.expenses.emptyTitle').closest('[data-empty-state]');
+
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('[data-empty-state-action]')).toBeNull();
+});
+
+test('EXP-065: invite onboarding of a single-member group shows no empty-state Add Expense', () => {
+    renderTabs(group);
+
+    expect(screen.queryByRole('button', { name: 'common:buttons.addExpense' })).toBeNull();
 });
 
 test('keeps the invite hint in a single-member group with existing activity', () => {

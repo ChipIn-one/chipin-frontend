@@ -15,7 +15,12 @@ const ActivityPage = () => {
                     <ActivitySidebar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
                 }
             >
-                <ActivityList activeFilter={activeFilter} />
+                <ActivityList
+                    activeFilter={activeFilter}
+                    onShowAll={() => {
+                        setActiveFilter('all');
+                    }}
+                />
             </InternalPageColumnsFromSm>
         </Container>
     );

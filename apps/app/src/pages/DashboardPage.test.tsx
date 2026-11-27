@@ -111,9 +111,30 @@ vi.mock('components/skeletons', () => ({
 }));
 
 vi.mock('features/activity', () => ({
-    ActivityEventsList: ({ children }: { children?: React.ReactNode }) => (
-        <div data-testid="activity-list">{children}</div>
+    ActivityEventsList: ({
+        children,
+        emptyState,
+        previews,
+    }: {
+        children?: React.ReactNode;
+        emptyState?: React.ReactNode;
+        previews: readonly unknown[];
+    }) => (
+        <div data-testid="activity-list">
+            {previews.length === 0 && emptyState}
+            {children}
+        </div>
     ),
+}));
+
+const addExpenseAction = vi.hoisted(() => ({ isVisible: true }));
+
+vi.mock('components/EmptyStateAddExpenseButton', () => ({
+    useEmptyStateAddExpenseAction: () => {
+        const label = 'common:buttons.addExpense';
+
+        return addExpenseAction.isVisible ? <button type="button">{label}</button> : undefined;
+    },
 }));
 
 const creator = {
@@ -255,6 +276,7 @@ const renderPage = () => renderWithQueryClient(<DashboardPage />, client);
 
 beforeEach(() => {
     vi.clearAllMocks();
+    addExpenseAction.isVisible = true;
     groupsCardsMode.real = false;
     client = createTestQueryClient();
     mountAsUserClient('user-1', client);
@@ -363,6 +385,42 @@ test('DSH-009 renders normal Dashboard for a connected friend with no activity',
 
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
+});
+
+test('EXP-065: an empty Dashboard feed offers the Add Expense action in its empty state', () => {
+    resolveDashboardOnboardingData();
+    seedFriends([friend()]);
+    renderPage();
+
+    const feed = screen.getByTestId('activity-list');
+    const card = within(feed).getByText('emptyTitle').closest('[data-empty-state]');
+
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('[data-empty-state-action]')?.textContent).toBe(
+        'common:buttons.addExpense',
+    );
+});
+
+test('EXP-065: without the shell Add Expense action the empty Dashboard feed has no action slot', () => {
+    addExpenseAction.isVisible = false;
+    resolveDashboardOnboardingData();
+    seedFriends([friend()]);
+    renderPage();
+
+    const card = screen.getByText('emptyTitle').closest('[data-empty-state]');
+
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('[data-empty-state-action]')).toBeNull();
+});
+
+test('EXP-065: a Dashboard feed with activity shows no empty-state Add Expense', () => {
+    resolveDashboardOnboardingData();
+    seedFriends([friend()]);
+    seedDashboard({ items: [activityItem] });
+    renderPage();
+
+    expect(screen.queryByText('emptyTitle')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.addExpense' })).toBeNull();
 });
 
 test('DSH-010 keeps normal Dashboard with a connection and activity', () => {

@@ -71,7 +71,10 @@ const renderActivityPage = (items: ActivityEvent[]) => {
             <Theme>
                 <MemoryRouter initialEntries={['/activity']}>
                     <Routes>
-                        <Route path="/activity" element={<ActivityList activeFilter="all" />} />
+                        <Route
+                            path="/activity"
+                            element={<ActivityList activeFilter="all" onShowAll={vi.fn()} />}
+                        />
                         <Route path="/activity/:parentActivityId" element={<HistoryProbe />} />
                     </Routes>
                 </MemoryRouter>
