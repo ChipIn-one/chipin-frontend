@@ -117,3 +117,18 @@ test('uses the shared image fallback when cover is missing', () => {
             ?.getAttribute('data-has-cover'),
     ).toBe('false');
 });
+
+test('shows a skeleton cover, not the image fallback, while no group is loaded yet', () => {
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <MemoryRouter>
+                <GroupCoverSection group={null} isLoading />
+            </MemoryRouter>
+        </ThemeProvider>,
+    );
+
+    expect(screen.queryByText('media.noImage')).toBeNull();
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(document.querySelector('.rt-Skeleton')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'modal.titleEdit' })).toBeNull();
+});

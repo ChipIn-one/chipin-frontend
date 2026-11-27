@@ -50,6 +50,10 @@ export interface GroupDetailResult {
     isLoading: boolean;
     /** The last read failed with a 403/404: the user may not read the group (cached data too). */
     isDenied: boolean;
+    /** The read waits for the network: it resumes by itself on reconnect (no Retry). */
+    isPaused: boolean;
+    /** Reads the detail again (a failed first read's Retry); nothing while no read may be sent. */
+    retry: () => void;
 }
 
 /** The detail of `groupId` (none: nothing is read). */
@@ -65,13 +69,22 @@ export const useGroupDetail = (groupId: string | undefined): GroupDetailResult =
     const detail =
         isReadable && !isDenied && query?.isPlaceholderData !== true ? query?.data : undefined;
     const hasDetail = detail !== undefined;
-    const isSettled = query?.isError === true || query?.isPaused === true;
+    const isPaused = query?.isPaused === true;
+    const isSettled = query?.isError === true || isPaused;
+    const refetch = query?.refetch;
+    const retry = useCallback(() => {
+        if (isEnabled && refetch) {
+            void refetch();
+        }
+    }, [isEnabled, refetch]);
 
     return {
         group: isReadable && !isDenied ? (detail ?? listed) : undefined,
         hasDetail,
         isLoading: groupId !== undefined && !hasDetail && !isDenied && !isSettled,
         isDenied,
+        isPaused,
+        retry,
     };
 };
 

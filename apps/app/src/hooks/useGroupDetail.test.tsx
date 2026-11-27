@@ -137,6 +137,50 @@ test('a failed detail read without a denial keeps the listed group and its recen
     expect(result.current.activity.hasMore).toBe(false);
 });
 
+test('retry reads a failed detail again', async () => {
+    let reads = 0;
+    server.use(
+        http.get('*/groups/group-1', () => {
+            reads += 1;
+            return reads === 1 ? HttpResponse.json({}, { status: 500 }) : HttpResponse.json(group);
+        }),
+    );
+    const { result } = renderHook(() => useGroupDetail(group.id));
+
+    await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.isPaused).toBe(false);
+    expect(result.current.hasDetail).toBe(false);
+
+    act(() => {
+        result.current.retry();
+    });
+
+    await waitFor(() => {
+        expect(result.current.hasDetail).toBe(true);
+    });
+    expect(reads).toBe(2);
+});
+
+test('a detail read offline is paused, not loading, and not denied', async () => {
+    onlineManager.setOnline(false);
+
+    try {
+        const { result } = renderHook(() => useGroupDetail(group.id));
+
+        await waitFor(() => {
+            expect(result.current.isPaused).toBe(true);
+        });
+        expect(result.current.isLoading).toBe(false);
+        expect(result.current.isDenied).toBe(false);
+    } finally {
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+    }
+});
+
 test('a route without a group creates no detail query', () => {
     const { result } = renderHook(() => useGroupDetail(undefined));
 
