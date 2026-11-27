@@ -46,6 +46,8 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
             <Box mt="3">
                 <Skeleton loading={isLoading}>
                     <SegmentedControl
+                        fill
+                        size="2"
                         items={filterItems}
                         value={activeFilter}
                         onValueChange={value => onFilterChange(value as ActivityFilter)}
@@ -56,4 +58,4 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
     );
 };
 
-export default ActivityHeader;
+export { ActivityHeader };

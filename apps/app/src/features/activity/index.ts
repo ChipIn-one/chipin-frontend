@@ -1,4 +1,4 @@
-import ActivityHeader, { type ActivityFilter } from './ActivityHeader';
+import { type ActivityFilter, ActivityHeader } from './ActivityHeader';
 import { ActivityList } from './ActivityList';
 import ActivitySidebar from './ActivitySidebar';
 import { ActivityEvent, ActivityEventsList } from './components';

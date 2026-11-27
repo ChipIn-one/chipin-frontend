@@ -1,0 +1,68 @@
+/*
+ * `fill`: the control takes its container's width and can shrink below its labels (#969).
+ * Radix `.rt-SegmentedControlRoot` is `inline-grid` with `min-width: max-content`, so it never
+ * shrinks. Columns stay equal (`minmax(0, 1fr)`): the Radix indicator is sized as 100% / count.
+ * Doubled class (0,2,0) beats `.rt-SegmentedControlRoot` and its `:where(.rt-r-size-*)` /
+ * `sm:` size rules (0,1,0), which load after the app CSS.
+ * `container-type: inline-size` gives the root zero intrinsic width: the parent must give it a
+ * definite width (a block container, not a shrink-to-fit one).
+ */
+.fill.fill {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-auto-columns: minmax(0, 1fr);
+    container-type: inline-size;
+}
+
+/* stylelint-disable selector-disallowed-list -- the item and label parts are Radix internals with no prop or token hook for their padding, font size and overflow */
+
+/* Grid items default to `min-width: auto`; let the cell shrink to its 1fr track. */
+.fill.fill :global(.rt-SegmentedControlItem) {
+    min-width: 0;
+}
+
+/*
+ * Positioned so the absolutely positioned inactive label is clipped to its own cell (otherwise
+ * its containing block is the root). It paints above the z-index -1 indicator either way.
+ */
+.fill.fill :global(.rt-SegmentedControlItemLabel) {
+    --_label-padding: var(--cp-space-2);
+
+    position: relative;
+    min-width: 0;
+    padding-left: var(--_label-padding);
+    padding-right: var(--_label-padding);
+}
+
+/*
+ * Last-resort overflow guard: a label longer than its cell ends in an ellipsis instead of
+ * spilling onto its neighbour. The active span is in flow and reserves the (medium weight) width;
+ * the inactive span is absolute, so it gets an explicit max-width of the label's content box.
+ */
+.fill.fill :global(.rt-SegmentedControlItemLabelActive),
+.fill.fill :global(.rt-SegmentedControlItemLabelInactive) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fill.fill :global(.rt-SegmentedControlItemLabelInactive) {
+    max-width: calc(100% - 2 * var(--_label-padding));
+}
+
+/*
+ * Very narrow controls: size-1 font and the smallest padding. Size 2 fits down to 280px:
+ * "Settlements" ~77px at 14px + 2 x 8px = 93px x 3 = 279px (the 291px column at 1280).
+ * Compact: ~66px at 12px + 2 x 4px = 74px x 3 = 222px, which fits the ~229px column at 768.
+ */
+@container (width < 280px) {
+    .fill.fill :global(.rt-SegmentedControlItemLabel) {
+        --_label-padding: var(--cp-space-1);
+
+        font-size: var(--cp-font-size-1);
+    }
+}
+
+/* stylelint-enable selector-disallowed-list */
