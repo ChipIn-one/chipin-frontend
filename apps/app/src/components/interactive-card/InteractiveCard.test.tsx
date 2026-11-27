@@ -5,10 +5,6 @@ import { expect, test, vi } from 'vitest';
 
 import { InteractiveCard } from './InteractiveCard';
 
-// NavButton is still styled-components; its theme colour is a fallback behind `--cp-focus-ring`,
-// so the test needs no styled ThemeProvider (new files may not import styled-components).
-vi.mock('helpers/colors', () => ({ themeColor: () => () => 'transparent' }));
-
 const CARD_CONTENT = 'Card content';
 const TARGET_PAGE = 'Target page';
 
@@ -33,6 +29,8 @@ test('renders a link around the marked card surface', () => {
     const { container } = renderCard();
     const link = screen.getByRole('link');
 
+    expect(link.tagName).toBe('A');
+    expect(link.getAttribute('href')).toBe('/target');
     expect(link.getAttribute('aria-current')).toBe('page');
     expect(link.querySelector('[data-interactive-card]')?.textContent).toBe(CARD_CONTENT);
     expect(container.querySelectorAll('[data-interactive-card]')).toHaveLength(1);
