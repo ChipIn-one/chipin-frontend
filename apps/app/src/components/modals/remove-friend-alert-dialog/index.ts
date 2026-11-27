@@ -1,3 +1,3 @@
-import RemoveFriendAlertDialog from './RemoveFriendAlertDialog';
+import { RemoveFriendAlertDialog } from './RemoveFriendAlertDialog';
 
 export { RemoveFriendAlertDialog };

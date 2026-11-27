@@ -48,7 +48,7 @@ vi.mock('react-i18next', () =>
                         };
                     }, []);
 
-                    return { i18n: instance };
+                    return { i18n: instance, t: instance.t };
                 },
             };
         },

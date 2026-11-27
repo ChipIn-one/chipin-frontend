@@ -121,7 +121,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
                 data-locked={isIncludeLocked}
             >
                 {selectionControl}
-                <UserAvatar user={member} size="2" />
+                <UserAvatar user={member} size="2" decorative />
                 <Flex direction="column" align="start" minWidth="0">
                     <Text size="2" weight="medium" truncate>
                         {member.displayName}

@@ -151,6 +151,7 @@ const UserAvatarModal = ({ children }: Props) => {
                                     src={resolvedPreviewUrl}
                                     size="8"
                                     variant="solid"
+                                    decorative
                                 />
                             </div>
 

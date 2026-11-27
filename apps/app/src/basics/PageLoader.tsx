@@ -4,7 +4,10 @@ import type { ReactNode } from 'react';
 import { ChipInLoader } from './ChipInLoader';
 
 interface Props {
-    /** Shown under the loader, e.g. a `role="status"` line that says what is loading. */
+    /**
+     * Shown under the loader, e.g. a `role="status"` line that says what is loading. When given,
+     * the loader itself is not announced, so the children must carry the status announcement.
+     */
     children?: ReactNode;
 }
 
@@ -13,7 +16,7 @@ const PageLoader = ({ children }: Props) => {
         <Box>
             <Container size="4">
                 <Flex direction="column" justify="center" align="center" gap="3" minHeight="100vh">
-                    <ChipInLoader />
+                    <ChipInLoader announce={!children} />
                     {children}
                 </Flex>
             </Container>

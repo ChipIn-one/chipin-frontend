@@ -20,7 +20,7 @@ const UserProfileSummary = ({ avatarSize = '5', isLoading = false, user }: Props
 
     return (
         <Flex align="center" gap="2" minWidth="0">
-            <UserAvatar size={avatarSize} user={user} isLoading={isLoading} />
+            <UserAvatar size={avatarSize} user={user} isLoading={isLoading} decorative />
 
             <Flex direction="column" gap="1" minWidth="0">
                 <Text weight="medium" size="4" truncate>
@@ -40,4 +40,4 @@ const UserProfileSummary = ({ avatarSize = '5', isLoading = false, user }: Props
     );
 };
 
-export default UserProfileSummary;
+export { UserProfileSummary };

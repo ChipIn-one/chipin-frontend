@@ -9,7 +9,7 @@ import { useAuthStore } from 'store/authStore';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
-import LeaveGroupAlertDialog from './LeaveGroupAlertDialog';
+import { LeaveGroupAlertDialog } from './LeaveGroupAlertDialog';
 
 const OPEN_LEAVE_LABEL = 'Open leave';
 

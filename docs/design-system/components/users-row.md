@@ -37,10 +37,14 @@ visual order both match `members`.
 
 ## Accessibility and i18n
 
-- Each member avatar has `alt={user.displayName}`; the fallback is the first initial.
-- The "+N" text is a literal (`react/jsx-no-literals` disabled in source), not translated, and
-  has no label naming hidden members.
-- i18n: none.
+- Each member avatar has `alt={user.displayName}`; the fallback is the first initial. Known gap
+  (follow-up, outside #946): the name is only the `<img>` `alt`, so a member without a picture
+  (or whose picture has not loaded) is read as the initial, not the name. The fix is to name the
+  avatar root, as `UserAvatar` does.
+- The "+N" avatar is a `role="img"` named by the plural `common:members.overflowLabel` ("2 more
+  members", ru "Ещё 2 участника"); its visible text is `common:members.overflow` ("+2").
+- i18n: `common:members.overflow` and `common:members.overflowLabel` (plural: en `_one/_other`,
+  ru `_one/_few/_many/_other`).
 
 ## Example
 
