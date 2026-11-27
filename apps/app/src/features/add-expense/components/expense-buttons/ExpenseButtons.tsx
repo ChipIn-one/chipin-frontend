@@ -6,7 +6,10 @@ import { useShallow } from 'zustand/react/shallow';
 import { EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { type LedgerWriteTarget, useCanQueueLedgerWrite } from 'entities/ledger';
-import { selectExpenseSubmitFeedback } from 'store/expenseModalSelectors';
+import {
+    selectExpenseSubmitFeedback,
+    selectIsDirectExpenseWithoutFriend,
+} from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { OverlayFooter } from 'components/modals/components';
@@ -26,11 +29,12 @@ const CREATE: LedgerWriteTarget = { kind: 'create' };
 
 const ExpenseButtons = ({ onClose }: Props) => {
     const { t } = useTranslation('group');
-    const { mode, currency, editedEntryId } = useExpenseModalStore(
+    const { mode, currency, editedEntryId, isDirectWithoutFriend } = useExpenseModalStore(
         useShallow(state => ({
             mode: state.mode,
             currency: state.currency,
             editedEntryId: state.editContext?.entryId,
+            isDirectWithoutFriend: selectIsDirectExpenseWithoutFriend(state),
         })),
     );
     const canQueueOffline = useCanQueueLedgerWrite(
@@ -39,7 +43,8 @@ const ExpenseButtons = ({ onClose }: Props) => {
             : CREATE,
     );
     const submitFeedback = useExpenseModalStore(useShallow(selectExpenseSubmitFeedback));
-    // KB EXP-064: one explanation only; the amount blocker is shown below the amount field.
+    // KB EXP-064: one explanation only; the amount blocker is shown below the amount field (and a
+    // direct expense with no friend has none here: its empty state explains it, EXP-067).
     const feedback =
         submitFeedback?.reason === EXPENSE_SUBMIT_BLOCKERS.AMOUNT ? null : submitFeedback;
     const feedbackId = useId();
@@ -71,28 +76,33 @@ const ExpenseButtons = ({ onClose }: Props) => {
                     </Button>
                 }
                 primaryAction={
-                    // KB NET-007: offline the save is disabled with the hint (the form stays
-                    // readable) unless the outbox can take it.
-                    <OnlineOnly
-                        action={ONLINE_ONLY_ACTIONS.expenseSave}
-                        canQueueOffline={canQueueOffline}
-                    >
-                        <Button
-                            className={styles.save}
-                            size="3"
-                            variant="solid"
-                            disabled={isSubmitDisabled || isSubmitting}
-                            loading={isSubmitting}
-                            aria-describedby={!isSubmitting && feedback ? feedbackId : undefined}
-                            onClick={onSubmit}
+                    // KB EXP-067: the empty state's invite is the one primary action; no submit.
+                    isDirectWithoutFriend ? null : (
+                        // KB NET-007: offline the save is disabled with the hint (the form stays
+                        // readable) unless the outbox can take it.
+                        <OnlineOnly
+                            action={ONLINE_ONLY_ACTIONS.expenseSave}
+                            canQueueOffline={canQueueOffline}
                         >
-                            {t(
-                                mode === 'edit'
-                                    ? 'common:buttons.save'
-                                    : 'common:buttons.addExpense',
-                            )}
-                        </Button>
-                    </OnlineOnly>
+                            <Button
+                                className={styles.save}
+                                size="3"
+                                variant="solid"
+                                disabled={isSubmitDisabled || isSubmitting}
+                                loading={isSubmitting}
+                                aria-describedby={
+                                    !isSubmitting && feedback ? feedbackId : undefined
+                                }
+                                onClick={onSubmit}
+                            >
+                                {t(
+                                    mode === 'edit'
+                                        ? 'common:buttons.save'
+                                        : 'common:buttons.addExpense',
+                                )}
+                            </Button>
+                        </OnlineOnly>
+                    )
                 }
             />
         </Flex>

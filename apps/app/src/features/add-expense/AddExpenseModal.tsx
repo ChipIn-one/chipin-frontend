@@ -3,6 +3,7 @@ import { Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
+import { selectIsDirectExpenseWithoutFriend } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { BaseModal, MODAL_SIZES } from 'components/modals/base-modal';
@@ -11,8 +12,9 @@ import { OverlayBody } from 'components/modals/components';
 import { ConflictDraftNotice } from './components/conflict-draft-notice/ConflictDraftNotice';
 import { ExpenseButtons } from './components/expense-buttons/ExpenseButtons';
 import ExpenseDetailsSection from './components/expense-details-section/ExpenseDetailsSection';
+import { ExpenseDirectNoFriendState } from './components/expense-direct-no-friend-state/ExpenseDirectNoFriendState';
 import ExpenseSplitCard from './components/expense-split-card/ExpenseSplitCard';
-import ExpenseTargetSection from './components/expense-target-section/ExpenseTargetSection';
+import { ExpenseTargetSection } from './components/expense-target-section/ExpenseTargetSection';
 import { useExpenseModalOpenChange, useExpenseModalSource } from './internal/hooks';
 
 const AddExpenseModal = () => {
@@ -26,7 +28,9 @@ const AddExpenseModal = () => {
         close,
         initialize,
         applyLateGroups,
+        applyLateKnownFriends,
         reset,
+        isDirectWithoutFriend,
     } = useExpenseModalStore(
         useShallow(state => ({
             isOpened: state.isOpened,
@@ -37,7 +41,9 @@ const AddExpenseModal = () => {
             close: state.close,
             initialize: state.initialize,
             applyLateGroups: state.applyLateGroups,
+            applyLateKnownFriends: state.applyLateKnownFriends,
             reset: state.reset,
+            isDirectWithoutFriend: selectIsDirectExpenseWithoutFriend(state),
         })),
     );
     const source = useExpenseModalSource({
@@ -58,10 +64,12 @@ const AddExpenseModal = () => {
     useExpenseModalOpenChange(isOpened, onReset);
 
     // The groups list can load after the modal opened (#718): the store takes it and picks the
-    // default group unless a target is already set.
+    // default group unless a target is already set. KB EXP-067: so do the known friends, which make
+    // a direct expense usable without a reload.
     useEffect(() => {
         applyLateGroups(source);
-    }, [applyLateGroups, source]);
+        applyLateKnownFriends(source);
+    }, [applyLateGroups, applyLateKnownFriends, source]);
 
     const content = (
         <>
@@ -70,7 +78,7 @@ const AddExpenseModal = () => {
                     <ConflictDraftNotice />
                     <ExpenseDetailsSection />
                     <ExpenseTargetSection />
-                    <ExpenseSplitCard />
+                    {isDirectWithoutFriend ? <ExpenseDirectNoFriendState /> : <ExpenseSplitCard />}
                 </Flex>
             </OverlayBody>
             <ExpenseButtons onClose={close} />
