@@ -128,6 +128,15 @@ test('disables the group settle-up trigger when every member is settled', () => 
     );
 });
 
+test('renders the group header settle-up trigger as a soft button', () => {
+    render(<SettleUpModal source="group" group={group} />);
+
+    const trigger = screen.getByRole('button', { name: 'common:buttons.settleUp' });
+
+    expect(trigger.classList.contains('rt-variant-soft')).toBe(true);
+    expect(trigger.classList.contains('rt-variant-solid')).toBe(false);
+});
+
 test('lists one row per group debt with display names and two-digit precision', () => {
     const user = userEvent.setup();
 
