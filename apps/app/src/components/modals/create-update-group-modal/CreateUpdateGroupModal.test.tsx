@@ -17,7 +17,6 @@ import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
 import CreateUpdateGroupModal from './CreateUpdateGroupModal';
-import { GROUP_NAME_MAX_LENGTH } from './internal';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -195,7 +194,6 @@ test('GRP-002: the group name input allows 100 characters', () => {
     return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
         const nameInput = screen.getByRole('textbox', { name: 'common:fields.groupName' });
 
-        expect(GROUP_NAME_MAX_LENGTH).toBe(100);
         expect(nameInput.getAttribute('maxlength')).toBe('100');
         expect(screen.getByText('0 / 100')).toBeTruthy();
     });
@@ -246,23 +244,31 @@ test('GRP-002: caps a 101-character group name at 100 characters', () => {
         });
 });
 
-test('GRP-002: update keeps and submits an existing name longer than 50 characters', () => {
+test('GRP-002: update accepts a name up to 100 characters and caps it there', () => {
     const interaction = userEvent.setup();
-    const longName = 'Long group name '.repeat(5).trim();
-    const groupWithLongName = { ...group, name: longName } satisfies Group;
+    const existingName = 'c'.repeat(99);
+    const groupWithLongName = { ...group, name: existingName } satisfies Group;
+    const nameInput = () => screen.getByPlaceholderText('modal.fields.namePlaceholder');
 
-    expect(longName.length).toBeGreaterThan(50);
-    expect(longName.length).toBeLessThanOrEqual(100);
-    updateGroup.mockResolvedValue(groupWithLongName);
+    updateGroup.mockResolvedValue({ ...groupWithLongName, name: `${existingName}d` });
     renderModal('update', groupWithLongName);
 
     return interaction
         .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
         .then(() => {
-            expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
-                'value',
-                longName,
-            );
+            expect(nameInput()).toHaveProperty('value', existingName);
+            expect(nameInput().getAttribute('aria-invalid')).toBe('false');
+            expect(screen.getByText('99 / 100')).toBeTruthy();
+            return interaction.type(nameInput(), 'd');
+        })
+        .then(() => {
+            expect(nameInput()).toHaveProperty('value', `${existingName}d`);
+            expect(screen.getByText('100 / 100')).toBeTruthy();
+            return interaction.paste('efg');
+        })
+        .then(() => {
+            expect(nameInput()).toHaveProperty('value', `${existingName}d`);
+            expect(screen.getByText('100 / 100')).toBeTruthy();
             return interaction.click(
                 screen.getByRole('button', { name: 'common:buttons.saveGroup' }),
             );
@@ -270,7 +276,7 @@ test('GRP-002: update keeps and submits an existing name longer than 50 characte
         .then(() =>
             waitFor(() => {
                 expect(updateGroup).toHaveBeenCalledWith(group.id, {
-                    name: longName,
+                    name: `${existingName}d`,
                     description: group.description,
                 });
             }),
