@@ -106,7 +106,7 @@ const LeaveGroupAlertDialog = ({ children, group }: Props) => {
 
                                 return (
                                     <Flex align="center" gap="2">
-                                        <UserAvatar size="1" user={member.user} />
+                                        <UserAvatar size="1" user={member.user} decorative />
                                         {member.user.displayName}
                                     </Flex>
                                 );
@@ -120,7 +120,7 @@ const LeaveGroupAlertDialog = ({ children, group }: Props) => {
 
                                 return (
                                     <Flex align="center" gap="2">
-                                        <UserAvatar size="1" user={member.user} />
+                                        <UserAvatar size="1" user={member.user} decorative />
                                         {member.user.displayName}
                                     </Flex>
                                 );
@@ -133,4 +133,4 @@ const LeaveGroupAlertDialog = ({ children, group }: Props) => {
     );
 };
 
-export default LeaveGroupAlertDialog;
+export { LeaveGroupAlertDialog };

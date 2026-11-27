@@ -155,6 +155,16 @@
     "media": {
         "noImage": "Нет изображения"
     },
+    "loader": {
+        "label": "Загрузка…"
+    },
+    "members": {
+        "overflow": "+{{count}}",
+        "overflowLabel_one": "Ещё {{count}} участник",
+        "overflowLabel_few": "Ещё {{count}} участника",
+        "overflowLabel_many": "Ещё {{count}} участников",
+        "overflowLabel_other": "Ещё {{count}} участника"
+    },
     "roles": {
         "owner": "Владелец"
     },

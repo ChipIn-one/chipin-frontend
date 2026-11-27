@@ -1,3 +1,3 @@
-import UserProfileSummary from './UserProfileSummary';
+import { UserProfileSummary } from './UserProfileSummary';
 
 export { UserProfileSummary };

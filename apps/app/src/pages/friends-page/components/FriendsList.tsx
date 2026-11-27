@@ -9,7 +9,7 @@ import { FriendsPageSkeleton } from 'components/skeletons';
 
 import CurrencyGroupCard from './CurrencyGroupCard';
 import { FriendInviteEmptyState } from './FriendInviteEmptyState';
-import SettledUpCard from './SettledUpCard';
+import { SettledUpCard } from './SettledUpCard';
 
 interface Props {
     currencyGroups: readonly FriendCurrencyGroup[];

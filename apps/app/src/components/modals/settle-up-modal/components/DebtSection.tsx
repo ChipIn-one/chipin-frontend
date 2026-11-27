@@ -66,7 +66,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                 >
                     <Flex align="center" justify="between" gap="3" width="100%">
                         <Flex align="center" gap="3" minWidth="0">
-                            <UserAvatar user={debt.user} size="3" />
+                            <UserAvatar user={debt.user} size="3" decorative />
                             <Text weight="bold" size="2" truncate>
                                 {debt.user.displayName}
                             </Text>

@@ -1,7 +1,7 @@
 # UserAvatar
 
-`import { UserAvatar } from 'basics';` (default export of `basics/UserAvatar.tsx`, re-exported by
-name from `basics`).
+`import { UserAvatar } from 'basics';` (named export of `basics/UserAvatar.tsx`, re-exported by
+`basics`).
 
 ## Purpose
 
@@ -16,17 +16,20 @@ A user's picture, or their first initial, in a Radix `Avatar`, with an optional 
 ## Props
 
 Source: [`basics/UserAvatar.tsx`](../../../apps/app/src/basics/UserAvatar.tsx). Plus Radix
-`Avatar` props except `fallback` (the component builds it).
+`Avatar` props except `fallback`, `asChild`, `children`, `role`, `aria-label`, `aria-labelledby` and
+`aria-hidden` (the component owns them: it builds the fallback and the accessible name).
 
-| Prop        | Type                                                | Default                 | Description                           |
-| ----------- | --------------------------------------------------- | ----------------------- | ------------------------------------- |
-| `user`      | `{ displayName: string; picture?: string \| null }` | —                       | Source of the picture and the initial |
-| `isLoading` | `boolean`                                           | —                       | Wrap the avatar in Radix `Skeleton`   |
-| `size`      | Radix `Avatar` `size`                               | `'3'`                   | Avatar size                           |
-| `src`       | `string`                                            | `user?.picture \|\| ''` | Image URL                             |
-| `variant`   | Radix `Avatar` `variant`                            | `'soft'`                | Fallback style                        |
-| `color`     | Radix `Avatar` `color`                              | `'mint'`                | Fallback color                        |
-| `radius`    | Radix `Avatar` `radius`                             | `'full'`                | Shape                                 |
+| Prop         | Type                                                | Default                 | Description                           |
+| ------------ | --------------------------------------------------- | ----------------------- | ------------------------------------- |
+| `user`       | `{ displayName: string; picture?: string \| null }` | —                       | Source of the picture and the initial |
+| `isLoading`  | `boolean`                                           | —                       | Wrap the avatar in Radix `Skeleton`   |
+| `decorative` | `boolean`                                           | `false`                 | Hide the avatar from screen readers   |
+| `alt`        | `string`                                            | `user?.displayName`     | Accessible name of the avatar         |
+| `size`       | Radix `Avatar` `size`                               | `'3'`                   | Avatar size                           |
+| `src`        | `string`                                            | `user?.picture \|\| ''` | Image URL                             |
+| `variant`    | Radix `Avatar` `variant`                            | `'soft'`                | Fallback style                        |
+| `color`      | Radix `Avatar` `color`                              | `'mint'`                | Fallback color                        |
+| `radius`     | Radix `Avatar` `radius`                             | `'full'`                | Shape                                 |
 
 Fallback: `user.displayName.charAt(0)`, or a lucide `UserIcon` when there is no user or name.
 
@@ -40,9 +43,15 @@ Fallback: `user.displayName.charAt(0)`, or a lucide `UserIcon` when there is no 
 
 ## Accessibility and i18n
 
-- The component sets no `alt`; pass `alt={user.displayName}` through the Radix props when the
-  avatar is the only place the name appears. Next to a visible name it is decorative.
-- i18n: none; the initial comes from the user's name.
+- The avatar root is one `role="img"` named by `alt`, by default the user's `displayName`, in
+  every state: a screen reader hears "Misha", not the initial "M", with the picture or with the
+  fallback. The `<img>` inside has an empty `alt`, so the name is not read twice.
+- Pass `decorative` when the name is visible next to the avatar (list rows, select items, a
+  button with its own label): the root gets `aria-hidden="true"`. Pass `alt` only to replace the
+  name with a fuller text (the activity feed's "Performed by …").
+- With no `user` and no `alt` there is no name, and the avatar is hidden like a decorative one.
+- i18n: none in the component; the name comes from the user, a caller's `alt` is translated by
+  the caller.
 
 ## Example
 
@@ -52,7 +61,7 @@ import { Flex, Text } from '@radix-ui/themes';
 import { UserAvatar } from 'basics';
 
 <Flex align="center" gap="2">
-    <UserAvatar user={user} size="2" />
+    <UserAvatar user={user} size="2" decorative />
     <Text size="2">{user.displayName}</Text>
 </Flex>;
 ```
