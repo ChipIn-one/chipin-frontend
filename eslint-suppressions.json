@@ -39,11 +39,6 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/UserAvatar.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/buttons/BackButton.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -174,17 +169,7 @@
       "count": 1
     }
   },
-  "apps/app/src/components/modals/leave-group-alert-dialog/LeaveGroupAlertDialog.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/modals/modal-router/ModalRouter.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/remove-friend-alert-dialog/RemoveFriendAlertDialog.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -250,11 +235,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/user-profile-summary/UserProfileSummary.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/constants/publicRoutes.test.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 2
@@ -309,11 +289,6 @@
     }
   },
   "apps/app/src/features/add-expense/components/expense-details-section/components/expense-date-field/ExpenseDateField.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/add-expense/components/expense-payer-search-select/ExpensePayerSearchSelect.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -523,17 +498,7 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/friends-page/components/FriendListItem.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/friends-page/components/FriendsPageHeader.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/components/SettledUpCard.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }

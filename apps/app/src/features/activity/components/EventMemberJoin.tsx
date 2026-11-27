@@ -35,7 +35,7 @@ const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
                         />
                     </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">
-                        <EventActorInlineAvatar event={event} />
+                        <EventActorInlineAvatar event={event} isActorInText={isActorInText} />
 
                         <Text size="3" as="p">
                             <Text size="3" as="span" weight="medium">

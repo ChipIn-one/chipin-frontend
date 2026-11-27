@@ -8,7 +8,7 @@ import { i18n } from 'i18n';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { ExpenseButtons } from '../expense-buttons/ExpenseButtons';
-import ExpensePayerSearchSelect from '../expense-payer-search-select/ExpensePayerSearchSelect';
+import { ExpensePayerSearchSelect } from '../expense-payer-search-select/ExpensePayerSearchSelect';
 
 import ExpenseSplitCard from './ExpenseSplitCard';
 

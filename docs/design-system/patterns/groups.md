@@ -21,8 +21,8 @@ How people and groups look on every screen. Paths are inside `apps/app/src`; che
   component tokens yet; pick the size of the same place on another screen.
 - `UsersRow` shows at most `max` avatars (default `5`, all callers pass `5`) and one `+N` avatar
   for the rest. Do not list members as a wrapped avatar grid on cards.
-- `GroupAvatar` and `UsersRow` pass the name as `alt`. `UserAvatar` takes `alt` from its caller
-  (it spreads Radix `Avatar` props); pass the display name.
+- `GroupAvatar` and `UsersRow` pass the name as `alt`. `UserAvatar` names itself with the
+  display name (photo or initial); pass `decorative` when the name is visible next to it.
 
 ## Roles
 

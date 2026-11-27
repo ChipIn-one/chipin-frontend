@@ -6,7 +6,7 @@ import { type ExpenseTargetMode, useExpenseModalStore } from 'store/expenseModal
 
 import { SegmentedControl } from 'basics/SegmentedControl';
 
-import ExpensePayerSearchSelect from '../expense-payer-search-select/ExpensePayerSearchSelect';
+import { ExpensePayerSearchSelect } from '../expense-payer-search-select/ExpensePayerSearchSelect';
 
 import ExpenseGroupSearchSelect from './components/expense-group-search-select/ExpenseGroupSearchSelect';
 import ExpenseScopeContext from './components/expense-scope-context/ExpenseScopeContext';

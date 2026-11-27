@@ -1,5 +1,6 @@
 import { Avatar, Flex, Text } from '@radix-ui/themes';
 import type { CSSProperties, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { GroupUser } from 'api/chipin.types';
 
@@ -25,6 +26,7 @@ interface Props {
 }
 
 const UsersRow = ({ members, size = '1', max = 5 }: Props) => {
+    const { t } = useTranslation('common');
     const visibleUsers = members.slice(0, max);
     const hiddenCount = members.length - max;
 
@@ -45,14 +47,24 @@ const UsersRow = ({ members, size = '1', max = 5 }: Props) => {
 
             {hiddenCount > 0 && (
                 <AvatarWrapper $stackOrder={visibleUsers.length}>
+                    {/* The root is the named image: the visible "+N" alone says nothing to a screen reader. */}
                     <Avatar
+                        asChild
                         mr="-1"
                         size="1"
                         color="cyan"
                         radius="full"
-                        // eslint-disable-next-line react/jsx-no-literals
-                        fallback={<Text size="1" weight="bold" as="span">{`+${hiddenCount}`}</Text>}
-                    />
+                        fallback={
+                            <Text size="1" weight="bold" as="span">
+                                {t('members.overflow', { count: hiddenCount })}
+                            </Text>
+                        }
+                    >
+                        <span
+                            role="img"
+                            aria-label={t('members.overflowLabel', { count: hiddenCount })}
+                        />
+                    </Avatar>
                 </AvatarWrapper>
             )}
         </Flex>
