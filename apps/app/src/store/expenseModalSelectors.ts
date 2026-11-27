@@ -27,6 +27,7 @@ import {
     toUnits,
 } from 'shared/money';
 
+import { resolveExpenseModalCurrency } from './expenseModalCurrency';
 import type { ExpenseModalState, ExpenseParticipant } from './expenseModalTypes';
 import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
@@ -826,4 +827,41 @@ export const selectSplitSummary = (state: ExpenseModalState) => {
         progressPercent: split.progressPercent,
         yourShareAmount: toDisplayNumber(split.yourShare),
     };
+};
+
+/** The source of an automatic expense currency that the editor names (KB EXP-074). */
+export type ExpenseCurrencySourceNote = 'group' | 'friend' | 'global' | 'default';
+
+/**
+ * The source of the currency of a new expense while it is automatic (EXP-073), from the one
+ * EXP-072 resolver: null after a manual pick, in edit mode, for the app's fallback, for a direct
+ * target without a friend, and when the stored currency is not the one the resolver gives (a
+ * restored draft), so a note never names a source the currency did not come from.
+ */
+export const selectCurrencySourceNote = (
+    state: ExpenseModalState,
+): ExpenseCurrencySourceNote | null => {
+    if (
+        state.mode !== 'create' ||
+        state.isCurrencyManuallyEdited ||
+        (state.targetMode === 'friends' && !state.selectedFriendId)
+    ) {
+        return null;
+    }
+
+    const { currency, source } = resolveExpenseModalCurrency(state.source, state);
+
+    if (currency !== state.currency) {
+        return null;
+    }
+
+    switch (source) {
+        case 'context':
+            return state.targetMode === 'friends' ? 'friend' : 'group';
+        case 'global':
+        case 'default':
+            return source;
+        case 'fallback':
+            return null;
+    }
 };
