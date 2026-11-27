@@ -124,11 +124,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/ViewModeSwitch.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/internal-page-layout/InternalPageLayout.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -215,11 +210,6 @@
     }
   },
   "apps/app/src/components/modals/settle-up-modal/components/DebtSelectionStep.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/settle-up-modal/components/GroupSettleUpFlow.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -644,11 +634,6 @@
     }
   },
   "apps/app/src/pages/settings-page/index.ts": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/solo-page/SoloPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }

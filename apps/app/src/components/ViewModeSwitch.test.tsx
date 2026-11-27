@@ -6,7 +6,7 @@ import type { UserSettings } from 'api/chipin.types';
 import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
-import ViewModeSwitch from './ViewModeSwitch';
+import { ViewModeSwitch } from './ViewModeSwitch';
 
 import 'i18n/index';
 

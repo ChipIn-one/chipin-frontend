@@ -149,40 +149,36 @@ const DashboardPage = () => {
                     hasExpenseHistory={hasExpenseHistory}
                 />
 
-                <Flex
-                    gap="4"
-                    direction="column"
-                    display={
-                        dashboardView === 'welcome' ? { initial: 'none', sm: 'flex' } : undefined
-                    }
-                    data-testid="dashboard-groups-section"
-                >
-                    {!isDashboardFetched || groupsList.isLoading || hasGroups ? (
-                        <GroupsCards groups={groups} label={t('groups.title')} />
-                    ) : (
-                        <NoGroupsEmptyState
-                            action={
-                                dashboardView !== 'dashboard' ? undefined : (
-                                    <CreateUpdateGroupModal type="create">
-                                        <OnlineOnly
-                                            action={ONLINE_ONLY_ACTIONS.groupCreate}
-                                            isFullWidth
-                                        >
-                                            <Button
-                                                className={styles.createGroupButton}
-                                                size="2"
-                                                variant="soft"
+                {/* The welcome hero already offers Create group: no side groups section (DSH-011). */}
+                {dashboardView !== 'welcome' && (
+                    <Flex gap="4" direction="column" data-testid="dashboard-groups-section">
+                        {!isDashboardFetched || groupsList.isLoading || hasGroups ? (
+                            <GroupsCards groups={groups} label={t('groups.title')} />
+                        ) : (
+                            <NoGroupsEmptyState
+                                action={
+                                    dashboardView !== 'dashboard' ? undefined : (
+                                        <CreateUpdateGroupModal type="create">
+                                            <OnlineOnly
+                                                action={ONLINE_ONLY_ACTIONS.groupCreate}
+                                                isFullWidth
                                             >
-                                                <PlusIcon size={14} />
-                                                {t('common:buttons.createGroup')}
-                                            </Button>
-                                        </OnlineOnly>
-                                    </CreateUpdateGroupModal>
-                                )
-                            }
-                        />
-                    )}
-                </Flex>
+                                                <Button
+                                                    className={styles.createGroupButton}
+                                                    size="2"
+                                                    variant="soft"
+                                                >
+                                                    <PlusIcon size={14} />
+                                                    {t('common:buttons.createGroup')}
+                                                </Button>
+                                            </OnlineOnly>
+                                        </CreateUpdateGroupModal>
+                                    )
+                                }
+                            />
+                        )}
+                    </Flex>
+                )}
             </Flex>
         );
 

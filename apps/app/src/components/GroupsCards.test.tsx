@@ -515,6 +515,41 @@ test('uses search-specific and filter-specific empty-state descriptions', () => 
         });
 });
 
+test('DSH-006: Show all resets the debt filter and search', () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const owed = createGroup({
+        id: 'show-all-owed',
+        name: 'Vietnam',
+        balances: [{ USD: balance('USD', 10) }],
+    });
+    const owes = createGroup({
+        id: 'show-all-owes',
+        name: 'Lisbon',
+        balances: [{ USD: balance('USD', -5) }],
+    });
+
+    renderGroups([owed, owes]);
+
+    return user
+        .click(screen.getByRole('button', { name: 'summary.youOwe' }))
+        .then(() => user.click(screen.getByRole('button', { name: 'groups.searchLabel' })))
+        .then(() =>
+            user.type(screen.getByRole('textbox', { name: 'groups.searchLabel' }), 'missing'),
+        )
+        .then(() => user.click(screen.getByRole('button', { name: 'activity:showAllAction' })))
+        .then(() => {
+            const allFilter = screen.getByRole('button', { name: 'groups.filterAll' });
+
+            expect(screen.queryByText('groups.filterEmptyTitle')).toBeNull();
+            expect(screen.queryByRole('button', { name: 'activity:showAllAction' })).toBeNull();
+            expect(allFilter.getAttribute('aria-pressed')).toBe('true');
+            expect(document.activeElement).toBe(allFilter);
+            expect(screen.getByRole('button', { name: 'groups.searchLabel' })).toBeTruthy();
+            expect(screen.getByText('Vietnam')).toBeTruthy();
+            expect(screen.getByText('Lisbon')).toBeTruthy();
+        });
+});
+
 test('returns focus to the search trigger on Escape', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const group = createGroup({

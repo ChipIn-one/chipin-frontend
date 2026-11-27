@@ -9,8 +9,9 @@ import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { getOrThrow } from 'test/getOrThrow';
 
-import SoloPage from './SoloPage';
+import { SoloPage } from './SoloPage';
 
 import 'i18n/index';
 
@@ -73,5 +74,37 @@ test('uses the shared profile shortcut to open Settings from Solo', () => {
 
     return interaction.click(screen.getByRole('link', { name: 'Settings' })).then(() => {
         expect(screen.getByLabelText('Current route').textContent).toBe('/settings');
+    });
+});
+
+test('DSH-016: each Solo placeholder offers Go to dashboard, which switches to group mode', () => {
+    const interaction = userEvent.setup();
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+    saveLocalUser({ role: 'ADMIN', settings });
+
+    const CurrentRoute = () => {
+        const location = useLocation();
+
+        return <output aria-label="Current route">{location.pathname}</output>;
+    };
+
+    render(
+        <MemoryRouter initialEntries={['/solo']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <SoloPage />
+                    <CurrentRoute />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    const actions = screen.getAllByRole('button', { name: 'Go to dashboard' });
+
+    expect(actions).toHaveLength(2);
+
+    return interaction.click(getOrThrow(actions, 1)).then(() => {
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.GROUP);
+        expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
     });
 });

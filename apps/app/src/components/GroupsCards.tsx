@@ -44,8 +44,9 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const [searchQuery, setSearchQuery] = useState('');
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchButtonRef = useRef<HTMLButtonElement>(null);
+    const allFilterButtonRef = useRef<HTMLButtonElement>(null);
     const shouldRestoreSearchButtonFocusRef = useRef(false);
-    const { t } = useTranslation('dashboard');
+    const { t } = useTranslation(['dashboard', 'activity']);
     const [nowTimestamp] = useState(() => getUnixTimestampInSec());
     // The list has data, or its first load has settled (a failed one included).
     const { isLoading: isGroupListLoading } = useGroupsList();
@@ -116,6 +117,14 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const onClearSearch = () => {
         searchInputRef.current?.focus();
         setSearchQuery('');
+    };
+
+    // `Show all` of an empty result (DSH-006): the All filter and no query. The action unmounts with
+    // the empty state, so focus moves to the All filter instead of falling back to the page.
+    const onShowAll = () => {
+        setActiveFilter(GROUP_DEBT_FILTERS.ALL);
+        setSearchQuery('');
+        allFilterButtonRef.current?.focus();
     };
 
     return (
@@ -205,6 +214,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                 {filterItems.map(item => (
                     <Button
                         key={item.value}
+                        ref={item.value === GROUP_DEBT_FILTERS.ALL ? allFilterButtonRef : undefined}
                         size="3"
                         variant="soft"
                         color={activeFilter === item.value ? 'grass' : 'gray'}
@@ -221,6 +231,11 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                     icon={<FilterXIcon size={16} />}
                     title={t('groups.filterEmptyTitle')}
                     description={emptyStateDescription}
+                    action={
+                        <Button type="button" variant="soft" onClick={onShowAll}>
+                            {t('activity:showAllAction')}
+                        </Button>
+                    }
                 />
             )}
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Text } from '@radix-ui/themes';
+import { Badge, Button, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -167,6 +167,16 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
         },
     };
 
+    // BAL-023: a member with nothing left to settle gets a status badge, not a disabled action. An
+    // open flow stays mounted (a payment that just settled the debt finishes and closes it).
+    if (isSettledMember && !isOpened) {
+        return (
+            <Badge size="1" color="gray" variant="soft">
+                {t('group:page.balances.settledBadge')}
+            </Badge>
+        );
+    }
+
     return (
         <ModalRouter<SettlementRouteId>
             isOpened={isOpened}
@@ -183,11 +193,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                         disabled={debts.length === 0}
                     >
                         <ArrowLeftRightIcon size={15} />
-                        {t(
-                            isSettledMember
-                                ? 'group:page.balances.settled'
-                                : 'common:buttons.settleUp',
-                        )}
+                        {t('common:buttons.settleUp')}
                     </Button>
                 </OnlineOnly>
             }
@@ -195,4 +201,4 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     );
 };
 
-export default GroupSettleUpFlow;
+export { GroupSettleUpFlow };
