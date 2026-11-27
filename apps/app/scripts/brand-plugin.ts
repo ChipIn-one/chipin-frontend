@@ -2,8 +2,8 @@
 // `@chipin/tokens`. `favicon.svg` lives in `packages/tokens/assets/` (not in `public/`), so this
 // plugin serves it at `/favicon.svg` in dev and emits it to the `dist` root in a build (where the
 // Workbox `globPatterns` precache it). `<meta name="theme-color">` is injected from `BRAND_COLORS`
-// into the SPA shell `app.html` only (spec 05 §6; the public `index.html` and its prerendered pages
-// are not touched until spec 04), so the HTML and the Vite config hold no colour literal.
+// into the SPA shell `index.html` (spec 05 §6), so the HTML and the Vite config hold no colour
+// literal.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename } from 'node:path';
@@ -15,7 +15,7 @@ import type { HtmlTagDescriptor, Plugin } from 'vite';
 export const FAVICON_FILE = 'favicon.svg';
 
 /** The HTML entry that gets `<meta name="theme-color">`: the SPA shell. */
-export const THEME_COLOR_ENTRY = 'app.html';
+export const THEME_COLOR_ENTRY = 'index.html';
 
 /** The absolute path of the favicon source in the tokens package. */
 export const FAVICON_SOURCE = createRequire(import.meta.url).resolve(
@@ -53,13 +53,12 @@ export const brandPlugin = (): Plugin => ({
 });
 
 // Spec 05 §2 (05-3): the anti-FOUC theme script runs as the first element of `<head>` of the SPA
-// shell `app.html`, before any CSS or app code, so a dark reload never shows a light frame. The
-// public `index.html` (and its prerendered pages) is not touched until spec 04: `PublicApp` sets its
-// own theme there. The script text is inserted as is (Vite serialises string `children` verbatim
+// shell `index.html`, before any CSS or app code, so a dark reload never shows a light frame. The
+// script text is inserted as is (Vite serialises string `children` verbatim
 // and does not rewrite an inline classic script), so its CSP hash THEME_INIT_SCRIPT_SHA256 matches
 // the `script-src` of vercel.json (theme-init.test.ts checks it).
 /** The HTML entry that gets the theme script: the SPA shell. */
-export const THEME_INIT_ENTRY = 'app.html';
+export const THEME_INIT_ENTRY = 'index.html';
 
 export const THEME_INIT_TAG: HtmlTagDescriptor = {
     tag: 'script',

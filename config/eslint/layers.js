@@ -28,14 +28,13 @@ export const LAYERS_DOC = 'docs/engineering/rules/10-architecture.md';
 export const LAYER_ELEMENTS = [
     {
         type: 'app',
-        description: 'composition root: entry points, bootstrap, router, public routes',
+        description: 'composition root: entry points, bootstrap, router',
         patterns: [
             { pattern: 'main.tsx', mode: 'file' },
             { pattern: 'root.tsx', mode: 'file' },
             { pattern: 'pages/GlobalHooks.tsx', mode: 'file' },
             { pattern: 'app', mode: 'folder' },
             { pattern: 'bootstrap', mode: 'folder' },
-            { pattern: 'public-routes', mode: 'folder' },
         ],
     },
     {

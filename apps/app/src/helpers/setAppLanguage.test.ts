@@ -4,7 +4,7 @@ import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { LocalStorage } from 'helpers/localStorage';
 import { i18n, I18N_NAMESPACES } from 'i18n';
 
-import { applyLanguage, getPendingLanguage, setAppLanguage } from './setAppLanguage';
+import { getPendingLanguage, setAppLanguage } from './setAppLanguage';
 
 type ReadCallback = (error: unknown, data?: unknown) => void;
 type Read = (lng: string, ns: string, callback: ReadCallback) => void;
@@ -49,15 +49,12 @@ afterEach(() => {
 });
 
 // Spec 04 §2.10: a language is a set of lazy chunks; it is loaded before i18next switches to it.
-test.each([
-    ['setAppLanguage', setAppLanguage],
-    ['applyLanguage', applyLanguage],
-])('%s loads a language that is not loaded yet, then switches to it', (_, switchTo) => {
+test('setAppLanguage loads a language that is not loaded yet, then switches to it', () => {
     dropRussian();
     const reloadResources = vi.spyOn(i18n, 'reloadResources');
     const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
 
-    return switchTo('ru').then(() => {
+    return setAppLanguage('ru').then(() => {
         expect(reloadResources).toHaveBeenCalledOnce();
         expect(changeLanguage).toHaveBeenCalledExactlyOnceWith('ru');
         expect(reloadResources.mock.invocationCallOrder[0]).toBeLessThan(
@@ -71,11 +68,6 @@ test.each([
 test('setAppLanguage saves the language as the preference', () =>
     setAppLanguage('ru').then(() => {
         expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('ru');
-    }));
-
-test('applyLanguage does not save the language', () =>
-    applyLanguage('ru').then(() => {
-        expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('');
     }));
 
 // R1 M1: i18next itself resolves a failed load and would switch to a language without strings.
@@ -101,11 +93,11 @@ test('the next switch after a failed load reads the language again', () => {
     dropRussian();
     connector().backend.read = failingRead;
 
-    return expect(applyLanguage('ru'))
+    return expect(setAppLanguage('ru'))
         .rejects.toThrow()
         .then(() => {
             connector().backend.read = realRead;
-            return applyLanguage('ru');
+            return setAppLanguage('ru');
         })
         .then(() => {
             expect(i18n.resolvedLanguage).toBe('ru');
@@ -123,7 +115,7 @@ test('the latest switch wins over an older one still loading', () => {
     };
     const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
 
-    const older = applyLanguage('ru');
+    const older = setAppLanguage('ru');
     expect(getPendingLanguage()).toBe('ru');
 
     return setAppLanguage('en')
@@ -152,7 +144,7 @@ test('the latest call wins even when an older call has the same language', () =>
     };
     const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
 
-    const first = applyLanguage('ru');
+    const first = setAppLanguage('ru');
     const second = setAppLanguage('en');
     const third = setAppLanguage('ru');
 

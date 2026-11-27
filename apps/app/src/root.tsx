@@ -1,20 +1,16 @@
 import * as Sentry from '@sentry/react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { createRoot, hydrateRoot } from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 
 import { persistedUserId } from 'app/providers/persistedUserId';
 import { ServiceWorkerManager } from 'app/pwa/ServiceWorkerManager';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
 import { getLocalUser } from 'helpers/localStorage';
-import { getPublicRoute } from 'helpers/publicRoutes';
-import { applyLanguage } from 'helpers/setAppLanguage';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
 import { i18n, i18nReady } from 'i18n';
 import { syncHtmlLang } from 'i18n/htmlLang';
-import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
-import { PublicTelemetry } from 'public-routes/PublicTelemetry';
 
 import { GlobalErrorBoundary } from 'components/global-error-boundary';
 
@@ -46,73 +42,34 @@ const IsolatedServiceWorkerManager = () => (
 );
 
 const rootElement = document.getElementById('root')!;
-const publicBuildYear = Number(rootElement.dataset.publicBuildYear);
-const prerenderedRoute =
-    rootElement.dataset.publicSsg === 'true' ? getPublicRoute(window.location.pathname) : null;
 
-if (prerenderedRoute) {
-    // Hydration preserves static, indexable React markup from the build. The route language is
-    // loaded first (spec 04 §2.10: lazy locale chunks), so hydration never renders raw keys.
-    Promise.all([import('public-routes'), i18nSettled])
-        .then(([{ PublicApp }]) =>
-            // A route language that fails to load is reported; the page still hydrates (with the
-            // `en` fallback strings), so the worker, telemetry and effects of the page run.
-            applyLanguage(prerenderedRoute.locale)
-                .catch((error: unknown) => {
-                    Sentry.captureException(error);
-                })
-                .then(() =>
-                    hydrateRoot(
-                        rootElement,
-                        <>
-                            <GlobalErrorBoundary>
-                                <PublicBuildYearContext.Provider
-                                    value={
-                                        Number.isInteger(publicBuildYear) && publicBuildYear > 2000
-                                            ? publicBuildYear
-                                            : null
-                                    }
-                                >
-                                    <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
-                                </PublicBuildYearContext.Provider>
-                                <PublicTelemetry />
-                            </GlobalErrorBoundary>
-                            {/* Public SSG entry must register the same service worker as the SPA. */}
-                            <IsolatedServiceWorkerManager />
-                        </>,
-                    ),
-                ),
-        )
-        .catch(error => Sentry.captureException(error));
-} else {
-    // The user's query cache is restored from IndexedDB before the app (and its router) renders;
-    // the public SSG branch above never touches IndexedDB. The first render waits for the initial
-    // language's lazy chunks (spec 04 §2.10), so it never shows raw keys. Importing `main` runs
-    // `initAppearance()`, which applies the theme class to `<html>` before that render (spec 05 §2).
-    Promise.all([
-        import('main'),
-        import('shared/offline/restore'),
-        import('app/pwa/expenseDraftReload'),
-    ])
-        .then(([{ Main }, { startCacheRestore }, { startExpenseDraftReload }]) => {
-            startCacheRestore(persistedUserId(getLocalUser()?.id));
-            // Spec 04 §2.11 item 4: an expense draft saved before an app reload reopens once.
-            startExpenseDraftReload();
-            return i18nSettled.then(() => Main);
-        })
-        .then(Main => {
-            createRoot(rootElement).render(
-                <>
-                    <GlobalErrorBoundary>
-                        <Analytics beforeSend={sanitizeTelemetryEvent} />
-                        <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
-                        <Main />
-                    </GlobalErrorBoundary>
-                    {/* The single SW registration, once per page, outside the error boundary: it
-                        keeps running for the error fallback when the app crashes on first render. */}
-                    <IsolatedServiceWorkerManager />
-                </>,
-            );
-        })
-        .catch(error => Sentry.captureException(error));
-}
+// The user's query cache is restored from IndexedDB before the app (and its router) renders. The
+// first render waits for the initial language's lazy chunks (spec 04 §2.10), so it never shows raw
+// keys. Importing `main` runs `initAppearance()`, which applies the theme class to `<html>` before
+// that render (spec 05 §2).
+Promise.all([
+    import('main'),
+    import('shared/offline/restore'),
+    import('app/pwa/expenseDraftReload'),
+])
+    .then(([{ Main }, { startCacheRestore }, { startExpenseDraftReload }]) => {
+        startCacheRestore(persistedUserId(getLocalUser()?.id));
+        // Spec 04 §2.11 item 4: an expense draft saved before an app reload reopens once.
+        startExpenseDraftReload();
+        return i18nSettled.then(() => Main);
+    })
+    .then(Main => {
+        createRoot(rootElement).render(
+            <>
+                <GlobalErrorBoundary>
+                    <Analytics beforeSend={sanitizeTelemetryEvent} />
+                    <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
+                    <Main />
+                </GlobalErrorBoundary>
+                {/* The single SW registration, once per page, outside the error boundary: it
+                    keeps running for the error fallback when the app crashes on first render. */}
+                <IsolatedServiceWorkerManager />
+            </>,
+        );
+    })
+    .catch(error => Sentry.captureException(error));

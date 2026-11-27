@@ -47,21 +47,17 @@ test('<meta name="theme-color"> equals the manifest theme colour token', () => {
     });
 });
 
-test('only the SPA shell app.html gets <meta name="theme-color">, exactly once', () => {
-    expect(THEME_COLOR_ENTRY).toBe('app.html');
-    expect(transformHtml('app.html')).toEqual([THEME_COLOR_META]);
-    expect(transformHtml('index.html')).toEqual([]);
-    expect(transformHtml('privacy/index.html')).toEqual([]);
+test('only the SPA shell index.html gets <meta name="theme-color">, exactly once', () => {
+    expect(THEME_COLOR_ENTRY).toBe('index.html');
+    expect(transformHtml('index.html')).toEqual([THEME_COLOR_META]);
+    expect(transformHtml('other.html')).toEqual([]);
 });
 
-test.each(['app.html', 'index.html'])(
-    'the source %s has no colour literal and no hand-written theme-color meta',
-    file => {
-        const html = readFileSync(path.join(APP_DIR, file), 'utf8');
-        expect(html).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-        expect(html).not.toMatch(/name=["']theme-color["']/);
-    },
-);
+test('the source index.html has no colour literal and no hand-written theme-color meta', () => {
+    const html = readFileSync(path.join(APP_DIR, 'index.html'), 'utf8');
+    expect(html).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(html).not.toMatch(/name=["']theme-color["']/);
+});
 
 test('a build emits favicon.svg at the dist root', () => {
     const emitFile = vi.fn();
@@ -91,7 +87,7 @@ test('the dev server serves /favicon.svg and passes other requests on', () => {
     expect(next).toHaveBeenCalledOnce();
 });
 
-// 05-3 (spec 05 §2): the anti-FOUC script is the first element of `<head>` in app.html only, and
+// 05-3 (spec 05 §2): the anti-FOUC script is the first element of `<head>` in index.html, and
 // its text is THEME_INIT_SCRIPT byte for byte (the CSP hash input).
 /** Runs the HTML through Vite's own transform pipeline (a dev server, no build). */
 const transform = async (file: string): Promise<string> => {
@@ -114,7 +110,7 @@ const transform = async (file: string): Promise<string> => {
 };
 
 test('the tag is an inline classic script prepended to <head>', () => {
-    expect(THEME_INIT_ENTRY).toBe('app.html');
+    expect(THEME_INIT_ENTRY).toBe('index.html');
     expect(THEME_INIT_TAG).toEqual({
         tag: 'script',
         children: THEME_INIT_SCRIPT,
@@ -122,16 +118,20 @@ test('the tag is an inline classic script prepended to <head>', () => {
     });
 });
 
-test('app.html gets the script as the first element of <head>, byte for byte', async () => {
-    const html = await transform('app.html');
+test('index.html gets the script as the first element of <head>, byte for byte', async () => {
+    const html = await transform('index.html');
     const head = /<head>\s*([\s\S]*?)<\/head>/.exec(html)?.[1] ?? '';
 
     expect(head.startsWith(`<script>${THEME_INIT_SCRIPT}</script>`)).toBe(true);
     expect(html.split(THEME_INIT_SCRIPT)).toHaveLength(2);
 });
 
-test('the public index.html does not get the script', async () => {
-    const html = await transform('index.html');
+test('another HTML file does not get the script', () => {
+    const transformInit = (filename: string): unknown =>
+        callHook(themeInitPlugin().transformIndexHtml, undefined, '<html></html>', {
+            filename: path.join(APP_DIR, filename),
+        });
 
-    expect(html).not.toContain('Chipin_theme');
+    expect(transformInit('other.html')).toEqual([]);
+    expect(transformInit('index.html')).toEqual([THEME_INIT_TAG]);
 });

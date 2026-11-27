@@ -4,7 +4,6 @@ import resourcesToBackend from 'i18next-resources-to-backend';
 import { initReactI18next } from 'react-i18next';
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from 'constants/locales';
-import { getPublicRoute } from 'constants/publicRoutes';
 import { resolveLocale } from 'helpers/locale';
 
 const isSupportedLocale = (lng: string): lng is SupportedLocale =>
@@ -44,9 +43,9 @@ const i18nReady = i18n
     .use(resourcesToBackend(loadNamespace))
     .use(initReactI18next)
     .init({
-        lng:
-            (typeof window !== 'undefined' && getPublicRoute(window.location.pathname)?.locale) ||
-            resolveLocale(),
+        // 04-5a: the app serves no public pages, so no URL picks the language (`/` is the `home`
+        // redirect, the PWA start URL).
+        lng: resolveLocale(),
         fallbackLng: DEFAULT_LOCALE,
         supportedLngs: SUPPORTED_LOCALES,
         nonExplicitSupportedLngs: false,

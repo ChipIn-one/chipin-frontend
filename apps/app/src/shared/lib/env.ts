@@ -59,14 +59,11 @@ export const getIsDevEnv = (): boolean => getEnv() === ENV_DEV;
 
 export const getIsProdEnv = (): boolean => getEnv() === ENV_PROD;
 
+/** The origin the app is served on; resolving the environment first rejects an unknown host. */
 export const getChipInAppUrl = (): string => {
-    const environment = getEnv();
+    getEnv();
 
-    if (typeof window !== 'undefined') {
-        return window.location.origin;
-    }
-
-    return ENV_URLS[environment].siteBaseUrl;
+    return window.location.origin;
 };
 
 /**

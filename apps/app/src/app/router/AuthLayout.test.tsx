@@ -11,6 +11,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vi
 
 import { AUTH_READY_TIMEOUT_MS } from 'app/auth/session';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
+import { getSiteOrigin } from 'helpers/env';
 import { getLocalUser, LocalStorage } from 'helpers/localStorage';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { startCacheRestore } from 'shared/offline/restore';
@@ -456,7 +457,7 @@ describe('the explicit sign-out of this tab', () => {
             // Protected UI is gone at once; the page is left once the logout and deletes settle.
             expect(screen.queryByLabelText('Draft')).toBeNull();
             await waitFor(() => {
-                expect(assign).toHaveBeenCalledExactlyOnceWith(landing);
+                expect(assign).toHaveBeenCalledExactlyOnceWith(`${getSiteOrigin()}${landing}`);
             });
             expect(screen.getByLabelText('Current route').textContent).toBe(
                 '/group/123?tab=members',
