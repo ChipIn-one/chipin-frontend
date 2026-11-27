@@ -1,4 +1,4 @@
-import { AlertDialog, Dialog, Theme } from '@radix-ui/themes';
+import { AlertDialog, Dialog, Popover, Theme } from '@radix-ui/themes';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -141,6 +141,25 @@ test('#936 offline with an alert dialog open shows the status pill', async () =>
         </Theme>,
     );
     expect(await screen.findByText(offlineStatusText())).toBeTruthy();
+});
+
+test('#936 offline with a page-level popover open shows no status pill', async () => {
+    useConnectivityStore.setState({ mode: 'offline' });
+    render(
+        <Theme>
+            <Popover.Root open>
+                <Popover.Trigger>
+                    <button type="button">{DIALOG_TITLE}</button>
+                </Popover.Trigger>
+                <Popover.Content>{DIALOG_TITLE}</Popover.Content>
+            </Popover.Root>
+            <TopLayer />
+        </Theme>,
+    );
+    await waitFor(() => {
+        expect(document.querySelector('.rt-PopoverContent[data-state="open"]')).not.toBeNull();
+    });
+    expect(screen.queryByText(offlineStatusText())).toBeNull();
 });
 
 test('#936 online shows no status pill with or without a dialog', () => {

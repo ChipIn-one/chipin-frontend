@@ -8,17 +8,12 @@ import { useIsDialogOpen } from './useIsDialogOpen';
 
 import styles from './OfflineStatus.module.css';
 
-/**
- * Compact offline status above every dialog and sheet (NET-004). Shown only while one is open: on a
- * page the inline `OfflineBanner` is the one offline indicator (#936). Informational only: no
- * focusable element and no pointer input; the inline `OfflineBanner` keeps the Retry control.
- */
-const OfflineStatus = () => {
+// Mounted only while offline, so the `<body>` observer of `useIsDialogOpen` runs only then.
+const OfflineStatusPill = () => {
     const { t } = useTranslation('errors');
-    const isOffline = useConnectivityStore(state => state.mode === 'offline');
     const isDialogOpen = useIsDialogOpen();
 
-    if (!isOffline || !isDialogOpen) {
+    if (!isDialogOpen) {
         return null;
     }
 
@@ -30,6 +25,17 @@ const OfflineStatus = () => {
             </Badge>
         </div>
     );
+};
+
+/**
+ * Compact offline status above every dialog and sheet (NET-004). Shown only while one is open: on a
+ * page the inline `OfflineBanner` is the one offline indicator (#936). Informational only: no
+ * focusable element and no pointer input; the inline `OfflineBanner` keeps the Retry control.
+ */
+const OfflineStatus = () => {
+    const isOffline = useConnectivityStore(state => state.mode === 'offline');
+
+    return isOffline ? <OfflineStatusPill /> : null;
 };
 
 export { OfflineStatus };

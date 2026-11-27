@@ -1,8 +1,11 @@
 import { useSyncExternalStore } from 'react';
 
-// Radix dialog, alert dialog and sheet content while open (they are portaled into `<body>`).
-const OPEN_DIALOG_SELECTOR =
-    '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]';
+// Radix dialog, alert dialog and sheet content while open (they are portaled into `<body>`). A
+// Radix Popover is also `role="dialog"` but opens on pages too, where the inline banner is visible.
+const OPEN_DIALOG_SELECTOR = [
+    '[role="dialog"][data-state="open"]:not(.rt-PopoverContent)',
+    '[role="alertdialog"][data-state="open"]',
+].join(', ');
 
 const getSnapshot = (): boolean => document.querySelector(OPEN_DIALOG_SELECTOR) !== null;
 
@@ -14,7 +17,6 @@ const subscribe = (onChange: () => void): (() => void) => {
     observer.observe(document.body, {
         childList: true,
         subtree: true,
-        attributes: true,
         attributeFilter: ['data-state', 'role'],
     });
     return () => observer.disconnect();
