@@ -4,8 +4,11 @@ import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { currencyCode, fromUnits } from 'shared/money';
 
 import {
+    selectDirectExpenseFallbackGroupId,
     selectExpensePayload,
+    selectExpenseSubmitFeedback,
     selectIncludedUsers,
+    selectIsDirectExpenseWithoutFriend,
     selectIsSubmitDisabled,
     selectIsUserLocked,
     selectPayerId,
@@ -14,7 +17,11 @@ import {
     selectSplitSummary,
     selectUserIds,
 } from './expenseModalSelectors';
-import { type ExpenseParticipant, useExpenseModalStore } from './expenseModalStore';
+import {
+    type ExpenseModalSource,
+    type ExpenseParticipant,
+    useExpenseModalStore,
+} from './expenseModalStore';
 
 const currentUser = {
     id: 'user-1',
@@ -646,4 +653,163 @@ test('EXP-063 a group-page modal keeps its own group when a later source names a
     expect(state.groupId).toBe('');
     expect(state.source.defaultGroupId).toBe('group-9');
     expect(state.source.groups.map(group => group.id)).toEqual(['group-1']);
+});
+
+// KB EXP-067: a dashboard direct expense opened before any mutual known user exists.
+const noFriendSource = (overrides: Partial<ExpenseModalSource> = {}): ExpenseModalSource => ({
+    context: 'dashboard' as const,
+    currentUser,
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    skipCategory: false,
+    groups: [],
+    knownFriends: [],
+    ...overrides,
+});
+
+const openDirectWithoutFriend = (overrides: Partial<ExpenseModalSource> = {}): void => {
+    useExpenseModalStore.getState().initialize(noFriendSource(overrides));
+    useExpenseModalStore.getState().setTargetMode('friends');
+};
+
+test('EXP-067 a direct create without a known friend is the no-friend state with no submit feedback', () => {
+    openDirectWithoutFriend();
+
+    const state = useExpenseModalStore.getState();
+
+    expect(selectIsDirectExpenseWithoutFriend(state)).toBe(true);
+    expect(selectIsSubmitDisabled(state)).toBe(true);
+    expect(selectExpenseSubmitFeedback(state)).toBeNull();
+    expect(selectExpensePayload(state)).toBeNull();
+
+    useExpenseModalStore.getState().setTargetMode('group');
+
+    expect(selectIsDirectExpenseWithoutFriend(useExpenseModalStore.getState())).toBe(false);
+});
+
+test('EXP-067 an edit or a direct create with a known friend is not the no-friend state', () => {
+    openDirectWithoutFriend({ knownFriends: [friend] });
+
+    expect(selectIsDirectExpenseWithoutFriend(useExpenseModalStore.getState())).toBe(false);
+
+    useExpenseModalStore.setState({ mode: 'edit', source: noFriendSource() });
+
+    expect(selectIsDirectExpenseWithoutFriend(useExpenseModalStore.getState())).toBe(false);
+});
+
+test('EXP-067 the fallback group is the chosen eligible group, else the first eligible one', () => {
+    const soloGroup = { id: 'group-solo', members: [currentUser] };
+    const firstPair = { id: 'group-1', members: [groupMember, currentUser] };
+    const secondPair = { id: 'group-2', members: [friend, currentUser] };
+
+    openDirectWithoutFriend({ groups: [soloGroup, firstPair, secondPair] });
+    useExpenseModalStore.setState({ groupId: soloGroup.id });
+
+    expect(selectDirectExpenseFallbackGroupId(useExpenseModalStore.getState())).toBe(firstPair.id);
+
+    useExpenseModalStore.setState({ groupId: secondPair.id });
+
+    expect(selectDirectExpenseFallbackGroupId(useExpenseModalStore.getState())).toBe(secondPair.id);
+});
+
+test('EXP-067 no fallback group without a group of two or more members', () => {
+    openDirectWithoutFriend({ groups: [{ id: 'group-solo', members: [currentUser] }] });
+
+    expect(selectDirectExpenseFallbackGroupId(useExpenseModalStore.getState())).toBe('');
+});
+
+test('EXP-067 a known friend arriving while open makes the direct expense usable, keeping the draft', () => {
+    openDirectWithoutFriend();
+    useExpenseModalStore.getState().setDescription('Dinner');
+    useExpenseModalStore.getState().setAmount('42');
+
+    useExpenseModalStore
+        .getState()
+        .applyLateKnownFriends(noFriendSource({ knownFriends: [friend] }));
+
+    const state = useExpenseModalStore.getState();
+
+    expect(selectIsDirectExpenseWithoutFriend(state)).toBe(false);
+    expect(state.targetMode).toBe('friends');
+    expect(state.selectedFriendId).toBe(friend.id);
+    expect(state.description).toBe('Dinner');
+    expect(state.amount).toBe('42');
+    expect(selectIncludedUsers(state).map(user => user.id)).toEqual([currentUser.id, friend.id]);
+    expect(selectPayerId(state)).toBe(currentUser.id);
+    expect(selectIsSubmitDisabled(state)).toBe(false);
+    expect(selectExpensePayload(state)).toMatchObject({
+        payerId: currentUser.id,
+        participantIds: [currentUser.id, friend.id],
+    });
+});
+
+test('EXP-067 a later known friend keeps the chosen friend and joins unselected', () => {
+    const otherFriend = { id: 'user-4', displayName: 'Other', picture: null };
+
+    openDirectWithoutFriend({ knownFriends: [friend] });
+    useExpenseModalStore.getState().setAmount('10');
+    useExpenseModalStore
+        .getState()
+        .applyLateKnownFriends(noFriendSource({ knownFriends: [friend, otherFriend] }));
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.selectedFriendId).toBe(friend.id);
+    expect(selectIncludedUsers(state).map(user => user.id)).toEqual([currentUser.id, friend.id]);
+    expect(selectIsSubmitDisabled(state)).toBe(false);
+});
+
+test('EXP-067 known friends arriving do not change a group-mode draft beyond the source', () => {
+    const pair = { id: 'group-1', members: [groupMember, currentUser] };
+
+    useExpenseModalStore.getState().initialize(noFriendSource({ groups: [pair] }));
+    useExpenseModalStore.getState().setAmount('10');
+
+    const before = useExpenseModalStore.getState();
+
+    useExpenseModalStore
+        .getState()
+        .applyLateKnownFriends(noFriendSource({ groups: [pair], knownFriends: [friend] }));
+
+    const after = useExpenseModalStore.getState();
+
+    expect(after.targetMode).toBe('group');
+    expect(after.groupId).toBe(pair.id);
+    expect(after.selectedFriendId).toBe(before.selectedFriendId);
+    expect(after.includedParticipantIds).toEqual(before.includedParticipantIds);
+    expect(after.source.knownFriends).toEqual([friend]);
+});
+
+test('EXP-067 known friends arriving do not touch an edit draft', () => {
+    useExpenseModalStore.setState({
+        isOpened: true,
+        mode: 'edit',
+        targetMode: 'friends',
+        source: noFriendSource(),
+    });
+    useExpenseModalStore
+        .getState()
+        .applyLateKnownFriends(noFriendSource({ knownFriends: [friend] }));
+
+    expect(useExpenseModalStore.getState().source.knownFriends).toEqual([]);
+});
+
+test('EXP-067 a selected friend restored before the friends loaded stays included when they arrive', () => {
+    const otherFriend = { id: 'user-4', displayName: 'Other', picture: null };
+
+    openDirectWithoutFriend();
+    useExpenseModalStore.setState({ selectedFriendId: friend.id, amount: '10' });
+    useExpenseModalStore
+        .getState()
+        .applyLateKnownFriends(noFriendSource({ knownFriends: [friend, otherFriend] }));
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.selectedFriendId).toBe(friend.id);
+    expect(state.includedParticipantIds[otherFriend.id]).toBe(false);
+    expect(selectIncludedUsers(state).map(user => user.id)).toEqual([currentUser.id, friend.id]);
+    expect(selectExpensePayload(state)).toMatchObject({
+        payerId: currentUser.id,
+        participantIds: [currentUser.id, friend.id],
+    });
 });

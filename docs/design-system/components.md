@@ -70,18 +70,19 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 
 ## basics: imported by path
 
-| Name                    | Import path                              | Purpose                                                                                             |
-| ----------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `CopyButton`            | `basics/buttons`                         | Button that copies a value and confirms with a tooltip                                              |
-| `DebtAmount`            | `basics/DebtAmount`                      | `Amount` colored by debt direction (owed/owe/settled) ([card](components/debt-amount.md))           |
-| `Dropdown`              | `basics/Dropdown`                        | Radix dropdown menu from items or sections (icon, hint, disabled) ([card](components/dropdown.md))  |
-| `LoadErrorEmptyState`   | `basics/empty-states`                    | `EmptyState` for a failed first load, with one `soft` Retry ([card](components/empty-state.md))     |
-| `NoDebtsEmptyState`     | `basics/empty-states`                    | `EmptyState` for "no debts" ([card](components/empty-state.md))                                     |
-| `OfflineEmptyState`     | `basics/empty-states`                    | `EmptyState` for offline with nothing cached, no action ([card](components/empty-state.md))         |
-| `ProgressBar`           | `basics/progress-bar/ProgressBar`        | Radix `Progress` with the value clamped to `0..max` ([card](components/progress-bar.md))            |
-| `SegmentedControl`      | `basics/SegmentedControl`                | Radix segmented control of items, responsive default size ([card](components/segmented-control.md)) |
-| `Select`                | `basics/Select`                          | Radix select from items, with a custom item render ([card](components/select.md))                   |
-| `BalanceBadgesSkeleton` | `basics/skeletons/BalanceBadgesSkeleton` | Loading placeholder of `BalanceBadges` ([card](components/skeletons.md))                            |
+| Name                       | Import path                              | Purpose                                                                                                   |
+| -------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `CopyButton`               | `basics/buttons`                         | Button that copies a value and confirms with a tooltip                                                    |
+| `DebtAmount`               | `basics/DebtAmount`                      | `Amount` colored by debt direction (owed/owe/settled) ([card](components/debt-amount.md))                 |
+| `Dropdown`                 | `basics/Dropdown`                        | Radix dropdown menu from items or sections (icon, hint, disabled) ([card](components/dropdown.md))        |
+| `LoadErrorEmptyState`      | `basics/empty-states`                    | `EmptyState` for a failed first load, with one `soft` Retry ([card](components/empty-state.md))           |
+| `NoDebtsEmptyState`        | `basics/empty-states`                    | `EmptyState` for "no debts" ([card](components/empty-state.md))                                           |
+| `NoDirectFriendEmptyState` | `basics/empty-states`                    | `EmptyState` for a direct expense with no mutual known user (EXP-067) ([card](components/empty-state.md)) |
+| `OfflineEmptyState`        | `basics/empty-states`                    | `EmptyState` for offline with nothing cached, no action ([card](components/empty-state.md))               |
+| `ProgressBar`              | `basics/progress-bar/ProgressBar`        | Radix `Progress` with the value clamped to `0..max` ([card](components/progress-bar.md))                  |
+| `SegmentedControl`         | `basics/SegmentedControl`                | Radix segmented control of items, responsive default size ([card](components/segmented-control.md))       |
+| `Select`                   | `basics/Select`                          | Radix select from items, with a custom item render ([card](components/select.md))                         |
+| `BalanceBadgesSkeleton`    | `basics/skeletons/BalanceBadgesSkeleton` | Loading placeholder of `BalanceBadges` ([card](components/skeletons.md))                                  |
 
 ## components: top-level files
 

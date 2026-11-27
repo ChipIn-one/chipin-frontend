@@ -395,19 +395,37 @@ test('EXP-073 a restored draft keeps its automatic friend currency until the kno
     store.initialize(beforeFriends);
     expect(currency()).toBe('THB');
 
+    // As the modal does on every source: the groups (and preferences), then the known users.
+    const applyLate = (live: ExpenseModalSource) => {
+        store.applyLateGroups(live);
+        store.applyLateKnownFriends(live);
+    };
     const before = useExpenseModalStore.getState();
-    store.applyLateGroups(beforeFriends);
+    applyLate(beforeFriends);
     expect(useExpenseModalStore.getState()).toBe(before);
     expect(currency()).toBe('THB');
 
     // The known users arrive: the store takes them, and the untouched currency follows them.
-    store.applyLateGroups(withFriend('THB'));
+    applyLate(withFriend('THB'));
     expect(useExpenseModalStore.getState().source.knownFriends.map(item => item.id)).toEqual([
         'friend-1',
     ]);
     expect(currency()).toBe('THB');
 
-    store.applyLateGroups(withFriend('KHR'));
+    applyLate(withFriend('KHR'));
     expect(currency()).toBe('KHR');
     expect(useExpenseModalStore.getState().isCurrencyManuallyEdited).toBe(false);
+});
+
+test('EXP-073 a friend known only after opening sets the untouched currency to their own preference', () => {
+    const store = useExpenseModalStore.getState();
+    const noFriends = source({ lastSelectedCurrency: 'EUR', groups: [], knownFriends: [] });
+
+    store.initialize({ ...noFriends, context: 'friends' });
+    expect(useExpenseModalStore.getState().selectedFriendId).toBe('');
+    expect(currency()).toBe('EUR');
+
+    store.applyLateKnownFriends({ ...noFriends, knownFriends: [friend('friend-1', 'THB')] });
+    expect(useExpenseModalStore.getState().selectedFriendId).toBe('friend-1');
+    expect(currency()).toBe('THB');
 });

@@ -1,8 +1,9 @@
 # EmptyState
 
 `import { EmptyState, NoGroupsEmptyState } from 'basics';` (default exports of
-`basics/empty-states/*`, re-exported by name). `NoDebtsEmptyState`, `LoadErrorEmptyState` and
-`OfflineEmptyState` (named exports) are imported from `basics/empty-states` only.
+`basics/empty-states/*`, re-exported by name). `NoDebtsEmptyState`, `NoDirectFriendEmptyState`,
+`LoadErrorEmptyState` and `OfflineEmptyState` (named exports) are imported from
+`basics/empty-states` only.
 
 ## Purpose
 
@@ -40,6 +41,7 @@ Each variant takes `action?: ReactNode`.
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------- |
 | `NoActivityEmptyState`         | `activity`: `emptyTitle` / `emptyDescription`                                                               | `ClipboardListIcon`, gray               |
 | `NoDebtsEmptyState`            | `common`: `noDebtsTitle` / `noDebtsDescription`                                                             | `BanknoteXIcon`, gray                   |
+| `NoDirectFriendEmptyState`     | `group`: `expenses.modal.directNoFriend.title` / `expenses.modal.directNoFriend.description`                | `UserPlusIcon`, `PROP_COLOR.info`       |
 | `NoFilteredActivityEmptyState` | `activity`: `filteredEmptyTitle` / `filteredEmptyDescription`                                               | `ClipboardListIcon`, gray               |
 | `NoFriendsEmptyState`          | `friends`: `emptyTitle` / `emptyDescription`                                                                | `UserPlusIcon`, cyan                    |
 | `NoGroupExpensesEmptyState`    | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription`                                      | `ReceiptIcon`, jade                     |
@@ -48,7 +50,12 @@ Each variant takes `action?: ReactNode`.
 | `NoMatchingGroupsEmptyState`   | `dashboard`: `groups.filterEmptyTitle` / `groups.filterEmptyDescription` or `groups.searchEmptyDescription` | `FilterXIcon`, gray                     |
 | `SoloInDevelopmentEmptyState`  | `dashboard`: `solo.summaryTitle` or `solo.activityTitle` / `solo.inDevelopment`                             | `WalletCardsIcon` or `ListIcon`, violet |
 
-`NoGroupsEmptyState` sets `actionPosition="below"` when it has an action. Two variants take one
+`NoGroupsEmptyState` and `NoDirectFriendEmptyState` set `actionPosition="below"` when they have an
+action. `NoDirectFriendEmptyState` is the Add Expense editor's direct target with no mutual known
+user (KB EXP-067); its action is the personal invite, or Retry (reloads the self user) when there
+is no invite token. Exception to the one-action rule: the editor may put one `ghost` secondary
+action outside the card, switching to an eligible group (dashboard context only, where the editor
+has a group picker). Two variants take one
 more prop: `NoMatchingGroupsEmptyState` takes `hasSearchQuery` (the description names the search
 rather than the debt filter), and `SoloInDevelopmentEmptyState` takes `section`
 (`'summary' | 'activity'`).

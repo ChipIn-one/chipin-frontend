@@ -56,7 +56,7 @@
         },
         "multiCurrency": {
             "title": "Multi-currency",
-            "description": "Travelling abroad? Add expenses in any currency. Chipin handles conversion automatically so everyone pays the right amount."
+            "description": "Travelling abroad? Add expenses in any currency. Chipin keeps balances separately for each currency, so amounts are never mixed up."
         },
         "settleUp": {
             "title": "Settle Up",

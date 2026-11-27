@@ -353,20 +353,11 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
                 return state;
             }
 
-            // Known users loaded after the modal opened (a restored draft opens before them): the
-            // store takes the live list, as it does for groups.
-            const storedFriendIds = new Set(state.source.knownFriends.map(friend => friend.id));
-            const hasNewFriends = source.knownFriends.some(
-                friend => !storedFriendIds.has(friend.id),
-            );
-            const withFriends: ExpenseModalSource = hasNewFriends
-                ? { ...state.source, knownFriends: source.knownFriends }
-                : state.source;
             // EXP-073: refreshed preferences (a reload after a create, a late self user or known
             // users) reach the stored source even when the groups are the same ones.
             const refreshed: ExpenseModalState = {
                 ...state,
-                source: refreshPreferences(withFriends, source),
+                source: refreshPreferences(state.source, source),
             };
             const storedGroupIds = new Set(state.source.groups.map(group => group.id));
             const hasNewGroups = source.groups.some(group => !storedGroupIds.has(group.id));
@@ -411,6 +402,74 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             };
 
             return groupId ? { ...next, ...getSplitDefaults(next) } : next;
+        });
+    },
+    applyLateKnownFriends: source => {
+        set(state => {
+            if (!state.isOpened || state.mode !== 'create') {
+                return state;
+            }
+
+            const storedFriendIds = state.source.knownFriends.map(friend => friend.id);
+            const isSameList =
+                storedFriendIds.length === source.knownFriends.length &&
+                source.knownFriends.every((friend, index) => friend.id === storedFriendIds[index]);
+
+            if (isSameList) {
+                return state;
+            }
+
+            const withFriends: ExpenseModalState = {
+                ...state,
+                source: { ...state.source, knownFriends: source.knownFriends },
+            };
+            // EXP-073: an untouched currency follows the friends' own preferences (the known users
+            // are taken only here; `applyLateGroups` refreshes the stored ones).
+            const withCurrency = (next: ExpenseModalState): ExpenseModalState => ({
+                ...next,
+                currency: getAutomaticCurrency(state, next.source, next),
+            });
+
+            if (state.targetMode !== 'friends') {
+                return withFriends;
+            }
+
+            const isSelectedFriendKnown =
+                state.selectedFriendId !== '' &&
+                source.knownFriends.some(friend => friend.id === state.selectedFriendId);
+
+            if (isSelectedFriendKnown) {
+                // The chosen friend stays included (also when the stored list was empty, as in a
+                // draft restored before the friends loaded); a newly known friend joins the list
+                // unselected (EXP-006: exactly the current user and one friend).
+                const storedIds = new Set(storedFriendIds);
+                const currentUserId = state.source.currentUser?.id;
+
+                return withCurrency({
+                    ...withFriends,
+                    includedParticipantIds: {
+                        ...state.includedParticipantIds,
+                        ...Object.fromEntries(
+                            source.knownFriends
+                                .filter(
+                                    friend =>
+                                        !storedIds.has(friend.id) &&
+                                        friend.id !== state.selectedFriendId,
+                                )
+                                .map(friend => [friend.id, false]),
+                        ),
+                        ...(currentUserId ? { [currentUserId]: true } : {}),
+                        [state.selectedFriendId]: true,
+                    },
+                });
+            }
+
+            const next: ExpenseModalState = {
+                ...withFriends,
+                selectedFriendId: getDefaultFriendId(withFriends.source),
+            };
+
+            return withCurrency({ ...next, ...getSplitDefaults(next) });
         });
     },
     initializeEdit: initialization => {

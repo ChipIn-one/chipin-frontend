@@ -2,12 +2,12 @@ import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
-import type { SelfUser } from 'entities/users';
+import type { SelfUser as DomainSelfUser } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
@@ -19,6 +19,26 @@ import { seedSelfUser } from 'test/selfUserSeed';
 import { AddExpenseModal } from './AddExpenseModal';
 
 import 'i18n/index';
+
+// KB EXP-067: the personal invite of the no-friend state (the Friends page flow).
+const invite = vi.hoisted(() => ({
+    isNativeShareSupported: false,
+    onShare: vi.fn(() => Promise.resolve()),
+    onCopyLink: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('hooks/pwaHooks', async importOriginal => ({
+    ...(await importOriginal<typeof import('hooks/pwaHooks')>()),
+    useFriendInvite: () => ({
+        inviteLink: 'https://chipin.one/friends/join/invite-token-user',
+        isNativeShareSupported: invite.isNativeShareSupported,
+        isShareDone: false,
+        isCopied: false,
+        qr: { title: '', accessibleDescription: '', description: '', subtitle: '' },
+        onShare: invite.onShare,
+        onCopyLink: invite.onCopyLink,
+    }),
+}));
 
 // Rates already loaded: the currency picker does not request them.
 const ratesClient = () => {
@@ -60,6 +80,8 @@ const group = {
 } satisfies Group;
 
 beforeEach(() => {
+    vi.clearAllMocks();
+    invite.isNativeShareSupported = false;
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP, lastGroupId: group.id });
     useExpenseModalStore.getState().reset();
     useAuthStore.setState({ status: 'authenticated' });
@@ -254,7 +276,127 @@ test('EXP-063 an edit-expense modal is not reinitialized when the groups list ar
     expect(state.description).toBe('Dinner');
 });
 
-const selfUser = (lastSelectedCurrency: string | null, defaultCurrency = 'GBP'): SelfUser => ({
+// KB EXP-067: a dashboard direct expense before any mutual known user.
+const selfUser = {
+    ...creator,
+    role: 'USER',
+    subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
+    settings: {
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'en',
+        theme: 'system',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
+    },
+} satisfies SelfUser;
+
+const noFriendTitle = 'No friends for a direct expense yet';
+const groupFallbackName = 'Split in a group instead';
+
+const openDirectWithoutFriend = async (groups: Parameters<typeof seedGroupsList>[0]) => {
+    const interaction = userEvent.setup();
+
+    useUiPrefsStore.setState({ lastGroupId: null });
+    seedSelfUser(selfUser);
+    seedKnownUsers([]);
+    seedGroupsList(groups);
+    const view = renderAt('/');
+
+    await interaction.click(screen.getByRole('radio', { name: 'Friends' }));
+    return { interaction, view };
+};
+
+test('EXP-067 no friend: the empty state replaces the payer, the split and the submit', async () => {
+    await openDirectWithoutFriend([group]);
+
+    expect(screen.getByText(noFriendTitle)).not.toBeNull();
+    expect(
+        screen.getByText(/once a person you invite accepts the invite and you are both friends/),
+    ).not.toBeNull();
+    expect(screen.queryByText('Paid by')).toBeNull();
+    expect(screen.queryByText('How to split')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeNull();
+    // EXP-064: the empty state is the one explanation.
+    expect(screen.getByRole('status').textContent).toBe('');
+    expect(screen.queryByText('Enter an amount greater than zero.')).toBeNull();
+    // A one-member group cannot take the expense: no group fallback.
+    expect(screen.queryByRole('button', { name: groupFallbackName })).toBeNull();
+});
+
+test.each([
+    [false, 'onCopyLink'],
+    [true, 'onShare'],
+] as const)(
+    'EXP-067 the invite action (native share %s) uses %s and creates nothing',
+    async (isNativeShareSupported, method) => {
+        invite.isNativeShareSupported = isNativeShareSupported;
+        const { interaction, view } = await openDirectWithoutFriend([]);
+
+        await interaction.click(screen.getByRole('button', { name: 'Invite a friend' }));
+
+        expect(invite[method]).toHaveBeenCalledTimes(1);
+        expect(invite[method === 'onShare' ? 'onCopyLink' : 'onShare']).not.toHaveBeenCalled();
+        expect(view.client.getMutationCache().getAll()).toHaveLength(0);
+
+        const state = useExpenseModalStore.getState();
+
+        expect(state.isOpened).toBe(true);
+        expect(state.targetMode).toBe('friends');
+        expect(state.source.knownFriends).toEqual([]);
+    },
+);
+
+test('EXP-067 the group fallback switches the editor to an eligible group', async () => {
+    // A one-member group and a group of two (`newerGroup`).
+    const { interaction } = await openDirectWithoutFriend([group, newerGroup]);
+
+    await interaction.click(screen.getByRole('button', { name: groupFallbackName }));
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.targetMode).toBe('group');
+    expect(state.groupId).toBe(newerGroup.id);
+    expect(screen.queryByText(noFriendTitle)).toBeNull();
+    expect(screen.getByText('How to split')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Add expense' })).not.toBeNull();
+});
+
+test('EXP-067 a known friend arriving while open makes the direct expense usable', async () => {
+    await openDirectWithoutFriend([]);
+    fireEvent.change(screen.getByPlaceholderText('e.g. Hotel booking, dinner...'), {
+        target: { value: 'Dinner' },
+    });
+    enterAmount('10');
+
+    await act(async () => {
+        seedKnownUsers([createKnownUser('user-5')]);
+        await new Promise(resolve => {
+            setTimeout(resolve, 0);
+        });
+    });
+
+    const state = useExpenseModalStore.getState();
+
+    expect(screen.queryByText(noFriendTitle)).toBeNull();
+    expect(state.targetMode).toBe('friends');
+    expect(state.selectedFriendId).toBe('user-5');
+    expect(state.paidById).toBe(selfUser.id);
+    expect(state.description).toBe('Dinner');
+    expect(state.amount).toBe('10');
+    expect(submitButton()).toHaveProperty('disabled', false);
+});
+
+const selfWithCurrency = (
+    lastSelectedCurrency: string | null,
+    defaultCurrency = 'GBP',
+): DomainSelfUser => ({
     id: creator.id,
     email: creator.email,
     displayName: creator.displayName,
@@ -280,7 +422,7 @@ const selfUser = (lastSelectedCurrency: string | null, defaultCurrency = 'GBP'):
 });
 
 test("EXP-072 a group expense starts with the viewer's own currency in the group, never the group's shared last used one", () => {
-    seedSelfUser(selfUser(null));
+    seedSelfUser(selfWithCurrency(null));
     seedGroupsList([
         { ...tripGroup, lastUsedCurrency: 'KHR', lastSelectedCurrency: 'VND' },
         { ...newerGroup, lastUsedCurrency: 'KHR', lastSelectedCurrency: null },
@@ -330,7 +472,7 @@ test('EXP-073 a currency the user picked is kept when the groups list refreshes 
 
 test('EXP-073 reopened after a VND create in a group whose list still has the old USD preference, the refreshed list brings VND', async () => {
     // The create reloaded the self user (overall VND); the groups list has not answered yet.
-    seedSelfUser(selfUser('VND'));
+    seedSelfUser(selfWithCurrency('VND'));
     seedGroupsList([{ ...tripGroup, lastSelectedCurrency: 'USD' }]);
     renderAt('/group/group-1');
 
@@ -347,14 +489,14 @@ test('EXP-073 reopened after a VND create in a group whose list still has the ol
 });
 
 test('EXP-073 a preference that arrives late for an unchanged target replaces only an untouched currency', async () => {
-    seedSelfUser(selfUser(null));
+    seedSelfUser(selfWithCurrency(null));
     seedGroupsList([tripGroup]);
     renderAt('/group/group-1');
 
     expect(useExpenseModalStore.getState().currency).toBe('GBP');
 
     await act(async () => {
-        seedSelfUser(selfUser('EUR'));
+        seedSelfUser(selfWithCurrency('EUR'));
         await new Promise(resolve => {
             setTimeout(resolve, 0);
         });
