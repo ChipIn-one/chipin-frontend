@@ -2,6 +2,7 @@ export { default as EmptyState } from './EmptyState';
 export { LoadErrorEmptyState } from './LoadErrorEmptyState';
 export { default as NoActivityEmptyState } from './NoActivityEmptyState';
 export { default as NoDebtsEmptyState } from './NoDebtsEmptyState';
+export { NoDirectFriendEmptyState } from './NoDirectFriendEmptyState';
 export { NoFilteredActivityEmptyState } from './NoFilteredActivityEmptyState';
 export { default as NoFriendsEmptyState } from './NoFriendsEmptyState';
 export { default as NoGroupExpensesEmptyState } from './NoGroupExpensesEmptyState';

@@ -635,9 +635,42 @@ export const selectIsSubmitDisabled = (state: ExpenseModalState) => {
     );
 };
 
+/**
+ * KB EXP-067: a new direct expense with no mutual known user to pick. The editor shows one empty
+ * state (an invite) in place of the payer and split controls and of the submit feedback.
+ */
+export const selectIsDirectExpenseWithoutFriend = (state: ExpenseModalState): boolean =>
+    state.mode === 'create' &&
+    state.targetMode === 'friends' &&
+    state.source.knownFriends.length === 0;
+
+/**
+ * KB EXP-067: the group the no-friend empty state offers instead, '' when none: the chosen group
+ * if it can take an expense (two or more members), else the first such group. Only where the
+ * editor can switch its target (the dashboard's Group/Friends control).
+ */
+export const selectDirectExpenseFallbackGroupId = (state: ExpenseModalState): string => {
+    if (state.source.context !== 'dashboard') {
+        return '';
+    }
+
+    const eligibleGroups = state.source.groups.filter(
+        group => group.members.length >= MIN_GROUP_EXPENSE_PARTICIPANTS,
+    );
+
+    return (
+        (eligibleGroups.find(group => group.id === state.groupId) ?? eligibleGroups[0])?.id ?? ''
+    );
+};
+
 export const selectExpenseSubmitFeedback = (
     state: ExpenseModalState,
 ): ExpenseSubmitFeedback | null => {
+    // KB EXP-067 / EXP-064: the no-friend empty state is the one explanation.
+    if (selectIsDirectExpenseWithoutFriend(state)) {
+        return null;
+    }
+
     const { split, payerId, hasNoDebt, hasValidCurrency, isDirectValid } = getSubmitState(state);
 
     if (sign(split.total) <= 0) {

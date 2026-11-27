@@ -288,11 +288,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/add-expense/components/expense-target-section/ExpenseTargetSection.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/add-expense/components/expense-target-section/components/expense-group-search-select/ExpenseGroupSearchSelect.tsx": {
     "import-x/no-default-export": {
       "count": 1

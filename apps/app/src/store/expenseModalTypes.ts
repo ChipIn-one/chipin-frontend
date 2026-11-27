@@ -111,6 +111,11 @@ interface ExpenseModalActions {
      * and, while its target is a group not chosen yet, picks the default group.
      */
     applyLateGroups: (source: ExpenseModalSource) => void;
+    /**
+     * KB EXP-067: an open create modal takes the known friends of a newer source. A direct target
+     * without a known selected friend picks the default friend; other draft values are kept.
+     */
+    applyLateKnownFriends: (source: ExpenseModalSource) => void;
     initializeEdit: (initialization: ExpenseModalEditInitialization) => void;
     reset: () => void;
     /**
