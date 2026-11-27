@@ -293,16 +293,14 @@ test('DSH-007 renders welcome only for no friends and no groups', () => {
     expect(within(main).queryByTestId('activity-list')).toBeNull();
 });
 
-test('DSH-011 hides the redundant No groups empty state on mobile Welcome, not desktop', () => {
+test('DSH-011: Welcome renders no side groups section at any width', () => {
     resolveDashboardOnboardingData();
 
     renderPage();
 
-    const groupsSection = screen.getByTestId('dashboard-groups-section');
     const sidePanel = screen.getByTestId('dashboard-side-panel');
-    expect(within(sidePanel).getByText('groups.emptyTitle')).toBeTruthy();
-    expect(groupsSection.className).toContain('rt-r-display-none');
-    expect(groupsSection.className).toContain('sm:rt-r-display-flex');
+    expect(screen.queryByTestId('dashboard-groups-section')).toBeNull();
+    expect(within(sidePanel).queryByText('groups.emptyTitle')).toBeNull();
     expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
 });
 

@@ -122,8 +122,9 @@ export const expectBalance = async (
 /** Asserts the Balances panel shows no debt with the other member. */
 export const expectSettledUp = async (balances: Locator, otherMember: string): Promise<void> => {
     await expect(balances.getByText(otherMember)).toBeVisible();
-    // "Settled up" is both the member's status and the disabled settle button's name.
-    await expect(balances.getByRole('button', { name: 'Settled up' })).toBeDisabled();
+    // BAL-023: a settled member shows a `Settled` status badge, not a (disabled) settle button.
+    await expect(balances.getByText('Settled', { exact: true })).toBeVisible();
+    await expect(balances.getByRole('button', { name: 'Settle up' })).toHaveCount(0);
     await expect(balances.getByText(/^You (owe|are owed)\b/)).toHaveCount(0);
 };
 

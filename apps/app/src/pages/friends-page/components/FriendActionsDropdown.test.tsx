@@ -51,3 +51,9 @@ test('NET-006: flag off, online: Settle up and Remove friend are enabled without
         expect(within(item(name)).queryByText(HINT)).toBeNull();
     }
 });
+
+test('#950: the menu trigger is named after the friend', () => {
+    render(<FriendActionsDropdown friend={friend} balance={balance} />, { wrapper: Theme });
+
+    expect(screen.getByRole('button', { name: 'More actions for Friend friend-1' })).toBeTruthy();
+});

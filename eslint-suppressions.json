@@ -39,11 +39,6 @@
       "count": 1
     }
   },
-  "apps/app/src/basics/PageLoader.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/basics/buttons/BackButton.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -115,11 +110,6 @@
     }
   },
   "apps/app/src/components/LanguageSelector.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/ViewModeSwitch.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -200,11 +190,6 @@
     }
   },
   "apps/app/src/components/modals/settle-up-modal/components/DebtSelectionStep.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/modals/settle-up-modal/components/GroupSettleUpFlow.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -513,22 +498,7 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/friends-page/components/FriendsFilterDropdown.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/friends-page/components/FriendsPageHeader.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/components/FriendsSearchBar.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/friends-page/components/FriendsSidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -609,11 +579,6 @@
     }
   },
   "apps/app/src/pages/settings-page/index.ts": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/solo-page/SoloPage.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }

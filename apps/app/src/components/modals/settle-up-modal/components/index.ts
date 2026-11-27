@@ -1,6 +1,6 @@
 import { DebtSection } from './DebtSection';
 import DebtSelectionStep from './DebtSelectionStep';
-import GroupSettleUpFlow from './GroupSettleUpFlow';
+import { GroupSettleUpFlow } from './GroupSettleUpFlow';
 import { SettlementAmountField } from './SettlementAmountField';
 import { SettlementDebtSummary } from './SettlementDebtSummary';
 import SettlementForm from './SettlementForm';

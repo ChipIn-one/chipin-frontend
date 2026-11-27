@@ -1,7 +1,7 @@
 /*
- * The link is an unstyled NavButton. Its own rules (`all: unset`, `inline-flex`, the focus
- * outline) go up to (0,2,0) and may load later (styled-components today, or a CSS Module after
- * #916), so these root rules win by specificity alone: (0,2,0) for layout, (0,3,0) for focus.
+ * The link is an unstyled NavButton (an `<a href>`). Its own rules (`all: unset`, `inline-flex`,
+ * the focus outline) go up to (0,2,0) and may load later, so these root rules win by specificity
+ * alone: (0,2,0) for layout, (0,3,0) for focus.
  * The inner card draws the focus ring, so the link hides its own.
  */
 .root.root {

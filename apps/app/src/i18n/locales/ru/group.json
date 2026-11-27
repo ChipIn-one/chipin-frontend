@@ -236,6 +236,7 @@
         },
         "balances": {
             "settled": "Долгов нет",
+            "settledBadge": "Рассчитались",
             "empty": "Балансов пока нет."
         },
         "settleUp": {

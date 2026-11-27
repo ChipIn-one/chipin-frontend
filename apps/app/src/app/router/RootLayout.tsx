@@ -8,7 +8,7 @@ import { AddExpenseModal } from 'features/add-expense';
 import { GlobalHooks } from 'pages/GlobalHooks';
 
 import BackgroundBox from 'basics/BackgroundBox';
-import PageLoader from 'basics/PageLoader';
+import { PageLoader } from 'basics/PageLoader';
 import { AddExpenseButton } from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import { Header } from 'components/Header';

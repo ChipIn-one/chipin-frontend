@@ -8,7 +8,7 @@ import { UserAvatar } from 'basics';
 import { DevMenu } from 'components/DevMenu';
 import { NavButton } from 'components/NavButton';
 
-import ViewModeSwitch from '../ViewModeSwitch';
+import { ViewModeSwitch } from '../ViewModeSwitch';
 
 import styles from './DashboardHeader.module.css';
 
@@ -24,7 +24,7 @@ const DashboardHeader: React.FC = () => {
                 <Box flexShrink="0">
                     <NavButton
                         to={ROUTES.SETTINGS}
-                        aria-label={t('common:nav.settings')}
+                        aria-label={t('header.openSettings')}
                         variant="ghost"
                         radius="full"
                     >

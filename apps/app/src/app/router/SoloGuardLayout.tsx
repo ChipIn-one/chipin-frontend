@@ -9,7 +9,7 @@ import { restoreReady } from 'shared/offline/restore';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 
-import PageLoader from 'basics/PageLoader';
+import { PageLoader } from 'basics/PageLoader';
 
 /**
  * The loader of `SoloGuardLayout` (spec 04 §2.3): a signed-in user whose cached profile has no Solo

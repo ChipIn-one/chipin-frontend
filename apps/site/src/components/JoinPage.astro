@@ -40,6 +40,9 @@ const { title, description } = messages(DEFAULT_LOCALE).join;
                         <h1>{text[kind].heading}</h1>
                         <noscript>
                             <p>{text.noscript}</p>
+                            <p>
+                                <a href="/">{text.goHome}</a>
+                            </p>
                         </noscript>
                         <p data-state="valid" hidden>
                             <a class="open-invite" data-open-invite rel="noreferrer">

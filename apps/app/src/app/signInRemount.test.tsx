@@ -46,7 +46,7 @@ vi.mock('entities/users', async importOriginal => ({
     ...(await importOriginal<typeof import('entities/users')>()),
     fetchSelfUser: vi.fn(),
 }));
-vi.mock('basics/PageLoader', () => ({ default: () => null }));
+vi.mock('basics/PageLoader', () => ({ PageLoader: () => null }));
 vi.mock('idb-keyval', async importOriginal => {
     const actual = await importOriginal<typeof import('idb-keyval')>();
 

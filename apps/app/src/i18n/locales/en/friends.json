@@ -10,12 +10,15 @@
     "inviteLoadErrorTitle": "Couldn't load your invite link",
     "inviteLoadErrorDescription": "Try loading your invite link again.",
     "filter": {
+        "all": "All",
         "allCurrencies": "All currencies",
-        "byFriends": "By friends"
+        "byFriends": "By friends",
+        "byCurrency": "Filter by currency: {{value}}"
     },
     "actions": {
         "remind": "Remind",
-        "removeFriend": "Remove friend"
+        "removeFriend": "Remove friend",
+        "moreFor": "More actions for {{name}}"
     },
     "removeModal": {
         "title": "Remove friend",

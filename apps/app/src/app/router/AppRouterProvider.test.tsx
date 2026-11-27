@@ -42,7 +42,7 @@ vi.mock('entities/users', async importOriginal => ({
     ...(await importOriginal<typeof import('entities/users')>()),
     fetchSelfUser: vi.fn(),
 }));
-vi.mock('basics/PageLoader', () => ({ default: () => null }));
+vi.mock('basics/PageLoader', () => ({ PageLoader: () => null }));
 vi.mock('components/nav-bars', () => ({
     DESKTOP_SHELL_MAX_WIDTH: '1200px',
     DesktopSidebar: () => null,
