@@ -210,6 +210,103 @@ test('reveals an optional description in create mode', () => {
         });
 });
 
+test('GRP-002: the group name input allows 100 characters', () => {
+    const interaction = userEvent.setup();
+
+    renderModal('create');
+
+    return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
+        const nameInput = screen.getByRole('textbox', { name: 'common:fields.groupName' });
+
+        expect(nameInput.getAttribute('maxlength')).toBe('100');
+        expect(screen.getByText('0 / 100')).toBeTruthy();
+    });
+});
+
+test('GRP-002: creates a group with a 100-character name', () => {
+    const interaction = userEvent.setup();
+    const longName = 'a'.repeat(100);
+
+    createGroup.mockResolvedValue({ ...group, name: longName });
+    renderModal('create');
+
+    return interaction
+        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
+        .then(() => interaction.click(screen.getByPlaceholderText('modal.fields.namePlaceholder')))
+        .then(() => interaction.paste(longName))
+        .then(() => {
+            expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
+                'value',
+                longName,
+            );
+            return interaction.click(
+                screen.getByRole('button', { name: 'common:buttons.createGroup' }),
+            );
+        })
+        .then(() =>
+            waitFor(() => {
+                expect(createGroup).toHaveBeenCalledWith({ name: longName });
+            }),
+        );
+});
+
+test('GRP-002: caps a 101-character group name at 100 characters', () => {
+    const interaction = userEvent.setup();
+
+    renderModal('create');
+
+    return interaction
+        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
+        .then(() => interaction.click(screen.getByPlaceholderText('modal.fields.namePlaceholder')))
+        .then(() => interaction.paste('b'.repeat(101)))
+        .then(() => {
+            expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
+                'value',
+                'b'.repeat(100),
+            );
+            expect(screen.getByText('100 / 100')).toBeTruthy();
+        });
+});
+
+test('GRP-002: update accepts a name up to 100 characters and caps it there', () => {
+    const interaction = userEvent.setup();
+    const existingName = 'c'.repeat(99);
+    const groupWithLongName = { ...group, name: existingName } satisfies Group;
+    const nameInput = () => screen.getByPlaceholderText('modal.fields.namePlaceholder');
+
+    updateGroup.mockResolvedValue({ ...groupWithLongName, name: `${existingName}d` });
+    renderModal('update', groupWithLongName);
+
+    return interaction
+        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
+        .then(() => {
+            expect(nameInput()).toHaveProperty('value', existingName);
+            expect(nameInput().getAttribute('aria-invalid')).toBe('false');
+            expect(screen.getByText('99 / 100')).toBeTruthy();
+            return interaction.type(nameInput(), 'd');
+        })
+        .then(() => {
+            expect(nameInput()).toHaveProperty('value', `${existingName}d`);
+            expect(screen.getByText('100 / 100')).toBeTruthy();
+            return interaction.paste('efg');
+        })
+        .then(() => {
+            expect(nameInput()).toHaveProperty('value', `${existingName}d`);
+            expect(screen.getByText('100 / 100')).toBeTruthy();
+            return interaction.click(
+                screen.getByRole('button', { name: 'common:buttons.saveGroup' }),
+            );
+        })
+        .then(() =>
+            waitFor(() => {
+                expect(updateGroup).toHaveBeenCalledWith(group.id, {
+                    name: `${existingName}d`,
+                    description: group.description,
+                });
+            }),
+        );
+});
+
 test('preserves the description draft while its field is collapsed', () => {
     const interaction = userEvent.setup();
 

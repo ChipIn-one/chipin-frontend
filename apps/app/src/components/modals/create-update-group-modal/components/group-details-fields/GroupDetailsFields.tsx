@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import { TextArea, TextInput } from 'basics';
 
+import { GROUP_NAME_MAX_LENGTH } from '../../internal/constants';
+
 import styles from './GroupDetailsFields.module.css';
 
 const DESCRIPTION_FIELD_ID = 'group-description-field';
@@ -41,7 +43,7 @@ const GroupDetailsFields = ({
                     <TextInput
                         label={t('common:fields.groupName')}
                         initialValue={name}
-                        maxLength={50}
+                        maxLength={GROUP_NAME_MAX_LENGTH}
                         isRequired
                         // The native maxLength stops typing past the limit, so the failing
                         // check a user can reach is the empty name.
