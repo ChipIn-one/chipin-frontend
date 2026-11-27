@@ -47,18 +47,10 @@ vi.mock('styles/index.css', () => ({}));
 
 const bootOn = async (
     url: string,
-    { publicSsg, standalone = false }: { publicSsg: boolean; standalone?: boolean },
+    { publicSsg }: { publicSsg: boolean },
 ): Promise<ReturnType<typeof vi.fn>> => {
     const { hostname, pathname, search, hash } = new URL(url);
     const replace = vi.fn();
-    vi.stubGlobal(
-        'matchMedia',
-        vi.fn((query: string) => ({
-            matches: standalone && query === '(display-mode: standalone)',
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-        })),
-    );
     vi.stubGlobal('location', { ...window.location, hostname, pathname, search, hash, replace });
     document.body.innerHTML = publicSsg
         ? '<div id="root" data-public-ssg="true"></div>'
@@ -80,55 +72,12 @@ afterEach(() => {
     document.head.innerHTML = '';
 });
 
-// M1 of the 04-4a2 review (spec 04 §4.1, §4.5 step 1): no path on a legacy host boots the full app
-// (no session check, no refresh, no `Set-Cookie` there); the same URL opens on the app host.
-test.each([
-    [
-        'https://chipin.one/index.html?utm_source=x#top',
-        'https://app.chipin.one/index.html?utm_source=x#top',
-    ],
-    ['https://chipin.one/privacy//', 'https://app.chipin.one/privacy//'],
-    ['https://dev.chipin.one/ru/index.html', 'https://app-dev.chipin.one/ru/index.html'],
-])('on a legacy host the app branch of %s goes to %s and mounts nothing', async (url, target) => {
-    const replace = await bootOn(url, { publicSsg: true });
-
-    expect(replace).toHaveBeenCalledExactlyOnceWith(target);
-    // Give a dynamic import of either branch the time to resolve, had one started.
-    await new Promise(resolve => {
-        setTimeout(resolve, 20);
-    });
-    expect(boot.startCacheRestore).not.toHaveBeenCalled();
-    expect(boot.createRoot).not.toHaveBeenCalled();
-    expect(boot.hydrateRoot).not.toHaveBeenCalled();
-});
-
-test('on a legacy host the plain SPA shell at an unknown path goes to the app host', async () => {
-    const replace = await bootOn('https://chipin.one/estonia', { publicSsg: false });
-
-    expect(replace).toHaveBeenCalledExactlyOnceWith('https://app.chipin.one/estonia');
-    await new Promise(resolve => {
-        setTimeout(resolve, 20);
-    });
-    expect(boot.startCacheRestore).not.toHaveBeenCalled();
-    expect(boot.createRoot).not.toHaveBeenCalled();
-});
-
-test('on a legacy host a known public page hydrates as before', async () => {
-    const replace = await bootOn('https://chipin.one/privacy', { publicSsg: true });
-
-    await vi.waitFor(() => {
-        expect(boot.hydrateRoot).toHaveBeenCalledOnce();
-    });
-    expect(replace).not.toHaveBeenCalled();
-    expect(boot.createRoot).not.toHaveBeenCalled();
-});
-
 test.each([
     'https://app.chipin.one/dashboard',
     'https://app-dev.chipin.one/index.html',
     'https://chipin-git-x.vercel.app/group/1',
     'http://localhost/settings',
-])('on %s the app branch mounts the app as before', async url => {
+])('on %s the app branch mounts the app', async url => {
     const replace = await bootOn(url, { publicSsg: false });
 
     await vi.waitFor(() => {
@@ -223,85 +172,6 @@ test.each([
 
     expect(boot.syncHtmlLang).toHaveBeenCalledExactlyOnceWith(boot.i18n);
 });
-
-// #758: the shared HTML loses its web-app head on a legacy host before anything renders.
-const WEB_APP_HEAD = `
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="manifest" href="/manifest.webmanifest">
-`;
-const WEB_APP_SELECTOR =
-    'link[rel="manifest"], meta[name="mobile-web-app-capable"], meta[name="apple-mobile-web-app-status-bar-style"]';
-
-test.each(['https://chipin.one/', 'https://dev.chipin.one/ru/'])(
-    'booting %s strips the manifest links and the web-app metas, keeping the icon',
-    async url => {
-        document.head.innerHTML = WEB_APP_HEAD;
-
-        await bootOn(url, { publicSsg: true });
-
-        expect(document.head.querySelectorAll(WEB_APP_SELECTOR)).toHaveLength(0);
-        expect(document.head.querySelector('link[rel="apple-touch-icon"]')).not.toBeNull();
-    },
-);
-
-test.each(['https://app.chipin.one/', 'https://chipin-git-x.vercel.app/'])(
-    'booting %s keeps the manifest links and the web-app metas',
-    async url => {
-        document.head.innerHTML = WEB_APP_HEAD;
-
-        await bootOn(url, { publicSsg: true });
-
-        expect(document.head.querySelectorAll(WEB_APP_SELECTOR)).toHaveLength(4);
-    },
-);
-
-// #758: an icon installed from a legacy host never opens the app host (an in-app sheet); the SPA
-// shell there goes to the landing of the same host, which shows the reinstall notice.
-test.each(['https://chipin.one/estonia', 'https://dev.chipin.one/index.html?a=1'])(
-    'in standalone mode the app branch of %s goes to / on the same host',
-    async url => {
-        const replace = await bootOn(url, { publicSsg: false, standalone: true });
-
-        expect(replace).toHaveBeenCalledExactlyOnceWith('/');
-        await new Promise(resolve => {
-            setTimeout(resolve, 20);
-        });
-        expect(boot.createRoot).not.toHaveBeenCalled();
-        expect(boot.hydrateRoot).not.toHaveBeenCalled();
-    },
-);
-
-test('in standalone mode the SPA shell at / of a legacy host neither loops nor boots', async () => {
-    const replace = await bootOn('https://chipin.one/', { publicSsg: false, standalone: true });
-
-    await new Promise(resolve => {
-        setTimeout(resolve, 20);
-    });
-    expect(replace).not.toHaveBeenCalled();
-    expect(boot.createRoot).not.toHaveBeenCalled();
-    expect(boot.startCacheRestore).not.toHaveBeenCalled();
-});
-
-test('in a browser tab the app branch of a legacy host still goes to the app host', async () => {
-    const replace = await bootOn('https://chipin.one/estonia', { publicSsg: false });
-
-    expect(replace).toHaveBeenCalledExactlyOnceWith('https://app.chipin.one/estonia');
-});
-
-test.each(['https://app.chipin.one/dashboard', 'https://chipin-git-x.vercel.app/group/1'])(
-    'in standalone mode %s mounts the app as before',
-    async url => {
-        const replace = await bootOn(url, { publicSsg: false, standalone: true });
-
-        await vi.waitFor(() => {
-            expect(boot.createRoot).toHaveBeenCalledOnce();
-        });
-        expect(replace).not.toHaveBeenCalled();
-    },
-);
 
 // Spec 04 §2.11 item 4 (04-2d): the app branch restores a draft saved before a reload and registers
 // its save; the public pages have no expense modal and never touch it.

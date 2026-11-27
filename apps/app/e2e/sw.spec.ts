@@ -2,8 +2,8 @@
 // playwright.sw.config.ts against a Vercel Preview or a local `vite preview`: spec 04 criterion 5
 // scenario (a) and what the 04-2d update policy (§2.11) shows without a second deploy. No user is
 // signed in: the checks are on the document, the worker and its registration.
-// Scenarios (b), (c) and (d) of criterion 5 need the site preview (04-3d) and the legacy hosts
-// (04-4a1), not an app preview, and are not here yet.
+// Scenarios (b) to (d) of criterion 5 were planned for the kill-switch on the site and the legacy
+// hosts and never written; 04-5a dropped them with the kill-switch.
 import { expect, type Page, type Request, test } from '@playwright/test';
 
 const APP_SHELL_PATH = '/app.html';

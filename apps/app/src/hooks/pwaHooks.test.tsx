@@ -304,8 +304,7 @@ test('clears the pending copy feedback timer on unmount', () => {
     });
 });
 
-// #758: the legacy hosts are not installable as the app, so their landing never stores the install
-// prompt (the hero and CTA install buttons stay hidden); every other host keeps the install flow.
+// `useCheckPwa` stores the install prompt and records `appinstalled` on every host.
 const pwaStoreActions = {
     setIsPwaInstalled: vi.fn(),
     setPwaInstallPrompt: vi.fn(),
@@ -335,21 +334,8 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-test.each(['chipin.one', 'dev.chipin.one'])(
-    'on the legacy host %s ignores beforeinstallprompt',
-    hostname => {
-        const { unmount } = renderCheckPwaOn(hostname);
-
-        const event = fireBeforeInstallPrompt();
-
-        expect(pwaStoreActions.setPwaInstallPrompt).not.toHaveBeenCalled();
-        expect(event.defaultPrevented).toBe(false);
-        unmount();
-    },
-);
-
 test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app', 'localhost'])(
-    'on %s stores the install prompt, as before',
+    'on %s stores the install prompt',
     hostname => {
         const { unmount } = renderCheckPwaOn(hostname);
 
@@ -363,7 +349,7 @@ test.each(['app.chipin.one', 'app-dev.chipin.one', 'chipin-git-x.vercel.app', 'l
     },
 );
 
-test.each(['chipin.one', 'app.chipin.one'])('on %s still records appinstalled', hostname => {
+test.each(['app.chipin.one', 'localhost'])('on %s records appinstalled', hostname => {
     const { unmount } = renderCheckPwaOn(hostname);
 
     window.dispatchEvent(new Event('appinstalled'));

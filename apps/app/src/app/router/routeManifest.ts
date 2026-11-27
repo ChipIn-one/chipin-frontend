@@ -35,7 +35,7 @@ interface AppRouteDef {
     guard?: 'solo';
     /** Keys of the `meta` namespace. */
     meta: { titleKey: string; entityTitleKey?: string };
-    /** Paths on chipin.one redirected to app.chipin.one (§4.2); read only by the config tests. */
+    /** Old chipin.one paths of the route; no hosting rule reads them since #959 (gone in #960). */
     legacyPaths: readonly string[];
     /** A transitional public route; removed in 04-5a. */
     transitional?: true;

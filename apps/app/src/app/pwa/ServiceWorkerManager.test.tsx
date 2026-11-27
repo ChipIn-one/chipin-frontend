@@ -112,16 +112,6 @@ test('registers once on the app host and hands the registration to the update AP
     expect(getServiceWorkerRegistration()).toBe(registration);
 });
 
-test.each(['chipin.one', 'dev.chipin.one', 'CHIPIN.ONE.'])(
-    'registers nothing on the legacy host %s (04-4a1)',
-    hostname => {
-        renderOn(hostname);
-
-        expect(pwa.useRegisterSW).not.toHaveBeenCalled();
-        expect(pwa.register).not.toHaveBeenCalled();
-    },
-);
-
 test.each(['app-dev.chipin.one', 'chipin-git-x.vercel.app', 'localhost'])(
     'registers on %s',
     hostname => {

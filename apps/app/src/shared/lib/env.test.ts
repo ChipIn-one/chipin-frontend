@@ -20,11 +20,11 @@ describe('getEnv', () => {
     });
 
     test('uses explicit production configuration', () => {
-        setWindowLocation('https://chipin.one');
+        setWindowLocation('https://app.chipin.one');
         vi.stubEnv('VITE_CHIPIN_ENV', ENV_PROD);
 
         expect(getEnv()).toBe(ENV_PROD);
-        expect(getChipInApiUrl()).toBe('https://chipin.one/api/');
+        expect(getChipInApiUrl()).toBe('https://app.chipin.one/api/');
     });
 
     test('uses explicit development configuration on a Vercel Preview hostname', () => {
@@ -51,13 +51,13 @@ describe('getEnv', () => {
     });
 
     test('uses development on the known development hostname without explicit configuration', () => {
-        setWindowLocation('https://dev.chipin.one');
+        setWindowLocation('https://app-dev.chipin.one');
 
         expect(getEnv()).toBe(ENV_DEV);
     });
 
     test('rejects unsupported development subdomains without explicit configuration', () => {
-        setWindowLocation('https://preview.dev.chipin.one');
+        setWindowLocation('https://preview.app-dev.chipin.one');
 
         expect(() => getEnv()).toThrowError(/environment configuration/i);
     });
@@ -101,8 +101,8 @@ describe('app hosts and the site origin', () => {
     });
 
     test('lists the app hosts and site origins of the spec', () => {
-        expect(ENV_URLS[ENV_PROD].appHostnames).toEqual(['app.chipin.one', 'chipin.one']);
-        expect(ENV_URLS[ENV_DEV].appHostnames).toEqual(['app-dev.chipin.one', 'dev.chipin.one']);
+        expect(ENV_URLS[ENV_PROD].appHostnames).toEqual(['app.chipin.one']);
+        expect(ENV_URLS[ENV_DEV].appHostnames).toEqual(['app-dev.chipin.one']);
         expect(ENV_URLS[ENV_PROD].siteOrigin).toBe(SITE_ORIGINS[ENV_PROD]);
         expect(ENV_URLS[ENV_DEV].siteOrigin).toBe(SITE_ORIGINS[ENV_DEV]);
     });
@@ -155,15 +155,19 @@ describe('app hosts and the site origin', () => {
         expect(getSiteOrigin()).toBe('https://site-dev.chipin.one');
     });
 
-    test.each(['app.chipin.one.example.com', 'xchipin.one', 'evil-chipin.one'])(
-        'a look-alike host %s still fails closed',
-        hostname => {
-            setWindowLocation(`https://${hostname}`);
+    // The old hosts `chipin.one` / `dev.chipin.one` are no app hosts (04-5a).
+    test.each([
+        'chipin.one',
+        'dev.chipin.one',
+        'app.chipin.one.example.com',
+        'xchipin.one',
+        'evil-chipin.one',
+    ])('a host %s that is no app host fails closed', hostname => {
+        setWindowLocation(`https://${hostname}`);
 
-            expect(() => getEnv()).toThrowError(/environment configuration/i);
-            expect(() => getSiteOrigin()).toThrowError(/environment configuration/i);
-        },
-    );
+        expect(() => getEnv()).toThrowError(/environment configuration/i);
+        expect(() => getSiteOrigin()).toThrowError(/environment configuration/i);
+    });
 
     test('the site origin has no trailing slash', () => {
         for (const env of [ENV_PROD, ENV_DEV]) {

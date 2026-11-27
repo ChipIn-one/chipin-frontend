@@ -49,7 +49,7 @@ closed by hand.
 
 1. A PR merges into `master` (squash).
 2. The Vercel Git integration builds that `master` commit as a Preview with
-   development environment variables; `dev.chipin.one` is attached to
+   development environment variables; `app-dev.chipin.one` is attached to
    `master`. The Vercel Production Branch stays `main` (a placeholder
    that receives no pushes) and `apps/app/vercel.json` disables Git deployments for it, so no
    push creates a production build. Preview builds of `master` create only
@@ -57,7 +57,7 @@ closed by hand.
    Vercel project is connected, [Two projects](release-qa.md#two-projects)).
 3. The owner opens the chosen commit's deployment and runs **Promote to
    Production**; Vercel rebuilds that commit with production environment
-   variables and assigns `chipin.one`. Vercel records that production
+   variables and assigns `app.chipin.one`. Vercel records that production
    deployment as a GitHub Deployment, environment `Production` (most likely
    `Production – chipin-frontend` since the second Vercel project is connected,
    [Two projects](release-qa.md#two-projects)), creator

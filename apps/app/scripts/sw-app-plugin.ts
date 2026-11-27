@@ -1,9 +1,8 @@
-// Spec 04 §2.11 option (a) (04-4a1, D30): the app and the legacy hosts share one `dist`, and the
-// filesystem wins over Vercel rewrites, so no file may sit at `/sw.js`. VitePWA keeps
-// `filename: 'sw.js'` (the registration URL of `virtual:pwa-register`, the single registration of
-// `ServiceWorkerManager`, stays `/sw.js`); this plugin renames the generated worker to `sw-app.js`,
-// and `vercel.json` rewrites `/sw.js` by host to `/sw-app.js` or to the kill-switch `/sw-kill.js`.
-// 04-5a removes the plugin, the kill-switch and the rewrites.
+// Spec 04 §2.11 option (a) (04-4a1, D30): VitePWA keeps `filename: 'sw.js'` (the registration URL
+// of `virtual:pwa-register`, the single registration of `ServiceWorkerManager`, stays `/sw.js`);
+// this plugin renames the generated worker to `sw-app.js`, and `vercel.json` rewrites `/sw.js` to
+// `/sw-app.js` on the app hosts. The filesystem wins over Vercel rewrites, so no file sits at
+// `/sw.js`.
 import { access, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 

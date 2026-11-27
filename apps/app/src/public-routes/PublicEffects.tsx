@@ -147,7 +147,7 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
 
     return (
         <>
-            <PublicSession isHome={route.page === 'home'} />
+            <PublicSession />
             <Toaster
                 theme={isDark ? 'dark' : 'light'}
                 richColors
