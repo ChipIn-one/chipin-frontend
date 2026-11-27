@@ -1,0 +1,11 @@
+/* AUTH-078: the manual-copy address. iOS WKWebView in-app browsers often block selecting text in
+   a read-only field, and a one-line field hides most of the URL; wrapping text that a long-press
+   selects as a whole works in every webview. */
+.address {
+    display: block;
+    user-select: all;
+    -webkit-user-select: all;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    white-space: normal;
+}

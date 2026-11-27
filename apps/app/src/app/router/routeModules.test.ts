@@ -39,18 +39,14 @@ describe('route modules', () => {
         PAGE_IMPORT_TIMEOUT,
     );
 
-    // The transitional public ids render the real public pages: a swapped module fails here.
-    it.each([
-        ['publicHome', () => import('pages/HomePage')],
-        ['publicPrivacy', () => import('pages/PrivacyPage')],
-        ['publicTerms', () => import('pages/TermsPage')],
-    ] as const)(
-        '%s renders its public page component',
-        async (id, page) => {
-            const [module, pageModule] = await Promise.all([ROUTE_MODULES[id](), page()]);
+    // The `home` index only redirects (its loader is `homeLoader`); while it waits it shows the
+    // page loader, never a page.
+    it('home renders the page loader', async () => {
+        const [module, loader] = await Promise.all([
+            ROUTE_MODULES.home(),
+            import('basics/PageLoader'),
+        ]);
 
-            expect(module.Component).toBe(pageModule.default);
-        },
-        PAGE_IMPORT_TIMEOUT,
-    );
+        expect(module.Component).toBe(loader.PageLoader);
+    });
 });

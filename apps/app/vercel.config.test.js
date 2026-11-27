@@ -7,7 +7,6 @@ import { describe, expect, test } from 'vitest';
 
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
 import { APP_ROUTES } from './src/app/router/routeManifest.ts';
-import { LOCALE_PREFIX } from './src/constants/publicRouteManifest.ts';
 import { INVITE_TOKEN_PATTERN } from './src/helpers/inviteToken.ts';
 import { TEST_INVITE_TOKEN } from './src/test/fixtures/inviteToken.ts';
 
@@ -88,14 +87,14 @@ describe('Vercel API proxy routing', () => {
         expect(apiRewrites.every(rewrite => rewrite.has?.length > 0)).toBe(true);
     });
 
-    test('keeps API rewrites before private SPA routes without capturing public SSG HTML', () => {
+    test('keeps API rewrites before the SPA rewrites', () => {
         const lastApiRewriteIndex = config.rewrites.reduce(
             (lastIndex, rewrite, index) => (rewrite.source === API_SOURCE ? index : lastIndex),
             -1,
         );
         const appRewrites = config.rewrites
             .map((rewrite, index) => ({ ...rewrite, index }))
-            .filter(rewrite => rewrite.destination === '/app.html');
+            .filter(rewrite => rewrite.destination === '/index.html');
 
         expect(lastApiRewriteIndex).toBeGreaterThanOrEqual(0);
         expect(appRewrites.length).toBeGreaterThan(0);
@@ -136,7 +135,7 @@ describe('Vercel production security headers', () => {
                 }),
         );
 
-        // The one inline script allowed: the anti-FOUC theme script of app.html (spec 05 §2).
+        // The one inline script allowed: the anti-FOUC theme script of index.html (spec 05 §2).
         expect(directives['script-src']).toBe(`'self' '${THEME_INIT_SCRIPT_SHA256}'`);
         expect(directives['script-src']).not.toContain("'unsafe-inline'");
         expect(directives['connect-src']).toBe("'self' https://*.sentry.io");
@@ -322,7 +321,7 @@ describe('Vercel /sw.js (04-4a1)', () => {
         const swRewrites = indexes.filter(rewrite => rewrite.source === '/sw.js');
         const firstSpaIndex = Math.min(
             ...indexes
-                .filter(rewrite => rewrite.destination === '/app.html')
+                .filter(rewrite => rewrite.destination === '/index.html')
                 .map(({ index }) => index),
         );
 
@@ -366,7 +365,6 @@ const NEVER_REDIRECTED_PATHS = [
     '/index.html',
     '/privacy/index.html',
     '/ru/index.html',
-    '/app.html',
     '/manifest.webmanifest',
     '/join/group/token',
     '/join/friend/token',
@@ -404,7 +402,7 @@ describe('Vercel redirects by host (04-5a)', () => {
 
     // L1 of the 04-4a2 review: an unanchored host condition would match a look-alike host.
     test.each(APP_HOSTS)('serves %s/dashboard with no redirect (no loop)', host => {
-        expect(resolveRoute(host, '/dashboard')).toEqual({ rewrite: '/app.html' });
+        expect(resolveRoute(host, '/dashboard')).toEqual({ rewrite: '/index.html' });
     });
 
     test('writes every named host condition as an exact { eq } match', () => {
@@ -447,7 +445,6 @@ describe('Vercel has no app rules for the old hosts (04-5a)', () => {
             [
                 ...APP_PATHS,
                 '/unknown',
-                '/app.html',
                 '/index.html',
                 '/ru/privacy/index.html',
                 '/manifest.webmanifest',
@@ -540,16 +537,16 @@ describe('Vercel redirects are not open redirects (#821)', () => {
 // 04-2b (spec 04 §2.9, D31): one host-scoped catch-all to the shell per app host group, at the end
 // of the rewrites. It skips `api/`, `assets/`, `_vercel/`, `.well-known/` and any path whose last
 // segment has a file extension, so a missing chunk or icon stays a 404 and never gets the shell.
-// The filesystem is checked before the rewrites (§4.1), so `dist` files and the transitional
-// prerender pages are served as files; the route table below models only the rules. 04-5a removed
-// the enumerated host-agnostic rewrites: the catch-all alone serves the shell.
+// The filesystem is checked before the rewrites (§4.1), so `dist` files (`/` is `index.html`) are
+// served as files; the route table below models only the rules. 04-5a removed the enumerated
+// host-agnostic rewrites: the catch-all alone serves the shell.
 const CATCH_ALL_SOURCE = '/((?!api/|assets/|_vercel/|\\.well-known/)(?!.*\\.[^/]+$).*)';
 const APP_HOST_CONDITIONS = [
     { eq: 'app.chipin.one' },
     { eq: 'app-dev.chipin.one' },
     { suf: '.vercel.app' },
 ];
-const SHELL = { rewrite: '/app.html' };
+const SHELL = { rewrite: '/index.html' };
 
 // Invite tokens are base64url (`INVITE_TOKEN_PATTERN`, backend InviteTokenGenerator): no `.`, so a
 // join link never looks like a file and the catch-all serves it the shell.
@@ -571,17 +568,8 @@ const substituteParams = path =>
 /** A manifest `path` (relative, no leading slash) as a URL path. */
 const manifestUrlPath = route => `/${substituteParams(route.path)}`;
 
-const regularRoutes = APP_ROUTES.filter(route => !route.transitional);
-const transitionalRoutes = APP_ROUTES.filter(route => route.transitional);
-
-// Every form of a transitional path: `/privacy`, `/ru/privacy`, `/ru/privacy/`, `/`, `/ru`, `/ru/`.
-const transitionalUrlPaths = transitionalRoutes.flatMap(route =>
-    Object.values(LOCALE_PREFIX).flatMap(prefix => {
-        const path = route.path ? `${prefix}/${route.path}` : `${prefix}/`;
-
-        return [...new Set([path, `${path.replace(/\/$/, '')}/`, path.replace(/(.)\/$/, '$1')])];
-    }),
-);
+// 04-5a: the public pages moved to the site; their old app paths are unknown paths now.
+const OLD_PUBLIC_PATHS = ['/privacy', '/terms', '/ru', '/ru/', '/ru/privacy', '/ru/terms'];
 
 const NOT_SHELL_PATHS = [
     '/assets/x.js',
@@ -599,7 +587,7 @@ const NOT_SHELL_PATHS = [
     '/pwa-192x192.png',
     '/robots.txt',
     '/sitemap.xml',
-    '/app.html',
+    '/index.html',
     '/favicon.ico',
     '/group/x.json',
     '/dashboard/x.js',
@@ -617,7 +605,7 @@ const ASSET_PATHS = [
 const allowsPrivateFallback = pathname =>
     PRIVATE_SPA_NAVIGATION_ALLOWLIST.some(pattern => pattern.test(pathname));
 
-const isCatchAllSource = rewrite => rewrite.destination === '/app.html';
+const isCatchAllSource = rewrite => rewrite.destination === '/index.html';
 
 // The same config with the catch-all removed: the baseline of the differential check below.
 const routesWithoutCatchAll = compileRoutes({
@@ -648,13 +636,12 @@ const DIFFERENTIAL_PATHS = [
         `/group/${PARAM_VALUES.groupId}`,
         `/group/${PARAM_VALUES.groupId}/x`,
         '/oauth/callback?code=x',
-        '/app.html',
         '/index.html',
         ...NEVER_REDIRECTED_PATHS,
         ...NOT_SHELL_PATHS,
         ...APP_PATHS,
         ...APP_ROUTES.map(manifestUrlPath),
-        ...transitionalUrlPaths,
+        ...OLD_PUBLIC_PATHS,
         '/api/x',
     ]),
 ];
@@ -688,12 +675,14 @@ describe('Vercel app-host catch-all to the shell (04-2b)', () => {
 
     test('has no host-agnostic shell rewrite (04-5a)', () => {
         expect(
-            config.rewrites.filter(rewrite => rewrite.destination === '/app.html' && !rewrite.has),
+            config.rewrites.filter(
+                rewrite => rewrite.destination === '/index.html' && !rewrite.has,
+            ),
         ).toEqual([]);
     });
 
     test('compiles the catch-all source', () => {
-        const compiled = allRoutes.filter(route => route.dest === '/app.html' && route.has);
+        const compiled = allRoutes.filter(route => route.dest === '/index.html' && route.has);
 
         expect(compiled).toHaveLength(APP_HOST_CONDITIONS.length);
         for (const route of compiled) {
@@ -705,21 +694,10 @@ describe('Vercel app-host catch-all to the shell (04-2b)', () => {
     });
 
     test.each(
-        APP_SHELL_HOSTS.flatMap(host =>
-            regularRoutes.map(manifestUrlPath).map(path => [host, path]),
-        ),
+        APP_SHELL_HOSTS.flatMap(host => APP_ROUTES.map(manifestUrlPath).map(path => [host, path])),
     )('on %s routes the manifest path %s to the shell', (host, path) => {
         expect(resolveRoute(host, path)).toEqual(SHELL);
     });
-
-    // The rule table gives the shell only where no file matches: on Vercel the filesystem is
-    // checked before the rewrites (§4.1), so the prerender files of these pages are served first.
-    test.each(APP_SHELL_HOSTS.flatMap(host => transitionalUrlPaths.map(path => [host, path])))(
-        'on %s routes the transitional path %s to the shell only when no prerender file matches',
-        (host, path) => {
-            expect(resolveRoute(host, path)).toEqual(SHELL);
-        },
-    );
 
     test.each(
         APP_SHELL_HOSTS.flatMap(host =>
@@ -730,6 +708,7 @@ describe('Vercel app-host catch-all to the shell (04-2b)', () => {
                 `/group/${PARAM_VALUES.groupId}/x`,
                 '/oauth/callback?code=x',
                 '/a.b/c',
+                ...OLD_PUBLIC_PATHS,
             ].map(path => [host, path]),
         ),
     )('on %s serves the shell at the nested or unknown path %s', (host, path) => {
@@ -791,21 +770,22 @@ describe('Vercel app-host catch-all to the shell (04-2b)', () => {
 });
 
 // The SW navigation allowlist is hand-written (§2.9): a new manifest route must be added to it, and
-// it must stay narrower than the catch-all (no transitional page, no asset).
+// it must stay narrower than the catch-all (no old public page, no asset).
 describe('PRIVATE_SPA_NAVIGATION_ALLOWLIST against the route manifest (04-2b)', () => {
-    test('has regular and transitional routes to check', () => {
-        expect(regularRoutes.length).toBeGreaterThan(0);
-        expect(transitionalUrlPaths).toEqual(expect.arrayContaining(['/', '/ru/', '/ru/privacy']));
+    test('has the manifest routes to check, the `home` index among them (04-5a)', () => {
+        expect(APP_ROUTES.map(manifestUrlPath)).toEqual(
+            expect.arrayContaining(['/', '/dashboard']),
+        );
     });
 
-    test.each(regularRoutes.map(route => [route.id, manifestUrlPath(route)]))(
+    test.each(APP_ROUTES.map(route => [route.id, manifestUrlPath(route)]))(
         'allows the %s path %s',
         (_, path) => {
             expect(allowsPrivateFallback(path)).toBe(true);
         },
     );
 
-    test.each(transitionalUrlPaths)('does not allow the transitional path %s', path => {
+    test.each(OLD_PUBLIC_PATHS)('does not allow the old public path %s', path => {
         expect(allowsPrivateFallback(path)).toBe(false);
     });
 
@@ -895,8 +875,7 @@ test('assetlinks.json lists the site and the app hosts (04-4a2)', () => {
     ).toEqual(ASSET_LINK_SITES);
 });
 
-// Runs against a built `dist` only (`npm run build` runs `verify:public-precache`, which checks
-// the same files on every build, including Vercel's).
+// Runs against a built `dist` only (`swAppPlugin` fails a build without `dist/sw.js` to rename).
 describe.runIf(existsSync(resolve(DIST, 'index.html')))('built dist worker files (04-4a1)', () => {
     test('has sw-app.js and no sw.js', () => {
         expect(existsSync(resolve(DIST, 'sw-app.js'))).toBe(true);

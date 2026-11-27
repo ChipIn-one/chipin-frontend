@@ -48,9 +48,5 @@
     "apps/app/src/pages/settings-page/SettingsPage.test.tsx",
     "apps/app/src/pages/settings-page/components/AccountSection.test.tsx",
     "apps/app/src/pages/solo-page/SoloPage.test.tsx",
-    "apps/app/src/public-routes/PublicApp.tsx",
-    "apps/app/src/public-routes/PublicLanguageLinks.test.tsx",
-    "apps/app/src/public-routes/PublicLanguageLinks.tsx",
-    "apps/app/src/public-routes/entry-server.tsx",
     "apps/app/src/types/styled.d.ts"
 ]

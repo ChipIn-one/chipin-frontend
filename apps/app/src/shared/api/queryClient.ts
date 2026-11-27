@@ -1,6 +1,6 @@
 // The TanStack Query client (spec 03 §1.2). The per-user client and its persister live in
 // `shared/offline/restore.ts` (03-7a); `registerMutationDefaults` arrives in 03-15a.
-import { isServer, QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 
 import { DAY } from 'constants/time';
 import { ApiError } from 'shared/lib/apiError';
@@ -69,9 +69,8 @@ export const createQueryClient = (): QueryClient =>
             queries: {
                 networkMode: 'offlineFirst',
                 staleTime: 30_000,
-                // >= maxAge, otherwise an inactive query is collected before it is persisted. On the
-                // server (landing prerender) Infinity: no 14-day GC timer keeps Node alive.
-                gcTime: isServer ? Infinity : PERSIST_MAX_AGE,
+                // >= maxAge, otherwise an inactive query is collected before it is persisted.
+                gcTime: PERSIST_MAX_AGE,
                 retry: queryRetry,
                 refetchOnWindowFocus: true,
                 refetchOnReconnect: true,

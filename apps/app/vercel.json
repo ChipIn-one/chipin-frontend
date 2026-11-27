@@ -70,7 +70,7 @@
                     }
                 }
             ],
-            "destination": "/app.html"
+            "destination": "/index.html"
         },
         {
             "source": "/((?!api/|assets/|_vercel/|\\.well-known/)(?!.*\\.[^/]+$).*)",
@@ -82,7 +82,7 @@
                     }
                 }
             ],
-            "destination": "/app.html"
+            "destination": "/index.html"
         },
         {
             "source": "/((?!api/|assets/|_vercel/|\\.well-known/)(?!.*\\.[^/]+$).*)",
@@ -94,7 +94,7 @@
                     }
                 }
             ],
-            "destination": "/app.html"
+            "destination": "/index.html"
         }
     ],
     "headers": [

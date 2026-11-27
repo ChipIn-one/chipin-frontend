@@ -29,6 +29,7 @@ states, accessibility and i18n, example.
 - [Dropdown](components/dropdown.md)
 - [ProgressBar](components/progress-bar.md)
 - [ModeLogotype](components/mode-logotype.md)
+- [InAppBrowserNotice](components/in-app-browser-notice.md)
 
 ## basics and components
 
@@ -87,7 +88,7 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 | Name                          | Import path                      | Purpose                                                                         |
 | ----------------------------- | -------------------------------- | ------------------------------------------------------------------------------- |
 | `AddExpenseButton`            | `components/AddExpenseButton`    | The global "add expense" button (mobile, desktop, sidebar forms)                |
-| `AuthButtons`                 | `components/AuthButtons`         | Social sign-in button (Google)                                                  |
+| `AuthButtons`                 | `components/AuthButtons`         | Social sign-in button (Google), with the in-app browser notice                  |
 | `CurrencySelect`              | `components/CurrencySelect`      | Searchable currency picker                                                      |
 | `Footer`                      | `components/Footer`              | Public pages footer with logo and media links                                   |
 | `GroupAvatar`                 | `components/GroupAvatar`         | Group avatar from its cover, icon fallback ([card](components/group-avatar.md)) |
@@ -109,6 +110,7 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 | `DashboardHeader`, `DashboardSummary`                                                               | `components/dashboard-summary`                                        | Dashboard greeting; total balance with expandable details                                   |
 | `GlobalErrorBoundary`                                                                               | `components/global-error-boundary`                                    | Top-level crash fallback (renders without the app CSS)                                      |
 | `GroupCard`                                                                                         | `components/group-card`                                               | One group as an interactive card with its balance                                           |
+| `InAppBrowserNotice`                                                                                | `components/in-app-browser-notice/InAppBrowserNotice`                 | In-app browser notice before Google sign-in ([card](components/in-app-browser-notice.md))   |
 | `InteractiveCard`                                                                                   | `components/interactive-card/InteractiveCard`                         | A whole card as a link; rules in [patterns/groups.md](patterns/groups.md#interactive-cards) |
 | `LandingNav`, `LandingMobileMenu`                                                                   | `components/header/LandingNav`, `components/header/LandingMobileMenu` | Public header navigation, desktop and mobile                                                |
 | `InternalPageLayout`, `InternalPageColumns`, `InternalPageColumnsFromSm`                            | `components/internal-page-layout`                                     | Signed-in page shell (sidebar, mobile nav); main + side columns                             |

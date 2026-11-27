@@ -3,7 +3,6 @@ import { BRAND_COLORS } from '@chipin/tokens/theme';
 import { describe, expect, test } from 'vitest';
 
 import { APP_SHELL, buildPwaOptions } from './pwa.config.ts';
-import { addPublicDirectoryAliases } from './scripts/prerender-before-workbox.mjs';
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
 
 const options = buildPwaOptions({ appName: 'ChipIn' });
@@ -61,7 +60,7 @@ describe('buildPwaOptions: the table of spec 04 §2.11', () => {
     });
 
     test('precache patterns, the app shell fallback and its private allowlist', () => {
-        expect(APP_SHELL).toBe('app.html');
+        expect(APP_SHELL).toBe('index.html');
         expect(workbox?.globPatterns).toEqual(['**/*.{js,css,html,svg,png,webp,ico}']);
         expect(workbox?.navigateFallback).toBe(APP_SHELL);
         expect(workbox?.navigateFallbackAllowlist).toBe(PRIVATE_SPA_NAVIGATION_ALLOWLIST);
@@ -83,8 +82,9 @@ describe('buildPwaOptions: the common options', () => {
         expect(workbox?.sourcemap).toBe(false);
     });
 
-    test('public directory aliases are added to the precache manifest (until 04-5a)', () => {
-        expect(workbox?.manifestTransforms).toEqual([addPublicDirectoryAliases]);
+    test('no prerender step and no precache manifest transform (04-5a)', () => {
+        expect(options.integration).toBeUndefined();
+        expect(workbox?.manifestTransforms).toBeUndefined();
     });
 
     test('the dev worker stays disabled', () => {

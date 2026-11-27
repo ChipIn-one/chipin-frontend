@@ -9,7 +9,7 @@ interface QueryProviderProps {
 }
 
 /**
- * One QueryClient without persistence: the landing (and its prerender) and the signed-out app.
+ * One QueryClient without persistence: the landing and the signed-out app.
  * It imports nothing of the persister, so the landing bundle stays without IndexedDB code.
  */
 export const QueryProvider = ({ children }: QueryProviderProps) => {

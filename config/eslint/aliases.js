@@ -22,7 +22,7 @@ const formatDiagnostics = diagnostics =>
 const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * Returns the alias names (e.g. `api`, `public-routes`) declared in the app tsconfig `paths`.
+ * Returns the alias names (e.g. `api`, `shared`) declared in the app tsconfig `paths`.
  * @param {{ appDir?: string }} [options] app directory relative to the repository root
  * @returns {string[]}
  */

@@ -574,7 +574,7 @@ describe('scope and canonical QA identity', () => {
         for (const file of [
             'apps/app/src/app/router/createAppRouter.tsx',
             'apps/app/src/app/auth/requireSession.ts',
-            'apps/app/src/features/routing/PublicLocaleRoute.tsx',
+            'apps/app/src/features/routing/index.ts',
             'apps/app/src/root.tsx',
             'apps/app/src/bootstrap/initializeApi.ts',
             'apps/app/src/app/pwa/ServiceWorkerManager.tsx',
