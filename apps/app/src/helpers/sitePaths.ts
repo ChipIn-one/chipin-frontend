@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, type SupportedLocale } from 'constants/locales';
+import { DEFAULT_LOCALE } from 'constants/locales';
 import { SITE_PAGE_PATHS } from 'constants/sitePaths';
 
 import { getSiteOrigin } from './env';
@@ -13,8 +13,6 @@ const SITE_PATHS = {
     home: (): string => `${getSiteOrigin()}${SITE_PAGE_PATHS.home}`,
     privacy: (): string => `${getSiteOrigin()}${SITE_PAGE_PATHS.privacy}`,
     terms: (): string => `${getSiteOrigin()}${SITE_PAGE_PATHS.terms}`,
-    localeHome: (locale: SupportedLocale): string =>
-        `${getSiteOrigin()}${SITE_PAGE_PATHS.localeHome(locale)}`,
 } as const;
 
 /**

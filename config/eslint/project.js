@@ -142,8 +142,8 @@ export const projectImports = ({ appDir = '.', styledAllowlist = readStyledAllow
     },
     {
         // spec 05 §6: svgr (`?react`) only for the brand marks logo.svg and google-icon.svg (used
-        // by Footer.tsx, AuthButtons.tsx and mode-logotype). Allowlisted by the imported asset, not
-        // the importing file: no scope left for an ignore glob.
+        // by mode-logotype and AuthButtons.tsx). Allowlisted by the imported asset, not the
+        // importing file: no scope left for an ignore glob.
         id: 'svgr-react',
         pattern: {
             regex: '^(?!(?:@chipin/tokens/assets/logo|assets/google-icon)\\.svg\\?react$).*\\.svg\\?react$',

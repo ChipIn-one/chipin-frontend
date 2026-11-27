@@ -22,11 +22,10 @@ afterEach(() => {
     window.localStorage.clear();
 });
 
-test('site links are the site origin plus the locale path', () => {
+test('site links are the site origin plus the page path', () => {
     expect(SITE_PATHS.home()).toBe(`${getSiteOrigin()}/`);
-    expect(SITE_PATHS.localeHome('en')).toBe(`${getSiteOrigin()}/`);
-    expect(SITE_PATHS.localeHome('ru')).toBe(`${getSiteOrigin()}/ru/`);
     expect(SITE_PATHS.privacy()).toBe(`${getSiteOrigin()}/privacy`);
+    expect(SITE_PATHS.terms()).toBe(`${getSiteOrigin()}/terms`);
 });
 
 test('the sign-out landing path follows the last account language, English without one', () => {

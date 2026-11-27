@@ -82,7 +82,7 @@ describe('service worker registration call sites', () => {
         const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
         expect(code).not.toMatch(/\bscope\s*:/);
-        expect(code).not.toMatch(/['"`]\/sw\.js['"`]/);
+        expect(code).not.toMatch(/['"`]\/sw(?:-app)?\.js['"`]/);
     });
 
     test('the registration is /sw.js with scope / (pwa.config.ts)', () => {
@@ -103,7 +103,10 @@ describe('service worker registration call sites', () => {
             "'/'",
         ]);
         expect(viteConfig).toContain('VitePWA(buildPwaOptions(');
-        // The worker stays `dist/sw.js`, served at its registration URL `/sw.js` (spec 04 §2.11).
-        expect(viteConfig).not.toMatch(/\brename/);
+        // The worker stays `dist/sw.js`, served at its registration URL `/sw.js` (spec 04 §2.11):
+        // no plugin renames it to `sw-app.js` (comments are stripped first, so only code counts).
+        const code = viteConfig.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+        expect(code).not.toMatch(/sw-app|swAppPlugin/);
     });
 });
