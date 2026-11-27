@@ -1,6 +1,7 @@
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import type { SettlementActivityEvent } from 'entities/activity';
@@ -22,6 +23,7 @@ interface Props {
 const EventSettlement = ({ event }: Props) => {
     const { t } = useTranslation('activity');
     const user = useSelfUser();
+    const { groupId: routeGroupId } = useParams<{ groupId: string }>();
     const { amount, fromDisplayName, groupId, groupName, payerId, toDisplayName } = event.metadata;
     const isReversed = event.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isCurrentUserPayer = user?.id === payerId;
@@ -69,7 +71,11 @@ const EventSettlement = ({ event }: Props) => {
                 </Flex>
 
                 <Flex direction="column" align="end" gap="1" flexShrink="0" maxWidth="50%">
-                    <LedgerScopeBadge groupId={groupId ?? null} groupName={groupName ?? null} />
+                    <LedgerScopeBadge
+                        groupId={groupId ?? null}
+                        groupName={groupName ?? null}
+                        currentGroupId={routeGroupId}
+                    />
                 </Flex>
             </Flex>
         </Card>

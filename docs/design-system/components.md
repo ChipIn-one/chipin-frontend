@@ -77,7 +77,7 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 | `NoDebtsEmptyState`     | `basics/empty-states`                    | `EmptyState` for "no debts" ([card](components/empty-state.md))                                     |
 | `OfflineEmptyState`     | `basics/empty-states`                    | `EmptyState` for offline with nothing cached, no action ([card](components/empty-state.md))         |
 | `ProgressBar`           | `basics/progress-bar/ProgressBar`        | Radix `Progress` with the value clamped to `0..max` ([card](components/progress-bar.md))            |
-| `SegmentedControl`      | `basics/SegmentedControl`                | Radix segmented control from items, responsive size fixed ([card](components/segmented-control.md)) |
+| `SegmentedControl`      | `basics/SegmentedControl`                | Radix segmented control of items, responsive default size ([card](components/segmented-control.md)) |
 | `Select`                | `basics/Select`                          | Radix select from items, with a custom item render ([card](components/select.md))                   |
 | `BalanceBadgesSkeleton` | `basics/skeletons/BalanceBadgesSkeleton` | Loading placeholder of `BalanceBadges` ([card](components/skeletons.md))                            |
 

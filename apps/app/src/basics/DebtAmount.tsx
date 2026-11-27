@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +34,11 @@ const DebtAmount = ({
     const direction = getBalanceDirection(amount);
     const isOwed = direction === 'owed';
     const isZero = direction === 'settled';
-    const color = isZero ? 'gray' : isOwed ? 'green' : 'red';
+    const color = isZero
+        ? PROP_COLOR.debtSettled
+        : isOwed
+          ? PROP_COLOR.debtOwed
+          : PROP_COLOR.debtOwing;
     const directionLabel = isZero
         ? tCommon('balances.settledUp')
         : tCommon(isOwed ? 'balances.youAreOwed' : 'balances.youOwe');
