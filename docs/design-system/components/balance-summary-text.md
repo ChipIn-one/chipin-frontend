@@ -37,9 +37,8 @@ amount chunk does not wrap.
 - Plain Radix `Text as="span"` lines; words are visible.
 - i18n: namespace `common`, keys `balances.youAreOwed`, `balances.youOwe`, `balances.settledUp`.
 
-Money rules: direction is in words and color together. Colors are Radix `color` literals
-`green`/`red`/`gray` today, equal to `PROP_COLOR.debtOwed`/`debtOwing`/`debtSettled`. Each
-currency code stays next to its number. Screen rules: patterns/money.md (ChipIn-one/chipin-frontend#490).
+Money rules: direction is in words and color together. Colors are
+`PROP_COLOR.debtOwed`/`debtOwing`/`debtSettled`. Each currency code stays next to its number. Screen rules: patterns/money.md (ChipIn-one/chipin-frontend#490).
 
 ## Example
 

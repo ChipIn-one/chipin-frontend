@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { DropdownMenu, Flex, Text } from '@radix-ui/themes';
 
 import styles from './Dropdown.module.css';
@@ -76,7 +77,7 @@ const Dropdown = ({
             <DropdownMenu.Item
                 key={item.value}
                 disabled={item.isDisabled}
-                color={isActive ? 'green' : item.color}
+                color={isActive ? PROP_COLOR.success : item.color}
                 className={item.hint === undefined ? undefined : styles.withHint}
                 onSelect={() => {
                     item.onSelect?.();
@@ -96,7 +97,7 @@ const Dropdown = ({
             key={item.value}
             value={item.value}
             disabled={item.isDisabled}
-            color={selectedValue === item.value ? 'green' : item.color}
+            color={selectedValue === item.value ? PROP_COLOR.success : item.color}
             className={item.hint === undefined ? undefined : styles.withHint}
             onSelect={item.onSelect}
         >

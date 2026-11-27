@@ -40,8 +40,8 @@ The amount is `Math.abs(value)` with `precision={0}`.
 - i18n: `useTranslation('activity')`, keys read from `common`: `common:balances.youAreOwed`,
   `common:balances.youOwe`.
 
-Money rules: this is the reference for "direction in words and color together". Colors are Radix
-`color` literals `green`/`red` today, equal to `PROP_COLOR.debtOwed`/`debtOwing`. The sign test is
+Money rules: this is the reference for "direction in words and color together". Colors are
+`PROP_COLOR.debtOwed`/`debtOwing`. The sign test is
 `value >= 0`, not `getBalanceDirection`. Screen rules: patterns/money.md (ChipIn-one/chipin-frontend#490).
 
 ## Example

@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Text } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +30,7 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
 
     if (owedEntries.length === 0 && oweEntries.length === 0) {
         return (
-            <Text size={size} color="gray" as="span" align={align}>
+            <Text size={size} color={PROP_COLOR.debtSettled} as="span" align={align}>
                 {t('balances.settledUp')}
             </Text>
         );
@@ -38,7 +39,13 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
     return (
         <Flex direction="column">
             {owedEntries.length > 0 && (
-                <Text size={size} color="green" as="span" weight="medium" align={align}>
+                <Text
+                    size={size}
+                    color={PROP_COLOR.debtOwed}
+                    as="span"
+                    weight="medium"
+                    align={align}
+                >
                     {t('balances.youAreOwed')}{' '}
                     {owedEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>
@@ -57,7 +64,13 @@ const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
                 </Text>
             )}
             {oweEntries.length > 0 && (
-                <Text size={size} color="red" as="span" weight="medium" align={align}>
+                <Text
+                    size={size}
+                    color={PROP_COLOR.debtOwing}
+                    as="span"
+                    weight="medium"
+                    align={align}
+                >
                     {t('balances.youOwe')}{' '}
                     {oweEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>

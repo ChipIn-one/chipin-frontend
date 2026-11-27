@@ -1,5 +1,6 @@
 import { Card, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import type { ExpenseActivityEvent } from 'entities/activity';
@@ -22,6 +23,7 @@ interface Props {
 const EventExpense = ({ event }: Props) => {
     const { t } = useTranslation('activity');
     const user = useSelfUser();
+    const { groupId: routeGroupId } = useParams<{ groupId: string }>();
     const { amount } = event.metadata;
     const isReversed = event.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED;
     const isCurrentUserPayer = event.metadata.payerId === user?.id;
@@ -104,6 +106,7 @@ const EventExpense = ({ event }: Props) => {
                     <LedgerScopeBadge
                         groupId={event.metadata.groupId ?? null}
                         groupName={event.metadata.groupName ?? null}
+                        currentGroupId={routeGroupId}
                     />
                 </Flex>
             </Flex>

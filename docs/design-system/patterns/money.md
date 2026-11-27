@@ -31,10 +31,13 @@ The three debt roles exist once, in [`tokens.css`](../../../packages/tokens/toke
 - The direction comes from `getBalanceDirection` (`helpers/currencies`), not from a local
   `> 0` check.
 
-Today (origin/master) no money component meets these two rules yet, and no lint checks them:
+Today only `DebtAmount` meets both rules, and no lint checks them. `BalanceSummaryText` and
+`OwedStatusText` take their colors from `PROP_COLOR` (ChipIn-one/chipin-frontend#947), but
+not their direction: `BalanceSummaryText` gets it from the caller's `legacyPartitionEntries`
+split. The rest:
 
-- Radix literals: `DebtAmount`, `GroupCard`, `BalanceSummaryText` use `green`/`red`/`gray`;
-  `OwedStatusText` and `EventExpense` (`features/activity`) use `green`/`red`;
+- Radix literals: `GroupCard` uses `green`/`red`/`gray`; `EventExpense` (`features/activity`)
+  uses `green`/`red`;
   `DashboardSummary`, `dashboard-summary/summary.ts` (the `BalanceBadges` items), `OwedToYouCard`
   and `YouOweCard` use `grass`/`tomato`.
 - Local sign checks: `OwedStatusText` (`value >= 0`), `GroupCard`, `EventExpense`. Only

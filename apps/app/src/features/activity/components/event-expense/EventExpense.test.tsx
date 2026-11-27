@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
@@ -237,4 +238,34 @@ test('shows reversed expense context and strikes through monetary values', () =>
     expect(screen.getByText('30 USD').className).toContain(styles.reversed);
     expect(screen.getByText('You borrowed').className).toContain(styles.reversed);
     expect(screen.getByText('10 USD').className).toContain(styles.reversed);
+});
+
+test("hides the group badge on the expense's own group page", () => {
+    const element = (
+        <EventExpense
+            event={domainExpenseEvent(
+                createExpenseEvent({ groupId: 'group-1', groupName: 'Vietnam' }),
+            )}
+        />
+    );
+    const { unmount } = render(
+        <MemoryRouter initialEntries={['/group/group-1']}>
+            <Routes>
+                <Route path="/group/:groupId" element={element} />
+            </Routes>
+        </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Vietnam')).toBeNull();
+    unmount();
+
+    render(
+        <MemoryRouter initialEntries={['/group/group-2']}>
+            <Routes>
+                <Route path="/group/:groupId" element={element} />
+            </Routes>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Vietnam')).toBeTruthy();
 });

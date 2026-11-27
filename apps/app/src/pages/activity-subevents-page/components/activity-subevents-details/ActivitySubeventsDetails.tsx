@@ -1,6 +1,7 @@
 import { Card, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { ArrowRightIcon, ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
 
 import type {
     ActivityEvent,
@@ -60,6 +61,7 @@ const ActivitySubeventsDetails = ({
     isLoading,
 }: Props) => {
     const { t, i18n } = useTranslation(['activity', 'group']);
+    const { groupId: routeGroupId } = useParams<{ groupId: string }>();
 
     if (isLoading) {
         return (
@@ -127,7 +129,11 @@ const ActivitySubeventsDetails = ({
                     <Text className={styles.detailLabel} size="1" color="gray">
                         {t('subeventsScope')}
                     </Text>
-                    <LedgerScopeBadge groupId={groupId} groupName={groupName} />
+                    <LedgerScopeBadge
+                        groupId={groupId}
+                        groupName={groupName}
+                        currentGroupId={routeGroupId}
+                    />
                 </Flex>
                 <Flex className={styles.detailRow} gap="3" pt="2">
                     <Text className={styles.detailLabel} size="1" color="gray">
@@ -224,7 +230,11 @@ const ActivitySubeventsDetails = ({
                     <Text className={styles.detailLabel} size="1" color="gray">
                         {t('subeventsScope')}
                     </Text>
-                    <LedgerScopeBadge groupId={groupId} groupName={groupName} />
+                    <LedgerScopeBadge
+                        groupId={groupId}
+                        groupName={groupName}
+                        currentGroupId={routeGroupId}
+                    />
                 </Flex>
             </Flex>
 

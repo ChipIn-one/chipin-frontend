@@ -141,8 +141,8 @@ The scales come before `base.css`, as in Radix's own `tokens/index.css`: the oli
 - **Preference source.**
   - `useSyncUserSettings` calls `setPreference(settings.theme)` when the server settings arrive.
   - If there are no server settings, the local key applies.
-  - A one-time migration at store init: if there is no key but `getLocalUser()?.settings.theme` has a value, it is written to the key. This replaces `resolveStoredTheme` in `root.tsx:59`.
-  - Remove this branch after 2 releases (the Issue is created in PR 05-3).
+  - (Removed by #825.) A one-time migration at store init: if there is no key but `getLocalUser()?.settings.theme` has a value, it is written to the key. This replaces `resolveStoredTheme` in `root.tsx:59`.
+  - Remove this branch after 2 releases (the Issue is created in PR 05-3). Removed early by #825 (owner decision 2026-11-27): the store reads only the key.
 - **FOUC.** `packages/tokens/src/theme-init.ts` exports `THEME_INIT_SCRIPT`, an IIFE of about 12 lines in try/catch:
   - reads `localStorage['Chipin_theme']`;
   - `dark` or (`system`/no value and `matchMedia` dark) → class `dark`, otherwise `light`;
@@ -421,7 +421,7 @@ Gate PR (commands) — items 2–8; item 1 — owner QA, not a PR gate (C2-18, C
    - a CSS Module with `#fff`, `var(--gray-11)`, `var(--cp-text-secndary)` — 3 errors; `16px` in `padding` — 0 (the px rule is not introduced, C1-14);
    - TS: the `no-raw-colors` fixtures from §3 (4 errors, 0 on `'#add-expense'`);
    - editing a `styled.ts` from the allowlist without converting it — a `check-styled-allowlist` error.
-7. Unit tests: `tokens.test.ts` ("Checks" 1–3, plus a negative fixture for each), `appearanceStore` (system/matchMedia, key migration, html class), `theme-init` (hash in CSP, key).
+7. Unit tests: `tokens.test.ts` ("Checks" 1–3, plus a negative fixture for each), `appearanceStore` (system/matchMedia, html class; the key migration was removed by #825), `theme-init` (hash in CSP, key).
 8. The existing tests are green (`build:ds-gallery` withdrawn by D33, 2026-11-21).
 
 ## Backend requirements

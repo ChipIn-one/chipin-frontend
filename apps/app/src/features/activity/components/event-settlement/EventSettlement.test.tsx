@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
@@ -166,4 +167,34 @@ test('strikes reversed settlement values and shows deletion context', () => {
         styles.reversed,
     );
     expect(screen.getByText('event.settlementReversedDescription')).toBeTruthy();
+});
+
+test("hides the group badge on the settlement's own group page", () => {
+    const element = (
+        <EventSettlement
+            event={domainSettlementEvent(
+                createSettlementEvent({ groupId: 'group-1', groupName: 'Vietnam' }),
+            )}
+        />
+    );
+    const { unmount } = render(
+        <MemoryRouter initialEntries={['/group/group-1']}>
+            <Routes>
+                <Route path="/group/:groupId" element={element} />
+            </Routes>
+        </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Vietnam')).toBeNull();
+    unmount();
+
+    render(
+        <MemoryRouter initialEntries={['/group/group-2']}>
+            <Routes>
+                <Route path="/group/:groupId" element={element} />
+            </Routes>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Vietnam')).toBeTruthy();
 });

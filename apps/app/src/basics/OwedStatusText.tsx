@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Text } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +25,7 @@ const OwedStatusText = ({ value, currencyCode, size, align = 'right', className 
     return (
         <Text
             size={size}
-            color={isPositive ? 'green' : 'red'}
+            color={isPositive ? PROP_COLOR.debtOwed : PROP_COLOR.debtOwing}
             as="span"
             align={align}
             className={className}

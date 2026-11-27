@@ -38,7 +38,7 @@ Source: [`basics/Dropdown.tsx`](../../../apps/app/src/basics/Dropdown.tsx).
 `RadioGroup`.
 
 Selection: when `value`, `defaultValue` or `onValueChange` is set, the active item is colored
-`green` (a Radix literal); otherwise items use their own `color`.
+`PROP_COLOR.success` (green; not `accent`); otherwise items use their own `color`.
 
 ## States
 
