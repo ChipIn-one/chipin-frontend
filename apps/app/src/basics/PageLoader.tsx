@@ -6,7 +6,7 @@ import { ChipInLoader } from './ChipInLoader';
 interface Props {
     /**
      * Shown under the loader, e.g. a `role="status"` line that says what is loading. When given,
-     * the loader itself is not announced, so assistive technology hears only this line.
+     * the loader itself is not announced, so the children must carry the status announcement.
      */
     children?: ReactNode;
 }

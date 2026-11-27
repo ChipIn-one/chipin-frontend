@@ -1,7 +1,7 @@
 # ChipInLoader
 
-`import { ChipInLoader, PageLoader } from 'basics';` (`ChipInLoader` named export;
-`PageLoader` default export of `basics/PageLoader.tsx`, re-exported by name).
+`import { ChipInLoader, PageLoader } from 'basics';` (both are named exports of their files,
+re-exported from `basics`).
 
 ## Purpose
 
@@ -29,7 +29,8 @@ Source: [`basics/ChipInLoader.tsx`](../../../apps/app/src/basics/ChipInLoader.ts
 | `announce`    | `boolean` | `true`  | `false` hides the loader from assistive tech (a status line nearby) |
 
 `PageLoader`: optional `children`, shown under the loader (e.g. a `role="status"` line that says
-what is loading; then the loader passes `announce={false}`). Renders `ChipInLoader` at default
+what is loading; then the loader passes `announce={false}`, so the children must carry the
+status announcement). Renders `ChipInLoader` at default
 size in a `Container size="4"` and a `Flex` with `minHeight="100vh"`.
 
 ## States
