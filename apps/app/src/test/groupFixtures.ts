@@ -36,6 +36,7 @@ export const wireGroup = (id: string, overrides: Partial<LegacyGroup> = {}): Leg
         role: 'OWNER',
         status: 'ACTIVE',
         lastUsedCurrency: null,
+        lastSelectedCurrency: null,
         recentActivities: { items: [], nextCursor: null },
         ...overrides,
     };
@@ -71,6 +72,7 @@ export const toTestGroup = (group: LegacyGroup): Group => ({
     role: group.role,
     status: group.status,
     lastUsedCurrency: group.lastUsedCurrency,
+    lastSelectedCurrency: group.lastSelectedCurrency ?? null,
     recentActivities: {
         items: group.recentActivities.items.map(legacyActivityPreview),
         nextCursor: group.recentActivities.nextCursor,

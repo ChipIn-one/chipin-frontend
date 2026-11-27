@@ -34,6 +34,7 @@ export const createKnownUser = (
     })),
     hasUnreadableBalance: false,
     lastUsedCurrency: null,
+    lastSelectedCurrency: null,
     ...overrides,
 });
 

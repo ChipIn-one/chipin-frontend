@@ -55,6 +55,12 @@ export interface Group {
     readonly status: 'ACTIVE';
     /** Currency of the latest manual entry in the group; null when there is none. */
     readonly lastUsedCurrency: string | null;
+    /**
+     * The signed-in user's own last selected currency in this group (their latest entry here);
+     * null until the first one. Other members' entries never change it, unlike `lastUsedCurrency`.
+     * Optional: an entry restored from the cache persisted before the field existed lacks it (read as null).
+     */
+    readonly lastSelectedCurrency?: string | null;
     /** The first page of the group's activity (it seeds `groups.activity`). */
     readonly recentActivities: GroupActivityPage;
 }

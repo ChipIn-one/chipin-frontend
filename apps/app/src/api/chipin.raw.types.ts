@@ -73,6 +73,8 @@ export interface ApiGroupResponse {
     role: 'OWNER' | 'MEMBER';
     status: 'ACTIVE';
     lastUsedCurrency: string | null;
+    /** The requester's own last selected currency in the group (`GroupResponse`). */
+    lastSelectedCurrency?: string | null;
     recentActivities: ApiActivityFeedResponse;
 }
 

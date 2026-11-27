@@ -43,6 +43,7 @@ const toKnownUser = (response: KnownUserResponse): KnownUser => {
         balances,
         hasUnreadableBalance: balances.length !== mapped.length,
         lastUsedCurrency: response.lastUsedCurrency,
+        lastSelectedCurrency: response.lastSelectedCurrency ?? null,
     };
 };
 

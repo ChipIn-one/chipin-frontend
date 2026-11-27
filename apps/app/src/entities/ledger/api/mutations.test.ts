@@ -280,7 +280,10 @@ describe('create an expense', () => {
         await create({ expense, parentActivityId: 'activity-1' });
 
         expect(onEntryWritten.mock.calls).toEqual([
-            [{ groupId: 'group-1', parentActivityId: 'activity-1' }, getDefaultTestQueryClient()],
+            [
+                { groupId: 'group-1', parentActivityId: 'activity-1', isCreate: true },
+                getDefaultTestQueryClient(),
+            ],
         ]);
     });
 
@@ -298,7 +301,7 @@ describe('create an expense', () => {
 
         await vi.waitFor(() => {
             expect(onEntryWritten).toHaveBeenCalledWith(
-                { groupId: undefined, parentActivityId: undefined },
+                { groupId: undefined, parentActivityId: undefined, isCreate: true },
                 getDefaultTestQueryClient(),
             );
         });
@@ -454,8 +457,9 @@ describe('a rejected or unanswered request', () => {
                     {
                         groupId: 'group-1',
                         parentActivityId: 'activity-1',
-                        // `ledger.entry(id)` is read again too (§2.2); a create has no id yet.
-                        ...(kind !== 'create' && { entryId: 'entry-1' }),
+                        // `ledger.entry(id)` is read again too (§2.2); a create has no id yet,
+                        // and reloads the user's last selected currencies (EXP-073).
+                        ...(kind === 'create' ? { isCreate: true } : { entryId: 'entry-1' }),
                     },
                     getDefaultTestQueryClient(),
                 ],

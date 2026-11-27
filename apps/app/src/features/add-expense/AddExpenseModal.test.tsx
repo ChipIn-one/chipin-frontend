@@ -7,6 +7,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { Group, SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
+import type { SelfUser as DomainSelfUser } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
@@ -390,4 +391,121 @@ test('EXP-067 a known friend arriving while open makes the direct expense usable
     expect(state.description).toBe('Dinner');
     expect(state.amount).toBe('10');
     expect(submitButton()).toHaveProperty('disabled', false);
+});
+
+const selfWithCurrency = (
+    lastSelectedCurrency: string | null,
+    defaultCurrency = 'GBP',
+): DomainSelfUser => ({
+    id: creator.id,
+    email: creator.email,
+    displayName: creator.displayName,
+    picture: null,
+    role: 'USER',
+    subscriptionUntil: null,
+    inviteToken: 'invite',
+    settings: {
+        defaultCurrency,
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'en',
+        theme: 'system',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
+    },
+    lastSelectedCurrency,
+    createdAt: 1,
+    updatedAt: 1,
+});
+
+test("EXP-072 a group expense starts with the viewer's own currency in the group, never the group's shared last used one", () => {
+    seedSelfUser(selfWithCurrency(null));
+    seedGroupsList([
+        { ...tripGroup, lastUsedCurrency: 'KHR', lastSelectedCurrency: 'VND' },
+        { ...newerGroup, lastUsedCurrency: 'KHR', lastSelectedCurrency: null },
+    ]);
+    renderAt('/group/group-1');
+
+    expect(useExpenseModalStore.getState().currency).toBe('VND');
+
+    // Another member's entry set the shared `lastUsedCurrency` of group-2: it is not the start.
+    act(() => {
+        useExpenseModalStore.getState().setGroupId(newerGroup.id);
+    });
+    // No preference of the viewer there: their default currency.
+    expect(useExpenseModalStore.getState().currency).toBe('GBP');
+});
+
+test("EXP-072 a direct expense starts with the viewer's own currency with the friend, never the pair's shared last used one", () => {
+    useUiPrefsStore.setState({ lastGroupId: null });
+    seedGroupsList([]);
+    seedKnownUsers([
+        createKnownUser('user-5', [], { lastUsedCurrency: 'KHR', lastSelectedCurrency: 'THB' }),
+        createKnownUser('user-6', [], { lastUsedCurrency: 'KHR', lastSelectedCurrency: null }),
+    ]);
+    renderAt('/');
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.targetMode).toBe('friends');
+    expect(state.selectedFriendId).toBe('user-5');
+    expect(state.currency).toBe('THB');
+});
+
+test('EXP-073 a currency the user picked is kept when the groups list refreshes with newer preferences', async () => {
+    seedGroupsList([tripGroup]);
+    renderAt('/group/group-1');
+
+    act(() => {
+        useExpenseModalStore.getState().setCurrency('JPY');
+    });
+    await receiveGroupsList([
+        { ...newerGroup, lastSelectedCurrency: 'EUR' },
+        { ...tripGroup, lastSelectedCurrency: 'VND' },
+    ]);
+
+    expect(useExpenseModalStore.getState().currency).toBe('JPY');
+});
+
+test('EXP-073 reopened after a VND create in a group whose list still has the old USD preference, the refreshed list brings VND', async () => {
+    // The create reloaded the self user (overall VND); the groups list has not answered yet.
+    seedSelfUser(selfWithCurrency('VND'));
+    seedGroupsList([{ ...tripGroup, lastSelectedCurrency: 'USD' }]);
+    renderAt('/group/group-1');
+
+    expect(useExpenseModalStore.getState().currency).toBe('USD');
+
+    // The list answers with the same groups and the new preference of the group.
+    await receiveGroupsList([{ ...tripGroup, lastSelectedCurrency: 'VND' }]);
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.groupId).toBe(tripGroup.id);
+    expect(state.currency).toBe('VND');
+    expect(state.isCurrencyManuallyEdited).toBe(false);
+});
+
+test('EXP-073 a preference that arrives late for an unchanged target replaces only an untouched currency', async () => {
+    seedSelfUser(selfWithCurrency(null));
+    seedGroupsList([tripGroup]);
+    renderAt('/group/group-1');
+
+    expect(useExpenseModalStore.getState().currency).toBe('GBP');
+
+    await act(async () => {
+        seedSelfUser(selfWithCurrency('EUR'));
+        await new Promise(resolve => {
+            setTimeout(resolve, 0);
+        });
+    });
+    expect(useExpenseModalStore.getState().currency).toBe('EUR');
+
+    act(() => {
+        useExpenseModalStore.getState().setCurrency('JPY');
+    });
+    await receiveGroupsList([{ ...tripGroup, lastSelectedCurrency: 'VND' }]);
+    expect(useExpenseModalStore.getState().currency).toBe('JPY');
 });

@@ -442,6 +442,36 @@ const useWrites = () => ({
 
 type Writes = ReturnType<typeof useWrites>;
 
+test('EXP-073 a created expense or settlement reloads the self user (its last selected currency); an edit or a delete does not', async () => {
+    const client = signIn();
+    const sent = serve();
+    const { result } = renderHook(() => useWrites());
+    const markSelfFresh = () => {
+        client.setQueryData(usersKeys.self(), { id: 'user-1' });
+    };
+
+    markSelfFresh();
+    await act(() => result.current.create.createExpense({ expense }));
+    expect(isStale(client, usersKeys.self())).toBe(true);
+
+    markSelfFresh();
+    await act(() => result.current.settle.createSettlement({ settlement }));
+    expect(isStale(client, usersKeys.self())).toBe(true);
+
+    markSelfFresh();
+    await act(() =>
+        result.current.update.updateExpense({
+            entryId: 'entry-1',
+            entry: patch,
+            groupId: 'group-1',
+        }),
+    );
+    await act(() => result.current.remove.deleteLedgerEntry({ entryId: 'entry-1' }));
+    expect(isStale(client, usersKeys.self())).toBe(false);
+    // No modal-specific request: the self user is only marked stale (nothing observes it here).
+    expect(sent.filter(request => request === 'GET /users/self')).toEqual([]);
+});
+
 const groupWrites: [string, string, (writes: Writes) => Promise<unknown>][] = [
     [
         'create',

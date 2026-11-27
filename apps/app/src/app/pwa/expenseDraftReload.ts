@@ -77,7 +77,8 @@ const ParticipantSchema = z.object({
 const SourceSchema = z.object({
     context: z.enum(['dashboard', 'friends', 'group']),
     currentUser: ParticipantSchema.nullable(),
-    defaultCurrency: z.string(),
+    defaultCurrency: z.string().nullable(),
+    lastSelectedCurrency: z.string().nullable().optional(),
     defaultCategory: z.string(),
     skipCategory: z.boolean(),
     groups: z.array(
@@ -85,9 +86,10 @@ const SourceSchema = z.object({
             id: z.string().min(1),
             name: z.string().optional(),
             members: z.array(ParticipantSchema),
-            lastUsedCurrency: z.string().nullable().optional(),
+            lastSelectedCurrency: z.string().nullable().optional(),
         }),
     ),
+    // An edit draft stores its friends as participants only (`toSavedEditSource`).
     knownFriends: z.array(ParticipantSchema),
     defaultGroupId: z.string().optional(),
     preferredFriendId: z.string().optional(),

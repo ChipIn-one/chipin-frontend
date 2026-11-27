@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
 import { discardConflictDraft, reportConflictDraftFailure } from 'entities/ledger';
-import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
+import { type SelfUserSettings, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { useGroups } from 'hooks/useGroupsList';
 import { useKnownUsers } from 'hooks/useKnownUsers';
 import {
@@ -59,6 +59,11 @@ const getExpenseModalContext = (
     return 'dashboard';
 };
 
+// The settings' own default currency, without the app fallback: the starting currency tells the two
+// apart (`resolveInputCurrency`, EXP-072).
+const defaultCurrencySetting = (settings: SelfUserSettings | null): string | null =>
+    settings?.defaultCurrency || null;
+
 /** The group of a `/group/:groupId` path. */
 const getRouteGroupId = (pathname: string): string | undefined =>
     matchPath({ path: `${ROUTES.GROUP}/:groupId`, end: true }, pathname)?.params.groupId;
@@ -70,7 +75,7 @@ export const useExpenseModalSource = ({
     const location = useLocation();
     const user = useSelfUser();
     const { friends } = useKnownUsers();
-    const defaultCurrency = useUserSetting(userCurrency);
+    const defaultCurrency = useUserSetting(defaultCurrencySetting);
     const defaultCategory = useUserSetting(userDefaultCategory);
     const skipCategory = useUserSetting(userSkipCategory);
 
@@ -83,15 +88,21 @@ export const useExpenseModalSource = ({
             context: openingContext,
             currentUser: user,
             defaultCurrency,
+            // The viewer's own preferences (EXP-072), never the shared ledger `lastUsedCurrency`.
+            lastSelectedCurrency: user?.lastSelectedCurrency ?? null,
             defaultCategory,
             skipCategory,
             groups: groups.map(group => ({
                 id: group.id,
                 name: group.name,
                 members: group.members.map(member => member.user),
-                lastUsedCurrency: group.lastUsedCurrency,
+                lastSelectedCurrency: group.lastSelectedCurrency ?? null,
             })),
-            knownFriends: friends?.map(friend => friend.user) ?? [],
+            knownFriends:
+                friends?.map(friend => ({
+                    ...friend.user,
+                    lastSelectedCurrency: friend.lastSelectedCurrency ?? null,
+                })) ?? [],
             // On a group page only the opened group: not the last one, not the first loaded.
             defaultGroupId:
                 openingContext === 'group'

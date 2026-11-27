@@ -27,6 +27,12 @@ export interface SelfUser {
     readonly subscriptionUntil: number | null;
     readonly inviteToken: string;
     readonly settings: SelfUserSettings;
+    /**
+     * The currency of the latest entry the user created, in any group or with any known user; null
+     * until the first one. Not a setting: `settings.defaultCurrency` stays the base currency.
+     * Optional: an entry restored from the cache persisted before the field existed lacks it (read as null).
+     */
+    readonly lastSelectedCurrency?: string | null;
     /** Unix seconds. */
     readonly createdAt: number;
     /** Unix seconds. */
@@ -59,4 +65,10 @@ export interface KnownUser {
     readonly hasUnreadableBalance: boolean;
     /** Currency of the latest direct entry with this user; null when there is none. */
     readonly lastUsedCurrency: string | null;
+    /**
+     * The signed-in user's own last selected currency with this user (their latest direct entry
+     * with them); null until the first one. The other side's entries never change it.
+     * Optional: an entry restored from the cache persisted before the field existed lacks it (read as null).
+     */
+    readonly lastSelectedCurrency?: string | null;
 }

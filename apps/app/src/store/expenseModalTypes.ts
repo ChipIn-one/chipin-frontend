@@ -7,23 +7,33 @@ export type ExpenseTargetMode = 'group' | 'friends';
 export type ExpenseModalMode = 'create' | 'edit';
 export type ExpenseParticipant = Pick<User, 'id' | 'displayName' | 'picture'>;
 
+/** A known user the viewer can add a direct expense with. */
+export interface ExpenseModalFriend extends ExpenseParticipant {
+    /** The viewer's last selected currency with this known user (EXP-072); absent until set. */
+    lastSelectedCurrency?: string | null;
+}
+
 export type ExpenseModalContext = 'dashboard' | 'friends' | 'group';
 
 export interface ExpenseModalGroup {
     id: string;
     name?: string;
     members: ExpenseParticipant[];
-    lastUsedCurrency?: string | null;
+    /** The viewer's last selected currency in this group (EXP-072); absent until set. */
+    lastSelectedCurrency?: string | null;
 }
 
 export interface ExpenseModalSource {
     context: ExpenseModalContext;
     currentUser: ExpenseParticipant | null;
-    defaultCurrency: string;
+    /** The default (base) currency of the viewer's settings; null while unknown. */
+    defaultCurrency: string | null;
+    /** The viewer's last selected currency overall (EXP-072); absent until set or loaded. */
+    lastSelectedCurrency?: string | null;
     defaultCategory: string;
     skipCategory: boolean;
     groups: ExpenseModalGroup[];
-    knownFriends: ExpenseParticipant[];
+    knownFriends: ExpenseModalFriend[];
     defaultGroupId?: string;
     preferredFriendId?: string;
 }
@@ -54,6 +64,10 @@ export interface ExpenseModalState {
     amount: string;
     date: number;
     currency: string;
+    /**
+     * The user picked the currency in this editor (or it is an edit's stored currency): refreshed
+     * or late data and a target change no longer replace it (EXP-073).
+     */
     isCurrencyManuallyEdited: boolean;
     category: string;
     paidById: string;
