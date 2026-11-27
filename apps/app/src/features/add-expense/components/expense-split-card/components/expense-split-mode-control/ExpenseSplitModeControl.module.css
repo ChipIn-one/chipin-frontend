@@ -1,0 +1,31 @@
+/*
+ * #970: below sm (767px = constants/breakpoints RADIX_BREAKPOINTS.sm - 1) each split-mode segment
+ * keeps a 44px tap target. Radix size 2 is `height: var(--space-6)` (32px); no 44px token exists,
+ * so it is space-7 (40px) + space-1 (4px). Doubled class (0,2,0) beats
+ * `.rt-SegmentedControlRoot:where(.rt-r-size-2)` (0,1,0), which loads after the app CSS.
+ */
+@media (max-width: 767px) {
+    .splitControl.splitControl {
+        height: calc(var(--cp-space-7) + var(--cp-space-1));
+    }
+}
+
+/* stylelint-disable selector-disallowed-list -- the item label is a Radix internal with no prop or token hook for its padding and font size */
+
+/*
+ * Four segments compact earlier than the basics `fill` threshold (280px, sized for three).
+ * Size 2: ~58-60px labels (Amounts, Поровну) at 14px + 2 x 8px = ~74-76px x 4 = ~296-304px, so
+ * below 310px it drops to 12px + 2 x 4px: ~51px + 8px = ~59px x 4 = ~236px (fits 264px at 320).
+ * Box = viewport - 2 x 16px body - 2 x 12px card: 360 -> 304 compacts, 375 -> 319 stays 14px.
+ * The container is the root itself (`fill` sets `container-type` on it); the tripled class
+ * (0,4,0) beats the basics `.fill.fill` label rules (0,3,0).
+ */
+@container (width < 310px) {
+    .splitControl.splitControl.splitControl :global(.rt-SegmentedControlItemLabel) {
+        --_label-padding: var(--cp-space-1);
+
+        font-size: var(--cp-font-size-1);
+    }
+}
+
+/* stylelint-enable selector-disallowed-list */

@@ -283,11 +283,6 @@
       "count": 1
     }
   },
-  "apps/app/src/features/add-expense/components/expense-split-card/components/expense-split-mode-control/ExpenseSplitModeControl.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/features/add-expense/components/expense-split-card/components/split-type-header/SplitTypeHeader.tsx": {
     "import-x/no-default-export": {
       "count": 1
