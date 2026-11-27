@@ -75,7 +75,7 @@ const ExpenseSplitModeControl = () => {
             </Flex>
             <SegmentedControl
                 fill
-                className={styles.tapTarget}
+                className={styles.splitControl}
                 value={splitMode}
                 onValueChange={value => setSplitMode(value as ExpenseSplitMode)}
                 items={items}

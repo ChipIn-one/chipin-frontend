@@ -158,9 +158,9 @@ test('#970 the split-mode control fills the card, keeps the phone tap target and
     }
 
     expect(fillStyles.fill).toBeTruthy();
-    expect(controlStyles.tapTarget).toBeTruthy();
+    expect(controlStyles.splitControl).toBeTruthy();
     expect(root.classList).toContain(fillStyles.fill);
-    expect(root.classList).toContain(controlStyles.tapTarget);
+    expect(root.classList).toContain(controlStyles.splitControl);
     expect(root.classList).toContain('rt-r-size-2');
     expect(root.classList).toContain('sm:rt-r-size-3');
     for (const [, key] of SPLIT_MODE_LABELS) {
