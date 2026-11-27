@@ -59,6 +59,7 @@ test('#969: without fill the root has no fill class and keeps the caller classNa
     });
 
     const root = rootOf('First');
+    expect(styles.fill).toBeTruthy();
     expect(root.classList).not.toContain(styles.fill);
     expect(root.classList).toContain('caller');
 });

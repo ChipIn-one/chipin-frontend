@@ -58,4 +58,4 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
     );
 };
 
-export default ActivityHeader;
+export { ActivityHeader };

@@ -3,7 +3,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 
-import ActivityHeader from './ActivityHeader';
+import styles from 'basics/SegmentedControl.module.css';
+
+import { ActivityHeader } from './ActivityHeader';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -43,7 +45,7 @@ test('#969: the filter control fills its column at size 2 with all three labels'
         throw new Error('SegmentedControl root not found');
     }
 
-    expect(root.className).toMatch(/fill/);
+    expect(root.classList).toContain(styles.fill);
     expect(root.classList).toContain('rt-r-size-2');
     expect([...root.classList].some(name => name.startsWith('sm:'))).toBe(false);
     expect(screen.getByRole('radio', { name: 'filterExpenses' })).toBeTruthy();

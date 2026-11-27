@@ -27,7 +27,9 @@ Radix `SegmentedControl.Root` props (`value`, `defaultValue`, `onValueChange`, `
 
 Use `fill` when the control must fit a narrow container or column: it takes the full width, keeps
 equal-width cells (the Radix indicator needs them), uses compact label padding and drops to the
-size-1 font below ~300px (ChipIn-one/chipin-frontend#969).
+size-1 font below a 280px wide control, and clips over-long labels with an ellipsis
+(ChipIn-one/chipin-frontend#969). The parent must give it a definite width (a block container):
+inline-size containment gives it zero intrinsic width in a shrink-to-fit parent.
 
 ## States
 
