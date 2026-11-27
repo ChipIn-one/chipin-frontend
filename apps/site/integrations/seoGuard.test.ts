@@ -16,7 +16,24 @@ import {
 
 const page = (head: string, body = '') =>
     `<!DOCTYPE html><html lang="en"><head>${head}</head><body>${body}</body></html>`;
-const HEAD = '<title>ChipIn</title><meta name="description" content="Split expenses">';
+const IMAGE = 'https://chipin.one/og-image.png';
+/** The social preview tags of #940, one per entry: `[selector, content]`. */
+const SOCIAL_TAGS: [string, string][] = [
+    ['property="og:image"', IMAGE],
+    ['property="og:image:width"', '1200'],
+    ['property="og:image:height"', '630'],
+    ['property="og:image:type"', 'image/png'],
+    ['property="og:image:alt"', 'ChipIn logo'],
+    ['name="twitter:card"', 'summary_large_image'],
+    ['name="twitter:title"', 'ChipIn'],
+    ['name="twitter:description"', 'Split expenses'],
+    ['name="twitter:image"', IMAGE],
+    ['name="twitter:image:alt"', 'ChipIn logo'],
+];
+const social = (tags: [string, string][] = SOCIAL_TAGS) =>
+    tags.map(([selector, content]) => `<meta ${selector} content="${content}">`).join('');
+const SOCIAL = social();
+const HEAD = `<title>ChipIn</title><meta name="description" content="Split expenses">${SOCIAL}`;
 const noScripts = () => undefined;
 
 const problemsOf = (
@@ -52,16 +69,20 @@ describe('seoGuard checkPage', () => {
     });
 
     test.each([
-        ['no title', page('<meta name="description" content="x">'), 'missing <title>'],
+        ['no title', page(`<meta name="description" content="x">${SOCIAL}`), 'missing <title>'],
         [
             'an empty title',
-            page('<title> </title><meta name="description" content="x">'),
+            page(`<title> </title><meta name="description" content="x">${SOCIAL}`),
             'missing <title>',
         ],
-        ['no description', page('<title>ChipIn</title>'), 'missing <meta name="description">'],
+        [
+            'no description',
+            page(`<title>ChipIn</title>${SOCIAL}`),
+            'missing <meta name="description">',
+        ],
         [
             'an empty description',
-            page('<title>ChipIn</title><meta name="description" content="">'),
+            page(`<title>ChipIn</title><meta name="description" content="">${SOCIAL}`),
             'missing <meta name="description">',
         ],
     ])('fails on %s', (_, html, problem) => {
@@ -188,6 +209,104 @@ describe('seoGuard checkPage', () => {
         expect(
             problemsOf('index.html', page(HEAD, '<script src="/_astro/gone.js"></script>')),
         ).toEqual(['index.html: script /_astro/gone.js is not in the build']);
+    });
+});
+
+// #940: every page carries the social preview (Open Graph image, X large card).
+describe('seoGuard social preview', () => {
+    test('passes a page with every og:image and twitter tag', () => {
+        expect(problemsOf('ru/index.html', page(HEAD))).toEqual([]);
+    });
+
+    test.each(SOCIAL_TAGS.map(([selector]) => selector))('fails without <meta %s>', selector => {
+        const head =
+            '<title>ChipIn</title><meta name="description" content="x">' +
+            social(SOCIAL_TAGS.filter(([other]) => other !== selector));
+
+        expect(problemsOf('ru/index.html', page(head))).toEqual([
+            `ru/index.html: missing <meta ${selector}>`,
+        ]);
+    });
+
+    test.each(SOCIAL_TAGS.map(([selector]) => selector))(
+        'fails on an empty <meta %s>',
+        selector => {
+            const head =
+                '<title>ChipIn</title><meta name="description" content="x">' +
+                social(
+                    SOCIAL_TAGS.map(([other, content]) => [
+                        other,
+                        other === selector ? ' ' : content,
+                    ]),
+                );
+
+            expect(problemsOf('index.html', page(head))).toEqual([
+                `index.html: missing <meta ${selector}>`,
+            ]);
+        },
+    );
+
+    test('og tags by name or twitter tags by property do not count', () => {
+        const head =
+            '<title>ChipIn</title><meta name="description" content="x">' +
+            social(
+                SOCIAL_TAGS.map(([selector, content]) => [
+                    selector.startsWith('property=')
+                        ? selector.replace('property=', 'name=')
+                        : selector.replace('name=', 'property='),
+                    content,
+                ]),
+            );
+
+        expect(problemsOf('index.html', page(head))).toEqual(
+            SOCIAL_TAGS.map(([selector]) => `index.html: missing <meta ${selector}>`),
+        );
+    });
+
+    test('a social tag inside <template> does not count', () => {
+        const head =
+            '<title>ChipIn</title><meta name="description" content="x">' +
+            `<template>${SOCIAL}</template>`;
+
+        expect(problemsOf('index.html', page(head))).toEqual(
+            SOCIAL_TAGS.map(([selector]) => `index.html: missing <meta ${selector}>`),
+        );
+    });
+
+    test('fails on a twitter:card other than summary_large_image', () => {
+        const head =
+            '<title>ChipIn</title><meta name="description" content="x">' +
+            social(
+                SOCIAL_TAGS.map(([selector, content]) => [
+                    selector,
+                    selector === 'name="twitter:card"' ? 'summary' : content,
+                ]),
+            );
+
+        expect(problemsOf('index.html', page(head))).toEqual([
+            'index.html: twitter:card is summary, not summary_large_image',
+        ]);
+    });
+
+    test.each([
+        ['a relative URL', '/og-image.png'],
+        ['a protocol-relative URL', '//chipin.one/og-image.png'],
+        ['an http URL', 'http://chipin.one/og-image.png'],
+        ['a data: URL', 'data:image/png;base64,AAAA'],
+    ])('fails on %s for og:image and twitter:image', (_name, url) => {
+        const head =
+            '<title>ChipIn</title><meta name="description" content="x">' +
+            social(
+                SOCIAL_TAGS.map(([selector, content]) => [
+                    selector,
+                    content === IMAGE ? url : content,
+                ]),
+            );
+
+        expect(problemsOf('index.html', page(head))).toEqual([
+            'index.html: <meta property="og:image"> is not an absolute https URL',
+            'index.html: <meta name="twitter:image"> is not an absolute https URL',
+        ]);
     });
 });
 
@@ -429,7 +548,9 @@ describe('seoGuard scripts', () => {
         expect(
             problemsOf(
                 'index.html',
-                page('<template><title>x</title><meta name="description" content="x"></template>'),
+                page(
+                    `<template><title>x</title><meta name="description" content="x"></template>${SOCIAL}`,
+                ),
             ),
         ).toEqual(['index.html: missing <title>', 'index.html: missing <meta name="description">']);
     });
@@ -520,7 +641,7 @@ describe('seoGuard checkBuild', () => {
         );
         writeFileSync(
             join(dist, 'ru', 'index.html'),
-            page('<title>x</title>', '<script>a()</script>'),
+            page(`<title>x</title>${SOCIAL}`, '<script>a()</script>'),
         );
 
         expect(await checkBuild(dist, vercelJson("'self'"))).toEqual([

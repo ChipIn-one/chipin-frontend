@@ -49,6 +49,22 @@ const JS_TYPES = new Set([
     'text/x-javascript',
 ]);
 
+// Social preview tags every page carries (#940): Open Graph by `property`, X (Twitter) by `name`.
+const SOCIAL_META = [
+    'property="og:image"',
+    'property="og:image:width"',
+    'property="og:image:height"',
+    'property="og:image:type"',
+    'property="og:image:alt"',
+    'name="twitter:card"',
+    'name="twitter:title"',
+    'name="twitter:description"',
+    'name="twitter:image"',
+    'name="twitter:image:alt"',
+] as const;
+// Crawlers fetch the image without a page context: the URL is absolute, on https.
+const SOCIAL_IMAGES = ['property="og:image"', 'name="twitter:image"'] as const;
+
 const ANALYTICS_SCRIPT = /_vercel\/(?:insights|speed-insights)/;
 const VERCEL_SCRIPT = /^\/_vercel\//;
 
@@ -86,6 +102,9 @@ interface ParsedPage {
     title: string | undefined;
     /** The `content` of the first `<meta name="description">` outside `<template>`. */
     description: string | undefined;
+    /** The `content` of the first HTML `<meta>` outside `<template>` for each `property="…"` and
+     * `name="…"` (the key is that attribute as written in the source, e.g. `property="og:image"`). */
+    meta: Map<string, string>;
     /** Markup a reader can see in the HTML: tag and attribute names, attribute values, text and
      * comments, without the bodies of executable scripts. */
     text: string[];
@@ -142,6 +161,7 @@ const parsePage = (source: string): ParsedPage => {
         scriptSources: [],
         title: undefined,
         description: undefined,
+        meta: new Map(),
         text: [],
         frames: [],
         inertFrames: [],
@@ -182,6 +202,16 @@ const parsePage = (source: string): ParsedPage => {
                     page.description === undefined
                 ) {
                     page.description = attributes.get('content') ?? '';
+                }
+                if (!inTemplate && isHtml && node.tagName === 'meta') {
+                    for (const key of ['property', 'name']) {
+                        const value = attributes.get(key);
+                        const selector = `${key}="${value}"`;
+
+                        if (value !== undefined && !page.meta.has(selector)) {
+                            page.meta.set(selector, attributes.get('content') ?? '');
+                        }
+                    }
                 }
                 if (node.tagName === 'script') {
                     // An SVG `<script>` loads `href` (or `xlink:href`), not `src`.
@@ -336,6 +366,15 @@ const staticImports = (path: string, code: string): string[] =>
             specifier.startsWith('/') ? specifier : posix.join(posix.dirname(path), specifier),
         );
 
+/** `https://host/…`: a relative or protocol-relative URL, or another scheme, is not. */
+const isAbsoluteHttpsUrl = (value: string): boolean => {
+    try {
+        return new URL(value).protocol === 'https:';
+    } catch {
+        return false;
+    }
+};
+
 /** The rule violations of one built page. */
 const checkPage = ({ file, html, script }: PageInput): string[] => {
     const problems: string[] = [];
@@ -347,6 +386,23 @@ const checkPage = ({ file, html, script }: PageInput): string[] => {
     }
     if (!description) {
         problems.push(`${file}: missing <meta name="description">`);
+    }
+    for (const selector of SOCIAL_META) {
+        if (!page.meta.get(selector)?.trim()) {
+            problems.push(`${file}: missing <meta ${selector}>`);
+        }
+    }
+    const twitterCard = page.meta.get('name="twitter:card"')?.trim();
+
+    if (twitterCard && twitterCard !== 'summary_large_image') {
+        problems.push(`${file}: twitter:card is ${twitterCard}, not summary_large_image`);
+    }
+    for (const selector of SOCIAL_IMAGES) {
+        const url = page.meta.get(selector)?.trim();
+
+        if (url && !isAbsoluteHttpsUrl(url)) {
+            problems.push(`${file}: <meta ${selector}> is not an absolute https URL`);
+        }
     }
     // Executable scripts may name such variables; data scripts and comments ship as text.
     // `<iframe srcdoc>` documents included; the JWT also in decoded text (`&#46;` for `.`).
