@@ -1,0 +1,11 @@
+/*
+ * #970: below sm (767px = constants/breakpoints RADIX_BREAKPOINTS.sm - 1) each split-mode segment
+ * keeps a 44px tap target. Radix size 2 is `height: var(--space-6)` (32px); no 44px token exists,
+ * so it is space-7 (40px) + space-1 (4px). Doubled class (0,2,0) beats
+ * `.rt-SegmentedControlRoot:where(.rt-r-size-2)` (0,1,0), which loads after the app CSS.
+ */
+@media (max-width: 767px) {
+    .tapTarget.tapTarget {
+        height: calc(var(--cp-space-7) + var(--cp-space-1));
+    }
+}

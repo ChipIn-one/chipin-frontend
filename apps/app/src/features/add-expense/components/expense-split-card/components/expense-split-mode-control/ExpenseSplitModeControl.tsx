@@ -14,6 +14,8 @@ import { SegmentedControl } from 'basics/SegmentedControl';
 import { EXPENSE_SPLIT_MODE_ITEMS, SPLIT_SUMMARY_SEPARATOR } from './constants';
 import { getStatusColor } from './helpers';
 
+import styles from './ExpenseSplitModeControl.module.css';
+
 const ExpenseSplitModeControl = () => {
     const { t } = useTranslation('group');
     const {
@@ -72,6 +74,8 @@ const ExpenseSplitModeControl = () => {
                 </Flex>
             </Flex>
             <SegmentedControl
+                fill
+                className={styles.tapTarget}
                 value={splitMode}
                 onValueChange={value => setSplitMode(value as ExpenseSplitMode)}
                 items={items}
@@ -81,4 +85,4 @@ const ExpenseSplitModeControl = () => {
     );
 };
 
-export default ExpenseSplitModeControl;
+export { ExpenseSplitModeControl };

@@ -1,6 +1,6 @@
 import { Card, Flex } from '@radix-ui/themes';
 
-import ExpenseSplitModeControl from './components/expense-split-mode-control/ExpenseSplitModeControl';
+import { ExpenseSplitModeControl } from './components/expense-split-mode-control/ExpenseSplitModeControl';
 import { ExpenseUsersList } from './components/expense-users-list/ExpenseUsersList';
 import SplitTypeHeader from './components/split-type-header/SplitTypeHeader';
 
