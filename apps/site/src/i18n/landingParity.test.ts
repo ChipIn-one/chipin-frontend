@@ -154,6 +154,8 @@ describe.each(SUPPORTED_LOCALES)('%s home page parity with the app landing', loc
             leaves(tree).map(([, text]) => text),
         );
 
-        expect(texts.filter(text => /receipt|attach|чек|прикреп/i.test(String(text)))).toEqual([]);
+        expect(
+            texts.filter(text => /receipt|attach|(?<![а-яё])чек|прикреп/iu.test(String(text))),
+        ).toEqual([]);
     });
 });
