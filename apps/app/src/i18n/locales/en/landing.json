@@ -74,7 +74,7 @@
             "titleHighlight": "without the chaos",
             "description": "Organise trips, households, or events. Share an invite link, and keep everyone’s balances visible in one place. No more chasing people for money.",
             "bullets": {
-                "shareableLink": "Invite via shareable link — no signup required for members",
+                "shareableLink": "Invite via shareable link — members sign in to join",
                 "realTimeBalances": "See real-time balances for every person",
                 "debtSimplification": "Smart debt simplification reduces the number of payments",
                 "multiCurrency": "Multi-currency support for international groups"
