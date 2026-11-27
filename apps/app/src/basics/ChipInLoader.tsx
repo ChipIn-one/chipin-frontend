@@ -5,6 +5,12 @@ import { useTranslation } from 'react-i18next';
 interface LoaderProps {
     size?: number; // SVG size (px)
     strokeWidth?: number; // line thickness
+    /**
+     * Default `true`: the loader is a `role="status"` region announcing `common:loader.label`.
+     * Pass `false` when a status line next to it already says what is loading; the loader is
+     * then hidden from assistive technology, so only that line is announced.
+     */
+    announce?: boolean;
 }
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -31,7 +37,7 @@ const noPreference = (): boolean => false;
  * from assistive technology. The animation is SMIL, which CSS media queries do not stop, so under
  * `prefers-reduced-motion: reduce` it renders a static arc without the animate elements.
  */
-const ChipInLoader = ({ size = 64, strokeWidth = 2 }: LoaderProps) => {
+const ChipInLoader = ({ size = 64, strokeWidth = 2, announce = true }: LoaderProps) => {
     const { t } = useTranslation('common');
     const isReducedMotion = useSyncExternalStore(
         subscribeReducedMotion,
@@ -40,7 +46,12 @@ const ChipInLoader = ({ size = 64, strokeWidth = 2 }: LoaderProps) => {
     );
 
     return (
-        <Flex as="span" display="inline-flex" role="status">
+        <Flex
+            as="span"
+            display="inline-flex"
+            role={announce ? 'status' : undefined}
+            aria-hidden={announce ? undefined : true}
+        >
             <svg
                 width={size}
                 height={size}
@@ -100,7 +111,7 @@ const ChipInLoader = ({ size = 64, strokeWidth = 2 }: LoaderProps) => {
                     </g>
                 )}
             </svg>
-            <VisuallyHidden>{t('loader.label')}</VisuallyHidden>
+            {announce && <VisuallyHidden>{t('loader.label')}</VisuallyHidden>}
         </Flex>
     );
 };

@@ -22,13 +22,15 @@ Source: [`basics/ChipInLoader.tsx`](../../../apps/app/src/basics/ChipInLoader.ts
 
 `ChipInLoader`:
 
-| Prop          | Type     | Default | Description                     |
-| ------------- | -------- | ------- | ------------------------------- |
-| `size`        | `number` | `64`    | SVG width and height, in pixels |
-| `strokeWidth` | `number` | `2`     | Stroke width in SVG units       |
+| Prop          | Type      | Default | Description                                                         |
+| ------------- | --------- | ------- | ------------------------------------------------------------------- |
+| `size`        | `number`  | `64`    | SVG width and height, in pixels                                     |
+| `strokeWidth` | `number`  | `2`     | Stroke width in SVG units                                           |
+| `announce`    | `boolean` | `true`  | `false` hides the loader from assistive tech (a status line nearby) |
 
-`PageLoader`: no props. Renders `ChipInLoader` at default size in a `Container size="4"` and a
-`Flex` with `minHeight="100vh"`.
+`PageLoader`: optional `children`, shown under the loader (e.g. a `role="status"` line that says
+what is loading; then the loader passes `announce={false}`). Renders `ChipInLoader` at default
+size in a `Container size="4"` and a `Flex` with `minHeight="100vh"`.
 
 ## States
 
@@ -41,7 +43,9 @@ Source: [`basics/ChipInLoader.tsx`](../../../apps/app/src/basics/ChipInLoader.ts
 - The loader is one `role="status"` region: the SVG is `aria-hidden`, and a `VisuallyHidden`
   text (`common:loader.label`, "Loading…") is what a screen reader announces. Do not wrap it in
   another `role="status"` or `aria-live` region, and do not add a second loading text next to
-  it; `PageLoader` and `GuardLoader` add none.
+  it. When a status line next to it already says what is loading, pass `announce={false}`: the
+  loader is then `aria-hidden` with no status text. `PageLoader` does this when it gets children
+  (e.g. "Signing you in…" on the login and OAuth callback pages); `GuardLoader` adds no text.
 - The animation is SVG SMIL (`<animate>`, `<animateTransform>`), which CSS media queries and the
   `--cp-duration-*` tokens do not reach. The component reads
   `matchMedia('(prefers-reduced-motion: reduce)')` (and follows its changes): under reduce it

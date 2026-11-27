@@ -47,6 +47,14 @@ test('is one status with the translated loading text and a hidden SVG', () => {
     expect(container.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
 });
 
+test('announce={false} is hidden from assistive technology with no status text', () => {
+    const { container } = render(<ChipInLoader announce={false} />);
+
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(container.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
+    expect(container.textContent).toBe('');
+});
+
 test('the status text follows the language', async () => {
     await act(() => i18n.changeLanguage('ru'));
 
