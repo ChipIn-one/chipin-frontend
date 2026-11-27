@@ -158,4 +158,15 @@ describe.each(SUPPORTED_LOCALES)('%s home page parity with the app landing', loc
             texts.filter(text => /receipt|attach|(?<![а-яё])чек|прикреп/iu.test(String(text))),
         ).toEqual([]);
     });
+
+    test('#985: site and app landing texts and llms.txt make no currency conversion claim', () => {
+        const texts = [
+            ...[siteJson(locale, 'landing'), appJson(locale, 'landing')].flatMap(tree =>
+                leaves(tree).map(([, text]) => text),
+            ),
+            readFileSync(new URL('apps/site/public/llms.txt', REPO), 'utf8'),
+        ];
+
+        expect(texts.filter(text => /convert|conversion|конверт/iu.test(String(text)))).toEqual([]);
+    });
 });
