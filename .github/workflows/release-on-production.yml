@@ -119,7 +119,7 @@ jobs:
     permissions:
       contents: write           # tags and GitHub Releases in this repository (the called workflow inherits this)
       pull-requests: read       # inventory: merged pull requests of the commits since the previous tag
-    uses: ChipIn-one/.github/.github/workflows/release.yml@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
+    uses: ChipIn-one/.github/.github/workflows/release.yml@5a58d05dde71164eb97aba9f9717efa949266d9a # v1.17.0
     with:
       ref: ${{ needs.guard.outputs.sha }}
       apply: true
@@ -187,7 +187,7 @@ jobs:
       - name: Post to Slack
         if: steps.message.outputs.post == 'true'
         continue-on-error: true
-        uses: ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
+        uses: ChipIn-one/.github/automation/slack-notify-action@5a58d05dde71164eb97aba9f9717efa949266d9a # v1.17.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_FE_RELEASES }}
           text: ${{ steps.message.outputs.text }}

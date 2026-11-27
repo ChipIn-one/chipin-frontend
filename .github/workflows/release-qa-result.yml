@@ -40,7 +40,7 @@ jobs:
         id: slack
         if: steps.result.outputs.slack_post == 'true'
         continue-on-error: true
-        uses: ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea # v1.15.0
+        uses: ChipIn-one/.github/automation/slack-notify-action@5a58d05dde71164eb97aba9f9717efa949266d9a # v1.17.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_FE_RELEASES }}
           text: ${{ steps.result.outputs.slack_text }}
