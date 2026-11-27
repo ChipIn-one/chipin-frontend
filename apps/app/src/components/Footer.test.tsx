@@ -1,8 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 
-import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
-
 import { Footer } from './Footer';
 
 vi.mock('react-i18next', () => ({
@@ -38,11 +36,8 @@ test('points legal links to public pages and does not expose Contact', () => {
     expect(screen.queryByRole('link', { name: 'footer.contact' })).toBeNull();
 });
 
-test('reuses the SSG build year rather than the browser clock', () => {
-    render(
-        <PublicBuildYearContext.Provider value={2024}>
-            <Footer />
-        </PublicBuildYearContext.Provider>,
-    );
-    expect(screen.getByText('Copyright 2024')).toBeTruthy();
+test('shows the current year in the copyright', () => {
+    render(<Footer />);
+
+    expect(screen.getByText(`Copyright ${new Date().getFullYear()}`)).toBeTruthy();
 });

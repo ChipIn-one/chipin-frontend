@@ -89,16 +89,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/Footer.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "apps/app/src/components/Footer.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/GroupAvatar.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -575,16 +565,6 @@
   },
   "apps/app/src/pages/settings-page/index.ts": {
     "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/public-routes/PublicEffects.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    }
-  },
-  "apps/app/src/public-routes/PublicLanguageLinks.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   },

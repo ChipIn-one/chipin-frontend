@@ -67,13 +67,9 @@ const switchTo = (lng: SupportedLocale): Promise<boolean> => {
 };
 
 /**
- * Switches to `lng` without saving it: a public page's URL language, or the user's language
- * restored on leaving the public pages. Rejects, without switching, when the language cannot be
- * loaded; a newer switch wins over this one.
+ * Switches to `lng` and saves it as the user's language preference (only if it was applied).
+ * Rejects, without switching, when the language cannot be loaded; a newer switch wins over this one.
  */
-const applyLanguage = (lng: SupportedLocale): Promise<void> => switchTo(lng).then(() => undefined);
-
-/** Switches to `lng` and saves it as the user's language preference (only if it was applied). */
 const setAppLanguage = (lng: SupportedLocale): Promise<void> =>
     switchTo(lng).then(applied => {
         if (applied) {
@@ -81,4 +77,4 @@ const setAppLanguage = (lng: SupportedLocale): Promise<void> =>
         }
     });
 
-export { applyLanguage, getPendingLanguage, setAppLanguage };
+export { getPendingLanguage, setAppLanguage };

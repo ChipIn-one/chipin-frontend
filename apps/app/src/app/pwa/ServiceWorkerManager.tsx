@@ -2,8 +2,8 @@
 // `/sw.js` with scope `/` (VitePWA `buildBase` + `filename` and the scope of `pwa.config.ts`),
 // exactly what the former manual `register('/sw.js', { scope: '/' })` did, so the SW behaviour does not
 // change (C2-01). There is no other registration call and no other place that sets a scope.
-// Mounted once per page, above the per-user router (`root.tsx`, both the app and the prerendered
-// public branch); the app shell reports its route changes and safe points (`ServiceWorkerSafePoints`).
+// Mounted once per page, above the per-user router (`root.tsx`); the app shell reports its route
+// changes and safe points (`ServiceWorkerSafePoints`).
 import { useEffect, useState } from 'react';
 import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { RefreshCwIcon } from 'lucide-react';

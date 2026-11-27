@@ -1,4 +1,3 @@
-import { useContext } from 'react';
 import Logotype from '@chipin/tokens/assets/logo.svg?react';
 import { Avatar, Box, Container, Flex, Link, Separator, Text } from '@radix-ui/themes';
 import { SendIcon } from 'lucide-react';
@@ -8,7 +7,6 @@ import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { matchLocale } from 'helpers/locale';
 import { getPublicPath } from 'helpers/publicRoutes';
-import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 
 import styles from './Footer.module.css';
 
@@ -24,8 +22,7 @@ const Footer = () => {
     const { t, i18n } = useTranslation();
     const locale =
         matchLocale(i18n?.resolvedLanguage ?? i18n?.language ?? DEFAULT_LOCALE) ?? DEFAULT_LOCALE;
-    const publicBuildYear = useContext(PublicBuildYearContext);
-    const copyrightYear = publicBuildYear ?? new Date().getFullYear();
+    const copyrightYear = new Date().getFullYear();
 
     return (
         <Box py={{ initial: '4', md: '6' }}>

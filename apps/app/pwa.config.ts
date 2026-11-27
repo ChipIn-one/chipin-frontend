@@ -5,14 +5,10 @@
 import { BRAND_COLORS } from '@chipin/tokens/theme';
 import type { VitePWAOptions } from 'vite-plugin-pwa';
 
-import {
-    addPublicDirectoryAliases,
-    runPrerenderPublic,
-} from './scripts/prerender-before-workbox.mjs';
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
 
-/** The SW navigation fallback: the noindex SPA shell (04-5a → `index.html`). */
-export const APP_SHELL = 'app.html';
+/** The SW navigation fallback: the noindex SPA shell. */
+export const APP_SHELL = 'index.html';
 
 interface PwaOptionsInput {
     /** `ChipIn DEV` on the dev environment, `ChipIn` elsewhere. */
@@ -20,11 +16,6 @@ interface PwaOptionsInput {
 }
 
 export const buildPwaOptions = ({ appName }: PwaOptionsInput): Partial<VitePWAOptions> => ({
-    // Run SSG after Vite writes client assets, before Workbox scans dist.
-    // This prevents missing localized pages and stale root HTML revisions.
-    integration: {
-        beforeBuildServiceWorker: runPrerenderPublic,
-    },
     // `src/app/pwa/ServiceWorkerManager.tsx` registers the worker (`useRegisterSW`) and asks the
     // user before an update: nothing is injected into the HTML.
     registerType: 'prompt',
@@ -95,14 +86,9 @@ export const buildPwaOptions = ({ appName }: PwaOptionsInput): Partial<VitePWAOp
 
     workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,ico}'],
-        // Canonical public URLs omit index.html and often the slash.
-        // Precache both URL variants so offline navigation resolves (until 04-5a, while prerender
-        // exists).
-        manifestTransforms: [addPublicDirectoryAliases],
         // Serve the noindex SPA shell for service-worker navigation fallback.
         navigateFallback: APP_SHELL,
-        // Only explicitly private SPA paths may use offline app.html.
-        // All public URLs use exact precache entries, and unknown URLs retain 404.
+        // Only explicitly listed SPA paths may use the offline shell; unknown URLs retain 404.
         navigateFallbackAllowlist: PRIVATE_SPA_NAVIGATION_ALLOWLIST,
         sourcemap: false,
         cleanupOutdatedCaches: true,

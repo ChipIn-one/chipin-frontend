@@ -1,46 +1,39 @@
 import type { QueryClient } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
 
 import { requireSession } from 'app/auth/requireSession';
-import { PUBLIC_ROUTE_ENTRIES, type PublicPage } from 'constants/publicRoutes';
 import { ROUTES } from 'constants/routes';
-import { GuardLoader, PublicLocaleRoute } from 'features/routing';
+import { GuardLoader } from 'features/routing';
 
 import { PageLoader } from 'basics/PageLoader';
 
 import { AuthLayout } from './AuthLayout';
+import { homeLoader } from './homeLoader';
 import { BareLayout, InternalLayout } from './InternalLayout';
-import { PublicHomeGuard } from './PublicHomeGuard';
 import { RootLayout } from './RootLayout';
 import { RootErrorBoundary, RouteErrorView } from './RouteErrorView';
-import { APP_ROUTES, type AppRouteDef, type AppRouteId } from './routeManifest';
+import { APP_ROUTES, type AppRouteDef } from './routeManifest';
 import { ROUTE_MODULES } from './routeModules';
 import { SoloGuardLayout, soloGuardLoader } from './SoloGuardLayout';
-
-// The transitional public ids (spec 04 §2.2) by the public page they render, until 04-5a.
-const TRANSITIONAL_ROUTE_IDS: Record<PublicPage, AppRouteId> = {
-    home: 'publicHome',
-    privacy: 'publicPrivacy',
-    terms: 'publicTerms',
-};
 
 /** The `handle` of a leaf route: what `useDocumentTitle` reads (spec 04 §2.6). */
 interface RouteHandle {
     meta: AppRouteDef['meta'];
 }
 
-const leaf = (route: AppRouteDef): RouteObject => ({
-    id: route.id,
-    path: route.path,
-    lazy: ROUTE_MODULES[route.id],
-    handle: { meta: route.meta } satisfies RouteHandle,
-});
+const leaf = (route: AppRouteDef): RouteObject => {
+    const common = {
+        id: route.id,
+        lazy: ROUTE_MODULES[route.id],
+        handle: { meta: route.meta } satisfies RouteHandle,
+    };
+
+    // The manifest's `''` is the index route.
+    return route.path === '' ? { ...common, index: true } : { ...common, path: route.path };
+};
 
 const byLayout = (access: AppRouteDef['access'], layout: AppRouteDef['layout']) =>
-    APP_ROUTES.filter(
-        route => route.access === access && route.layout === layout && !route.transitional,
-    );
+    APP_ROUTES.filter(route => route.access === access && route.layout === layout);
 
 const internalRoutes = APP_ROUTES.filter(route => route.layout === 'internal');
 
@@ -54,24 +47,6 @@ const withPageFallback = (route: RouteObject): RouteObject => ({
     hydrateFallbackElement: route.hydrateFallbackElement ?? <PageLoader />,
 });
 
-const publicLocaleRoutes = (): RouteObject[] =>
-    PUBLIC_ROUTE_ENTRIES.map(entry => {
-        const page: ReactNode =
-            entry.page === 'home' ? (
-                <PublicHomeGuard>
-                    <Outlet />
-                </PublicHomeGuard>
-            ) : (
-                <Outlet />
-            );
-
-        return {
-            path: entry.path,
-            element: <PublicLocaleRoute locale={entry.locale}>{page}</PublicLocaleRoute>,
-            children: [{ index: true, lazy: ROUTE_MODULES[TRANSITIONAL_ROUTE_IDS[entry.page]] }],
-        };
-    });
-
 /**
  * The app route tree (spec 04 §2.3), 1:1 with the former `AppRouter`. The protected routes sit under
  * `AuthLayout` (loader `requireSession`), Solo also under `SoloGuardLayout`; `queryClient` is the
@@ -84,7 +59,6 @@ const buildAppRoutes = (queryClient: QueryClient): RouteObject[] => [
         errorElement: <RootErrorBoundary />,
         hydrateFallbackElement: <PageLoader />,
         children: [
-            ...publicLocaleRoutes(),
             ...byLayout('public', 'bare').map(leaf),
             {
                 id: 'auth',
@@ -108,15 +82,20 @@ const buildAppRoutes = (queryClient: QueryClient): RouteObject[] => [
                                 // (header and navigation stay): the `errorElement` of the layout
                                 // route itself would replace the layout.
                                 errorElement: <RouteErrorView />,
-                                children: internalRoutes.map(route =>
-                                    route.guard === 'solo'
-                                        ? {
-                                              element: <SoloGuardLayout />,
-                                              loader: soloGuardLoader(queryClient),
-                                              children: [leaf(route)],
-                                          }
-                                        : leaf(route),
-                                ),
+                                children: internalRoutes.map(route => {
+                                    if (route.guard === 'solo') {
+                                        return {
+                                            element: <SoloGuardLayout />,
+                                            loader: soloGuardLoader(queryClient),
+                                            children: [leaf(route)],
+                                        };
+                                    }
+                                    // 04-5a: `/` redirects to the preferred mode (it replaces
+                                    // `PublicHomeGuard`).
+                                    return route.id === 'home'
+                                        ? { ...leaf(route), loader: homeLoader(queryClient) }
+                                        : leaf(route);
+                                }),
                             },
                         ],
                     },

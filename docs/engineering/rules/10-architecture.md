@@ -13,22 +13,22 @@ every row is a `boundaries/no-unknown-files` error.
 Test files (`**/*.{test,spec}.{ts,tsx}`) keep the row of their folder and may also
 import `test`; no production file may import it.
 
-| Layer        | Folders                                                                                 | May import                                                                                                                                       |
-| ------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app`        | `main.tsx`, `root.tsx`, `pages/GlobalHooks.tsx`, `app/`, `bootstrap/`, `public-routes/` | every layer except `test`                                                                                                                        |
-| `pages`      | `pages/*/`, `pages/*.*` files                                                           | `features`, `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base`                                         |
-| `features`   | `features/*/`, `features/*` files                                                       | `features` (another slice only via its `index.ts`), `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base` |
-| `entities`   | `entities/*/`, `entities/*` files                                                       | `entities` (another slice only via its `index.ts`), `helpers`, `shared-api`, `shared-lib`, `api`, `base`                                         |
-| `store`      | `store/`                                                                                | `store`, `entities`, `helpers`, `shared-api`, `shared-lib`, `api`, `base`                                                                        |
-| `components` | `components/`                                                                           | `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base`                                                     |
-| `basics`     | `basics/`, `design-system/`                                                             | `basics`, `helpers`, `shared-lib`, `base`                                                                                                        |
-| `hooks`      | `hooks/`                                                                                | `hooks`, `store`, `entities`, `helpers`, `shared-api`, `shared-lib`, `api`, `base`                                                               |
-| `helpers`    | `helpers/`                                                                              | `helpers`, `shared-lib`, `base`                                                                                                                  |
-| `shared-api` | `shared/api/`, `shared/offline/`                                                        | `shared-api`, `shared-lib`, `base`                                                                                                               |
-| `shared-lib` | `shared/`                                                                               | `shared-lib`, `base`                                                                                                                             |
-| `api`        | `api/`                                                                                  | `api`, `shared-api`, `base`                                                                                                                      |
-| `test`       | `test/`                                                                                 | every layer                                                                                                                                      |
-| `base`       | `constants/`, `types/`, `i18n/`, `styles/`, `assets/`                                   | `base`                                                                                                                                           |
+| Layer        | Folders                                                               | May import                                                                                                                                       |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app`        | `main.tsx`, `root.tsx`, `pages/GlobalHooks.tsx`, `app/`, `bootstrap/` | every layer except `test`                                                                                                                        |
+| `pages`      | `pages/*/`, `pages/*.*` files                                         | `features`, `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base`                                         |
+| `features`   | `features/*/`, `features/*` files                                     | `features` (another slice only via its `index.ts`), `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base` |
+| `entities`   | `entities/*/`, `entities/*` files                                     | `entities` (another slice only via its `index.ts`), `helpers`, `shared-api`, `shared-lib`, `api`, `base`                                         |
+| `store`      | `store/`                                                              | `store`, `entities`, `helpers`, `shared-api`, `shared-lib`, `api`, `base`                                                                        |
+| `components` | `components/`                                                         | `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base`                                                     |
+| `basics`     | `basics/`, `design-system/`                                           | `basics`, `helpers`, `shared-lib`, `base`                                                                                                        |
+| `hooks`      | `hooks/`                                                              | `hooks`, `store`, `entities`, `helpers`, `shared-api`, `shared-lib`, `api`, `base`                                                               |
+| `helpers`    | `helpers/`                                                            | `helpers`, `shared-lib`, `base`                                                                                                                  |
+| `shared-api` | `shared/api/`, `shared/offline/`                                      | `shared-api`, `shared-lib`, `base`                                                                                                               |
+| `shared-lib` | `shared/`                                                             | `shared-lib`, `base`                                                                                                                             |
+| `api`        | `api/`                                                                | `api`, `shared-api`, `base`                                                                                                                      |
+| `test`       | `test/`                                                               | every layer                                                                                                                                      |
+| `base`       | `constants/`, `types/`, `i18n/`, `styles/`, `assets/`                 | `base`                                                                                                                                           |
 
 <!-- END layers -->
 
@@ -45,7 +45,7 @@ import `test`; no production file may import it.
   value through helper parameters.
 - The allowed dependency direction is `selector → helper`; helpers cannot depend on selectors.
 
-Route composition lives in the `app` layer, `apps/app/src/app/router` (spec 04, since 04-2a4). `features/routing` keeps only `PublicLocaleRoute` and `GuardLoader`, which import no pages, so it is an ordinary `features` slice. Pages are imported only by `app`.
+Route composition lives in the `app` layer, `apps/app/src/app/router` (spec 04, since 04-2a4). `features/routing` keeps only `GuardLoader` and `OfflineLoadError`, which import no pages, so it is an ordinary `features` slice. Pages are imported only by `app`.
 
 `import-x/no-cycle` (`maxDepth: 3`) runs only in `npm run lint:full` (CI). Known violations of the layer, cycle and
 slice rules are entries in `eslint-suppressions.json`; the baseline only shrinks.

@@ -569,7 +569,7 @@ describe('e2e-sw workflow', () => {
             'apps/app/vite.config.ts',
             'apps/app/scripts/sw-app-plugin.ts',
             'apps/app/scripts/private-spa-navigation.ts',
-            'apps/app/scripts/prerender-before-workbox.mjs',
+            'apps/app/index.html',
             'apps/app/src/helpers/appUpdate.ts',
             'apps/app/src/shared/offline/network.ts',
             'apps/app/package.json',

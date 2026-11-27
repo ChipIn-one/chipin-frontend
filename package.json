@@ -37,8 +37,6 @@
         "test:contract:full": "npm run test:contract:full -w @chipin/app --",
         "test:e2e": "npm run test:e2e -w @chipin/app --",
         "test:e2e:sw": "npm run test:e2e:sw -w @chipin/app --",
-        "prerender:public": "npm run prerender:public -w @chipin/app --",
-        "verify:public-precache": "npm run verify:public-precache -w @chipin/app --",
         "api:fetch": "npm run api:fetch -w @chipin/app --",
         "api:fetch:staging": "npm run api:fetch:staging -w @chipin/app --",
         "api:gen": "npm run api:gen -w @chipin/app --",

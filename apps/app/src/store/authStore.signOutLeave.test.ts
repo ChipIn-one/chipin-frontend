@@ -3,6 +3,7 @@
 // SIGN_OUT_LEAVE_TIMEOUT_MS; the leaving state is bounded and an expiry in flight does not undo it.
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { getSiteOrigin } from 'helpers/env';
 import { saveLocalUser } from 'helpers/localStorage';
 
 import { SIGN_OUT_LEAVE_TIMEOUT_MS, SIGN_OUT_LEAVING_MAX_MS, useAuthStore } from './authStore';
@@ -105,7 +106,7 @@ describe('the sign-out of this tab', () => {
 
         deletes.resolve();
         await vi.advanceTimersByTimeAsync(0);
-        expect(assign).toHaveBeenCalledExactlyOnceWith('/ru/');
+        expect(assign).toHaveBeenCalledExactlyOnceWith(`${getSiteOrigin()}/ru/`);
         await signedOut;
     });
 
@@ -118,7 +119,7 @@ describe('the sign-out of this tab', () => {
         await vi.advanceTimersByTimeAsync(SIGN_OUT_LEAVE_TIMEOUT_MS - 1);
         expect(assign).not.toHaveBeenCalled();
         await vi.advanceTimersByTimeAsync(1);
-        expect(assign).toHaveBeenCalledExactlyOnceWith('/ru/');
+        expect(assign).toHaveBeenCalledExactlyOnceWith(`${getSiteOrigin()}/ru/`);
     });
 
     test('AUTH-071 a page still alive after leaving ends the leaving state: /login applies again', async () => {
