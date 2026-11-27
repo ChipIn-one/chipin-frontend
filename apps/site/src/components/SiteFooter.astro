@@ -3,6 +3,7 @@ import logoUrl from '@chipin/tokens/assets/logo.svg?url';
 
 import { localizedPath, type SupportedLocale } from '../i18n/locales';
 import { interpolate, messages } from '../i18n/ui';
+import { TELEGRAM_URL } from '../lib/siteLinks';
 
 import Icon from './Icon.astro';
 
@@ -15,7 +16,6 @@ interface Props {
 const { locale } = Astro.props;
 const { meta, shared } = messages(locale);
 const year = new Date().getFullYear();
-const TELEGRAM_URL = 'https://t.me/chipin_one';
 ---
 
 <footer class="site-footer">

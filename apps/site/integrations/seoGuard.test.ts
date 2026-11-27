@@ -212,6 +212,47 @@ describe('seoGuard checkPage', () => {
     });
 });
 
+// #941: JSON-LD blocks are valid JSON without rating or review markup.
+describe('seoGuard JSON-LD', () => {
+    const ld = (body: string, type = 'application/ld+json') =>
+        page(HEAD, `<script type="${type}">${body}</script>`);
+
+    test('passes valid JSON-LD', () => {
+        const body = JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [{ '@type': 'Organization', name: 'ChipIn', url: 'https://chipin.one/' }],
+        });
+
+        expect(problemsOf('index.html', ld(body))).toEqual([]);
+    });
+
+    // The type is compared trimmed and lowercased, as a browser does.
+    test.each([
+        ['{"@type": "Organization",}', 'application/ld+json'],
+        ['', 'application/ld+json'],
+        ['{', ' Application/LD+JSON '],
+        ['{', 'application/ld+json; charset=utf-8'],
+    ])('fails on malformed JSON-LD %j (type %j)', (body, type) => {
+        expect(problemsOf('index.html', ld(body, type))).toEqual(['index.html: invalid JSON-LD']);
+    });
+
+    test.each([
+        ['aggregateRating', { '@type': 'WebApplication', aggregateRating: { ratingValue: 5 } }],
+        ['review', { '@graph': [{ '@type': 'WebApplication', review: [] }] }],
+        ['reviews', { '@type': 'WebApplication', reviews: [] }],
+        ['@type Review', { '@graph': [{ '@type': ['Thing', 'Review'] }] }],
+        ['an IRI key', { 'https://schema.org/aggregateRating': { ratingValue: 5 } }],
+        ['@type schema:Review', { '@type': 'schema:Review' }],
+        ['@type https://schema.org/Review', { '@type': 'https://schema.org/Review' }],
+        ['the CriticReview subtype', { '@type': 'CriticReview' }],
+        ['the EmployerAggregateRating subtype', { '@type': ['EmployerAggregateRating'] }],
+    ])('fails on %s', (_name, data) => {
+        expect(problemsOf('index.html', ld(JSON.stringify(data)))).toEqual([
+            'index.html: rating or review markup in JSON-LD',
+        ]);
+    });
+});
+
 // #940: every page carries the social preview (Open Graph image, X large card).
 describe('seoGuard social preview', () => {
     test('passes a page with every og:image and twitter tag', () => {
