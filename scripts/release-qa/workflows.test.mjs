@@ -58,7 +58,7 @@ test('result reader never holds the Slack webhook and never interpolates comment
 // chipin-frontend#876: every Slack post goes through the pinned shared org action; the webhook secret is
 // only its `webhook-url` input, never in the env of a step that holds a GitHub token.
 const SLACK_ACTION =
-    'ChipIn-one/.github/automation/slack-notify-action@6a619d677a315e6dd145b68148634dcab8af8bea';
+    'ChipIn-one/.github/automation/slack-notify-action@5a58d05dde71164eb97aba9f9717efa949266d9a';
 const frontendCi = parse(readFileSync('.github/workflows/frontend-ci.yml', 'utf8'));
 
 const expectSharedSlackSteps = (steps, scriptStep) => {

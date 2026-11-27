@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import { TextArea, TextInput } from 'basics';
 
+import { GROUP_NAME_MAX_LENGTH } from '../../internal/constants';
+
 import styles from './GroupDetailsFields.module.css';
 
 const DESCRIPTION_FIELD_ID = 'group-description-field';
@@ -35,14 +37,17 @@ const GroupDetailsFields = ({
 
     return (
         <>
-            <Flex align="end" gap="3">
-                {coverPicker}
+            <Flex align="start" gap="3">
+                {coverPicker && <div className={styles.coverPicker}>{coverPicker}</div>}
                 <Box flexGrow="1" minWidth="0">
                     <TextInput
                         label={t('common:fields.groupName')}
                         initialValue={name}
-                        maxLength={50}
+                        maxLength={GROUP_NAME_MAX_LENGTH}
                         isRequired
+                        // The native maxLength stops typing past the limit, so the failing
+                        // check a user can reach is the empty name.
+                        validationMessage={t('modal.fields.nameRequired')}
                         size="3"
                         radius="large"
                         placeholder={t('modal.fields.namePlaceholder')}

@@ -1,6 +1,6 @@
 import { useSelfActivityLog } from 'hooks/useSelfActivity';
 
-import ActivityHeader, { type ActivityFilter } from './ActivityHeader';
+import { type ActivityFilter, ActivityHeader } from './ActivityHeader';
 
 interface Props {
     activeFilter: ActivityFilter;

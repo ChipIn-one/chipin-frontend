@@ -8,6 +8,11 @@
     border-radius: var(--cp-radius-5);
 }
 
+/* The empty live region takes no room: it cancels the root gap it would add. */
+.amountMessage:empty {
+    margin-top: calc(-1 * var(--cp-space-2));
+}
+
 /*
  * Borderless Radix text fields inside the box. App CSS loads before Radix, so the rules are
  * doubled to win by specificity; the Radix custom properties turn off its border and focus ring.
