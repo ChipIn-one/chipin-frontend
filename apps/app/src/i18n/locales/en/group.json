@@ -59,6 +59,12 @@
             "noGroups": "No groups found",
             "noKnownFriends": "No known friends yet",
             "includeInSolo": "Add to Solo",
+            "currencySource": {
+                "group": "Your last selected currency in this group",
+                "friend": "Your last selected currency with this friend",
+                "global": "Your last selected currency overall",
+                "default": "Your default currency"
+            },
             "categories": {
                 "food": "Food & Dining",
                 "transport": "Transport",
