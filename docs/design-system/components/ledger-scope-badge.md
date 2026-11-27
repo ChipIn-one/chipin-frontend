@@ -16,13 +16,15 @@ hidden on that group's own page.
 
 Source: [`basics/badges/LedgerScopeBadge.tsx`](../../../apps/app/src/basics/badges/LedgerScopeBadge.tsx).
 
-| Prop        | Type             | Default  | Description                         |
-| ----------- | ---------------- | -------- | ----------------------------------- |
-| `groupId`   | `string \| null` | required | Group of the entry; `null` = direct |
-| `groupName` | `string \| null` | required | Name shown in the badge             |
+| Prop             | Type             | Default  | Description                                 |
+| ---------------- | ---------------- | -------- | ------------------------------------------- |
+| `groupId`        | `string \| null` | required | Group of the entry; `null` = direct         |
+| `groupName`      | `string \| null` | required | Name shown in the badge                     |
+| `currentGroupId` | `string`         | —        | Group of the current page; omit off a group |
 
-Reads the route param `groupId` with `useParams` (react-router): when it equals `groupId`, the
-badge renders `null`. A `groupId` without a `groupName` also shows "Direct".
+The badge does not read the route. When `currentGroupId` equals `groupId`, it renders `null`; the
+caller passes its route `groupId` (`useParams`), which is `undefined` off group pages. A
+`groupId` without a `groupName` also shows "Direct".
 
 ## States
 
@@ -39,9 +41,13 @@ badge renders `null`. A `groupId` without a `groupName` also shows "Direct".
 ## Example
 
 ```tsx
+import { useParams } from 'react-router-dom';
+
 import { LedgerScopeBadge } from 'basics';
 
-<LedgerScopeBadge groupId={groupId} groupName={groupName} />;
+const { groupId: routeGroupId } = useParams<{ groupId: string }>();
+
+<LedgerScopeBadge groupId={groupId} groupName={groupName} currentGroupId={routeGroupId} />;
 ```
 
 No gallery anchor: ds-gallery was removed (D33, ChipIn-one/chipin-frontend#830).

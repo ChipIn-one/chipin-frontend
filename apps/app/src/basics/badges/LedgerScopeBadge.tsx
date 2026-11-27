@@ -1,19 +1,19 @@
 import { Badge, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
 
 import styles from './LedgerScopeBadge.module.css';
 
 interface Props {
     groupId: string | null;
     groupName: string | null;
+    /** The group whose page shows the badge (route `groupId`); the badge hides for that group. */
+    currentGroupId?: string;
 }
 
-const LedgerScopeBadge = ({ groupId, groupName }: Props) => {
+const LedgerScopeBadge = ({ groupId, groupName, currentGroupId }: Props) => {
     const { t } = useTranslation('activity');
-    const { groupId: routeGroupId } = useParams<{ groupId: string }>();
 
-    if (routeGroupId === groupId) {
+    if (currentGroupId === groupId) {
         return null;
     }
 

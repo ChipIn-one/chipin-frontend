@@ -50,8 +50,7 @@ Money rules:
 
 - Direction in words and color together: the hidden label covers screen readers only, so the
   screen must show the words visibly too (a heading such as "You owe").
-- Colors: today the source passes Radix `color` literals `green`/`red`/`gray`, the same values as
-  `PROP_COLOR.debtOwed`/`debtOwing`/`debtSettled` (CSS equivalents `--cp-debt-owed`,
+- Colors: `PROP_COLOR.debtOwed`/`debtOwing`/`debtSettled` (CSS equivalents `--cp-debt-owed`,
   `--cp-debt-owing`, `--cp-debt-settled`). Do not override the color per screen.
 - Currency code is always shown (`currency` is required).
 

@@ -5,7 +5,7 @@
 
 ## Purpose
 
-A Radix segmented control built from an `items` list, with the responsive size fixed.
+A Radix segmented control built from an `items` list, with a responsive default size.
 
 ## When to use
 
@@ -19,12 +19,10 @@ A Radix segmented control built from an `items` list, with the responsive size f
 Source: [`basics/SegmentedControl.tsx`](../../../apps/app/src/basics/SegmentedControl.tsx). Plus
 Radix `SegmentedControl.Root` props (`value`, `defaultValue`, `onValueChange`, `radius`, …).
 
-| Prop    | Type                                    | Default  | Description              |
-| ------- | --------------------------------------- | -------- | ------------------------ |
-| `items` | `{ value: string; label: ReactNode }[]` | required | Segments, keyed by value |
-
-`size` is always `{ initial: '2', sm: '3' }`: it is set after the spread, so a `size` prop is
-ignored.
+| Prop    | Type                                    | Default                     | Description              |
+| ------- | --------------------------------------- | --------------------------- | ------------------------ |
+| `items` | `{ value: string; label: ReactNode }[]` | required                    | Segments, keyed by value |
+| `size`  | Radix `SegmentedControl.Root` `size`    | `{ initial: '2', sm: '3' }` | Control size             |
 
 ## States
 
