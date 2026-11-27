@@ -4,6 +4,8 @@ import { expect, test } from 'vitest';
 
 import { SegmentedControl } from './SegmentedControl';
 
+import styles from './SegmentedControl.module.css';
+
 const items = [
     { value: 'a', label: 'First' },
     { value: 'b', label: 'Second' },
@@ -31,4 +33,32 @@ test.each(['1', '2', '3'] as const)('passes an explicit size %s to the root', si
 
     expect(root.classList).toContain(`rt-r-size-${size}`);
     expect([...root.classList].some(name => name.startsWith('sm:'))).toBe(false);
+});
+
+const rootOf = (name: string) => {
+    const root = screen.getByRole('radio', { name }).closest('.rt-SegmentedControlRoot');
+    if (!(root instanceof HTMLElement)) {
+        throw new Error('SegmentedControl root not found');
+    }
+    return root;
+};
+
+test('#969: fill adds the fill class and keeps the caller className', () => {
+    render(<SegmentedControl items={items} defaultValue="a" fill className="caller" />, {
+        wrapper: Theme,
+    });
+
+    const root = rootOf('First');
+    expect(root.classList).toContain(styles.fill);
+    expect(root.classList).toContain('caller');
+});
+
+test('#969: without fill the root has no fill class and keeps the caller className', () => {
+    render(<SegmentedControl items={items} defaultValue="a" className="caller" />, {
+        wrapper: Theme,
+    });
+
+    const root = rootOf('First');
+    expect(root.classList).not.toContain(styles.fill);
+    expect(root.classList).toContain('caller');
 });

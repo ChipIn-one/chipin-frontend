@@ -1,0 +1,31 @@
+/*
+ * `fill`: the control takes its container's width and can shrink below its labels (#969).
+ * Radix `.rt-SegmentedControlRoot` is `inline-grid` with `min-width: max-content`, so it never
+ * shrinks. Columns stay equal (`minmax(0, 1fr)`): the Radix indicator is sized as 100% / count.
+ * Doubled class (0,2,0) beats `.rt-SegmentedControlRoot` and its `:where(.rt-r-size-*)` /
+ * `sm:` size rules (0,1,0), which load after the app CSS.
+ */
+.fill.fill {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-auto-columns: minmax(0, 1fr);
+    container-type: inline-size;
+}
+
+/* stylelint-disable selector-disallowed-list -- the item label is a Radix internal with no prop or token hook for its padding and font size */
+.fill.fill :global(.rt-SegmentedControlItemLabel) {
+    min-width: 0;
+    padding-left: var(--cp-space-2);
+    padding-right: var(--cp-space-2);
+}
+
+/* Very narrow containers: size-1 font and the smallest padding. */
+@container (width < 300px) {
+    .fill.fill :global(.rt-SegmentedControlItemLabel) {
+        font-size: var(--cp-font-size-1);
+        padding-left: var(--cp-space-1);
+        padding-right: var(--cp-space-1);
+    }
+}
+/* stylelint-enable selector-disallowed-list */

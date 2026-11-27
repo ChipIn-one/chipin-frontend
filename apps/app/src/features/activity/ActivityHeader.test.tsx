@@ -28,3 +28,24 @@ test('removes the settings action and keeps activity filters interactive', () =>
         expect(onFilterChange).toHaveBeenCalledWith('expenses');
     });
 });
+
+test('#969: the filter control fills its column at size 2 with all three labels', () => {
+    render(
+        <Theme>
+            <ActivityHeader isLoading={false} activeFilter="all" onFilterChange={vi.fn()} />
+        </Theme>,
+    );
+
+    const root = screen
+        .getByRole('radio', { name: 'filterAll' })
+        .closest('.rt-SegmentedControlRoot');
+    if (!(root instanceof HTMLElement)) {
+        throw new Error('SegmentedControl root not found');
+    }
+
+    expect(root.className).toMatch(/fill/);
+    expect(root.classList).toContain('rt-r-size-2');
+    expect([...root.classList].some(name => name.startsWith('sm:'))).toBe(false);
+    expect(screen.getByRole('radio', { name: 'filterExpenses' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'filterSettlements' })).toBeTruthy();
+});
