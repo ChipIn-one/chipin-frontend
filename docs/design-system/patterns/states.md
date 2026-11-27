@@ -43,6 +43,9 @@ in order: loading -> skeleton, first load failed -> error with Retry, offline wi
 - One action, and it is the screen's next step ("Create group", "Invite a friend"), following
   [principles.md](../principles.md) 5. Use `actionPosition="below"` when the action is a
   full-width button.
+- One exception: in the expense editor, `NoDirectFriendEmptyState` (KB EXP-067) may have one
+  `ghost` secondary action next to the card that switches to an eligible group (dashboard context
+  only, where the editor has a group picker). Without an invite token its action is Retry.
 - Empty is only for "loaded, and there is nothing". It never stands in for an error or for
   offline with nothing cached.
 - Today `ActivitySubeventsFeed` still renders an inline `EmptyState` instead of a variant. Move

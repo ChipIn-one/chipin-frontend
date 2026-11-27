@@ -11,7 +11,7 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { ExpenseButtons } from '../expense-buttons/ExpenseButtons';
 
-import ExpenseTargetSection from './ExpenseTargetSection';
+import { ExpenseTargetSection } from './ExpenseTargetSection';
 
 const currentUser = {
     id: 'user-1',

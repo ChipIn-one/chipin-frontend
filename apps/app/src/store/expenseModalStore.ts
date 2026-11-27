@@ -342,6 +342,68 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             return { ...next, ...getSplitDefaults(next) };
         });
     },
+    applyLateKnownFriends: source => {
+        set(state => {
+            if (!state.isOpened || state.mode !== 'create') {
+                return state;
+            }
+
+            const storedFriendIds = state.source.knownFriends.map(friend => friend.id);
+            const isSameList =
+                storedFriendIds.length === source.knownFriends.length &&
+                source.knownFriends.every((friend, index) => friend.id === storedFriendIds[index]);
+
+            if (isSameList) {
+                return state;
+            }
+
+            const withFriends: ExpenseModalState = {
+                ...state,
+                source: { ...state.source, knownFriends: source.knownFriends },
+            };
+
+            if (state.targetMode !== 'friends') {
+                return withFriends;
+            }
+
+            const isSelectedFriendKnown =
+                state.selectedFriendId !== '' &&
+                source.knownFriends.some(friend => friend.id === state.selectedFriendId);
+
+            if (isSelectedFriendKnown) {
+                // The chosen friend stays included (also when the stored list was empty, as in a
+                // draft restored before the friends loaded); a newly known friend joins the list
+                // unselected (EXP-006: exactly the current user and one friend).
+                const storedIds = new Set(storedFriendIds);
+                const currentUserId = state.source.currentUser?.id;
+
+                return {
+                    ...withFriends,
+                    includedParticipantIds: {
+                        ...state.includedParticipantIds,
+                        ...Object.fromEntries(
+                            source.knownFriends
+                                .filter(
+                                    friend =>
+                                        !storedIds.has(friend.id) &&
+                                        friend.id !== state.selectedFriendId,
+                                )
+                                .map(friend => [friend.id, false]),
+                        ),
+                        ...(currentUserId ? { [currentUserId]: true } : {}),
+                        [state.selectedFriendId]: true,
+                    },
+                };
+            }
+
+            const next: ExpenseModalState = {
+                ...withFriends,
+                selectedFriendId: getDefaultFriendId(withFriends.source),
+            };
+
+            return { ...next, ...getSplitDefaults(next) };
+        });
+    },
     initializeEdit: initialization => {
         set(state => ({
             ...state,
