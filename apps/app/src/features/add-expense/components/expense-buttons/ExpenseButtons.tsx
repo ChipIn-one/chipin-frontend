@@ -3,6 +3,7 @@ import { Box, Button, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
+import { EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
 import { type LedgerWriteTarget, useCanQueueLedgerWrite } from 'entities/ledger';
 import { selectExpenseSubmitFeedback } from 'store/expenseModalSelectors';
@@ -37,7 +38,10 @@ const ExpenseButtons = ({ onClose }: Props) => {
             ? { kind: 'update', entryId: editedEntryId }
             : CREATE,
     );
-    const feedback = useExpenseModalStore(useShallow(selectExpenseSubmitFeedback));
+    const submitFeedback = useExpenseModalStore(useShallow(selectExpenseSubmitFeedback));
+    // KB EXP-064: one explanation only; the amount blocker is shown below the amount field.
+    const feedback =
+        submitFeedback?.reason === EXPENSE_SUBMIT_BLOCKERS.AMOUNT ? null : submitFeedback;
     const feedbackId = useId();
     const { isSubmitDisabled, isSubmitting, onSubmit } = useExpenseModalSubmit(onClose);
 

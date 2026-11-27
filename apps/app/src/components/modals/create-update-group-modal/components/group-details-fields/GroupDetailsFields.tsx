@@ -43,6 +43,9 @@ const GroupDetailsFields = ({
                         initialValue={name}
                         maxLength={50}
                         isRequired
+                        // KB GRP-002: the native maxLength stops typing past the limit, so the
+                        // failing check a user can reach is the empty name.
+                        validationMessage={t('modal.fields.nameRequired')}
                         size="3"
                         radius="large"
                         placeholder={t('modal.fields.namePlaceholder')}

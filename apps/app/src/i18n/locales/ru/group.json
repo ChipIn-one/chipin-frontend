@@ -7,6 +7,7 @@
         "fields": {
             "namePlaceholder": "например, Поездка в Барселону, Квартира...",
             "addDescription": "Добавить описание",
+            "nameRequired": "Введите название группы.",
             "descriptionOptional": "(необязательно)",
             "descriptionPlaceholder": "Добавь заметку об этой группе..."
         },

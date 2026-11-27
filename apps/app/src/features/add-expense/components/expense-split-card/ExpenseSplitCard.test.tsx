@@ -83,8 +83,9 @@ test('EXP-064 reports only the first cause even when the payer control is visibl
     );
     expect(screen.queryByRole('alert')).toBeNull();
 
+    // The amount blocker is shown below the amount field, not in the form-level status (#966).
     act(() => useExpenseModalStore.getState().setAmount(''));
-    expect(screen.getByRole('status').textContent).toBe('Enter an amount greater than zero.');
+    expect(screen.getByRole('status').textContent).toBe('');
     expect(screen.queryByText(i18n.t('group:expenses.modal.submitFeedback.noDebt'))).toBeNull();
 });
 

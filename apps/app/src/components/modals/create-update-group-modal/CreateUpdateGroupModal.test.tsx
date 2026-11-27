@@ -150,6 +150,30 @@ test('hides the cover preview until a file is selected in create mode', () => {
     });
 });
 
+test('#966 GRP-002 shows the required group name message below the field after it is cleared', async () => {
+    const interaction = userEvent.setup();
+
+    renderModal('create');
+    await interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }));
+    const nameInput = screen.getByRole('textbox', { name: 'common:fields.groupName' });
+
+    await interaction.click(nameInput);
+    await interaction.keyboard('x{Backspace}');
+    expect(screen.queryByText('modal.fields.nameRequired')).toBeNull();
+    await interaction.tab();
+
+    const message = screen.getByRole('alert');
+    expect(message.textContent).toBe('modal.fields.nameRequired');
+    expect(nameInput.getAttribute('aria-invalid')).toBe('true');
+    expect(nameInput.getAttribute('aria-describedby')).toBe(message.id);
+    expect(message.compareDocumentPosition(nameInput)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
+
+    await interaction.type(nameInput, 'Trip');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(nameInput.getAttribute('aria-invalid')).toBe('false');
+    expect(nameInput.getAttribute('aria-describedby')).toBeNull();
+});
+
 test('reveals an optional description in create mode', () => {
     const interaction = userEvent.setup();
 

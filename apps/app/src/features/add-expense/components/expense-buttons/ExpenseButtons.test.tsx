@@ -47,12 +47,30 @@ afterEach(() => {
     return i18n.changeLanguage('en');
 });
 
-test('EXP-064 describes the first blocking amount with a polite atomic status', () => {
+test('EXP-064 leaves the blocking amount out of the form-level status (#966)', () => {
     render(<ExpenseButtons onClose={vi.fn()} />);
 
     const status = screen.getByRole('status');
     const button = screen.getByRole('button', { name: 'Add expense' });
-    expect(status.textContent).toBe('Enter an amount greater than zero.');
+    expect(status.textContent).toBe('');
+    expect(screen.queryByText('Enter an amount greater than zero.')).toBeNull();
+    expect(button.getAttribute('aria-describedby')).toBeNull();
+    expect(button).toHaveProperty('disabled', true);
+});
+
+test('EXP-064 describes another first blocker with a polite atomic status', () => {
+    act(() => {
+        const store = useExpenseModalStore.getState();
+        store.toggleAllParticipants();
+        store.setAmount('10');
+    });
+    render(<ExpenseButtons onClose={vi.fn()} />);
+
+    const status = screen.getByRole('status');
+    const button = screen.getByRole('button', { name: 'Add expense' });
+    expect(status.textContent).toBe(
+        'Select eligible participants for this expense. For a direct expense, select a friend whose invitation has been accepted.',
+    );
     expect(status.getAttribute('aria-live')).toBe('polite');
     expect(status.getAttribute('aria-atomic')).toBe('true');
     expect(button.getAttribute('aria-describedby')).toBe(status.id);
@@ -80,7 +98,7 @@ test('EXP-064 keeps the status mounted as participant feedback clears and return
     expect(button.getAttribute('aria-describedby')).toBeNull();
     expect(button).toHaveProperty('disabled', false);
 
-    act(() => useExpenseModalStore.getState().setAmount('0'));
+    act(() => useExpenseModalStore.getState().toggleAllParticipants());
     expect(screen.getByRole('status')).toBe(status);
     expect(button.getAttribute('aria-describedby')).toBe(status.id);
 });
@@ -290,14 +308,16 @@ test('EXP-064 distinguishes an unchanged Save from invalid input and submission 
     expect(button.getAttribute('aria-describedby')).toBeNull();
     expect(button).toHaveProperty('disabled', true);
 
-    act(() => useExpenseModalStore.getState().setAmount(''));
+    act(() => useExpenseModalStore.getState().toggleAllParticipants());
     expect(status.textContent).toBe('');
     await act(async () => {
         finishUpdate();
         await update;
     });
     await waitFor(() => {
-        expect(status.textContent).toBe('Enter an amount greater than zero.');
+        expect(status.textContent).toBe(
+            'Select eligible participants for this expense. For a direct expense, select a friend whose invitation has been accepted.',
+        );
     });
     expect(button.getAttribute('aria-describedby')).toBe(status.id);
 });
@@ -325,12 +345,19 @@ test.each(['en', 'ru'])('EXP-064 localizes all blocker messages in %s', language
                 }),
             ).toBe(true);
         }
+        act(() => {
+            const store = useExpenseModalStore.getState();
+            store.toggleAllParticipants();
+            store.setAmount('10');
+        });
         render(<ExpenseButtons onClose={vi.fn()} />);
         const status = screen.getByRole('status');
         expect(status.textContent).not.toBe('');
         expect(status.textContent).not.toContain('submitFeedback');
         if (language !== 'en') {
-            expect(status.textContent).not.toBe('Enter an amount greater than zero.');
+            expect(status.textContent).not.toBe(
+                'Select eligible participants for this expense. For a direct expense, select a friend whose invitation has been accepted.',
+            );
         }
     });
 });

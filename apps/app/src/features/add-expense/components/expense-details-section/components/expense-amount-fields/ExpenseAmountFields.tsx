@@ -1,9 +1,14 @@
 import { useId } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Text, TextField } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import { selectInputFractionDigits } from 'store/expenseModalSelectors';
+import { EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
+import {
+    selectExpenseSubmitFeedback,
+    selectInputFractionDigits,
+} from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { AmountInput } from 'basics';
@@ -13,6 +18,7 @@ import styles from './ExpenseAmountFields.module.css';
 const ExpenseAmountFields = () => {
     const { t } = useTranslation('group');
     const amountId = useId();
+    const amountErrorId = `${amountId}-error`;
     const { amount, fractionDigits, description, setAmount, setDescription } = useExpenseModalStore(
         useShallow(state => ({
             amount: state.amount,
@@ -23,6 +29,11 @@ const ExpenseAmountFields = () => {
             setAmount: state.setAmount,
             setDescription: state.setDescription,
         })),
+    );
+    // KB EXP-064: when the amount is the first blocking condition, its one explanation sits
+    // below the amount field (ExpenseButtons leaves it out of the form-level message).
+    const isAmountBlocking = useExpenseModalStore(
+        state => selectExpenseSubmitFeedback(state)?.reason === EXPENSE_SUBMIT_BLOCKERS.AMOUNT,
     );
 
     return (
@@ -37,10 +48,18 @@ const ExpenseAmountFields = () => {
                 value={amount}
                 onChange={setAmount}
                 maxFractionDigits={fractionDigits}
+                aria-invalid={isAmountBlocking}
+                aria-describedby={isAmountBlocking ? amountErrorId : undefined}
                 color="gray"
                 size="3"
                 autoFocus
             />
+
+            {isAmountBlocking && (
+                <Text id={amountErrorId} size="2" color={PROP_COLOR.danger} role="alert">
+                    {t('expenses.modal.submitFeedback.amount')}
+                </Text>
+            )}
 
             <TextField.Root
                 className={styles.descriptionInput}
