@@ -94,7 +94,7 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 | `GroupsSectionHeader`         | `components/GroupsSectionHeader` | "Groups" section title with the create-group button                             |
 | `Header`                      | `components/Header`              | Sticky top header                                                               |
 | `LanguageSelector`            | `components/LanguageSelector`    | Language picker (compact or full)                                               |
-| `NavButton`, `UnstyledButton` | `components/NavButton`           | Navigation button; unstyled button base with a focus ring                       |
+| `NavButton`, `UnstyledButton` | `components/NavButton`           | Router link (`<a href>`) styled as a button; unstyled base with a focus ring    |
 | `OfflineQRCode`               | `components/OfflineQRCode`       | QR code drawn locally on a canvas (works offline)                               |
 | `UsersRow`                    | `components/UsersRow`            | Overlapping member avatars, up to `max` ([card](components/users-row.md))       |
 | `ViewModeSwitch`              | `components/ViewModeSwitch`      | Switch between group and solo mode                                              |
