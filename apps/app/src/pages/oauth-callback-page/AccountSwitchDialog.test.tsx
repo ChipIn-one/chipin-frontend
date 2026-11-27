@@ -19,7 +19,6 @@ import { OAuthCallbackPage } from './OAuthCallbackPage';
 
 vi.mock('basics/PageLoader', () => ({
     PageLoader: () => <div data-testid="page-loader" />,
-    default: () => <div data-testid="page-loader" />,
 }));
 
 const originalExchange = useAuthStore.getState().exchangeGoogleOAuthCode;

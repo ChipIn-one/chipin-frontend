@@ -1,7 +1,7 @@
 import { Flex } from '@radix-ui/themes';
 
 import FriendsPageHeader from './FriendsPageHeader';
-import FriendsSearchBar from './FriendsSearchBar';
+import { FriendsSearchBar } from './FriendsSearchBar';
 
 interface Props {
     currencies: string[];
@@ -33,4 +33,4 @@ const FriendsSidebar = ({
     </Flex>
 );
 
-export default FriendsSidebar;
+export { FriendsSidebar };

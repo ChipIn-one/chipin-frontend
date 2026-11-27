@@ -22,7 +22,7 @@ import { AuthLayout } from './AuthLayout';
 import { buildAppRoutes } from './createAppRouter';
 
 vi.mock('basics/PageLoader', () => ({
-    default: () => <div data-testid="page-loader" />,
+    PageLoader: () => <div data-testid="page-loader" />,
 }));
 
 // No real `/health` request from jsdom (the session check probes it alongside a refresh, NET-008).

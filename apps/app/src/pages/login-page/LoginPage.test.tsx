@@ -2,6 +2,7 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -15,7 +16,9 @@ vi.mock('assets/google-icon.svg?react', () => ({
 }));
 
 vi.mock('basics/PageLoader', () => ({
-    default: () => <div data-testid="page-loader" />,
+    PageLoader: ({ children }: { children?: ReactNode }) => (
+        <div data-testid="page-loader">{children}</div>
+    ),
 }));
 
 const CurrentRoute = () => {
@@ -79,6 +82,14 @@ describe('signed out', () => {
 
         expect(screen.getByTestId('page-loader')).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
+    });
+
+    test('#950: the loader of an unresolved session says "Signing you in…" in a status', () => {
+        useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
+
+        renderLogin('/login');
+
+        expect(screen.getByRole('status').textContent).toBe('Signing you in…');
     });
 
     test.each([

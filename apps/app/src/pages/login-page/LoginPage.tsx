@@ -8,7 +8,7 @@ import { resolveOAuthReturnTo } from 'helpers/url';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
-import PageLoader from 'basics/PageLoader';
+import { PageLoader } from 'basics/PageLoader';
 import { AuthButtons } from 'components/AuthButtons';
 
 /**
@@ -29,7 +29,13 @@ const LoginPage = () => {
     const returnTo = resolveOAuthReturnTo(searchParams.get('returnTo'), window.location.origin);
 
     if (!isAuthResolved) {
-        return <PageLoader />;
+        return (
+            <PageLoader>
+                <Text role="status" size="2" color="gray" align="center">
+                    {t('signingIn')}
+                </Text>
+            </PageLoader>
+        );
     }
     if (isLoggedIn) {
         return <Navigate to={returnTo} replace />;

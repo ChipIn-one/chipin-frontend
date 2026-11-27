@@ -38,7 +38,8 @@
     },
     "header": {
         "greeting": "Hi, {{name}}",
-        "overview": "Here's your summary"
+        "overview": "Here's your summary",
+        "openSettings": "Open settings"
     },
     "solo": {
         "summaryTitle": "Solo summary",

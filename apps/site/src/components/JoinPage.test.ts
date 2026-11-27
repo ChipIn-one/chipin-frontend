@@ -2,6 +2,8 @@ import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import { type DefaultTreeAdapterTypes, parse } from 'parse5';
 import { beforeAll, describe, expect, test } from 'vitest';
 
+import enJoin from '../i18n/locales/en/join.json';
+import ruJoin from '../i18n/locales/ru/join.json';
 import FriendPage from '../pages/join/friend.astro';
 import GroupPage from '../pages/join/group.astro';
 
@@ -50,5 +52,28 @@ describe.each(['group', 'friend'])('the %s invite landing', kind => {
                     .filter(element => element.tagName === 'a')
                     .every(element => element.attrs.some(({ name }) => name === 'hreflang')),
         ).toBe(true);
+    });
+
+    test('#950 without JavaScript each locale links back to the home page', () => {
+        // Parsed with scripting off, so `<noscript>` holds elements, as a browser without JS sees it.
+        const noscripts = elements(
+            parse(pages.get(kind) ?? '', { scriptingEnabled: false }),
+        ).filter(element => element.tagName === 'noscript');
+        const homeLinks = noscripts.map(noscript =>
+            elements(noscript)
+                .filter(
+                    element =>
+                        element.tagName === 'a' &&
+                        element.attrs.some(({ name, value }) => name === 'href' && value === '/'),
+                )
+                .map(link =>
+                    link.childNodes
+                        .map(child => ('value' in child ? child.value : ''))
+                        .join('')
+                        .trim(),
+                ),
+        );
+
+        expect(homeLinks).toEqual([[enJoin.goHome], [ruJoin.goHome]]);
     });
 });

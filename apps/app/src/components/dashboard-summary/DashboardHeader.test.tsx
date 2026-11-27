@@ -78,7 +78,7 @@ const renderDashboardHeader = () =>
 test('shows the profile Settings shortcut beside the dashboard greeting', () => {
     renderDashboardHeader();
 
-    expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open settings' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Hi, Admin' })).toBeTruthy();
     expect(screen.getByText("Here's your summary")).toBeTruthy();
 });
@@ -87,7 +87,7 @@ test('opens Settings from the shared profile avatar shortcut', () => {
     const interaction = userEvent.setup();
     renderDashboardHeader();
 
-    return interaction.click(screen.getByRole('link', { name: 'Settings' })).then(() => {
+    return interaction.click(screen.getByRole('link', { name: 'Open settings' })).then(() => {
         expect(screen.getByLabelText('Current route').textContent).toBe('/settings');
     });
 });
@@ -97,5 +97,5 @@ test('retains the Settings shortcut while the current user is loading', () => {
     clearSeededSelfUser();
     renderDashboardHeader();
 
-    expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open settings' })).toBeTruthy();
 });
