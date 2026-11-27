@@ -148,4 +148,12 @@ describe.each(SUPPORTED_LOCALES)('%s home page parity with the app landing', loc
             }
         }
     });
+
+    test('#977: site and app landing texts make no receipt or attachment claim', () => {
+        const texts = [siteJson(locale, 'landing'), appJson(locale, 'landing')].flatMap(tree =>
+            leaves(tree).map(([, text]) => text),
+        );
+
+        expect(texts.filter(text => /receipt|attach|чек|прикреп/i.test(String(text)))).toEqual([]);
+    });
 });
