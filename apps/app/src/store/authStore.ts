@@ -19,6 +19,7 @@ import {
     startAuthLogout,
     validateAuthSession,
 } from 'helpers/authSession';
+import { getSiteOrigin } from 'helpers/env';
 import { isUnauthorizedApiError } from 'helpers/errors';
 import {
     addKeptOutboxUser,
@@ -468,13 +469,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             return signOutPromise;
         }
 
-        // Leave protected UI immediately; leave the page (a full navigation to the landing in the
-        // last account's language, spec 04 §2.3, read before the user data goes) only once the
+        // Leave protected UI immediately; leave the page (a full navigation to the site landing in
+        // the last account's language, spec 04 §2.3, read before the user data goes) only once the
         // server logout (refresh cookie) and the IDB deletes settle, at most
         // SIGN_OUT_LEAVE_TIMEOUT_MS: an unload aborts both (invariant 12). `isLeavingAfterSignOut`
         // is set in the same update as `signed_out`, so no render sees the sign-out without it and
         // nothing redirects to `/login?returnTo=`; it is bounded (`leaveForLanding`).
-        const landingPath = getLastAccountLandingPath();
+        const landingUrl = getSiteOrigin() + getLastAccountLandingPath();
         const logoutRequest = startAuthLogout();
         const deletes = dropSignedOutUser();
         set({
@@ -486,7 +487,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         });
         void settledWithin(Promise.all([logoutRequest, deletes]), SIGN_OUT_LEAVE_TIMEOUT_MS).then(
             () => {
-                leaveForLanding(landingPath);
+                leaveForLanding(landingUrl);
             },
         );
 
@@ -506,8 +507,8 @@ function isLeavingAfterOwnSignOut(): boolean {
 
 // The full navigation of a sign-out. If the page is still here SIGN_OUT_LEAVING_MAX_MS later (the
 // navigation failed or was cancelled), the leaving state ends: protected routes go to `/login`.
-function leaveForLanding(landingPath: string): void {
-    window.location.assign(landingPath);
+function leaveForLanding(landingUrl: string): void {
+    window.location.assign(landingUrl);
     setTimeout(() => {
         if (isLeavingAfterOwnSignOut()) {
             useAuthStore.setState({ isLeavingAfterSignOut: false });

@@ -20,8 +20,6 @@ const settings = {
 beforeEach(() => {
     // A fresh `i18n` module: its `init` reads the saved language, as on a reload.
     vi.resetModules();
-    // An app page: a public URL (`/` is the English landing) picks the language itself.
-    window.history.pushState({}, '', '/settings');
     // What `index.html` ships with.
     document.documentElement.lang = 'en';
 });
@@ -31,19 +29,25 @@ afterEach(() => {
     document.documentElement.lang = 'en';
 });
 
-test('a reload with Russian saved starts with html lang ru', () => {
-    saveLocalUser({ id: 'user-1', role: 'USER', settings });
+// 04-5a: no URL picks the language, not `/` (the PWA start URL, the `home` redirect) nor an old
+// public path.
+test.each(['/settings', '/', '/privacy', '/ru/privacy'])(
+    'a reload of %s with Russian saved starts with html lang ru',
+    path => {
+        window.history.pushState({}, '', path);
+        saveLocalUser({ id: 'user-1', role: 'USER', settings });
 
-    return Promise.all([import('i18n'), import('i18n/htmlLang')]).then(
-        ([{ i18n, i18nReady }, { syncHtmlLang }]) => {
-            const stop = syncHtmlLang(i18n);
+        return Promise.all([import('i18n'), import('i18n/htmlLang')]).then(
+            ([{ i18n, i18nReady }, { syncHtmlLang }]) => {
+                const stop = syncHtmlLang(i18n);
 
-            // The locale chunks load lazily (spec 04 §2.10); the boot renders only after this.
-            return i18nReady.then(() => {
-                expect(i18n.resolvedLanguage).toBe('ru');
-                expect(document.documentElement.lang).toBe('ru');
-                stop();
-            });
-        },
-    );
-});
+                // The locale chunks load lazily (spec 04 §2.10); the boot renders only after this.
+                return i18nReady.then(() => {
+                    expect(i18n.resolvedLanguage).toBe('ru');
+                    expect(document.documentElement.lang).toBe('ru');
+                    stop();
+                });
+            },
+        );
+    },
+);

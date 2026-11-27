@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { redirect } from 'react-router-dom';
+import { replace } from 'react-router-dom';
 
 import { requireSession } from 'app/auth/requireSession';
 import { canRoleAccessSolo, type SelfUser, usersKeys, userSoloModeByDefault } from 'entities/users';
@@ -21,6 +21,10 @@ import { useAuthStore } from 'store/authStore';
  * router's user client (settings while signed in or expired, role only while signed in), else the
  * cached `LocalUser`. Without a cached profile it does not wait for one: the Solo guard still
  * checks the access on `/solo`.
+ *
+ * TODO(03-9): unlike `PublicHomeGuard`, it does not wait for the self user when nothing is cached
+ * (a first visit falls back to the dashboard). Revisit with `ensureQueryData` of 03-9 before Solo is
+ * released (`IS_SOLO_MODE_RELEASED`).
  */
 const homeLoader =
     (queryClient: QueryClient) =>
@@ -43,7 +47,11 @@ const homeLoader =
                     ? canRoleAccessSolo(cached.role)
                     : canRoleAccessSolo(localUser?.role);
 
-            return redirect(getPreferredModeRoute(canAccessSolo && soloModeByDefault));
+            // `replace`, as `PublicHomeGuard`'s `<Navigate replace>`: on a cold load of `/` (the PWA
+            // start URL) `/` does not stay in the history, so Back does not land on the redirect
+            // again. (On an in-app PUSH to `/` React Router would replace the previous entry; the
+            // app has no such link: the OAuth callback already navigates with `replace`.)
+            return replace(getPreferredModeRoute(canAccessSolo && soloModeByDefault));
         });
 
 export { homeLoader };

@@ -1,9 +1,10 @@
 // Spec 04 §2.2 (04-5a): the `home` index redirects to the preferred mode; it replaces
 // `PublicHomeGuard`.
+import { onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { LS_KEY_USER } from 'constants/localstorage';
+import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import type { SelfUser } from 'entities/users';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { startCacheRestore } from 'shared/offline/restore';
@@ -69,6 +70,8 @@ beforeEach(() => {
 
 afterEach(() => {
     LocalStorage.remove(LS_KEY_USER);
+    LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+    onlineManager.setOnline(true);
 });
 
 describe('homeLoader', () => {
@@ -119,8 +122,37 @@ describe('homeLoader', () => {
 
     test('AUTH-077: an expired session derives no Solo access from the cached profile', async () => {
         const client = signInWithSelf(selfUser('ADMIN', true));
+        // An expiry clears the cached role (D16); the settings stay.
+        saveLocalUser({ id: 'user-1', settings: settings(true) });
         useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
 
         expect(locationOf(await homeLoader(client)(HOME_REQUEST))).toBe('/dashboard');
+    });
+
+    // NET-008: offline with a session hint and no user saved on this device `requireSession` lets
+    // through (the auth layout shows the offline load error), so `/` goes to the dashboard.
+    test('offline with a hint and no saved user: to /dashboard', async () => {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        onlineManager.setOnline(false);
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'error' });
+
+        expect(locationOf(await homeLoader(createTestQueryClient())(HOME_REQUEST))).toBe(
+            '/dashboard',
+        );
+    });
+
+    test('offline with a hint and a saved user (the cache is shown): its preferred mode', async () => {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        onlineManager.setOnline(false);
+        saveLocalUser({ id: 'user-1', role: 'ADMIN', settings: settings(true) });
+        useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'error' });
+
+        expect(locationOf(await homeLoader(createTestQueryClient())(HOME_REQUEST))).toBe('/solo');
+    });
+
+    test('the redirect replaces / in the history (R1 S1)', async () => {
+        const response = await homeLoader(createTestQueryClient())(HOME_REQUEST);
+
+        expect(response.headers.get('X-Remix-Replace')).toBe('true');
     });
 });

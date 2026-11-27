@@ -362,6 +362,8 @@ describe('navigation', () => {
 
         expect(await screen.findByText('dashboard')).toBeTruthy();
         expect(router.state.location.pathname).toBe('/dashboard');
+        // R1 S1: the redirect replaces `/`, so Back does not return to it (no history trap).
+        expect(router.state.historyAction).toBe('REPLACE');
     });
 
     test('04-5a: a never-signed-in user at / goes to /login', async () => {
