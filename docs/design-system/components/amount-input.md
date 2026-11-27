@@ -32,7 +32,9 @@ Source: [`basics/AmountInput.tsx`](../../../apps/app/src/basics/AmountInput.tsx)
 - Default: mandatory.
 - Disabled: through Radix `disabled`; optional. Offline blocking goes on the submit button
   (`OnlineOnly`), not on the field.
-- Error: n/a inside the component; the form shows the validation message below the field.
+- Error: n/a inside the component; the composite passes `aria-invalid` and `aria-describedby`
+  and shows the validation message below the field (`SettlementAmountField`,
+  `ExpenseAmountFields`).
 - Loading, empty: n/a. An empty value shows the placeholder.
 
 ## Accessibility and i18n

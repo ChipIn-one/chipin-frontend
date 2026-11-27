@@ -35,14 +35,17 @@ const GroupDetailsFields = ({
 
     return (
         <>
-            <Flex align="end" gap="3">
-                {coverPicker}
+            <Flex align="start" gap="3">
+                {coverPicker && <div className={styles.coverPicker}>{coverPicker}</div>}
                 <Box flexGrow="1" minWidth="0">
                     <TextInput
                         label={t('common:fields.groupName')}
                         initialValue={name}
                         maxLength={50}
                         isRequired
+                        // The native maxLength stops typing past the limit, so the failing
+                        // check a user can reach is the empty name.
+                        validationMessage={t('modal.fields.nameRequired')}
                         size="3"
                         radius="large"
                         placeholder={t('modal.fields.namePlaceholder')}

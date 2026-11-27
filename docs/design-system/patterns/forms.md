@@ -34,7 +34,14 @@ Use these; a new field type is added here first:
   (only when `validationMessage` is passed) shows after the field is touched (on blur), below the
   field, in `PROP_COLOR.danger` with `role="alert"`. It comes from i18n.
 - The label stays; the message never replaces it. `aria-describedby` lists the description and the
-  message ids, only those shown (`TextInput`, `TextArea`, `SettlementAmountField`).
+  message ids, only those shown (`TextInput`, `TextArea`, `SettlementAmountField`,
+  `ExpenseAmountFields`).
+- `ExpenseAmountFields` shows the expense's "amount greater than zero" blocker below the amount
+  field from the first render, as the form-level blocker message did (KB EXP-064: one visible
+  explanation while save is disabled); `ExpenseButtons` leaves that blocker out of its form-level
+  status, which keeps every other blocker. Because it is visible from open, it sits in an
+  always-mounted `aria-live="polite"` `aria-atomic` region, not `role="alert"`: an alert would be
+  announced assertively as the dialog mounts and again with the autofocused input.
 - `SettlementAmountField` passes the literal `red` and has no `role="alert"`; fix when touched.
 
 - Required fields pass `isRequired` to the basic, which sets `required` and checks for an empty
