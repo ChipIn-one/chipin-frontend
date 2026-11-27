@@ -61,6 +61,20 @@ Code is the source of truth. Mockups (Pencil `.pen` files, Claude Design) are fo
 a screen changes and are disposable; they never become a token source (D17, D33). Design review of
 a component happens in Claude Design; there is no gallery in the repository.
 
+Two Claude Design artifacts hold the review material:
+
+- [ChipIn design system](https://claude.ai/artifact/AtzC72Gji4PkXbfpt8Qwov): the `--cp-*` tokens in
+  light and dark, spacing, radius, type, shadows, the component cards from
+  [`components/`](components/) with previews, the [patterns](patterns/), logos and icons.
+- [ChipIn screens](https://claude.ai/artifact/WNBRd6Z4QhcDoatv97mYSB): screenshots of the key
+  screens (dashboard, group, add expense, settle up, friends, activity, settings, invite join) in
+  light and dark, desktop and phone, taken from a `master` Preview with staging data. Sign-in is not
+  there yet: it needs a signed-out browser.
+
+Both are refreshed from code (each names the `master` commit it was made from) and never lead it:
+when they disagree with the code, the code wins and the artifact is refreshed. They are private to
+the owner until the owner shares them.
+
 ## Designer onboarding plan
 
 Future work, recorded here and not executed in v1. Each step is a separate owner decision.

@@ -2,6 +2,7 @@
     "ogLocale": "ru_RU",
     "languageName": "Русский",
     "brand": "ChipIn",
+    "ogImageAlt": "Логотип ChipIn и надпись «Split shared expenses without the spreadsheet»",
     "header": {
         "openApp": "Открыть ChipIn"
     },
