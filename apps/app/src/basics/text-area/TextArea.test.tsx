@@ -32,7 +32,9 @@ test('owns its value and exposes the character limit next to the label', () => {
     });
 });
 
-const renderRequiredTextArea = () =>
+const renderRequiredTextArea = (
+    onValueChange?: (state: { value: string; isValid: boolean }) => void,
+) =>
     render(
         <TextArea
             id="field"
@@ -41,13 +43,15 @@ const renderRequiredTextArea = () =>
             initialValue="Trip"
             isRequired
             validationMessage="Description is required."
+            onValueChange={onValueChange}
         />,
     );
 
 test('hides the validation message until the field loses focus', () => {
     const interaction = userEvent.setup();
+    const onValueChange = vi.fn();
 
-    renderRequiredTextArea();
+    renderRequiredTextArea(onValueChange);
 
     const input = screen.getByRole('textbox', { name: 'Description' });
 
@@ -60,6 +64,7 @@ test('hides the validation message until the field loses focus', () => {
             expect(input.getAttribute('aria-invalid')).toBe('true');
             expect(screen.queryByRole('alert')).toBeNull();
             expect(input.getAttribute('aria-describedby')).toBe('field-description');
+            expect(onValueChange).toHaveBeenLastCalledWith({ value: '   ', isValid: false });
         });
 });
 
@@ -102,5 +107,53 @@ test('removes the validation message once the value is valid again', () => {
             expect(screen.queryByRole('alert')).toBeNull();
             expect(input.getAttribute('aria-invalid')).toBe('false');
             expect(input.getAttribute('aria-describedby')).toBe('field-description');
+        });
+});
+
+test('describes the field by the error alone when there is no description', () => {
+    const interaction = userEvent.setup();
+
+    render(
+        <TextArea
+            id="field"
+            label="Description"
+            isRequired
+            validationMessage="Description is required."
+        />,
+    );
+
+    const input = screen.getByRole('textbox', { name: 'Description' });
+
+    expect(input.getAttribute('aria-describedby')).toBeNull();
+
+    return interaction
+        .click(input)
+        .then(() => interaction.tab())
+        .then(() => {
+            expect(input.getAttribute('aria-describedby')).toBe('field-error');
+        });
+});
+
+test('has no aria-describedby for a valid field without a description', () => {
+    render(<TextArea label="Description" initialValue="Value" />);
+
+    expect(
+        screen.getByRole('textbox', { name: 'Description' }).getAttribute('aria-describedby'),
+    ).toBeNull();
+});
+
+test('shows no alert for an invalid field without a validation message', () => {
+    const interaction = userEvent.setup();
+
+    render(<TextArea label="Description" isRequired />);
+
+    const input = screen.getByRole('textbox', { name: 'Description' });
+
+    return interaction
+        .click(input)
+        .then(() => interaction.tab())
+        .then(() => {
+            expect(input.getAttribute('aria-invalid')).toBe('true');
+            expect(screen.queryByRole('alert')).toBeNull();
         });
 });

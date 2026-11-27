@@ -20,24 +20,25 @@ Source: [`basics/text-input/TextInput.tsx`](../../../apps/app/src/basics/text-in
 [`basics/text-area/TextArea.tsx`](../../../apps/app/src/basics/text-area/TextArea.tsx). Plus Radix
 root props except `aria-describedby`, `aria-invalid`, `defaultValue`, `id`, `onChange` and `value`.
 
-| Prop                | Type                                  | Default  | Description                                              |
-| ------------------- | ------------------------------------- | -------- | -------------------------------------------------------- |
-| `label`             | `ReactNode`                           | required | Visible `<label htmlFor>` above the field; always shown  |
-| `id`                | `string`                              | `useId`  | Field id; also the base of the description and error ids |
-| `description`       | `ReactNode`                           | —        | Help text under the label (`${id}-description`)          |
-| `initialValue`      | `string`                              | `''`     | Starting value; the component owns the value after that  |
-| `isRequired`        | `boolean`                             | `false`  | Sets `required`; a blank (whitespace) value is invalid   |
-| `maxLength`         | `number`                              | —        | Limit; shows a `n / max` counter in the label row        |
-| `validationMessage` | `ReactNode`                           | —        | Text shown below the field when invalid after blur       |
-| `onValueChange`     | `(state: { value, isValid }) => void` | —        | Every change, with its validity                          |
-| `onValueCommit`     | `(value: string) => void`             | —        | On blur, only when the value is valid                    |
+| Prop                | Type                                  | Default  | Description                                                                           |
+| ------------------- | ------------------------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `label`             | `ReactNode`                           | required | Visible `<label htmlFor>` above the field; always shown                               |
+| `id`                | `string`                              | `useId`  | Field id; also the base of the description and error ids                              |
+| `description`       | `ReactNode`                           | —        | Help text: under the label (`TextInput`), beside it (`TextArea`); `${id}-description` |
+| `initialValue`      | `string`                              | `''`     | Starting value; the component owns the value after that                               |
+| `isRequired`        | `boolean`                             | `false`  | Sets `required`; a blank (whitespace) value is invalid                                |
+| `maxLength`         | `number`                              | —        | Limit; shows a `n / max` counter in the label row                                     |
+| `validationMessage` | `ReactNode`                           | —        | Shown below the field when the built-in check fails                                   |
+| `onValueChange`     | `(state: { value, isValid }) => void` | —        | Every change, with its validity                                                       |
+| `onValueCommit`     | `(value: string) => void`             | —        | On blur, only when the value is valid                                                 |
 
 ## States
 
 - Default: mandatory.
-- Error: `aria-invalid` follows validity from the first render. After blur, an invalid field with
-  `validationMessage` shows it below the field (`${id}-error`, `size="2"`,
-  `PROP_COLOR.danger`, `role="alert"`); it goes away once the value is valid.
+- Error: `aria-invalid` follows validity from the first render. `validationMessage` shows only
+  when the built-in check (`isRequired` or `maxLength`) fails, after the field is first blurred:
+  below the field (`${id}-error`, `size="2"`, `PROP_COLOR.danger`, `role="alert"`); it goes away
+  once the value is valid. There is no prop for an outside error.
 - Disabled: through Radix `disabled`; optional.
 - Loading, empty: n/a.
 

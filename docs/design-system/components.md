@@ -11,6 +11,7 @@ states, accessibility and i18n, example.
 
 - [Amount](components/amount.md)
 - [AmountInput](components/amount-input.md)
+- [TextInput](components/text-input.md) (with TextArea)
 - [DebtAmount](components/debt-amount.md)
 - [OwedStatusText](components/owed-status-text.md)
 - [BalanceBadges](components/balance-badges.md) (with `BalanceBadgesSkeleton`)
