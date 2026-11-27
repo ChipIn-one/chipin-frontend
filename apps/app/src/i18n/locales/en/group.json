@@ -236,6 +236,7 @@
         },
         "balances": {
             "settled": "Settled up",
+            "settledBadge": "Settled",
             "empty": "No balances to show yet."
         },
         "settleUp": {

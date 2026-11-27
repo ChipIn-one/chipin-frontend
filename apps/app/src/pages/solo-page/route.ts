@@ -1,1 +1,1 @@
-export { default as Component } from './SoloPage';
+export { SoloPage as Component } from './SoloPage';

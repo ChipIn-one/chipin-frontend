@@ -1,13 +1,25 @@
-import { Container, Flex } from '@radix-ui/themes';
-import { ListIcon, WalletCardsIcon } from 'lucide-react';
+import { Button, Container, Flex } from '@radix-ui/themes';
+import { LayoutDashboardIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState } from 'basics/empty-states';
+import { useSwitchAppMode } from 'hooks/useSwitchAppMode';
+import { APP_MODES } from 'store/ui-prefs';
+
+import { SoloInDevelopmentEmptyState } from 'basics/empty-states';
 import { DashboardHeader } from 'components/dashboard-summary';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 
 const SoloPage = () => {
-    const { t } = useTranslation('dashboard');
+    const { t } = useTranslation('common');
+    const switchAppMode = useSwitchAppMode();
+    // While Solo features are unavailable, each placeholder leads back to the group Dashboard
+    // (DSH-016), as the mode switch does.
+    const goToDashboardAction = (
+        <Button type="button" variant="soft" onClick={() => switchAppMode(APP_MODES.GROUP)}>
+            <LayoutDashboardIcon size={14} />
+            {t('buttons.goToDashboard')}
+        </Button>
+    );
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
@@ -16,24 +28,17 @@ const SoloPage = () => {
                     <Flex direction="column" gap="4">
                         <DashboardHeader />
 
-                        <EmptyState
-                            icon={<WalletCardsIcon size={20} />}
-                            iconColor="violet"
-                            title={t('solo.summaryTitle')}
-                            description={t('solo.inDevelopment')}
+                        <SoloInDevelopmentEmptyState
+                            section="summary"
+                            action={goToDashboardAction}
                         />
                     </Flex>
                 }
             >
-                <EmptyState
-                    icon={<ListIcon size={20} />}
-                    iconColor="violet"
-                    title={t('solo.activityTitle')}
-                    description={t('solo.inDevelopment')}
-                />
+                <SoloInDevelopmentEmptyState section="activity" action={goToDashboardAction} />
             </InternalPageColumnsFromSm>
         </Container>
     );
 };
 
-export default SoloPage;
+export { SoloPage };

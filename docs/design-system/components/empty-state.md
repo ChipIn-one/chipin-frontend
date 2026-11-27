@@ -34,19 +34,24 @@ Source: [`basics/empty-states/EmptyState.tsx`](../../../apps/app/src/basics/empt
 
 ### Variants
 
-Each `No*EmptyState` variant takes only `action?: ReactNode`.
+Each variant takes `action?: ReactNode`.
 
-| Variant                        | Namespace: title / description keys                                    | Icon, `iconColor`         |
-| ------------------------------ | ---------------------------------------------------------------------- | ------------------------- |
-| `NoActivityEmptyState`         | `activity`: `emptyTitle` / `emptyDescription`                          | `ClipboardListIcon`, gray |
-| `NoDebtsEmptyState`            | `common`: `noDebtsTitle` / `noDebtsDescription`                        | `BanknoteXIcon`, gray     |
-| `NoFilteredActivityEmptyState` | `activity`: `filteredEmptyTitle` / `filteredEmptyDescription`          | `ClipboardListIcon`, gray |
-| `NoFriendsEmptyState`          | `friends`: `emptyTitle` / `emptyDescription`                           | `UserPlusIcon`, cyan      |
-| `NoGroupExpensesEmptyState`    | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription` | `ReceiptIcon`, jade       |
-| `NoGroupMembersEmptyState`     | `group`: `page.balances.empty` / none                                  | `UserPlusIcon`, teal      |
-| `NoGroupsEmptyState`           | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`           | `UsersIcon`, indigo       |
+| Variant                        | Namespace: title / description keys                                                                         | Icon, `iconColor`                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `NoActivityEmptyState`         | `activity`: `emptyTitle` / `emptyDescription`                                                               | `ClipboardListIcon`, gray               |
+| `NoDebtsEmptyState`            | `common`: `noDebtsTitle` / `noDebtsDescription`                                                             | `BanknoteXIcon`, gray                   |
+| `NoFilteredActivityEmptyState` | `activity`: `filteredEmptyTitle` / `filteredEmptyDescription`                                               | `ClipboardListIcon`, gray               |
+| `NoFriendsEmptyState`          | `friends`: `emptyTitle` / `emptyDescription`                                                                | `UserPlusIcon`, cyan                    |
+| `NoGroupExpensesEmptyState`    | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription`                                      | `ReceiptIcon`, jade                     |
+| `NoGroupMembersEmptyState`     | `group`: `page.balances.empty` / none                                                                       | `UserPlusIcon`, teal                    |
+| `NoGroupsEmptyState`           | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`                                                | `UsersIcon`, indigo                     |
+| `NoMatchingGroupsEmptyState`   | `dashboard`: `groups.filterEmptyTitle` / `groups.filterEmptyDescription` or `groups.searchEmptyDescription` | `FilterXIcon`, gray                     |
+| `SoloInDevelopmentEmptyState`  | `dashboard`: `solo.summaryTitle` or `solo.activityTitle` / `solo.inDevelopment`                             | `WalletCardsIcon` or `ListIcon`, violet |
 
-`NoGroupsEmptyState` sets `actionPosition="below"` when it has an action.
+`NoGroupsEmptyState` sets `actionPosition="below"` when it has an action. Two variants take one
+more prop: `NoMatchingGroupsEmptyState` takes `hasSearchQuery` (the description names the search
+rather than the debt filter), and `SoloInDevelopmentEmptyState` takes `section`
+(`'summary' | 'activity'`).
 
 ### Error and offline variants
 

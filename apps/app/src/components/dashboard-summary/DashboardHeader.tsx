@@ -8,7 +8,7 @@ import { UserAvatar } from 'basics';
 import { DevMenu } from 'components/DevMenu';
 import { NavButton } from 'components/NavButton';
 
-import ViewModeSwitch from '../ViewModeSwitch';
+import { ViewModeSwitch } from '../ViewModeSwitch';
 
 import styles from './DashboardHeader.module.css';
 

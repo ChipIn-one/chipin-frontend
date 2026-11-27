@@ -11,7 +11,7 @@ import { AddExpenseButton } from 'components/AddExpenseButton';
 import { DevMenu } from 'components/DevMenu';
 import { ModeLogotype } from 'components/mode-logotype';
 import { NavButton } from 'components/NavButton';
-import ViewModeSwitch from 'components/ViewModeSwitch';
+import { ViewModeSwitch } from 'components/ViewModeSwitch';
 
 import { getNavElements } from '../constants';
 
