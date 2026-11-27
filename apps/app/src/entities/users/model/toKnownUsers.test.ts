@@ -20,7 +20,7 @@ const balance = (currency: string, amount: string) => ({
     netAmount: createWireAmount(amount),
 });
 
-test('maps the known users to the domain with exact Money, also beyond 2^39', () => {
+test('EXP-072 maps the known users to the domain with exact Money (also beyond 2^39) and the viewer last selected currency apart from the shared last used one', () => {
     expect(
         toKnownUsers({
             friends: [
@@ -28,7 +28,7 @@ test('maps the known users to the domain with exact Money, also beyond 2^39', ()
                     user: { ...wireUser('friend-1'), picture: 'https://example.com/a.png' },
                     balances: [balance('USD', '899999999999.9997'), balance('EUR', '-25.5')],
                     lastUsedCurrency: 'USD',
-                    lastSelectedCurrency: null,
+                    lastSelectedCurrency: 'VND',
                 },
                 {
                     user: wireUser('friend-2'),
@@ -52,12 +52,14 @@ test('maps the known users to the domain with exact Money, also beyond 2^39', ()
             ],
             hasUnreadableBalance: false,
             lastUsedCurrency: 'USD',
+            lastSelectedCurrency: 'VND',
         },
         {
             user: { ...wireUser('friend-2'), firstName: null, lastName: null, picture: null },
             balances: [],
             hasUnreadableBalance: false,
             lastUsedCurrency: null,
+            lastSelectedCurrency: null,
         },
     ]);
 });

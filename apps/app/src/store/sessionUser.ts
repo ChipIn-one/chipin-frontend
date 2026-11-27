@@ -223,6 +223,33 @@ export const invalidateKnownUsers = (): Promise<void> => {
         .then(() => client.invalidateQueries({ queryKey }, { cancelRefetch: true }));
 };
 
+const reloadSelf = (client: QueryClient): Promise<void> =>
+    client.invalidateQueries({ queryKey: usersKeys.self(), exact: true });
+
+/**
+ * Reloads the self user on `client` after a new ledger entry (KB EXP-073: its
+ * `lastSelectedCurrency`). A self write still pending is not overwritten by a load: the reload
+ * waits until no self write is pending (not awaited), and is dropped if the session ended meanwhile.
+ */
+export const invalidateSelfUser = (client: QueryClient): Promise<void> => {
+    if (!isSelfWritePending(client)) {
+        return reloadSelf(client);
+    }
+    const sessionVersion = getAuthSessionVersion();
+    const unsubscribe = client.getMutationCache().subscribe(() => {
+        if (!isAuthSessionCurrent(sessionVersion)) {
+            unsubscribe();
+            return;
+        }
+        if (!isSelfWritePending(client)) {
+            unsubscribe();
+            void reloadSelf(client).catch(() => undefined);
+        }
+    });
+
+    return Promise.resolve();
+};
+
 /** The cached self user of this tab's user, for legacy store actions. */
 export const getCachedSelfUser = (): SelfUser | undefined =>
     tabUserClient()?.getQueryData<SelfUser>(usersKeys.self());
