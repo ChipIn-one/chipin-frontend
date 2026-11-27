@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Text, TextField } from '@radix-ui/themes';
 import type { ChangeEvent, ComponentProps, FocusEvent, ReactNode } from 'react';
 
@@ -39,6 +40,7 @@ const TextInput = ({
     const generatedId = useId();
     const inputId = id ?? generatedId;
     const descriptionId = `${inputId}-description`;
+    const errorId = `${inputId}-error`;
     const [value, setValue] = useState(initialValue);
     const [isTouched, setIsTouched] = useState(false);
     const isValid =
@@ -46,6 +48,9 @@ const TextInput = ({
         (maxLength === undefined || value.length <= maxLength);
     const characterCounter = maxLength === undefined ? undefined : `${value.length} / ${maxLength}`;
     const isValidationMessageVisible = isTouched && !isValid && validationMessage !== undefined;
+    const describedBy = [description && descriptionId, isValidationMessageVisible && errorId]
+        .filter(Boolean)
+        .join(' ');
 
     const onChange = (event: ChangeEvent<HTMLInputElement>) => {
         const nextValue = event.target.value;
@@ -72,13 +77,7 @@ const TextInput = ({
             <Flex justify="between" align="end" gap="3">
                 <Flex direction="column" gap="1" minWidth="0">
                     <Text as="label" htmlFor={inputId} size="2" weight="medium">
-                        {isValidationMessageVisible ? (
-                            <Text as="span" color="red" role="alert">
-                                {validationMessage}
-                            </Text>
-                        ) : (
-                            label
-                        )}
+                        {label}
                     </Text>
                     {description && (
                         <Text id={descriptionId} size="2" color="gray">
@@ -97,7 +96,7 @@ const TextInput = ({
             <TextField.Root
                 {...inputProps}
                 id={inputId}
-                aria-describedby={description ? descriptionId : undefined}
+                aria-describedby={describedBy || undefined}
                 aria-invalid={!isValid}
                 value={value}
                 maxLength={maxLength}
@@ -105,6 +104,12 @@ const TextInput = ({
                 onChange={onChange}
                 onBlur={onBlur}
             />
+
+            {isValidationMessageVisible && (
+                <Text id={errorId} size="2" color={PROP_COLOR.danger} role="alert">
+                    {validationMessage}
+                </Text>
+            )}
         </Flex>
     );
 };

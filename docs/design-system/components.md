@@ -11,6 +11,7 @@ states, accessibility and i18n, example.
 
 - [Amount](components/amount.md)
 - [AmountInput](components/amount-input.md)
+- [TextInput](components/text-input.md) (with TextArea)
 - [DebtAmount](components/debt-amount.md)
 - [OwedStatusText](components/owed-status-text.md)
 - [BalanceBadges](components/balance-badges.md) (with `BalanceBadgesSkeleton`)
@@ -62,8 +63,8 @@ The import rules are enforced by `boundaries` from [`config/eslint/layers.js`](.
 | `PageLoader`                                                                                                                 | Full-screen centered `ChipInLoader` ([card](components/chipin-loader.md))                                                 |
 | `RadioCards` (type `RadioCardsItem`)                                                                                         | Radix `RadioCards` built from an `items` list                                                                             |
 | `RelativeTime`                                                                                                               | Relative time text in the user's locale and 12/24h format                                                                 |
-| `TextArea` (type `TextAreaValueState`)                                                                                       | Labeled text area with description, required flag and validation message                                                  |
-| `TextInput` (type `TextInputValueState`)                                                                                     | Labeled text field with description, required flag and validation message                                                 |
+| `TextArea` (type `TextAreaValueState`)                                                                                       | Labeled text area; validation message below the field ([card](components/text-input.md))                                  |
+| `TextInput` (type `TextInputValueState`)                                                                                     | Labeled text field; validation message below the field ([card](components/text-input.md))                                 |
 | `UserAvatar`                                                                                                                 | User avatar: picture or initials, with a loading state ([card](components/user-avatar.md))                                |
 
 ## basics: imported by path

@@ -1,7 +1,7 @@
 # Forms: fields, buttons, modals and confirmations
 
 How ChipIn takes input. Paths are inside `apps/app/src`; money fields follow
-[money.md](money.md#input-goes-through-amountinput). Component cards: [AmountInput](../components/amount-input.md), [Select](../components/select.md), [SegmentedControl](../components/segmented-control.md), [Dropdown](../components/dropdown.md).
+[money.md](money.md#input-goes-through-amountinput). Component cards: [TextInput](../components/text-input.md), [AmountInput](../components/amount-input.md), [Select](../components/select.md), [SegmentedControl](../components/segmented-control.md), [Dropdown](../components/dropdown.md).
 
 ## Field set
 
@@ -28,13 +28,14 @@ Use these; a new field type is added here first:
 - Every field has a visible label above it, tied to the control (`TextInput`/`TextArea` render a
   `<label htmlFor>` from their `label` prop). A placeholder is never the label. A search box is
   the one exception: its icon and `aria-label` name it.
-- Help text goes in `description`, under the label; it is linked by `aria-describedby`.
+- Help text goes in `description` (under the label in `TextInput`, beside it in `TextArea`); it is
+  linked by `aria-describedby`.
 - The control's `aria-invalid` follows its validity from the first render. The validation text
-  (only when `validationMessage` is passed) shows after the field is touched (on blur), in red with
-  `role="alert"`. It comes from i18n.
-- Target position: the message sits below the field, linked by `aria-describedby`, as
-  `SettlementAmountField` (settle-up) already does. Today `TextInput` and `TextArea` show it in the
-  label row, in place of the label; moving it is a change to those two basics, not to each form.
+  (only when `validationMessage` is passed) shows after the field is touched (on blur), below the
+  field, in `PROP_COLOR.danger` with `role="alert"`. It comes from i18n.
+- The label stays; the message never replaces it. `aria-describedby` lists the description and the
+  message ids, only those shown (`TextInput`, `TextArea`, `SettlementAmountField`).
+- `SettlementAmountField` passes the literal `red` and has no `role="alert"`; fix when touched.
 
 - Required fields pass `isRequired` to the basic, which sets `required` and checks for an empty
   value.
