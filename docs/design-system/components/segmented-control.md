@@ -43,6 +43,8 @@ inline-size containment gives it zero intrinsic width in a shrink-to-fit parent.
   when no visible label names the control.
 - Labels are `ReactNode`; icon-only labels need their own accessible text.
 - i18n: none; pass translated `label`s.
+- A `fill` label that is not plain text (an icon + text in a flex) gives its text its own ellipsis
+  element: the basics guard on the label spans clips only inline text (ChipIn-one/chipin-frontend#316).
 
 ## Example
 

@@ -1,0 +1,45 @@
+/*
+ * #316: the theme control is a basics `fill` SegmentedControl, so its root is the size container.
+ * Widest label: "Системная" (ru), medium weight (the active span reserves it), ~77px at 14px,
+ * ~66px at 12px, ~88px at 16px; the icon is 14px + a space-1 (4px) gap = 18px.
+ * Control width = viewport - 2 x 16px page gutter (RootLayout px 4) - 2 x 24px card padding
+ * (Card size 3): 320 -> 240px, 360 -> 280px, 375 -> 295px, 414 -> 334px.
+ * - Size 2 with icons: 77 + 18 + 2 x 8px padding = 111px x 3 = 333px; below 360px (~10% slack for
+ *   Roboto and other fallback fonts) the icons go.
+ * - Size 2 without icons: 77 + 16 = 93px x 3 = 279px, too tight for the 280px control at a 360
+ *   viewport, so this control compacts below 300px, earlier than the basics 280px step.
+ * - Compact (12px, 2 x 4px padding) without icons: 66 + 8 = 74px x 3 = 222px <= 280px at 360 and
+ *   240px at 320 (80px cells), so the labels stay whole. Below ~302px viewports the basics ellipsis
+ *   is the last resort.
+ * - Size 3 (sm and up) with icons: 88 + 18 + 16 = 122px x 3 = 366px; its narrowest settings column
+ *   is ~408px (1280: two columns beside the 280px sidebar), so the icons stay.
+ */
+@container (width < 360px) {
+    .themeIcon {
+        display: none;
+    }
+}
+
+/* stylelint-disable selector-disallowed-list -- the item label is a Radix internal with no prop or token hook for its padding and font size */
+
+/*
+ * The container is the root itself (`fill` sets `container-type` on it); the tripled class
+ * (0,4,0) beats the basics `.fill.fill` label rules (0,3,0).
+ */
+@container (width < 300px) {
+    .themeControl.themeControl.themeControl :global(.rt-SegmentedControlItemLabel) {
+        --_label-padding: var(--cp-space-1);
+
+        font-size: var(--cp-font-size-1);
+    }
+}
+
+/* stylelint-enable selector-disallowed-list */
+
+/* Last-resort overflow guard inside the icon + label row (the basics ellipsis sits on the spans). */
+.themeLabelText {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

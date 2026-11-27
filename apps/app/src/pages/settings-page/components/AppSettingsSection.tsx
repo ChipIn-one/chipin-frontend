@@ -1,5 +1,12 @@
 import { Avatar, Button, Card, Code, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
-import { MonitorIcon, MoonIcon, RefreshCwIcon, Settings2Icon, SunIcon } from 'lucide-react';
+import {
+    type LucideIcon,
+    MonitorIcon,
+    MoonIcon,
+    RefreshCwIcon,
+    Settings2Icon,
+    SunIcon,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ONLINE_ONLY_ACTIONS } from 'constants/onlineOnlyActions';
@@ -14,9 +21,19 @@ import { usePwaStore } from 'store/pwaStore';
 import { SegmentedControl } from 'basics/SegmentedControl';
 import { OnlineOnlyGroup } from 'components/online-only';
 
+import styles from './AppSettingsSection.module.css';
+
 interface Props {
     isLoading: boolean;
 }
+
+/** #316: the icon hides on narrow controls (see the CSS module); the text never wraps. */
+const ThemeOptionLabel = ({ icon: Icon, text }: { icon: LucideIcon; text: string }) => (
+    <Flex align="center" justify="center" gap="1" minWidth="0">
+        <Icon size={14} className={styles.themeIcon} aria-hidden />
+        <span className={styles.themeLabelText}>{text}</span>
+    </Flex>
+);
 
 const AppSettingsSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
@@ -67,34 +84,36 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                     <OnlineOnlyGroup action={ONLINE_ONLY_ACTIONS.userSettings}>
                         <Skeleton loading={isLoading}>
                             <SegmentedControl
+                                fill
+                                className={styles.themeControl}
                                 value={theme}
                                 onValueChange={onChangeTheme}
                                 items={[
                                     {
                                         value: 'dark',
                                         label: (
-                                            <Flex align="center" gap="1">
-                                                <MoonIcon size={14} />
-                                                {t('app.themeOptions.dark')}
-                                            </Flex>
+                                            <ThemeOptionLabel
+                                                icon={MoonIcon}
+                                                text={t('app.themeOptions.dark')}
+                                            />
                                         ),
                                     },
                                     {
                                         value: 'light',
                                         label: (
-                                            <Flex align="center" gap="1">
-                                                <SunIcon size={14} />
-                                                {t('app.themeOptions.light')}
-                                            </Flex>
+                                            <ThemeOptionLabel
+                                                icon={SunIcon}
+                                                text={t('app.themeOptions.light')}
+                                            />
                                         ),
                                     },
                                     {
                                         value: 'system',
                                         label: (
-                                            <Flex align="center" gap="1">
-                                                <MonitorIcon size={14} />
-                                                {t('app.themeOptions.system')}
-                                            </Flex>
+                                            <ThemeOptionLabel
+                                                icon={MonitorIcon}
+                                                text={t('app.themeOptions.system')}
+                                            />
                                         ),
                                     },
                                 ]}
