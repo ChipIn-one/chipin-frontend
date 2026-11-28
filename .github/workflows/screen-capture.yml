@@ -1,0 +1,613 @@
+name: Screen capture
+
+# Screenshots of every screen map row (docs/design-system/screens.md) in light and dark at 390 and
+# 1440 px, from the commit's code on the Vite dev server against the staging API, plus the commit's
+# site built and served by `astro preview` (#998, docs/e2e-tests.md "Screen captures"). CI-only: no
+# step runs on a developer machine.
+#
+# - push to master: captures everything and uploads the `screen-captures` artifact (index.json and
+#   png/), the baseline that pull requests and the Claude Design refresh (#999) read; fails, after
+#   the upload, when a row is missing.
+# - pull_request touching UI, the manifest or the capture: captures the head, compares it with the
+#   latest successful master baseline and shows before/after of the changed screens in the summary.
+#
+# Not a required check: it is not listed in the ruleset (which requires only `frontend-ci`) and must
+# not be added there; a staging outage would block merges.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - apps/app/src/**
+      - apps/site/src/**
+      - docs/design-system/screens.manifest.json
+      - apps/app/e2e/capture/**
+      - apps/app/e2e/support/**
+      - apps/app/playwright.capture.config.ts
+      - apps/app/index.html
+      - apps/app/vite.config.ts
+      - apps/site/integrations/**
+      - package.json
+      - apps/app/public/**
+      - apps/*/package.json
+      - apps/site/astro.config.*
+      - apps/site/public/**
+      - packages/tokens/**
+      - packages/i18n-content/**
+      - package-lock.json
+      - .github/workflows/screen-capture.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: screen-capture-${{ github.event.pull_request.number || github.ref }}
+  # A newer push to a pull request replaces its run; runs on master are never cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Fork and Dependabot pull requests get no repository secrets: the capture is then skipped (with a
+  # notice) instead of failing, as in e2e-smoke.yml.
+  check:
+    name: check staging credentials
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      available: ${{ steps.credentials.outputs.available }}
+    steps:
+      - name: Check staging credentials
+        id: credentials
+        env:
+          SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
+        shell: bash
+        run: |
+          if [[ -n "$SWAGGER_USER" && -n "$SWAGGER_PASSWORD" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Screen capture skipped::The staging Basic secrets are not available to this run (a fork or Dependabot pull request), so the screen capture was skipped."
+          fi
+
+  # Trust boundary (docs/e2e-tests.md "CI"): same-repository pull request code, including its
+  # playwright.capture.config.ts and the install scripts of its lockfile, runs in this job with the
+  # staging Basic secrets in the capture, artifact-scan and purge steps. Only the two Basic secrets
+  # are used, never the Vercel bypass secret. The PNGs leave the job only after a verified purge
+  # and a credential scan; traces, videos and reports never do.
+  capture:
+    name: capture
+    needs: check
+    if: needs.check.outputs.available == 'true'
+    runs-on: ubuntu-24.04
+    # A hard cap above the sum of every step's own limit (80 minutes), so a slow step never takes
+    # the purge's time.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    outputs:
+      uploaded: ${{ steps.upload.outcome == 'success' }}
+    steps:
+      # Created first, so the final purge can delete the run's users even after a cancel, a timeout
+      # or a crash of the capture. Same format as createRunId().
+      - name: Create run id
+        id: run
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id="fe-e2e-$(date +%s%3N)-$(openssl rand -hex 6)"
+          if [[ ! "$run_id" =~ ^fe-e2e-[0-9]{13}-[0-9a-f]{12}$ ]]; then
+            echo "::error::Could not create a valid e2e run id"
+            exit 1
+          fi
+          echo "id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "E2E run id: $run_id"
+      - name: Checkout the captured commit
+        timeout-minutes: 5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          # The pull request head, not its merge commit: the PNGs show the branch as pushed.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      # No npm cache: every workflow of this repository sets package-manager-cache: false.
+      - name: Setup Node
+        timeout-minutes: 5
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Install dependencies
+        timeout-minutes: 10
+        run: npm ci
+      - name: Resolve Playwright version
+        id: playwright
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./apps/app/package.json').devDependencies['@playwright/test']")"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::@playwright/test must be pinned to an exact version, got '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # The browsers come in the official Playwright image of the pinned version, as in e2e-run.yml.
+      - name: Pull the Playwright image
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: docker pull "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
+      - name: Check staging API
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 https://api-dev.chipin.one/users/self || true)"
+          if [[ "$status" != "401" ]]; then
+            echo "::error title=Staging API unavailable::Staging API https://api-dev.chipin.one is unavailable (GET /users/self answered '${status:-no response}', expected 401). The capture needs it; this is not a capture failure."
+            exit 1
+          fi
+      # The app on the Vite dev server and the site (astro build + preview) start as Playwright web
+      # servers inside the image. The purge is the global teardown inside this step. A failed row
+      # does not stop the job here: the index names it, the upload happens, and the last step fails.
+      - name: Capture the screens
+        id: capture
+        continue-on-error: true
+        timeout-minutes: 38
+        working-directory: apps/app
+        env:
+          CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          CHIPIN_CONTRACT_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
+          CHIPIN_E2E_RUN_ID: ${{ steps.run.outputs.id }}
+          CHIPIN_CAPTURE_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          CHIPIN_CAPTURE_REF: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+          PLAYWRIGHT_VERSION: ${{ steps.playwright.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The soft budget: rows that would start after 27 minutes fail as "not reached", so the
+          # run, its teardown purge and index.json end well inside this step's limit.
+          CHIPIN_CAPTURE_DEADLINE="$(( $(date +%s%3N) + 27 * 60 * 1000 ))"
+          export CHIPIN_CAPTURE_DEADLINE
+          node_home="$(dirname "$(dirname "$(command -v node)")")"
+          docker run --rm --ipc=host --init \
+            --name "$CHIPIN_E2E_RUN_ID" \
+            --user "$(id -u):$(id -g)" \
+            -v "$node_home:/opt/host-node:ro" \
+            -e PATH=/opt/host-node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -e HOME=/tmp \
+            -e CI \
+            -e GITHUB_RUN_ID \
+            -e CHIPIN_CONTRACT_SWAGGER_USER \
+            -e CHIPIN_CONTRACT_SWAGGER_PASSWORD \
+            -e CHIPIN_E2E_RUN_ID \
+            -e CHIPIN_CAPTURE_COMMIT \
+            -e CHIPIN_CAPTURE_REF \
+            -e CHIPIN_CAPTURE_DEADLINE \
+            -e ASTRO_TELEMETRY_DISABLED=1 \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+            -v "$RUNNER_TEMP:$RUNNER_TEMP" \
+            -w "$PWD" \
+            "mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble" \
+            bash -c 'node --version && exec npx playwright test -c playwright.capture.config.ts'
+      - name: Stop the capture container
+        if: always() && steps.run.outputs.id != ''
+        timeout-minutes: 1
+        env:
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: docker rm -f "$RUN_ID" >/dev/null 2>&1 || true
+      # The teardown writes the marker, holding the run id, only after its second purge found no
+      # user of the run left. Without it nothing is uploaded.
+      - name: Check verified purge
+        id: purge-marker
+        if: always() && steps.run.outputs.id != ''
+        timeout-minutes: 1
+        env:
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: |
+          marker="apps/app/test-results/capture/.purge-verified"
+          if [[ -f "$marker" && "$(cat "$marker")" == "$RUN_ID" ]]; then
+            echo "verified=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "verified=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Captures not uploaded::The run's purge was not verified, so the captures are not uploaded."
+          fi
+      # index.json is written by the capture's reporter (e2e/capture/indexReporter.ts). Its text is
+      # data: ids are checked against the manifest pattern and reasons are put in code spans. Runs
+      # whenever the index exists, also without a verified purge, so missing rows are always named.
+      - name: Summarize the capture
+        id: summary
+        if: always() && steps.run.outputs.id != ''
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          index="apps/app/screen-captures/index.json"
+          if [[ ! -s "$index" ]] || ! jq -e '.schemaVersion == 1 and (.missing | type == "array")' "$index" >/dev/null; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::error title=No capture index::The capture wrote no valid $index."
+            echo "### Screen capture: no index was written" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "present=true" >> "$GITHUB_OUTPUT"
+          missing="$(jq '.missing | length' "$index")"
+          # A variant is printed only as a known theme and width; anything else is data, not text.
+          variant='if . == null then "all" elif (type == "object" and (.theme == "light" or .theme == "dark") and (.width == 390 or .width == 1440)) then "\(.theme) \(.width)" else "invalid variant" end'
+
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+          pngs="$(find apps/app/screen-captures/png -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
+          {
+            echo "### Screen capture"
+            echo
+            echo "$pngs PNGs, $(jq '.manual | length' "$index") manual rows (not captured), $missing missing variants."
+            if [[ "$missing" != "0" ]]; then
+              echo
+              echo "| Row | Variant | Reason |"
+              echo "| --- | --- | --- |"
+              jq -r '.missing[]
+                | select(.id | test("^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*$"))
+                | "| `\(.id)` | \(.variant | '"$variant"') | `\(.reason | tostring | gsub("[`|\\r\\n]"; " "))` |"' "$index"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.missing[] | "::error title=Missing screen capture::\(.id | tostring | gsub("[^a-z0-9.-]"; "")) \(.variant | '"$variant"')"' "$index"
+      # The PNGs hold only the run's fake users (masked QR codes, invite links and emails); the
+      # index holds sanitized reasons. Both are still scanned for the Basic credentials.
+      - name: Scan the captures for credentials
+        id: scan
+        # Only after a verified purge: the marker gates what leaves the job, not the summary.
+        if: always() && steps.purge-marker.outputs.verified == 'true' && steps.summary.outputs.present == 'true'
+        timeout-minutes: 2
+        env:
+          SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, sys
+
+          user = os.environ["SWAGGER_USER"].encode()
+          password = os.environ["SWAGGER_PASSWORD"].encode()
+          needles = [password, base64.b64encode(user + b":" + password)]
+          hits = []
+          for directory, _, files in os.walk("apps/app/screen-captures"):
+              for file in files:
+                  path = os.path.join(directory, file)
+                  with open(path, "rb") as handle:
+                      if any(needle in handle.read() for needle in needles):
+                          hits.append(path)
+          for hit in hits:
+              print(f"::error::Credential material found in {hit}; the captures are not uploaded.")
+          sys.exit(1 if hits else 0)
+          PY
+      # One artifact per run with a stable name: #999 and pull requests take the one of the latest
+      # successful push run on master.
+      - name: Upload the captures
+        id: upload
+        if: always() && steps.scan.outcome == 'success'
+        timeout-minutes: 5
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screen-captures
+          path: |
+            apps/app/screen-captures/index.json
+            apps/app/screen-captures/png
+          retention-days: ${{ github.event_name == 'push' && 30 || 7 }}
+          if-no-files-found: error
+          # "Re-run failed jobs" replaces the earlier attempt's captures.
+          overwrite: true
+      # Also after a cancel, a timeout or a crash of the capture: deletes whatever the run left on
+      # staging, then verifies nothing is left (as in e2e-run.yml). The credentials reach curl only
+      # through its stdin config.
+      - name: Purge the run on staging
+        if: always() && steps.run.outputs.id != '' && contains(fromJSON('["success","failure","cancelled"]'), steps.capture.outcome)
+        timeout-minutes: 2
+        env:
+          SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
+          RUN_ID: ${{ steps.run.outputs.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$(printf '%s:%s' "$SWAGGER_USER" "$SWAGGER_PASSWORD" | base64 -w0)"
+          echo "::add-mask::$token"
+          body="$(mktemp)"
+          purge() {
+            local status
+            status="$(printf 'header = "Authorization: Basic %s"\n' "$token" \
+              | curl --silent --config - --request DELETE --output "$body" --write-out '%{http_code}' \
+                --max-time 30 --retry 2 --retry-all-errors \
+                "https://api-dev.chipin.one/auth/test-runs/$RUN_ID" || true)"
+            if [[ "$status" != "200" ]]; then
+              echo "::error title=Run purge failed::DELETE /auth/test-runs/$RUN_ID answered '${status:-no response}'; users of this run may remain on staging."
+              exit 1
+            fi
+            jq -er --arg run "$RUN_ID" \
+              'select(.runId == $run and (.deletedUsers | type) == "number") | "Purged run \(.runId): users=\(.deletedUsers) groups=\(.deletedGroups) expenses=\(.deletedExpenses) settlements=\(.deletedSettlements) activityEvents=\(.deletedActivityEvents)"' \
+              "$body" || { echo "::error title=Run purge failed::The purge response for $RUN_ID is not the expected counts."; exit 1; }
+          }
+          purge
+          purge
+          if [[ "$(jq -r '.deletedUsers' "$body")" != "0" ]]; then
+            echo "::error title=Run purge not verified::Users of run $RUN_ID were still present on the second purge."
+            exit 1
+          fi
+      # After the upload and the purge: a missing row (no recipe, a failed recipe, an unknown recipe)
+      # or a capture that did not finish fails the job; the summary above names the rows.
+      - name: Fail on missing captures
+        if: always()
+        timeout-minutes: 1
+        env:
+          CAPTURE: ${{ steps.capture.outcome }}
+          PRESENT: ${{ steps.summary.outputs.present }}
+          MISSING: ${{ steps.summary.outputs.missing }}
+          UPLOAD: ${{ steps.upload.outcome }}
+        shell: bash
+        run: |
+          if [[ "$PRESENT" != "true" || "$UPLOAD" != "success" ]]; then
+            echo "::error::The captures were not uploaded (capture: ${CAPTURE:-not run}, upload: ${UPLOAD:-not run})."
+            exit 1
+          fi
+          if [[ "$MISSING" != "0" ]]; then
+            echo "::error::$MISSING screen variants are missing; the job summary names them."
+            exit 1
+          fi
+          if [[ "$CAPTURE" != "success" ]]; then
+            echo "::error::The capture step ended as '$CAPTURE'."
+            exit 1
+          fi
+
+  # Pull requests only, after the capture uploaded (also when rows are missing). Runs no code of
+  # the pull request: it reads two artifacts as data. Changed = a different PNG file (SHA-256):
+  # the same pinned Playwright renders and encodes identical pixels to identical bytes, so a
+  # byte difference is a pixel difference unless the Playwright version differs (then noted).
+  compare:
+    name: compare with master
+    needs: capture
+    if: always() && github.event_name == 'pull_request' && needs.capture.outputs.uploaded == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      # Finds and downloads the master baseline of this workflow.
+      actions: read
+      # Reads the merge base of the pull request (the compare API).
+      contents: read
+    outputs:
+      matrix: ${{ steps.diff.outputs.matrix }}
+      has_images: ${{ steps.diff.outputs.has_images }}
+    steps:
+      - name: Download the pull request captures
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: screen-captures
+          path: ${{ runner.temp }}/after
+      # The baseline is the successful push run of this workflow on master for the pull request's
+      # merge base (where its branch left master), so the diff is the pull request's own change; its
+      # head is captured, as in e2e-smoke. When that run is missing or expired, the latest
+      # successful one (then noted). A run with a missing row failed and is never a baseline. An API
+      # error falls back to the next choice, at worst to "no baseline", never aborts the job.
+      - name: Find the master baseline
+        id: baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          sha='^[0-9a-f]{40}$'
+          runs="repos/$REPOSITORY/actions/workflows/screen-capture.yml/runs?branch=master&event=push&status=success&per_page=1"
+          has_artifact() {
+            local count
+            [[ "$1" =~ ^[0-9]+$ ]] || return 1
+            count="$(gh api "repos/$REPOSITORY/actions/runs/$1/artifacts?name=screen-captures" \
+              --jq '[.artifacts[] | select(.expired | not)] | length' 2>/dev/null || true)"
+            [[ "$count" =~ ^[1-9][0-9]*$ ]]
+          }
+          merge_base=""
+          if [[ "$BASE_SHA" =~ $sha && "$HEAD_SHA" =~ $sha ]]; then
+            merge_base="$(gh api "repos/$REPOSITORY/compare/$BASE_SHA...$HEAD_SHA" --jq '.merge_base_commit.sha' 2>/dev/null || true)"
+          fi
+          run_id="" kind=""
+          if [[ "$merge_base" =~ $sha ]]; then
+            candidate="$(gh api "$runs&head_sha=$merge_base" --jq '.workflow_runs[0].id // empty' 2>/dev/null || true)"
+            if has_artifact "$candidate"; then run_id="$candidate" kind="base"; fi
+          fi
+          if [[ -z "$run_id" ]]; then
+            candidate="$(gh api "$runs" --jq '.workflow_runs[0].id // empty' 2>/dev/null || true)"
+            if has_artifact "$candidate"; then run_id="$candidate" kind="latest"; fi
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+      - name: Download the master baseline
+        if: steps.baseline.outputs.run_id != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: screen-captures
+          path: ${{ runner.temp }}/before
+          run-id: ${{ steps.baseline.outputs.run_id }}
+          github-token: ${{ github.token }}
+      # Only files named png/<screen id>__<light|dark>__<390|1440>.png are read; anything else in
+      # either artifact is ignored. Every changed screen is listed by name. Up to IMAGE_LIMIT PNGs
+      # are copied (with unique names) for the `images` jobs, real changes first: changed before
+      # new, then by the row's kind (screen, state, modal; read from the head index.json), then by
+      # the largest change in file size.
+      - name: Compare the captures
+        id: diff
+        env:
+          BASE_DIR: ${{ runner.temp }}/before
+          HEAD_DIR: ${{ runner.temp }}/after
+          DIFF_DIR: ${{ runner.temp }}/screen-diff
+          BASELINE_RUN: ${{ steps.baseline.outputs.run_id }}
+          BASELINE_KIND: ${{ steps.baseline.outputs.kind }}
+          IMAGE_LIMIT: '12'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, re, shutil
+
+          name = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*__(light|dark)__(390|1440)\.png$")
+          summary = open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8")
+          output = open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8")
+          limit = int(os.environ["IMAGE_LIMIT"])
+
+          def pngs(root):
+              folder = os.path.join(root, "png")
+              found = {}
+              if not os.path.isdir(folder) or os.path.islink(folder):
+                  return found
+              for entry in os.scandir(folder):
+                  if entry.is_file(follow_symlinks=False) and name.match(entry.name):
+                      with open(entry.path, "rb") as handle:
+                          found[entry.name] = hashlib.sha256(handle.read()).hexdigest()
+              return found
+
+          def version(root):
+              try:
+                  with open(os.path.join(root, "index.json"), encoding="utf-8") as handle:
+                      value = json.load(handle).get("playwrightVersion")
+                  return value if isinstance(value, str) and re.fullmatch(r"\d+\.\d+\.\d+", value) else None
+              except (OSError, ValueError, AttributeError):
+                  return None
+
+          print("## Screen changes against master", file=summary)
+          print(file=summary)
+          if not os.environ.get("BASELINE_RUN"):
+              print("No baseline yet: no successful push run of this workflow on master has a `screen-captures` artifact. Nothing to compare; this is not a failure.", file=summary)
+              print("matrix=[]", file=output)
+              print("has_images=false", file=output)
+              raise SystemExit(0)
+
+          base, head = pngs(os.environ["BASE_DIR"]), pngs(os.environ["HEAD_DIR"])
+          changed = sorted(f for f in head if f in base and head[f] != base[f])
+          added = sorted(f for f in head if f not in base)
+          removed = sorted(f for f in base if f not in head)
+          baseline_note = "the pull request's merge base" if os.environ.get("BASELINE_KIND") == "base" else "the latest successful run (none for the pull request's merge base, so the diff may include other master changes)"
+          print(f"Baseline: master run {os.environ['BASELINE_RUN']}, {baseline_note}. {len(changed)} changed, {len(added)} new, {len(removed)} no longer captured, {len(head) - len(changed) - len(added)} unchanged.", file=summary)
+          base_version, head_version = version(os.environ["BASE_DIR"]), version(os.environ["HEAD_DIR"])
+          if base_version != head_version:
+              print(f"\n> The Playwright version differs (master {base_version}, this pull request {head_version}): its Chromium may render or encode differently, so screens may show as changed without a change in the app.", file=summary)
+          rows = [(f, "changed") for f in changed] + [(f, "new") for f in added] + [(f, "no longer captured") for f in removed]
+          if rows:
+              print("\n| Screen | Theme | Width | Change |\n| --- | --- | --- | --- |", file=summary)
+              for file, change in rows:
+                  screen, theme, width = file[:-4].split("__")
+                  print(f"| `{screen}` | {theme} | {width} | {change} |", file=summary)
+          kinds = {}
+          try:
+              with open(os.path.join(os.environ["HEAD_DIR"], "index.json"), encoding="utf-8") as handle:
+                  index = json.load(handle)
+              for screen in [s for flow in index.get("flows", []) for s in flow.get("screens", [])] + index.get("ungrouped", []):
+                  if isinstance(screen, dict) and screen.get("kind") in ("screen", "state", "modal"):
+                      kinds[str(screen.get("id"))] = screen["kind"]
+          except (OSError, ValueError, AttributeError, TypeError):
+              kinds = {}
+          rank = {"screen": 0, "state": 1, "modal": 2}
+
+          def size(root, file):
+              path = os.path.join(root, "png", file)
+              return os.path.getsize(path) if os.path.isfile(path) else 0
+
+          def order(file):
+              screen = file[:-4].split("__")[0]
+              delta = abs(size(os.environ["HEAD_DIR"], file) - size(os.environ["BASE_DIR"], file))
+              return (0 if file in base else 1, rank.get(kinds.get(screen), 3), -delta, file)
+
+          shown = sorted(changed + added, key=order)[:limit]
+          if len(changed) + len(added) > limit:
+              print(f"\nBefore/after images: {limit} below (changed before new, screens before states and modals, the largest change in file size first); the rest are only listed above. If an image does not show, open its link: the PNG artifacts need a signed-in GitHub session.", file=summary)
+          elif shown:
+              print("\nBefore/after images: one section per screen below. If an image does not show, open its link: the PNG artifacts need a signed-in GitHub session.", file=summary)
+          matrix = []
+          for file in shown:
+              screen, theme, width = file[:-4].split("__")
+              key = file[:-4]
+              target = os.path.join(os.environ["DIFF_DIR"], key)
+              os.makedirs(target, exist_ok=True)
+              shutil.copyfile(os.path.join(os.environ["HEAD_DIR"], "png", file), os.path.join(target, f"after--{file}"))
+              if file in base:
+                  shutil.copyfile(os.path.join(os.environ["BASE_DIR"], "png", file), os.path.join(target, f"before--{file}"))
+              matrix.append({"key": key, "screen": screen, "theme": theme, "width": width, "change": "changed" if file in base else "new"})
+          print(f"matrix={json.dumps(matrix)}", file=output)
+          print(f"has_images={'true' if matrix else 'false'}", file=output)
+          PY
+      - name: Upload the changed PNGs
+        if: steps.diff.outputs.has_images == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screen-diff
+          path: ${{ runner.temp }}/screen-diff
+          retention-days: 7
+          if-no-files-found: error
+          overwrite: true
+
+  # One job per changed screen variant: GitHub renders no `data:` image in a job summary, and an
+  # unarchived artifact (`archive: false`) is a single file, so each leg uploads its before and
+  # after PNG as their own artifacts and links them (plus an <img>) in its own summary.
+  images:
+    name: before/after ${{ matrix.screen.key }}
+    needs: compare
+    if: always() && needs.compare.outputs.has_images == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        screen: ${{ fromJSON(needs.compare.outputs.matrix) }}
+    steps:
+      - name: Download the changed PNGs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: screen-diff
+          path: ${{ runner.temp }}/screen-diff
+      - name: Upload the before PNG
+        id: before
+        if: matrix.screen.change == 'changed'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/screen-diff/${{ matrix.screen.key }}/before--${{ matrix.screen.key }}.png
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+          overwrite: true
+      - name: Upload the after PNG
+        id: after
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/screen-diff/${{ matrix.screen.key }}/after--${{ matrix.screen.key }}.png
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+          overwrite: true
+      - name: Write the summary
+        env:
+          SCREEN: ${{ matrix.screen.screen }}
+          THEME: ${{ matrix.screen.theme }}
+          WIDTH: ${{ matrix.screen.width }}
+          BEFORE_URL: ${{ steps.before.outputs.artifact-url }}
+          AFTER_URL: ${{ steps.after.outputs.artifact-url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### \`$SCREEN\` $THEME $WIDTH"
+            echo
+            if [[ -n "$BEFORE_URL" ]]; then
+              echo "| Before (master) | After (this pull request) |"
+              echo "| --- | --- |"
+              echo "| <img src=\"$BEFORE_URL\" width=\"360\" alt=\"before\"> | <img src=\"$AFTER_URL\" width=\"360\" alt=\"after\"> |"
+              echo
+              echo "[Before PNG]($BEFORE_URL) · [After PNG]($AFTER_URL)"
+            else
+              echo "New screen: <img src=\"$AFTER_URL\" width=\"360\" alt=\"after\">"
+              echo
+              echo "[After PNG]($AFTER_URL)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
