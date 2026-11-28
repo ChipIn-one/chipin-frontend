@@ -1,4 +1,5 @@
 import Logotype from '@chipin/tokens/assets/logo.svg?react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge, Box, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +14,7 @@ interface Props {
 
 const ModeLogotype = ({ isSoloMode, isModeBadgeVisible = true }: Props) => {
     const { t } = useTranslation('common');
-    const activeColor = isSoloMode ? 'violet' : 'green';
+    const activeColor = isSoloMode ? PROP_COLOR.solo : PROP_COLOR.accent;
     const modeBadgeKey = isSoloMode ? 'modes.solo' : 'modes.group';
 
     return (

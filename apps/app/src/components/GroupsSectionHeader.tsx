@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Button, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { PlusIcon, UsersIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
@@ -21,9 +22,13 @@ const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) 
         <Flex align="center" justify="between" gap="3" wrap="wrap" {...flexProps}>
             <Flex align="center" gap="2">
                 <Skeleton loading={isLoading}>
-                    <Avatar size="2" color="gray" fallback={<UsersIcon size={18} />} />
+                    <Avatar
+                        size="2"
+                        color={PROP_COLOR.neutral}
+                        fallback={<UsersIcon size={18} />}
+                    />
                 </Skeleton>
-                <Text size="2" color="gray" weight="medium">
+                <Text size="2" color={PROP_COLOR.neutral} weight="medium">
                     <Skeleton loading={isLoading}>{label}</Skeleton>
                 </Text>
             </Flex>

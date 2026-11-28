@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Flex, Popover, ScrollArea, Text, TextField } from '@radix-ui/themes';
 import { SearchIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
@@ -150,7 +151,11 @@ const SearchSelect = ({
                                                 asChild
                                                 size="3"
                                                 variant="soft"
-                                                color={isSelected ? 'blue' : 'gray'}
+                                                color={
+                                                    isSelected
+                                                        ? PROP_COLOR.accent
+                                                        : PROP_COLOR.neutral
+                                                }
                                                 highContrast={isSelected}
                                             >
                                                 <a
@@ -172,7 +177,9 @@ const SearchSelect = ({
                                             type="button"
                                             size="3"
                                             variant="soft"
-                                            color={isSelected ? 'blue' : 'gray'}
+                                            color={
+                                                isSelected ? PROP_COLOR.accent : PROP_COLOR.neutral
+                                            }
                                             highContrast={isSelected}
                                             aria-pressed={
                                                 value === undefined ? undefined : isSelected
@@ -185,7 +192,7 @@ const SearchSelect = ({
                                 })
                             ) : (
                                 <Box px="2" py="3">
-                                    <Text size="2" color="gray">
+                                    <Text size="2" color={PROP_COLOR.neutral}>
                                         {emptyText}
                                     </Text>
                                 </Box>

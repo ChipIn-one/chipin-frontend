@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Card, Flex, Text } from '@radix-ui/themes';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +48,7 @@ export const ConflictDraftRow = ({ item }: { item: ConflictDraftItem }) => {
                     <Text size="2" weight="medium" truncate>
                         {description ?? t('outbox.kind.updateExpense')}
                     </Text>
-                    <Text size="1" color="gray">
+                    <Text size="1" color={PROP_COLOR.neutral}>
                         {t('outbox.conflictDraftState')}
                     </Text>
                 </Flex>
@@ -68,7 +69,7 @@ export const ConflictDraftRow = ({ item }: { item: ConflictDraftItem }) => {
                         type="button"
                         size="1"
                         variant="soft"
-                        color="red"
+                        color={PROP_COLOR.danger}
                         loading={isDiscarding}
                         disabled={isDiscarding}
                         onClick={onDiscard}

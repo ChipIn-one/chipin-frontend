@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Badge, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -21,11 +22,11 @@ const ActivityEventSkeleton = () => {
                     <Flex gap="3" align="center" minWidth="0">
                         <ActivityEventSkeletonIcon />
                         <Flex direction="column" align="start" gap="1">
-                            <Text size="3" color="gray" weight="medium">
+                            <Text size="3" color={PROP_COLOR.neutral} weight="medium">
                                 <Skeleton>{t('activityFeed.expenseDescription')}</Skeleton>
                             </Text>
                             <Skeleton>
-                                <Badge size="1" variant="soft" color="gray">
+                                <Badge size="1" variant="soft" color={PROP_COLOR.neutral}>
                                     {t('activityFeed.scope')}
                                 </Badge>
                             </Skeleton>

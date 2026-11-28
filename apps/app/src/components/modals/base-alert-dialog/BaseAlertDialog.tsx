@@ -1,4 +1,5 @@
 import { type ComponentProps, type MouseEvent, type ReactNode, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { AlertDialog, Button, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -86,7 +87,7 @@ const BaseAlertDialog = ({
                 <OverlayHeader
                     title={
                         <AlertDialog.Title size="6" mb="0">
-                            <Text color="gray">{title}</Text>
+                            <Text color={PROP_COLOR.neutral}>{title}</Text>
                         </AlertDialog.Title>
                     }
                 />
@@ -101,7 +102,12 @@ const BaseAlertDialog = ({
                 <OverlayFooter
                     cancelAction={
                         <AlertDialog.Cancel>
-                            <Button size="3" variant="soft" color="gray" disabled={isPending}>
+                            <Button
+                                size="3"
+                                variant="soft"
+                                color={PROP_COLOR.neutral}
+                                disabled={isPending}
+                            >
                                 {t('buttons.cancel')}
                             </Button>
                         </AlertDialog.Cancel>

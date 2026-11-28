@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -47,7 +48,7 @@ const AuthButtons = (options: SocialAuthOptions) => {
             <Button
                 size="4"
                 variant="soft"
-                color="blue"
+                color={PROP_COLOR.info}
                 radius="full"
                 loading={isGoogleLoginLoading}
                 disabled={isGoogleLoginLoading}

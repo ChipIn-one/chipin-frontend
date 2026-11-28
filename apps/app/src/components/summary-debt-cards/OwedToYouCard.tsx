@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { TrendingUpIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +26,7 @@ const OwedToYouCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, ent
     const badgeItems = entries.map(entry => ({
         tokenCode: entry.currency,
         value: entry.netBalance || 0,
-        color: 'grass' as const,
+        color: PROP_COLOR.debtOwed,
     }));
 
     return (
@@ -36,17 +37,17 @@ const OwedToYouCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, ent
                         <Skeleton loading={isLoading}>
                             <Avatar
                                 size="2"
-                                color="grass"
+                                color={PROP_COLOR.debtOwed}
                                 fallback={<TrendingUpIcon size={16} />}
                             />
                         </Skeleton>
 
-                        <Text color="grass" weight="medium" size="4">
+                        <Text color={PROP_COLOR.debtOwed} weight="medium" size="4">
                             <Skeleton loading={isLoading}>{t('summary.owedToYou')}</Skeleton>
                         </Text>
                     </Flex>
 
-                    <Text size="4" color="grass" weight="bold">
+                    <Text size="4" color={PROP_COLOR.debtOwed} weight="bold">
                         <Skeleton loading={isLoading}>
                             {isLoading ? (
                                 tSkeletons('debtAmount.amount')

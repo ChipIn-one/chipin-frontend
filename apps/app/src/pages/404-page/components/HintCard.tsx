@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Text } from '@radix-ui/themes';
 import type { ReactNode } from 'react';
 
@@ -16,7 +17,7 @@ const HintCard = ({ icon, title, description }: HintCardProps) => (
             <Text size="2" weight="bold">
                 {title}
             </Text>
-            <Text size="1" color="gray">
+            <Text size="1" color={PROP_COLOR.neutral}>
                 {description}
             </Text>
         </Flex>

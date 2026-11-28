@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Dialog, IconButton, Text, VisuallyHidden } from '@radix-ui/themes';
 import { ArrowLeftIcon, XIcon } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
@@ -60,7 +61,7 @@ const BaseModal = ({
                             <IconButton
                                 type="button"
                                 variant="ghost"
-                                color="gray"
+                                color={PROP_COLOR.neutral}
                                 aria-label={t('buttons.back')}
                                 disabled={isBackDisabled}
                                 onClick={onBack}
@@ -76,14 +77,14 @@ const BaseModal = ({
                             size="6"
                             mb="0"
                         >
-                            <Text color="gray">{title}</Text>
+                            <Text color={PROP_COLOR.neutral}>{title}</Text>
                         </Dialog.Title>
                     }
                     closeControl={
                         <Dialog.Close>
                             <IconButton
                                 variant="ghost"
-                                color="grass"
+                                color={PROP_COLOR.accent}
                                 aria-label={t('buttons.close')}
                                 disabled={isCloseDisabled}
                             >

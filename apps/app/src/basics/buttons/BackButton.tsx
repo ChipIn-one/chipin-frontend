@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { IconButton } from '@radix-ui/themes';
 import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +11,7 @@ const BackButton = () => {
     return (
         <IconButton
             variant="solid"
-            color="gray"
+            color={PROP_COLOR.neutral}
             size="2"
             aria-label={t('buttons.back')}
             onClick={() => void navigate(-1)}

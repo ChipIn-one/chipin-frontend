@@ -1,4 +1,5 @@
 import { type FocusEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
 import {
     ChevronDownIcon,
@@ -156,7 +157,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                             type="button"
                                             size="1"
                                             variant="ghost"
-                                            color="gray"
+                                            color={PROP_COLOR.neutral}
                                             aria-label={t('groups.clearSearch')}
                                             onMouseDown={event => event.preventDefault()}
                                             onClick={onClearSearch}
@@ -182,7 +183,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                 type="button"
                                 size="2"
                                 variant="soft"
-                                color="gray"
+                                color={PROP_COLOR.neutral}
                                 aria-label={searchButtonLabel}
                                 data-query-active={hasSearchQuery || undefined}
                                 onClick={() => setIsSearchOpen(true)}
@@ -216,7 +217,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                         ref={item.value === GROUP_DEBT_FILTERS.ALL ? allFilterButtonRef : undefined}
                         size="3"
                         variant="soft"
-                        color={activeFilter === item.value ? 'grass' : 'gray'}
+                        color={activeFilter === item.value ? PROP_COLOR.accent : PROP_COLOR.neutral}
                         aria-pressed={activeFilter === item.value}
                         onClick={() => setActiveFilter(item.value)}
                     >
@@ -249,7 +250,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
             {showSettledSection && (
                 <Flex direction="column" gap="3" mt="1">
                     <Separator size="4" />
-                    <Text size="1" color="gray" align="center">
+                    <Text size="1" color={PROP_COLOR.neutral} align="center">
                         {t('groups.settledAutoHide')}
                     </Text>
                     <Button
@@ -257,7 +258,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                         type="button"
                         size="3"
                         variant="soft"
-                        color="gray"
+                        color={PROP_COLOR.neutral}
                         aria-expanded={isSettledVisible}
                         onClick={() => setIsSettledVisible(isVisible => !isVisible)}
                     >

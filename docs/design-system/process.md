@@ -13,7 +13,7 @@ changes, and the plan for when a designer joins. Read [README.md](README.md) fir
    presentational components without a store; `apps/app/src/components` holds compositions that
    may read stores, hooks and entities (layer rules: [components.md](components.md#basics-and-components)).
    Styles go to a CSS Module (`Component.module.css`) with `var(--cp-*)` only; Radix `color`
-   props take `PROP_COLOR` (not linted yet, [tokens.md](tokens.md)). A new styled-components file is a lint error.
+   props take `PROP_COLOR` (lint `[prop-color-roles]`, [tokens.md](tokens.md)). A new styled-components file is a lint error.
 4. **Card and registry row in the same PR.** A new ChipIn-specific component gets a card in
    [`components/`](components/) (purpose, when to use, props, states, accessibility and i18n,
    example) and a row in [components.md](components.md). A changed component updates its card.

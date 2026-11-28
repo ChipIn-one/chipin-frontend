@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { useTranslation } from 'react-i18next';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
@@ -21,7 +22,7 @@ const RemoveLedgerEntryAlertDialog = ({ children, isActionLoading, onAction }: P
             title={t('subeventsDeleteDialogTitle')}
             description={t('subeventsDeleteDialogDescription')}
             actionLabel={t('subeventsDeleteConfirmAction')}
-            actionColor="red"
+            actionColor={PROP_COLOR.danger}
             isActionLoading={isActionLoading}
             onAction={onAction}
         />

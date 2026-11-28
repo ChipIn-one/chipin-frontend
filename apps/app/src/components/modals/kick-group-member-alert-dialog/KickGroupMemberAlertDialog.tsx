@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Callout } from '@radix-ui/themes';
 import { TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,11 +44,11 @@ const KickGroupMemberAlertDialog = ({ children, groupId, member }: Props) => {
             title={t('group:kickModal.title')}
             description={t('group:kickModal.confirm', { name: member.displayName })}
             actionLabel={t('common:buttons.kickMember')}
-            actionColor="orange"
+            actionColor={PROP_COLOR.danger}
             isActionLoading={isKickingMember}
             onAction={onKickGroupMember}
             content={
-                <Callout.Root color="amber" size="2">
+                <Callout.Root color={PROP_COLOR.warning} size="2">
                     <Callout.Icon>
                         <TriangleAlertIcon size={18} />
                     </Callout.Icon>

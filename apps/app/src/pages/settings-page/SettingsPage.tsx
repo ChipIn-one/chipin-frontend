@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Callout, Container, Flex, Grid } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -29,7 +30,7 @@ const SettingsPage = () => {
             <SettingsPageHeader isLoading={isLoading} />
             <Flex direction="column" gap="6">
                 {isSettingsBlocked && (
-                    <Callout.Root color="gray" size="1" role="status">
+                    <Callout.Root color={PROP_COLOR.neutral} size="1" role="status">
                         <Callout.Text>{t('outbox.settingsOnlineRequired')}</Callout.Text>
                     </Callout.Root>
                 )}

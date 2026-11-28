@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -79,7 +80,7 @@ const CategorySearchSelect = ({
         <Button
             type="button"
             variant="surface"
-            color="gray"
+            color={PROP_COLOR.neutral}
             size="3"
             radius="large"
             loading={isLoading}

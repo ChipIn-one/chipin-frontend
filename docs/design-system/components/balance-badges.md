@@ -23,7 +23,7 @@ Source: [`basics/BalanceBadges.tsx`](../../../apps/app/src/basics/BalanceBadges.
 | `items`         | `BadgeItem[]`         | required                    | Badges, keyed by `tokenCode`           |
 | `isLoading`     | `boolean`             | `false`                     | Render `BalanceBadgesSkeleton` instead |
 | `maxVisible`    | `number`              | `3` (`DEFAULT_MAX_VISIBLE`) | Badges shown before the "+N" button    |
-| `overflowColor` | Radix `Badge` `color` | `'gray'`                    | Color of the "+N" / "Hide" button      |
+| `overflowColor` | Radix `Badge` `color` | `PROP_COLOR.neutral`        | Color of the "+N" / "Hide" button      |
 
 `BadgeItem`: `{ tokenCode: string; value: number; color: Radix Badge color }`. Each badge is a soft
 size-3 `Badge` with `Amount type="summary" precision={0}` (absolute value, K/M/B abbreviations).

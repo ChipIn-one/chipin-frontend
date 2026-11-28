@@ -86,7 +86,6 @@ export const RADIX_PALETTES = [
     'red',
     'sky',
     'teal',
-    'tomato',
     'violet',
     'yellow',
 ] as const;
@@ -118,11 +117,11 @@ export const CATEGORY_PALETTE = [
 ] as const;
 
 /**
- * Legacy: palettes still used directly in apps/app/src or apps/site (Radix `color` props,
- * `var(--<palette>-N)`) but by no role or category. They go when their usages move to roles
- * (#1007); `jade` also stays for `--cp-avatar-placeholder-from`.
+ * Legacy: palettes still used directly in apps/site (`var(--<palette>-N)`) but by no role or
+ * category; apps/app/src takes `PROP_COLOR` roles since #1007 (lint `prop-color-roles`). They go
+ * when the site moves to roles; `jade` also stays for `--cp-avatar-placeholder-from`.
  */
-export const LEGACY_PALETTES = ['cyan', 'jade', 'tomato'] as const;
+export const LEGACY_PALETTES = ['cyan', 'jade'] as const;
 
 /**
  * The only brand hex outside tokens.css (D23): the PWA manifest, `<meta name="theme-color">`

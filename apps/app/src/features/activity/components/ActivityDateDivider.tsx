@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -22,7 +23,7 @@ const ActivityDateDivider = ({ createdAt, summary }: Props) => {
 
     return (
         <Flex align="center" gap="3" py="2">
-            <Text size="1" color="gray" weight="medium" wrap="nowrap">
+            <Text size="1" color={PROP_COLOR.neutral} weight="medium" wrap="nowrap">
                 {label}
             </Text>
 

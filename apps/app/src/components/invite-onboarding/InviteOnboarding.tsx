@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +42,7 @@ const InviteOnboarding = ({ invite }: Props) => {
                         <Heading as="h3" size="5" align="center">
                             {t('page.expenses.inviteTitle')}
                         </Heading>
-                        <Text size="2" color="gray" align="center">
+                        <Text size="2" color={PROP_COLOR.neutral} align="center">
                             {t('page.expenses.inviteDescription')}
                         </Text>
                     </Flex>
@@ -50,7 +51,7 @@ const InviteOnboarding = ({ invite }: Props) => {
                         className={styles.inviteButton}
                         type="button"
                         size="3"
-                        color="green"
+                        color={PROP_COLOR.accent}
                         radius="full"
                         onClick={() => void onInviteFriends()}
                     >
@@ -61,7 +62,7 @@ const InviteOnboarding = ({ invite }: Props) => {
             </Card>
 
             <Flex className={styles.shareDivider} width="100%" align="center" gap="3">
-                <Text size="1" color="gray">
+                <Text size="1" color={PROP_COLOR.neutral}>
                     {t('page.expenses.shareVia')}
                 </Text>
             </Flex>

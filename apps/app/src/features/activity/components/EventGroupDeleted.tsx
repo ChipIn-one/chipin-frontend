@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { UserRoundXIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +27,7 @@ const EventGroupDeleted = ({ event }: Props) => {
                         <Avatar
                             size="4"
                             variant="soft"
-                            color="red"
+                            color={PROP_COLOR.danger}
                             fallback={<UserRoundXIcon size={20} />}
                         />
                     </EventIcon>
@@ -37,7 +38,7 @@ const EventGroupDeleted = ({ event }: Props) => {
                             <Text size="3" as="span" weight="medium">
                                 {event.actorSnapshot.displayName}
                             </Text>{' '}
-                            <Text size="3" as="span" color="gray">
+                            <Text size="3" as="span" color={PROP_COLOR.neutral}>
                                 {t('event.groupDeletedMiddleText')}
                             </Text>{' '}
                             <Text size="3" as="span" weight="medium">

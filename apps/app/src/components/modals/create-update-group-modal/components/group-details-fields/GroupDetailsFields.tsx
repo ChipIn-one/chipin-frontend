@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Flex } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -65,7 +66,7 @@ const GroupDetailsFields = ({
                         type="button"
                         size="2"
                         variant="outline"
-                        color="gray"
+                        color={PROP_COLOR.neutral}
                         disabled={isSaving}
                         aria-expanded={isDescriptionExpanded}
                         aria-controls={DESCRIPTION_FIELD_ID}

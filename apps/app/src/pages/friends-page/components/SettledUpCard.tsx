@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { CircleCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +20,7 @@ const SettledUpCard = ({ friends }: Props) => {
         <Card>
             <Flex align="center" gap="2" mb="3">
                 <CircleCheckIcon size={24} />
-                <Text weight="bold" as="span" size="3" color="gray">
+                <Text weight="bold" as="span" size="3" color={PROP_COLOR.neutral}>
                     {t('balances.settledUp')}
                 </Text>
             </Flex>

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Container, Flex, Heading, Separator, Text } from '@radix-ui/themes';
 import { ChartPieIcon, HomeIcon, LayoutListIcon, SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -23,12 +24,12 @@ const Page404 = () => {
                 <Icon404 />
                 <Flex direction="column" align="center" gap="2">
                     <Flex align="center" gap="2">
-                        <Heading size="8" color="green">
+                        <Heading size="8" color={PROP_COLOR.accent}>
                             {t('page404.code')}
                         </Heading>
                         <Heading size={{ initial: '6', sm: '8' }}>{t('page404.title')}</Heading>
                     </Flex>
-                    <Text size="3" color="gray" align="center">
+                    <Text size="3" color={PROP_COLOR.neutral} align="center">
                         {t('page404.subtitle')}
                     </Text>
                 </Flex>
@@ -36,7 +37,7 @@ const Page404 = () => {
                 <Separator size="4" />
 
                 <Flex direction="column" align="center" gap="4">
-                    <Text size="4" weight="bold" color="green">
+                    <Text size="4" weight="bold" color={PROP_COLOR.accent}>
                         {t('page404.whatYouCanDo')}
                     </Text>
                     <Flex direction={{ initial: 'column', sm: 'row' }} align="start" gap="4">

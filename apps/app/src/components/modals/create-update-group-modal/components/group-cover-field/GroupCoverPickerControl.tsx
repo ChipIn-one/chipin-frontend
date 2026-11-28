@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { IconButton, Tooltip } from '@radix-ui/themes';
 import { ImageUpIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
@@ -22,7 +23,7 @@ const GroupCoverPickerControl = ({ isOverlay = false, isSaving, onCoverChange }:
     const isDisabled = isBlocked || isSaving;
 
     const picker = (
-        <IconButton asChild variant="surface" color="gray" size="2">
+        <IconButton asChild variant="surface" color={PROP_COLOR.neutral} size="2">
             <label
                 className={styles.root}
                 data-unavailable={isDisabled}

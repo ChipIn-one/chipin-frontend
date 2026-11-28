@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge, Button, Flex, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -127,7 +128,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                                     type="button"
                                     size="4"
                                     variant="soft"
-                                    color="gray"
+                                    color={PROP_COLOR.neutral}
                                     onClick={navigation.close}
                                 >
                                     {t('common:buttons.cancel')}
@@ -161,7 +162,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                     />
                 ) : (
                     <OverlayBody>
-                        <Text color="gray">{t('group:page.balances.settled')}</Text>
+                        <Text color={PROP_COLOR.neutral}>{t('group:page.balances.settled')}</Text>
                     </OverlayBody>
                 ),
         },
@@ -173,7 +174,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
         // The wrapper takes the row's stretch on mobile, so the badge keeps its own width.
         return (
             <Flex flexShrink="0">
-                <Badge size="1" color="gray" variant="soft">
+                <Badge size="1" color={PROP_COLOR.neutral} variant="soft">
                     {t('group:page.balances.settledBadge')}
                 </Badge>
             </Flex>
@@ -191,7 +192,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                 <OnlineOnly action={ONLINE_ONLY_ACTIONS.settleUp}>
                     <Button
                         size={memberId ? '1' : '2'}
-                        color="green"
+                        color={PROP_COLOR.success}
                         variant="soft"
                         disabled={debts.length === 0}
                     >

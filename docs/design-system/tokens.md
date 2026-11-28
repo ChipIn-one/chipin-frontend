@@ -98,7 +98,15 @@ are the Radix ones (xs 520, sm 768, md 1024, lg 1280, xl 1640).
 Radix `color` props do not accept CSS variables. `PROP_COLOR` in `theme.ts` gives the Radix color
 of each role, matching the scale of the `--cp-*` role of the same meaning: `accent`, `neutral`,
 `debtOwed`, `debtOwing`, `debtSettled`, `success`, `danger`, `warning`, `info`, `solo` (violet).
-Spec 05 §3 says `color` goes only through `PROP_COLOR`; no lint checks it yet.
+Spec 05 §3 says `color` goes only through `PROP_COLOR`: in `apps/app/src` the ESLint entry
+`[prop-color-roles]` bans a Radix palette name as a color value: a `color`/`<x>Color` JSX
+attribute (`color="red"`, `color={on ? 'green' : 'gray'}`), an object field (`color: 'red'`), a
+default (`color = 'mint'`), a `<x>Color` variable or assignment, a TS type (`color: 'green' |
+'red'`, `type ShareColor = 'jade'`), as a string or a one-part template literal. Only the category
+palette, `constants/category-ui.ts`, may hold palette names (its ignore glob); its consumers pass
+`color={item.color}`. Not linted (review): a palette name passed through a helper argument, returned by a `function`
+declaration, held in a map not named `*Color` or under a string key, passed to `useState` or a
+generic type argument, or in a type alias not named `*Color`.
 
 ## Shipped scales
 
@@ -109,8 +117,9 @@ Spec 05 §3 says `color` goes only through `PROP_COLOR`; no lint checks it yet.
 - `CATEGORY_PALETTE`: the expense category colors of `constants/category-ui.ts` (gray, amber,
   blue, brown, crimson, gold, green, indigo, mint, orange, pink, purple, red, sky, teal, violet,
   yellow). `gray` also backs Radix `color="gray"`.
-- `LEGACY_PALETTES`: cyan, jade, tomato, still used directly in `apps/app/src` or `apps/site`;
-  they go as those usages move to roles (#1007). jade also feeds `--cp-avatar-placeholder-from`.
+- `LEGACY_PALETTES`: cyan, jade, still used directly in `apps/site`; they go as the site moves
+  to roles. jade also feeds `--cp-avatar-placeholder-from`. tomato went in #1007 (its "you owe"
+  usages are `PROP_COLOR.debtOwing`).
 
 No scale was pruned in #1005: every candidate (brown, crimson, gold, purple, sky, yellow) is a
 category color.
@@ -139,16 +148,17 @@ category color.
 Each rule names its check. Existing ESLint violations sit in `eslint-suppressions.json` and only
 shrink.
 
-| Rule                                                                                    | Check                                                                                       |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Raw hex, `rgb()`/`hsl()` and friends, named colors in CSS                               | stylelint `color-no-hex`, `color-named`, `function-disallowed-list` (`stylelint.config.js`) |
-| Raw hex, `rgb(a)()`, `hsl(a)()` or `var(--<palette>-N)` in TS/TSX and Astro frontmatter | ESLint `no-raw-colors` (`config/eslint/project.js`)                                         |
-| Any `var(--x)` in CSS other than `--cp-*` or local `--_*`                               | stylelint `declaration-property-value-disallowed-list`                                      |
-| A `--cp-*` name that is not in `tokens.css` (typos)                                     | stylelint `csstools/value-no-unknown-custom-properties`                                     |
-| `.rt-*` selectors outside `apps/app/src/styles/radixStylesOverwrite.css`                | stylelint `selector-disallowed-list`                                                        |
-| `style={{}}` with ordinary properties; only custom properties (`{ '--x': v }`)          | ESLint `inline-style` (`config/eslint/project.js`)                                          |
-| New styled-components files                                                             | ESLint `no-restricted-imports` + `scripts/check-styled-allowlist.mjs`                       |
-| `@radix-ui/colors` imports                                                              | ESLint `no-restricted-imports` `[radix-colors]` (`config/eslint/project.js`)                |
+| Rule                                                                                          | Check                                                                                       |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Raw hex, `rgb()`/`hsl()` and friends, named colors in CSS                                     | stylelint `color-no-hex`, `color-named`, `function-disallowed-list` (`stylelint.config.js`) |
+| Raw hex, `rgb(a)()`, `hsl(a)()` or `var(--<palette>-N)` in TS/TSX and Astro frontmatter       | ESLint `no-raw-colors` (`config/eslint/project.js`)                                         |
+| A Radix palette name as a color value (JSX, field, default, variable, type) in `apps/app/src` | ESLint `prop-color-roles` (`config/eslint/project.js`)                                      |
+| Any `var(--x)` in CSS other than `--cp-*` or local `--_*`                                     | stylelint `declaration-property-value-disallowed-list`                                      |
+| A `--cp-*` name that is not in `tokens.css` (typos)                                           | stylelint `csstools/value-no-unknown-custom-properties`                                     |
+| `.rt-*` selectors outside `apps/app/src/styles/radixStylesOverwrite.css`                      | stylelint `selector-disallowed-list`                                                        |
+| `style={{}}` with ordinary properties; only custom properties (`{ '--x': v }`)                | ESLint `inline-style` (`config/eslint/project.js`)                                          |
+| New styled-components files                                                                   | ESLint `no-restricted-imports` + `scripts/check-styled-allowlist.mjs`                       |
+| `@radix-ui/colors` imports                                                                    | ESLint `no-restricted-imports` `[radix-colors]` (`config/eslint/project.js`)                |
 
 Exceptions, exactly as configured:
 

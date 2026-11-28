@@ -28,7 +28,7 @@ Source: [`basics/UserAvatar.tsx`](../../../apps/app/src/basics/UserAvatar.tsx). 
 | `size`       | Radix `Avatar` `size`                               | `'3'`                   | Avatar size                           |
 | `src`        | `string`                                            | `user?.picture \|\| ''` | Image URL                             |
 | `variant`    | Radix `Avatar` `variant`                            | `'soft'`                | Fallback style                        |
-| `color`      | Radix `Avatar` `color`                              | `'mint'`                | Fallback color                        |
+| `color`      | Radix `Avatar` `color`                              | `PROP_COLOR.accent`     | Fallback color                        |
 | `radius`     | Radix `Avatar` `radius`                             | `'full'`                | Shape                                 |
 
 Fallback: `user.displayName.charAt(0)`, or a lucide `UserIcon` when there is no user or name.

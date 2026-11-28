@@ -24,7 +24,7 @@ const itemLabel = ({ label, hint }: DropdownMenuItem): ReactNode =>
     ) : (
         <Flex direction="column" py="1">
             <span>{label}</span>
-            <Text size="1" color="gray">
+            <Text size="1" color={PROP_COLOR.neutral}>
                 {hint}
             </Text>
         </Flex>
@@ -77,7 +77,7 @@ const Dropdown = ({
             <DropdownMenu.Item
                 key={item.value}
                 disabled={item.isDisabled}
-                color={isActive ? PROP_COLOR.success : item.color}
+                color={isActive ? PROP_COLOR.accent : item.color}
                 className={item.hint === undefined ? undefined : styles.withHint}
                 onSelect={() => {
                     item.onSelect?.();
@@ -97,7 +97,7 @@ const Dropdown = ({
             key={item.value}
             value={item.value}
             disabled={item.isDisabled}
-            color={selectedValue === item.value ? PROP_COLOR.success : item.color}
+            color={selectedValue === item.value ? PROP_COLOR.accent : item.color}
             className={item.hint === undefined ? undefined : styles.withHint}
             onSelect={item.onSelect}
         >

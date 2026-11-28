@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
@@ -44,24 +45,29 @@ vi.mock('constants/category', () => ({
     EXPENSE_CATEGORY_KEYS: ['food'],
 }));
 
-vi.mock('constants/category-ui', () => ({
-    EXPENSE_CATEGORY_UI: {
-        food: {
-            icon: ({ size }: { size?: number }) => (
-                <span data-testid="category-icon" data-size={size} />
-            ),
-            color: 'orange',
-            subcategories: {
-                groceries: {
-                    icon: ({ size }: { size?: number }) => (
-                        <span data-testid="subcategory-icon" data-size={size} />
-                    ),
-                    color: 'green',
+// Mock colors are roles: palette names live only in constants/category-ui.ts.
+vi.mock('constants/category-ui', async () => {
+    const { PROP_COLOR } = await import('@chipin/tokens/theme');
+
+    return {
+        EXPENSE_CATEGORY_UI: {
+            food: {
+                icon: ({ size }: { size?: number }) => (
+                    <span data-testid="category-icon" data-size={size} />
+                ),
+                color: PROP_COLOR.warning,
+                subcategories: {
+                    groceries: {
+                        icon: ({ size }: { size?: number }) => (
+                            <span data-testid="subcategory-icon" data-size={size} />
+                        ),
+                        color: PROP_COLOR.success,
+                    },
                 },
             },
         },
-    },
-}));
+    };
+});
 
 vi.mock('lucide-react', () => ({
     BanknoteArrowDownIcon: () => <span data-testid="generic-down-icon" />,
@@ -105,7 +111,7 @@ test('uses the configured subcategory icon, color, and accessible name', () => {
     });
 
     expect(screen.getByTestId('subcategory-icon').dataset.size).toBe('24');
-    expect(screen.getByTestId('expense-icon').dataset.color).toBe('green');
+    expect(screen.getByTestId('expense-icon').dataset.color).toBe(PROP_COLOR.success);
     expect(screen.getByRole('img', { name: 'Groceries' })).toBeTruthy();
 });
 
@@ -116,7 +122,7 @@ test('falls back to the configured category when the subcategory is not configur
     });
 
     expect(screen.getByTestId('category-icon').dataset.size).toBe('24');
-    expect(screen.getByTestId('expense-icon').dataset.color).toBe('orange');
+    expect(screen.getByTestId('expense-icon').dataset.color).toBe(PROP_COLOR.warning);
     expect(screen.getByRole('img', { name: 'Food' })).toBeTruthy();
 });
 
@@ -124,7 +130,7 @@ test('keeps the generic expense fallback when category metadata is absent', () =
     renderExpenseIcon();
 
     expect(screen.getByTestId('generic-down-icon')).toBeTruthy();
-    expect(screen.getByTestId('expense-icon').dataset.color).toBe('red');
+    expect(screen.getByTestId('expense-icon').dataset.color).toBe(PROP_COLOR.debtOwing);
 });
 
 test('falls back safely for unknown category and subcategory values', () => {
@@ -135,7 +141,7 @@ test('falls back safely for unknown category and subcategory values', () => {
     });
 
     expect(screen.getByTestId('generic-up-icon')).toBeTruthy();
-    expect(screen.getByTestId('expense-icon').dataset.color).toBe('green');
+    expect(screen.getByTestId('expense-icon').dataset.color).toBe(PROP_COLOR.debtOwed);
 });
 
 test('uses category metadata for updated expenses', () => {
@@ -146,7 +152,7 @@ test('uses category metadata for updated expenses', () => {
     });
 
     expect(screen.getByTestId('subcategory-icon')).toBeTruthy();
-    expect(screen.getByTestId('expense-icon').dataset.color).toBe('green');
+    expect(screen.getByTestId('expense-icon').dataset.color).toBe(PROP_COLOR.success);
     expect(screen.getByRole('img', { name: 'Groceries' })).toBeTruthy();
 });
 
@@ -160,6 +166,6 @@ test('keeps the red reversed expense icon even when category metadata is present
     expect(screen.getByTestId('reversed-icon')).toBeTruthy();
     expect(screen.queryByTestId('subcategory-icon')).toBeNull();
     expect(screen.queryByTestId('category-icon')).toBeNull();
-    expect(screen.getByTestId('expense-icon').dataset.color).toBe('red');
+    expect(screen.getByTestId('expense-icon').dataset.color).toBe(PROP_COLOR.danger);
     expect(screen.queryByRole('img', { name: 'Groceries' })).toBeNull();
 });

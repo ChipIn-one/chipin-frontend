@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Card, Flex, Text } from '@radix-ui/themes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -52,7 +53,7 @@ const CancelOperation = ({ item }: { item: Item }) => {
             isOpened={isOpened}
             setIsOpened={setIsOpened}
             triggerElement={
-                <Button type="button" size="1" variant="soft" color="red">
+                <Button type="button" size="1" variant="soft" color={PROP_COLOR.danger}>
                     {t('outbox.cancel')}
                 </Button>
             }
@@ -63,7 +64,7 @@ const CancelOperation = ({ item }: { item: Item }) => {
                     : t('outbox.cancelDescription')
             }
             actionLabel={t('outbox.cancel')}
-            actionColor="red"
+            actionColor={PROP_COLOR.danger}
             onAction={onAction}
         />
     );
@@ -130,7 +131,7 @@ export const OutboxItemRow = ({ item }: { item: Item }) => {
                         <Text size="2" weight="medium" truncate>
                             {description ?? t(`outbox.kind.${item.kind}`)}
                         </Text>
-                        <Text size="1" color="gray">
+                        <Text size="1" color={PROP_COLOR.neutral}>
                             {description === null
                                 ? state
                                 : `${t(`outbox.kind.${item.kind}`)} · ${state}`}
@@ -143,7 +144,7 @@ export const OutboxItemRow = ({ item }: { item: Item }) => {
                     )}
                 </Flex>
                 {item.share && (
-                    <Text size="1" color="gray">
+                    <Text size="1" color={PROP_COLOR.neutral}>
                         {t('outbox.yourShare')} <MoneyText money={item.share} />
                     </Text>
                 )}
@@ -153,7 +154,7 @@ export const OutboxItemRow = ({ item }: { item: Item }) => {
                 {(failed?.isRetrying || item.canCancel || failed?.canRetry) && (
                     <Flex gap="2" justify="end" wrap="wrap">
                         {failed?.isRetrying ? (
-                            <Text size="1" color="gray">
+                            <Text size="1" color={PROP_COLOR.neutral}>
                                 {t('outbox.retrying')}
                             </Text>
                         ) : (

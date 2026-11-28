@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { MouseEvent } from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -136,13 +137,19 @@ test('unsetStyles applies the unstyled root class to the anchor', () => {
 });
 
 test('look props style the anchor through Radix and never reach it as DOM attributes', () => {
-    renderNavButton({ variant: 'ghost', color: 'green', size: '3', radius: 'full', mt: '2' });
+    renderNavButton({
+        variant: 'ghost',
+        color: PROP_COLOR.accent,
+        size: '3',
+        radius: 'full',
+        mt: '2',
+    });
     const link = screen.getByRole('link');
 
     expect(link.classList.contains('rt-variant-ghost')).toBe(true);
     expect(link.classList.contains('rt-r-size-3')).toBe(true);
     expect(link.classList.contains('rt-r-mt-2')).toBe(true);
-    expect(link.getAttribute('data-accent-color')).toBe('green');
+    expect(link.getAttribute('data-accent-color')).toBe(PROP_COLOR.accent);
     expect(link.getAttribute('data-radius')).toBe('full');
     for (const attribute of ['color', 'size', 'variant', 'radius', 'mt']) {
         expect(link.hasAttribute(attribute)).toBe(false);

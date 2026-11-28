@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Callout, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -53,7 +54,7 @@ export const ConflictDraftNotice = () => {
     };
 
     return (
-        <Callout.Root color="amber" size="1" role="status">
+        <Callout.Root color={PROP_COLOR.warning} size="1" role="status">
             <Flex direction="column" gap="2">
                 <Callout.Text>{t('outbox.conflictDraftMarker')}</Callout.Text>
                 <Flex justify="end">
@@ -61,7 +62,7 @@ export const ConflictDraftNotice = () => {
                         type="button"
                         size="1"
                         variant="soft"
-                        color="red"
+                        color={PROP_COLOR.danger}
                         loading={isDiscarding}
                         disabled={isDiscarding}
                         onClick={onDiscard}

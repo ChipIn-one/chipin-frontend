@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { LogOutIcon, ShieldIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -51,7 +52,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         <Avatar
                             variant="soft"
                             size="3"
-                            color="mint"
+                            color={PROP_COLOR.neutral}
                             fallback={<ShieldIcon size={20} />}
                         />
                     </Skeleton>
@@ -59,7 +60,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('security.title')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>{t('security.description')}</Skeleton>
                         </Text>
                     </Flex>
@@ -81,7 +82,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                                         <Text weight="medium" as="p">
                                             {t('security.logoutOtherDevicesTitle')}
                                         </Text>
-                                        <Text size="2" color="gray" as="p">
+                                        <Text size="2" color={PROP_COLOR.neutral} as="p">
                                             {isLogoutOtherDevicesBlocked
                                                 ? t('common:outbox.onlineRequired')
                                                 : t(
@@ -104,14 +105,14 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('security.signOutTitle')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>
                                 {t('security.signOutDescription')}
                             </Skeleton>
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
-                        <Button onClick={requestSignOut} variant="soft" color="gray">
+                        <Button onClick={requestSignOut} variant="soft" color={PROP_COLOR.neutral}>
                             <LogOutIcon size={16} />
                             {t('common:buttons.signOut')}
                         </Button>

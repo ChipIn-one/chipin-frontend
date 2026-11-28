@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -25,7 +26,7 @@ test('shows a zero currency total as settled up instead of owed', () => {
 
     expect(screen.getAllByText('balances.settledUp').length).toBeGreaterThan(0);
     expect(screen.queryByText('balances.youAreOwed')).toBeNull();
-    expect(screen.getByText('USD').getAttribute('data-accent-color')).toBe('gray');
+    expect(screen.getByText('USD').getAttribute('data-accent-color')).toBe(PROP_COLOR.debtSettled);
 });
 
 test('keeps positive and negative currency totals directional', () => {

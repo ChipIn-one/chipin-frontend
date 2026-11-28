@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Callout, Flex, Heading, Text } from '@radix-ui/themes';
 import * as Sentry from '@sentry/react';
 import { onlineManager } from '@tanstack/react-query';
@@ -81,7 +82,7 @@ const ChunkErrorCard = () => {
     if (!isOnline) {
         return (
             <Flex direction="column" align="center" gap="3" py="9" role="alert">
-                <Text color="gray" align="center">
+                <Text color={PROP_COLOR.neutral} align="center">
                     {t('errorBoundary.offlineChunk')}
                 </Text>
                 <Button
@@ -100,7 +101,7 @@ const ChunkErrorCard = () => {
     return (
         <Flex direction="column" align="center" gap="3" py="9" role="alert">
             <Heading size="5">{t('errorBoundary.newVersionTitle')}</Heading>
-            <Text color="gray" align="center">
+            <Text color={PROP_COLOR.neutral} align="center">
                 {t('errorBoundary.newVersionDescription')}
             </Text>
             <Button
@@ -132,7 +133,7 @@ const RecoveryCard = ({ error, routeId }: { error: unknown; routeId: string }) =
 
     return (
         <Flex direction="column" align="center" gap="4" py="9">
-            <Callout.Root color="red" role="alert">
+            <Callout.Root color={PROP_COLOR.danger} role="alert">
                 <Callout.Icon>
                     <TriangleAlertIcon size={18} />
                 </Callout.Icon>

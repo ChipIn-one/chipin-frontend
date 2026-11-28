@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, IconButton, TextField } from '@radix-ui/themes';
 import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
@@ -38,7 +39,7 @@ const ExpenseInputActions = ({
             <IconButton
                 size="3"
                 variant="soft"
-                color="gray"
+                color={PROP_COLOR.neutral}
                 disabled={isDisabled}
                 onClick={() => onStep(-1)}
                 aria-label={decrementLabel}
@@ -57,7 +58,7 @@ const ExpenseInputActions = ({
             <IconButton
                 size="3"
                 variant="soft"
-                color="gray"
+                color={PROP_COLOR.neutral}
                 disabled={isDisabled}
                 onClick={() => onStep(1)}
                 aria-label={incrementLabel}

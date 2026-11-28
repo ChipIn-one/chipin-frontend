@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +11,7 @@ const ActivityDateDividerSkeleton = ({ isShowSummary }: Props) => {
 
     return (
         <Flex align="center" gap="3" py="2" data-activity-date-divider-skeleton>
-            <Text size="1" color="gray" weight="medium" wrap="nowrap">
+            <Text size="1" color={PROP_COLOR.neutral} weight="medium" wrap="nowrap">
                 <Skeleton>{t('activityFeed.dateDivider')}</Skeleton>
             </Text>
 
@@ -21,7 +22,7 @@ const ActivityDateDividerSkeleton = ({ isShowSummary }: Props) => {
             {isShowSummary ? (
                 <Text
                     size="1"
-                    color="gray"
+                    color={PROP_COLOR.neutral}
                     weight="medium"
                     wrap="nowrap"
                     data-activity-date-divider-summary-skeleton

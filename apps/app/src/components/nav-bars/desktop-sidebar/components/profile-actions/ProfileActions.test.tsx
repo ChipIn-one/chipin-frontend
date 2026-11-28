@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -58,7 +59,7 @@ test('expands and collapses the profile actions', () => {
     });
 
     expect(profileButton.getAttribute('aria-expanded')).toBe('false');
-    expect(profileButton.getAttribute('data-accent-color')).toBe('green');
+    expect(profileButton.getAttribute('data-accent-color')).toBe(PROP_COLOR.accent);
     expect(profileButton.querySelector('.lucide-chevron-down')).toBeTruthy();
     expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-4')).toBe(true);
     expect(screen.queryByRole('button', { name: 'Sign Out' })).toBeNull();
@@ -84,7 +85,7 @@ test('uses the Solo mode color', () => {
         screen
             .getByRole('button', { name: /Alex.*user@example\.com/i })
             .getAttribute('data-accent-color'),
-    ).toBe('violet');
+    ).toBe(PROP_COLOR.solo);
 });
 
 test('signs out directly from the expanded profile actions', () => {

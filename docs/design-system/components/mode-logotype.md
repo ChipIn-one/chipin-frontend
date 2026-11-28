@@ -19,10 +19,10 @@ Source: [`components/mode-logotype/ModeLogotype.tsx`](../../../apps/app/src/comp
 
 | Prop                 | Type      | Default  | Description                          |
 | -------------------- | --------- | -------- | ------------------------------------ |
-| `isSoloMode`         | `boolean` | required | Solo (violet) or group (green) mode  |
+| `isSoloMode`         | `boolean` | required | Solo (violet) or group (grass) mode  |
 | `isModeBadgeVisible` | `boolean` | `true`   | Show the mode badge next to the name |
 
-Colors: the name and badge use Radix `color` `violet` (solo) or `green` (group). In solo mode the
+Colors: the name and badge use `PROP_COLOR.solo` (violet) or `PROP_COLOR.accent` (grass, group). In solo mode the
 logo SVG gets `--cp-logo-mode-primary` and `--cp-logo-mode-secondary` through `data-mode="solo"`
 in `ModeLogotype.module.css`; in group mode it keeps its built-in brand colors.
 
