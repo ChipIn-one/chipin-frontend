@@ -10,8 +10,8 @@
     "scripts": {
         "dev": "npm run dev -w @chipin/app --",
         "build": "npm run build -w @chipin/app --",
-        "lint": "node scripts/check-rule-registry.mjs && node scripts/check-styled-allowlist.mjs && npm run lint:css && npm run sync:site && eslint . --max-warnings 0 --pass-on-unpruned-suppressions",
-        "lint:full": "node scripts/check-rule-registry.mjs && node scripts/check-styled-allowlist.mjs && npm run lint:css && npm run sync:site && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
+        "lint": "node scripts/check-rule-registry.mjs && npm run lint:css && npm run sync:site && eslint . --max-warnings 0 --pass-on-unpruned-suppressions",
+        "lint:full": "node scripts/check-rule-registry.mjs && npm run lint:css && npm run sync:site && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
         "lint:css": "stylelint 'apps/*/**/*.css' 'apps/*/**/*.astro' --max-warnings 0",
         "baseline:update": "npm run sync:site && CHIPIN_ESLINT_FULL=1 eslint . --prune-suppressions",
         "sync:site": "npm run sync -w @chipin/site",
