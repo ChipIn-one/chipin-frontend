@@ -24,7 +24,7 @@ const itemLabel = ({ label, hint }: DropdownMenuItem): ReactNode =>
     ) : (
         <Flex direction="column" py="1">
             <span>{label}</span>
-            <Text size="1" color="gray">
+            <Text size="1" color={PROP_COLOR.neutral}>
                 {hint}
             </Text>
         </Flex>

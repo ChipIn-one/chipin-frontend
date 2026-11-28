@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Badge, Button, Flex, Heading, Text } from '@radix-ui/themes';
 import { Clock3Icon, CrownIcon, SparklesIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -64,7 +65,12 @@ const EarlySupporterPromoModal = () => {
     };
 
     const thankYouAction = (
-        <Button size="3" color="amber" highContrast onClick={() => onOpenChange(false)}>
+        <Button
+            size="3"
+            color={PROP_COLOR.warning}
+            highContrast
+            onClick={() => onOpenChange(false)}
+        >
             {t('promo.button')}
         </Button>
     );
@@ -81,24 +87,24 @@ const EarlySupporterPromoModal = () => {
                     py={{ initial: '2', sm: '0' }}
                 >
                     <Flex align="center" justify="center" gap="3">
-                        <Text color="amber">
+                        <Text color={PROP_COLOR.warning}>
                             <SparklesIcon size={20} />
                         </Text>
                         <Avatar
                             size="8"
-                            color="amber"
+                            color={PROP_COLOR.warning}
                             variant="soft"
                             radius="full"
                             fallback={<CrownIcon size={36} />}
                         />
-                        <Text color="amber">
+                        <Text color={PROP_COLOR.warning}>
                             <SparklesIcon size={22} />
                         </Text>
                     </Flex>
 
                     <Flex direction="column" align="center" gap="2">
                         <Text
-                            color="amber"
+                            color={PROP_COLOR.warning}
                             size={{ initial: '2', sm: '3' }}
                             weight="bold"
                             align="center"
@@ -116,15 +122,23 @@ const EarlySupporterPromoModal = () => {
                     </Flex>
 
                     <Flex direction="column" align="center" gap="1">
-                        <Text color="gray" size={{ initial: '3', sm: '4' }} align="center">
+                        <Text
+                            color={PROP_COLOR.neutral}
+                            size={{ initial: '3', sm: '4' }}
+                            align="center"
+                        >
                             {t('promo.intro')}
                         </Text>
-                        <Text color="gray" size={{ initial: '3', sm: '4' }} align="center">
+                        <Text
+                            color={PROP_COLOR.neutral}
+                            size={{ initial: '3', sm: '4' }}
+                            align="center"
+                        >
                             {t('promo.benefit')}
                         </Text>
                     </Flex>
 
-                    <Badge size="3" color="gray" variant="surface" radius="full">
+                    <Badge size="3" color={PROP_COLOR.neutral} variant="surface" radius="full">
                         <Flex align="center" gap="2">
                             <Clock3Icon size={16} />
                             {t('promo.expires', { date: expiryDate })}

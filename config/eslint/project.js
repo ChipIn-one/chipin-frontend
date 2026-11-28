@@ -328,6 +328,12 @@ const QUERY_CACHE_METHODS = [
     'ensureInfiniteQueryData',
 ].join('|');
 
+// A Radix color prop (`prop-color-roles`): `color` and any `<x>Color` (`iconColor`, `actionColor`).
+const COLOR_PROP = '/^(?:color|[a-z][A-Za-z]*Color)$/';
+// Every Radix Themes color name (the accent scales and the grays).
+const RADIX_PALETTE_NAME =
+    '/^(?:gray|mauve|slate|sage|olive|sand|gold|bronze|brown|yellow|amber|orange|tomato|red|ruby|crimson|pink|plum|purple|violet|iris|indigo|blue|cyan|teal|jade|green|grass|lime|mint|sky)$/';
+
 /**
  * ChipIn project `no-restricted-syntax` entries (spec 02 §D0 "project"; 02-C12): images only
  * through basics/Image, Zustand reads only by a selector, an object selector only with useShallow
@@ -430,6 +436,23 @@ export const projectRules = ({ appDir }) => [
         ].join(', '),
         ignores: ['packages/tokens/**'],
         message: 'use var(--cp-*) from @chipin/tokens',
+    },
+    {
+        // spec 05 §3 (#1007): a Radix color prop (`color`, `iconColor`, `actionColor`, …) takes a
+        // `PROP_COLOR` role from @chipin/tokens/theme, never a palette name: a string attribute
+        // (`color="red"`) or a literal anywhere in its expression (`color={on ? 'green' : 'gray'}`).
+        // App sources, tests included (the `src/**/*.{ts,tsx}` glob of moneyScope: no new scope).
+        // The category palette (constants/category-ui.ts) is data, not a JSX attribute: its
+        // `color={item.color}` passes. Not linted: a palette name in a variable or object field.
+        id: 'prop-color-roles',
+        selector: [
+            `JSXAttribute[name.name=${COLOR_PROP}] > Literal[value=${RADIX_PALETTE_NAME}]`,
+            `JSXAttribute[name.name=${COLOR_PROP}] > JSXExpressionContainer Literal[value=${RADIX_PALETTE_NAME}]`,
+        ].join(', '),
+        files: [appGlob(appDir, 'src/**/*.{ts,tsx}')],
+        astro: false,
+        message:
+            'A Radix color prop takes a role: `color={PROP_COLOR.danger}` from @chipin/tokens/theme, not a palette name (docs/design-system/tokens.md).',
     },
     {
         // spec 05 §3: `style={{…}}` only for custom properties (`style={{ '--cover-url': url }}`).

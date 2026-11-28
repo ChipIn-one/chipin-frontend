@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { UserRoundXIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +28,7 @@ const EventMemberKicked = ({ event }: Props) => {
                         <Avatar
                             size="4"
                             variant="soft"
-                            color="red"
+                            color={PROP_COLOR.danger}
                             fallback={<UserRoundXIcon size={28} />}
                         />
                     </EventIcon>

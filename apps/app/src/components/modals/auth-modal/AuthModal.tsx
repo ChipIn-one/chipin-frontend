@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Heading, Text } from '@radix-ui/themes';
 import { ShieldLockIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -45,7 +46,7 @@ const AuthModal = ({ children, isOpened, onOpenChange }: Props) => {
 
                     <Heading as="h2" size={{ initial: '7', sm: '8' }} align="center">
                         {t('modal.headlinePrimary')} <br />
-                        <Text as="span" color="grass">
+                        <Text as="span" color={PROP_COLOR.accent}>
                             {t('modal.headlineAccent')}
                         </Text>
                     </Heading>
@@ -61,10 +62,10 @@ const AuthModal = ({ children, isOpened, onOpenChange }: Props) => {
                 >
                     <AuthButtons />
                     <Flex align="center" justify="center" gap="2">
-                        <Text color="gray">
+                        <Text color={PROP_COLOR.neutral}>
                             <ShieldLockIcon size={14} />
                         </Text>
-                        <Text size="1" color="gray" align="center">
+                        <Text size="1" color={PROP_COLOR.neutral} align="center">
                             {t('modal.trust')}
                         </Text>
                     </Flex>

@@ -98,7 +98,11 @@ are the Radix ones (xs 520, sm 768, md 1024, lg 1280, xl 1640).
 Radix `color` props do not accept CSS variables. `PROP_COLOR` in `theme.ts` gives the Radix color
 of each role, matching the scale of the `--cp-*` role of the same meaning: `accent`, `neutral`,
 `debtOwed`, `debtOwing`, `debtSettled`, `success`, `danger`, `warning`, `info`, `solo` (violet).
-Spec 05 §3 says `color` goes only through `PROP_COLOR`; no lint checks it yet.
+Spec 05 §3 says `color` goes only through `PROP_COLOR`: in `apps/app/src` the ESLint entry
+`[prop-color-roles]` bans a Radix palette name in a `color` or `<x>Color` JSX attribute
+(`color="red"`, `color={on ? 'green' : 'gray'}`). A palette name in a variable or an object
+field is not linted (review). The category palette (`constants/category-ui.ts`) is data: its
+`color={item.color}` passes.
 
 ## Shipped scales
 
@@ -109,8 +113,9 @@ Spec 05 §3 says `color` goes only through `PROP_COLOR`; no lint checks it yet.
 - `CATEGORY_PALETTE`: the expense category colors of `constants/category-ui.ts` (gray, amber,
   blue, brown, crimson, gold, green, indigo, mint, orange, pink, purple, red, sky, teal, violet,
   yellow). `gray` also backs Radix `color="gray"`.
-- `LEGACY_PALETTES`: cyan, jade, tomato, still used directly in `apps/app/src` or `apps/site`;
-  they go as those usages move to roles (#1007). jade also feeds `--cp-avatar-placeholder-from`.
+- `LEGACY_PALETTES`: cyan, jade, still used directly in `apps/site`; they go as the site moves
+  to roles. jade also feeds `--cp-avatar-placeholder-from`. tomato went in #1007 (its "you owe"
+  usages are `PROP_COLOR.debtOwing`).
 
 No scale was pruned in #1005: every candidate (brown, crimson, gold, purple, sky, yellow) is a
 category color.
@@ -143,6 +148,7 @@ shrink.
 | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Raw hex, `rgb()`/`hsl()` and friends, named colors in CSS                               | stylelint `color-no-hex`, `color-named`, `function-disallowed-list` (`stylelint.config.js`) |
 | Raw hex, `rgb(a)()`, `hsl(a)()` or `var(--<palette>-N)` in TS/TSX and Astro frontmatter | ESLint `no-raw-colors` (`config/eslint/project.js`)                                         |
+| A Radix palette name in a `color`/`<x>Color` JSX attribute in `apps/app/src`            | ESLint `prop-color-roles` (`config/eslint/project.js`)                                      |
 | Any `var(--x)` in CSS other than `--cp-*` or local `--_*`                               | stylelint `declaration-property-value-disallowed-list`                                      |
 | A `--cp-*` name that is not in `tokens.css` (typos)                                     | stylelint `csstools/value-no-unknown-custom-properties`                                     |
 | `.rt-*` selectors outside `apps/app/src/styles/radixStylesOverwrite.css`                | stylelint `selector-disallowed-list`                                                        |

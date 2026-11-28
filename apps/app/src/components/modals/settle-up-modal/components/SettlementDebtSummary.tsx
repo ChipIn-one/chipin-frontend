@@ -1,3 +1,4 @@
+import type { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -17,7 +18,7 @@ interface Props {
     isFriendPayer: boolean;
     /** The exact debt; below one minor unit it shows as "< 0.01". */
     amount: Money;
-    color: 'green' | 'red';
+    color: typeof PROP_COLOR.debtOwed | typeof PROP_COLOR.debtOwing;
 }
 
 const SettlementDebtSummary = ({ friend, summaryUser, isFriendPayer, amount, color }: Props) => {

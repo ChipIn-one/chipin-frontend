@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -71,17 +72,17 @@ const UpdateRequiredView = () => {
                         <Heading as="h1" size="5" id="update-required-title">
                             {t('updateRequired.title')}
                         </Heading>
-                        <Text as="p" color="gray" id="update-required-description">
+                        <Text as="p" color={PROP_COLOR.neutral} id="update-required-description">
                             {t('updateRequired.description')}
                         </Text>
                         {status === 'notPublished' && (
-                            <Text as="p" color="amber" role="status">
+                            <Text as="p" color={PROP_COLOR.warning} role="status">
                                 {t('updateRequired.notPublished')}
                             </Text>
                         )}
                         <Button
                             size="3"
-                            color="jade"
+                            color={PROP_COLOR.accent}
                             disabled={status === 'checking'}
                             onClick={onUpdate}
                         >

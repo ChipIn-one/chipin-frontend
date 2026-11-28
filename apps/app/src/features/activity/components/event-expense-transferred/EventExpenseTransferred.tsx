@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { Redo2Icon, Undo2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +45,7 @@ const EventExpenseTransferred = ({ event }: Props) => {
                         <Avatar
                             size="4"
                             variant="soft"
-                            color={isTransferredFrom ? 'orange' : 'blue'}
+                            color={isTransferredFrom ? PROP_COLOR.warning : PROP_COLOR.info}
                             fallback={
                                 isTransferredFrom ? (
                                     <Undo2Icon size={28} />
@@ -58,14 +59,14 @@ const EventExpenseTransferred = ({ event }: Props) => {
                         <Text size="3" weight="medium" as="p">
                             {t(titleKey, { group: event.metadata.groupName })}
                         </Text>
-                        <Text size="2" color="gray" as="p">
+                        <Text size="2" color={PROP_COLOR.neutral} as="p">
                             {t(getDescriptionKey(event.metadata.reason))}
                         </Text>
                     </Flex>
                 </Flex>
 
                 <Flex direction="column" align="end" flexShrink="0">
-                    <Text size="2" weight="medium" color="gray" as="p">
+                    <Text size="2" weight="medium" color={PROP_COLOR.neutral} as="p">
                         {t('event.expenseTransferCount', {
                             count: event.metadata.transfers.length,
                         })}

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Callout, Flex } from '@radix-ui/themes';
 import { CloudUploadIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +21,7 @@ const SettleUpQueuedHint = ({ isGroup, reason, onClose }: Props) => {
 
     return (
         <Flex direction="column" gap="3" align="start">
-            <Callout.Root color="amber" size="1" role="status">
+            <Callout.Root color={PROP_COLOR.warning} size="1" role="status">
                 <Callout.Text>
                     {reason === 'checking'
                         ? t('outbox.settleUpChecking')
@@ -31,7 +32,7 @@ const SettleUpQueuedHint = ({ isGroup, reason, onClose }: Props) => {
                 <Button
                     type="button"
                     variant="soft"
-                    color="amber"
+                    color={PROP_COLOR.warning}
                     onClick={() => {
                         onClose();
                         setIsOutboxOpen(true);

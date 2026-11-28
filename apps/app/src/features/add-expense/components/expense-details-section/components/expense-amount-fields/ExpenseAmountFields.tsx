@@ -38,7 +38,7 @@ const ExpenseAmountFields = () => {
 
     return (
         <div className={styles.root}>
-            <Text as="label" htmlFor={amountId} size="2" weight="bold" color="gray">
+            <Text as="label" htmlFor={amountId} size="2" weight="bold" color={PROP_COLOR.neutral}>
                 {t('common:fields.amount')}
             </Text>
 
@@ -50,7 +50,7 @@ const ExpenseAmountFields = () => {
                 maxFractionDigits={fractionDigits}
                 aria-invalid={isAmountBlocking}
                 aria-describedby={isAmountBlocking ? amountErrorId : undefined}
-                color="gray"
+                color={PROP_COLOR.neutral}
                 size="3"
                 autoFocus
             />

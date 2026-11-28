@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Dialog } from '@radix-ui/themes';
 import { RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -68,7 +69,7 @@ const BackendUnavailablePage = () => {
                         className={styles.retryButton}
                         type="button"
                         size="4"
-                        color="gray"
+                        color={PROP_COLOR.neutral}
                         highContrast
                         disabled={isChecking}
                         loading={isChecking}

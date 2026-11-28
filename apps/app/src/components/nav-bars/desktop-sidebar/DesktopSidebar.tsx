@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -28,7 +29,7 @@ const DesktopSidebar = () => {
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const canShowDevMenu = useIsUserAdmin();
     const homeRoute = getPreferredModeRoute(isSoloMode);
-    const activeColor = isSoloMode ? 'violet' : 'green';
+    const activeColor = isSoloMode ? PROP_COLOR.solo : PROP_COLOR.accent;
     const navElements = getNavElements(homeRoute);
 
     return (
@@ -67,7 +68,7 @@ const DesktopSidebar = () => {
                                             aria-current={isActive ? 'page' : undefined}
                                             variant="ghost"
                                             size="3"
-                                            color={isActive ? activeColor : 'gray'}
+                                            color={isActive ? activeColor : PROP_COLOR.neutral}
                                         >
                                             <Icon size={24} />
                                             <Text size="3" weight={isActive ? 'bold' : 'medium'}>

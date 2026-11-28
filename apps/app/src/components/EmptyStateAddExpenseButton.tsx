@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button } from '@radix-ui/themes';
 import { CirclePlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -24,7 +25,7 @@ const useEmptyStateAddExpenseAction = (): ReactNode | undefined => {
         <Button
             type="button"
             variant="soft"
-            color={isSoloMode ? 'violet' : 'grass'}
+            color={isSoloMode ? PROP_COLOR.solo : PROP_COLOR.accent}
             onClick={() => {
                 openExpenseModal();
             }}

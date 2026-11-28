@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, IconButton } from '@radix-ui/themes';
 import { BugIcon, CalendarPlusIcon, FlaskConicalIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -63,7 +64,12 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
         },
     ];
     const trigger = isShowLabel ? (
-        <Button className={styles.labeledTrigger} size="3" variant="outline" color="gray">
+        <Button
+            className={styles.labeledTrigger}
+            size="3"
+            variant="outline"
+            color={PROP_COLOR.neutral}
+        >
             <FlaskConicalIcon />
             {t('header.devMenu')}
         </Button>
@@ -74,7 +80,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
                 sm: '3',
             }}
             variant="soft"
-            color="gray"
+            color={PROP_COLOR.neutral}
             aria-label={t('header.devMenu')}
         >
             <FlaskConicalIcon />

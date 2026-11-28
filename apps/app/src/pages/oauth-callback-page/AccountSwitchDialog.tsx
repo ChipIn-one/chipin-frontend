@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { useTranslation } from 'react-i18next';
 
 import { useAccountSwitchConfirmStore } from 'store/accountSwitchConfirmStore';
@@ -31,7 +32,7 @@ export const AccountSwitchDialog = () => {
                     : t('outbox.accountSwitchDescription', { count })
             }
             actionLabel={t('outbox.accountSwitchConfirm')}
-            actionColor="red"
+            actionColor={PROP_COLOR.danger}
             onAction={() => {
                 answer(true);
                 return Promise.resolve();

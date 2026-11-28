@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -196,7 +197,7 @@ const DashboardPage = () => {
                             py="2"
                             role="alert"
                         >
-                            <Text size="2" color="gray">
+                            <Text size="2" color={PROP_COLOR.neutral}>
                                 {t('errors.loadDescription')}
                             </Text>
                             <Button type="button" size="1" variant="soft" onClick={onRetryLoad}>
@@ -251,10 +252,10 @@ const DashboardPage = () => {
 
                             {isEndOfFeed && (
                                 <Flex justify="center" align="center" gap="2" py="4">
-                                    <Text as="span" color="gray">
+                                    <Text as="span" color={PROP_COLOR.neutral}>
                                         <ChevronsDownIcon size={14} />
                                     </Text>
-                                    <Text size="1" color="gray">
+                                    <Text size="1" color={PROP_COLOR.neutral}>
                                         {t('activity:endOfFeed')}
                                     </Text>
                                 </Flex>

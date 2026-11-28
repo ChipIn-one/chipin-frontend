@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { CircleUserRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -32,7 +33,7 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
                         <Avatar
                             variant="soft"
                             size="3"
-                            color="violet"
+                            color={PROP_COLOR.solo}
                             fallback={<CircleUserRoundIcon size={20} />}
                         />
                     </Skeleton>
@@ -40,7 +41,7 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('solo.title')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>{t('solo.description')}</Skeleton>
                         </Text>
                     </Flex>
@@ -51,13 +52,13 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
                 <Flex justify="between" align="center" gap="3">
                     <Flex direction="column">
                         <Text weight="medium">{t('solo.soloModeTitle')}</Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             {t('solo.soloModeDescription')}
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
                         <Switch
-                            color="violet"
+                            color={PROP_COLOR.solo}
                             checked={soloModeByDefault}
                             onCheckedChange={onSoloModeByDefaultChange}
                             aria-label={t('solo.soloModeTitle')}
@@ -70,13 +71,13 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
                 <Flex justify="between" align="center" gap="3">
                     <Flex direction="column">
                         <Text weight="medium">{t('solo.saveGroupToSoloTitle')}</Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             {t('solo.saveGroupToSoloDescription')}
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
                         <Switch
-                            color="violet"
+                            color={PROP_COLOR.solo}
                             checked={saveGroupExpensesToSolo}
                             onCheckedChange={onSaveGroupExpensesToSoloChange}
                             aria-label={t('solo.saveGroupToSoloTitle')}

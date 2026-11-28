@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +14,7 @@ const GroupRoleBadge = ({ isOwner }: Props) => {
     }
 
     return (
-        <Badge size="1" color="amber" variant="soft">
+        <Badge size="1" color={PROP_COLOR.warning} variant="soft">
             {t('roles.owner')}
         </Badge>
     );

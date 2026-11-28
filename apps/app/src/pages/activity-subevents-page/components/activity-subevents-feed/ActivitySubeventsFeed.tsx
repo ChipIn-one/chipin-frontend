@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
 import {
     ChevronsDownIcon,
@@ -48,7 +49,7 @@ const ActivitySubeventsFeed = ({ history }: Props) => {
         return (
             <EmptyState
                 icon={<CircleAlertIcon size={20} />}
-                iconColor="red"
+                iconColor={PROP_COLOR.danger}
                 title={t('subeventsLoadErrorTitle')}
                 description={t('subeventsLoadErrorDescription')}
                 action={
@@ -76,7 +77,7 @@ const ActivitySubeventsFeed = ({ history }: Props) => {
             emptyState={
                 <EmptyState
                     icon={<ListTreeIcon size={20} />}
-                    iconColor="gray"
+                    iconColor={PROP_COLOR.neutral}
                     title={t('subeventsEmptyTitle')}
                     description={t('subeventsEmptyDescription')}
                 />
@@ -100,10 +101,10 @@ const ActivitySubeventsFeed = ({ history }: Props) => {
 
                 {isEndOfFeed && (
                     <Flex justify="center" align="center" gap="2" py="4">
-                        <Text as="span" color="gray">
+                        <Text as="span" color={PROP_COLOR.neutral}>
                             <ChevronsDownIcon size={14} />
                         </Text>
-                        <Text size="1" color="gray">
+                        <Text size="1" color={PROP_COLOR.neutral}>
                             {t('endOfFeed')}
                         </Text>
                     </Flex>

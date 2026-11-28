@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import {
     Avatar,
     Badge,
@@ -61,7 +62,7 @@ const GroupSettingsTab = ({ group }: Props) => {
         <Flex direction="column" gap="5">
             {/* ── INVITE section ── */}
             <Flex direction="column" gap="2">
-                <Text size="1" color="gray" weight="medium">
+                <Text size="1" color={PROP_COLOR.neutral} weight="medium">
                     {t('group:page.settings.inviteSection')}
                 </Text>
                 <GroupInviteActionRows group={group} />
@@ -69,7 +70,7 @@ const GroupSettingsTab = ({ group }: Props) => {
 
             {/* ── MEMBERS section ── */}
             <Flex direction="column" gap="2">
-                <Text size="1" color="gray" weight="medium">
+                <Text size="1" color={PROP_COLOR.neutral} weight="medium">
                     {t('group:page.settings.membersSection')}
                 </Text>
 
@@ -95,12 +96,16 @@ const GroupSettingsTab = ({ group }: Props) => {
                                             </Text>
                                             <GroupRoleBadge isOwner={isOwner} />
                                             {isCurrentUser && (
-                                                <Badge size="1" color="teal" variant="soft">
+                                                <Badge
+                                                    size="1"
+                                                    color={PROP_COLOR.accent}
+                                                    variant="soft"
+                                                >
                                                     {t('group:page.membersTab.you')}
                                                 </Badge>
                                             )}
                                         </Flex>
-                                        <Text size="1" color="gray" truncate>
+                                        <Text size="1" color={PROP_COLOR.neutral} truncate>
                                             {member.user.email}
                                         </Text>
                                     </Flex>
@@ -111,7 +116,11 @@ const GroupSettingsTab = ({ group }: Props) => {
                                         member={member.user}
                                     >
                                         <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupKick}>
-                                            <Button variant="soft" color="orange" size="1">
+                                            <Button
+                                                variant="soft"
+                                                color={PROP_COLOR.danger}
+                                                size="1"
+                                            >
                                                 <UserMinusIcon size={13} />
                                                 {t('common:buttons.kickMember')}
                                             </Button>
@@ -126,7 +135,7 @@ const GroupSettingsTab = ({ group }: Props) => {
 
             {/* ── SETTINGS section ── */}
             <Flex direction="column" gap="2">
-                <Text size="1" color="gray" weight="medium">
+                <Text size="1" color={PROP_COLOR.neutral} weight="medium">
                     {t('group:page.settings.settingsSection')}
                 </Text>
 
@@ -136,20 +145,20 @@ const GroupSettingsTab = ({ group }: Props) => {
                             <Text size="2" weight="medium">
                                 {t('group:page.settings.simplifyDebtsTitle')}
                             </Text>
-                            <Text size="1" color="gray">
+                            <Text size="1" color={PROP_COLOR.neutral}>
                                 {t('group:page.settings.simplifyDebtsSubtitle')}
                             </Text>
                             {!isSimplifyDebtsSupported ? (
-                                <Text size="1" color="orange">
+                                <Text size="1" color={PROP_COLOR.warning}>
                                     {t('group:page.settings.simplifyDebtsUnsupported')}
                                 </Text>
                             ) : !isGroupOwner ? (
-                                <Text size="1" color="gray">
+                                <Text size="1" color={PROP_COLOR.neutral}>
                                     {t('group:page.settings.simplifyDebtsOwnerOnly')}
                                 </Text>
                             ) : isGroupUpdateBlocked ? (
                                 // KB NET-006: the disabled switch says why.
-                                <Text size="1" color="gray">
+                                <Text size="1" color={PROP_COLOR.neutral}>
                                     {t('common:outbox.onlineRequired')}
                                 </Text>
                             ) : null}
@@ -158,7 +167,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                             {isGroupUpdatePending && (
                                 <Flex align="center" gap="1" role="status">
                                     <Spinner size="1" aria-hidden="true" />
-                                    <Text size="1" color="gray">
+                                    <Text size="1" color={PROP_COLOR.neutral}>
                                         {t('group:page.settings.simplifyDebtsUpdating')}
                                     </Text>
                                 </Flex>
@@ -187,7 +196,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                 <LeaveGroupAlertDialog group={group}>
                     <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupLeave} isFullWidth>
                         <Box width="100%" asChild>
-                            <Button variant="ghost" color="orange" size="3">
+                            <Button variant="ghost" color={PROP_COLOR.danger} size="3">
                                 <LogOutIcon size={16} />
                                 {t('common:buttons.leaveGroup')}
                             </Button>
@@ -202,7 +211,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                         <RemoveGroupAlertDialog group={group}>
                             <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupDelete} isFullWidth>
                                 <Box width="100%" asChild>
-                                    <Button variant="ghost" color="red" size="3">
+                                    <Button variant="ghost" color={PROP_COLOR.danger} size="3">
                                         <Trash2Icon size={16} />
                                         {t('common:buttons.removeGroup')}
                                     </Button>

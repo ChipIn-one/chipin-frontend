@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button } from '@radix-ui/themes';
 import { ChevronDownIcon, FilterIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +44,7 @@ const FriendsFilterDropdown = ({ currencies, filterKey, onFilterChange }: Props)
             trigger={
                 <Button
                     variant="soft"
-                    color="gray"
+                    color={PROP_COLOR.neutral}
                     size="3"
                     aria-label={t('filter.byCurrency', { value: label })}
                 >

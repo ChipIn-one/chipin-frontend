@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Theme } from '@radix-ui/themes';
 import { onlineManager } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
@@ -101,7 +102,7 @@ test('#971 from sm the screen keeps the card with Cancel, then Join at the end',
 
 test.each([
     ['group', 'ready', 'green'],
-    ['friend', 'ready', 'cyan'],
+    ['friend', 'ready', PROP_COLOR.accent],
     ['group', 'invalid', 'gray'],
     ['friend', 'invalid', 'gray'],
 ] as const)(

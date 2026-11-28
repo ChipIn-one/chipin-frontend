@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -54,7 +55,7 @@ export const OAuthCallbackPage = () => {
 
     const loader = (
         <PageLoader>
-            <Text role="status" size="2" color="gray" align="center">
+            <Text role="status" size="2" color={PROP_COLOR.neutral} align="center">
                 {t('auth:signingIn')}
             </Text>
         </PageLoader>

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Button, Card, Code, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 import {
     type LucideIcon,
@@ -55,7 +56,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                         <Avatar
                             variant="soft"
                             size="3"
-                            color="mint"
+                            color={PROP_COLOR.neutral}
                             fallback={<Settings2Icon size={20} />}
                         />
                     </Skeleton>
@@ -63,7 +64,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('app.title')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>{t('app.description')}</Skeleton>
                         </Text>
                     </Flex>
@@ -76,7 +77,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('app.themeTitle')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>{t('app.themeDescription')}</Skeleton>
                         </Text>
                     </Flex>
@@ -128,7 +129,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                             <Text weight="medium">
                                 <Skeleton loading={isLoading}>{t('app.versionTitle')}</Skeleton>
                             </Text>
-                            <Text size="2" color="gray">
+                            <Text size="2" color={PROP_COLOR.neutral}>
                                 <Skeleton loading={isLoading}>
                                     {t('app.versionDescription')}
                                 </Skeleton>
@@ -142,7 +143,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                         {isSwUpdateAvailable && (
                             <Button
                                 variant="soft"
-                                color="jade"
+                                color={PROP_COLOR.accent}
                                 size="2"
                                 onClick={() => void updateServiceWorker(true)}
                             >

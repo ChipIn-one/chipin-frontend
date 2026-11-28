@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Card, Dialog, Flex, Text } from '@radix-ui/themes';
 import { QrCodeIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -36,7 +37,7 @@ const InviteQRModal = ({ children, content, qrLink }: Props) => {
                     <OverlayBody>
                         <Flex direction="column" gap="4">
                             <Card size="1" variant="surface">
-                                <Text size="2" color="gray">
+                                <Text size="2" color={PROP_COLOR.neutral}>
                                     {content.description}
                                 </Text>
                             </Card>
@@ -50,7 +51,12 @@ const InviteQRModal = ({ children, content, qrLink }: Props) => {
                     <OverlayFooter
                         cancelAction={
                             <Dialog.Close>
-                                <Button type="button" size="3" variant="soft" color="gray">
+                                <Button
+                                    type="button"
+                                    size="3"
+                                    variant="soft"
+                                    color={PROP_COLOR.neutral}
+                                >
                                     {t('buttons.close')}
                                 </Button>
                             </Dialog.Close>

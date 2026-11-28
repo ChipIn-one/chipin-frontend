@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Button, Card, Flex, IconButton, Skeleton, Text } from '@radix-ui/themes';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -55,12 +56,12 @@ export const GroupsCardsSkeleton = ({ label }: Props) => {
                             <Text size="3" weight="bold" as="span">
                                 <Skeleton>{tSkeletons('groupsCards.groupName')}</Skeleton>
                             </Text>
-                            <Text size="1" color="gray">
+                            <Text size="1" color={PROP_COLOR.neutral}>
                                 <Skeleton>{tSkeletons('groupsCards.members')}</Skeleton>
                             </Text>
                         </Flex>
 
-                        <Text size="3" color="gray" weight="bold" as="span">
+                        <Text size="3" color={PROP_COLOR.neutral} weight="bold" as="span">
                             <Skeleton>{tSkeletons('groupsCards.groupBalance')}</Skeleton>
                         </Text>
                     </Flex>

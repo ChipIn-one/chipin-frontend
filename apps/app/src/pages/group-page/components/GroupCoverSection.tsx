@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge, Box, Flex, Heading, IconButton, Skeleton, Text } from '@radix-ui/themes';
 import { PencilIcon } from 'lucide-react';
 import type { CSSProperties } from 'react';
@@ -64,7 +65,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
             >
                 <Flex gap="1" direction="column" align="start">
                     <Skeleton loading={isLoading}>
-                        <Badge size="1" color="gray" variant="solid">
+                        <Badge size="1" color={PROP_COLOR.neutral} variant="solid">
                             {t('dashboard:groupsCard.members', {
                                 count: members.length,
                             })}
@@ -76,7 +77,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                         </Skeleton>
                     </Heading>
                     {group?.description ? (
-                        <Text color="gray" size={{ initial: '1', sm: '2' }}>
+                        <Text color={PROP_COLOR.neutral} size={{ initial: '1', sm: '2' }}>
                             <Skeleton loading={isLoading}>{group.description}</Skeleton>
                         </Text>
                     ) : null}
@@ -94,7 +95,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                             <OnlineOnly action={ONLINE_ONLY_ACTIONS.groupUpdate}>
                                 <IconButton
                                     variant="solid"
-                                    color="gray"
+                                    color={PROP_COLOR.neutral}
                                     size="2"
                                     aria-label={t('modal.titleEdit')}
                                 >

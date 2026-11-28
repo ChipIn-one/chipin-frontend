@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -37,7 +38,7 @@ const EventExpense = ({ event }: Props) => {
         ? sub(amount, userShareAmount)
         : negate(userShareAmount);
     const isUserLender = sign(userExpenseDebt) > 0;
-    const debtColor = isUserLender ? 'green' : 'red';
+    const debtColor = isUserLender ? PROP_COLOR.debtOwed : PROP_COLOR.debtOwing;
     const description = event.metadata.description;
     const reversedClassName = isReversed ? styles.reversed : undefined;
 
@@ -62,7 +63,7 @@ const EventExpense = ({ event }: Props) => {
                                 </Text>
                             ) : null}
 
-                            <Text size="2" color="gray" className={reversedClassName}>
+                            <Text size="2" color={PROP_COLOR.neutral} className={reversedClassName}>
                                 {t('event.paidAmount', {
                                     payer: isCurrentUserPayer
                                         ? t('event.you')
@@ -76,7 +77,7 @@ const EventExpense = ({ event }: Props) => {
                                 />
                             </Text>
                             {isReversed ? (
-                                <Text size="2" color="gray">
+                                <Text size="2" color={PROP_COLOR.neutral}>
                                     {t('event.expenseReversedDescription', {
                                         actor: event.actorSnapshot.displayName,
                                     })}

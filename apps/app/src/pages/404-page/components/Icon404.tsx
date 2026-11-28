@@ -11,7 +11,12 @@ const Icon404 = () => (
             color="var(--cp-text-muted)"
             className={styles.frown}
         />
-        <SearchIcon size={64} strokeWidth={2} color="var(--green-9)" className={styles.search} />
+        <SearchIcon
+            size={64}
+            strokeWidth={2}
+            color="var(--cp-brand-primary)"
+            className={styles.search}
+        />
     </div>
 );
 

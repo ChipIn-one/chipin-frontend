@@ -1,4 +1,5 @@
 import { memo, useId } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Checkbox, Flex } from '@radix-ui/themes';
 import { Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
@@ -126,7 +127,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
                     <Text size="2" weight="medium" truncate>
                         {member.displayName}
                     </Text>
-                    <Text size="1" color="gray">
+                    <Text size="1" color={PROP_COLOR.neutral}>
                         <Amount
                             value={calculatedAmount}
                             tokenCode={currency}

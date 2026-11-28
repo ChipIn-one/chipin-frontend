@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +37,7 @@ const EventSettlement = ({ event }: Props) => {
                         <Avatar
                             size="4"
                             variant="soft"
-                            color="green"
+                            color={PROP_COLOR.success}
                             fallback={<ArrowLeftRightIcon size={28} />}
                         />
                     </EventIcon>
@@ -47,7 +48,7 @@ const EventSettlement = ({ event }: Props) => {
                             isReversed={isReversed}
                         />
                         <Text
-                            color="gray"
+                            color={PROP_COLOR.neutral}
                             size="2"
                             className={isReversed ? styles.reversed : undefined}
                         >
@@ -61,7 +62,7 @@ const EventSettlement = ({ event }: Props) => {
                             />
                         </Text>
                         {isReversed ? (
-                            <Text size="2" color="gray">
+                            <Text size="2" color={PROP_COLOR.neutral}>
                                 {t('event.settlementReversedDescription', {
                                     actor: event.actorSnapshot.displayName,
                                 })}

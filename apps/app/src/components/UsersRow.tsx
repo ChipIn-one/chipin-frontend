@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Flex, Text } from '@radix-ui/themes';
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,7 +53,7 @@ const UsersRow = ({ members, size = '1', max = 5 }: Props) => {
                         asChild
                         mr="-1"
                         size="1"
-                        color="cyan"
+                        color={PROP_COLOR.neutral}
                         radius="full"
                         fallback={
                             <Text size="1" weight="bold" as="span">

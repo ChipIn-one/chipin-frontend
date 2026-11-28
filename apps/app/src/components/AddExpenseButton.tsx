@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button } from '@radix-ui/themes';
 import { CirclePlusIcon, PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +23,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         return null;
     }
 
-    const buttonColor = isSoloMode ? 'violet' : 'grass';
+    const buttonColor = isSoloMode ? PROP_COLOR.solo : PROP_COLOR.accent;
     const onClickAddExpense = () => {
         openExpenseModal();
     };
