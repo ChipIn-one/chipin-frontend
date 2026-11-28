@@ -53,4 +53,4 @@ _Design artifacts_ section lists every design artifact and which one is current;
 - A new component, or you need one: [components.md](components.md) first; reuse before you create.
 - A new route, page, modal or reachable state: add its rows to [screens.md](screens.md) and
   [screens.manifest.json](screens.manifest.json).
-- Styling a component (Radix props, CSS Modules, styled-components): [tokens.md](tokens.md#what-is-forbidden).
+- Styling a component (Radix props, CSS Modules; styled-components is removed): [tokens.md](tokens.md#what-is-forbidden).
