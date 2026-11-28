@@ -9,7 +9,7 @@ The ChipIn logo with the product name and a group/solo mode badge, colored by mo
 ## When to use
 
 - The app header and the desktop sidebar (today: `Header`, `DesktopSidebar`).
-- The plain logo on public pages (footer, landing) does not need the mode: use the logo asset
+- The plain logo on the site (`apps/site`) does not need the mode: use the logo asset
   `@chipin/tokens/assets/logo.svg` as there.
 - Switching mode: `ViewModeSwitch`; this component only shows it.
 
