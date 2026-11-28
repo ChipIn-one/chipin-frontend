@@ -18,7 +18,6 @@ export const GATE_STEPS = Object.freeze([
     'Install dependencies',
     'Check lint baseline does not grow',
     'Check file layout baseline does not grow',
-    'Check styled-components allowlist',
     'Check generated API types',
     'Verify frontend',
     'Verify site',

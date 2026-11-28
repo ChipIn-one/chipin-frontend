@@ -67,9 +67,9 @@ when a task touches them.
 - Other shown amounts on the same screen use size `2`-`4` (list rows `2`-`3`, summary cards `4`).
 - Sizes of shown amounts are Radix `size` props, never a `font-size` in CSS.
 
-Today the two large amount inputs (`expense-amount-fields/styled.ts`, `settle-up-modal/styled.ts`)
-set `font-size` and `font-weight` in styled CSS; that moves to a CSS Module with
-`var(--cp-font-size-*)` when they are touched.
+The two large amount inputs set `font-size` and `font-weight` in their CSS Modules
+(`ExpenseAmountFields.module.css`, `SettlementAmountField.module.css`) with
+`var(--cp-font-size-*)` and `var(--cp-font-weight-*)`.
 
 ## Input goes through `AmountInput`
 

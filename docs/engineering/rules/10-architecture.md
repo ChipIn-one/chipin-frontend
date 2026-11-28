@@ -76,7 +76,7 @@ settle-up/
 ├── SettleUpModal.tsx
 ├── SettleUpModal.friend.test.tsx
 ├── SettleUpModal.group.test.tsx
-├── styled.ts
+├── SettleUpModal.module.css
 ├── components/
 │   ├── SettlementForm.tsx
 │   └── DebtSection.tsx
@@ -99,8 +99,8 @@ The example shows the available locations, not a required complete file set.
   Neither `components/` nor `internal/` has its own `index.ts`.
 - Component `Props` live in the component file, immediately above the component. A `types.ts` holds only
   types with two or more consumers.
-- Keep styled-components in one `styled.ts` per ownership level until they move to CSS Modules (D14).
-  Export styled components directly by their readable component names.
+- Styles live in a CSS Module next to the component (`Component.module.css`); styled-components was
+  removed in #901 and importing it is a lint error.
 
 ## Index Files And Import Boundaries
 
