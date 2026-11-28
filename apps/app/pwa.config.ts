@@ -23,8 +23,7 @@ export const buildPwaOptions = ({ appName }: PwaOptionsInput): Partial<VitePWAOp
     // Where `sw.js` is written (also the Workbox `globDirectory`).
     outDir: 'dist',
     // The registration path and `<link rel="manifest">`: `/sw.js`, `/manifest.webmanifest`. The
-    // built `dist/sw.js` is renamed to `dist/sw-app.js` by `swAppPlugin` and served at `/sw.js` by
-    // the `vercel.json` rewrite; `filename` stays `sw.js`.
+    // worker is written to `dist/sw.js` and served at `/sw.js` from the filesystem.
     buildBase: '/',
     scope: '/',
     filename: 'sw.js',

@@ -94,18 +94,19 @@ describe('service worker registration call sites', () => {
         expect(options.strategies).toBeUndefined();
     });
 
-    test('vite.config.ts uses buildPwaOptions, with the rename plugin after VitePWA', () => {
+    test('vite.config.ts uses buildPwaOptions, and nothing renames the worker (04-5b)', () => {
         const viteConfig = readFileSync(path.join(APP_ROOT, 'vite.config.ts'), 'utf8');
-        const pwaIndex = viteConfig.indexOf('VitePWA(buildPwaOptions(');
-        const renameIndex = viteConfig.indexOf('swAppPlugin()');
 
         // No PWA option is set beside the pure function, and the base stays `/`.
         expect(viteConfig).not.toMatch(/\b(?:filename|buildBase|srcDir|strategies|scope)\s*:/);
         expect(Array.from(viteConfig.matchAll(/\bbase\s*:\s*([^,\n]+)/g), m => m[1])).toEqual([
             "'/'",
         ]);
-        // The rename plugin comes after VitePWA (spec 04 §2.11 option (a)).
-        expect(pwaIndex).toBeGreaterThan(-1);
-        expect(renameIndex).toBeGreaterThan(pwaIndex);
+        expect(viteConfig).toContain('VitePWA(buildPwaOptions(');
+        // The worker stays `dist/sw.js`, served at its registration URL `/sw.js` (spec 04 §2.11):
+        // no plugin renames it to `sw-app.js` (comments are stripped first, so only code counts).
+        const code = viteConfig.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+        expect(code).not.toMatch(/sw-app|swAppPlugin/);
     });
 });

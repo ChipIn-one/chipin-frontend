@@ -1,3 +1,0 @@
-import { EXPENSES_BULLET_KEYS, GROUPS_BULLET_KEYS } from './constants';
-
-export { EXPENSES_BULLET_KEYS, GROUPS_BULLET_KEYS };

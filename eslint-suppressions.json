@@ -99,11 +99,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/LanguageSelector.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/internal-page-layout/InternalPageLayout.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -220,16 +215,6 @@
       "count": 1
     }
   },
-  "apps/app/src/constants/publicRoutes.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    }
-  },
-  "apps/app/src/constants/publicRoutes.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "apps/app/src/constants/styled-themes.ts": {
     "no-restricted-syntax": {
       "count": 2
@@ -289,56 +274,6 @@
     }
   },
   "apps/app/src/features/add-expense/components/expense-target-section/components/expense-scope-context/ExpenseScopeContext.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/features-section/FeaturesSection.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/hero-section/components/landing-stats/LandingStats.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/how-it-works-section/HowItWorksSection.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/how-it-works-section/styled.ts": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
-  "apps/app/src/features/landing/showcase-sections/ShowcaseSections.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/showcase-sections/components/group-page-preview/GroupPagePreview.test.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/showcase-sections/components/group-page-preview/GroupPagePreview.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/showcase-sections/components/landing-preview-card/LandingPreviewCard.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/showcase-sections/components/showcase-section/ShowcaseSection.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/features/landing/showcase-sections/components/solo-page-preview/SoloPagePreview.tsx": {
     "import-x/no-default-export": {
       "count": 1
     }
@@ -425,26 +360,6 @@
   },
   "apps/app/src/pages/GlobalHooks.test.tsx": {
     "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/HomePage.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/LegalPages.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "apps/app/src/pages/PrivacyPage.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/TermsPage.tsx": {
-    "import-x/no-default-export": {
       "count": 1
     }
   },

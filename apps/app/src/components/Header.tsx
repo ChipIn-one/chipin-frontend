@@ -1,16 +1,11 @@
 import { Box, Button, Container, Flex } from '@radix-ui/themes';
-import { ArrowRightIcon, LogInIcon } from 'lucide-react';
+import { LogInIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { PROJECT_NAME } from 'constants/chipin';
-import { DEFAULT_LOCALE } from 'constants/locales';
-import { PUBLIC_HOME_PAGE } from 'constants/publicRouteManifest';
 import { ROUTES } from 'constants/routes';
-import { matchLocale, type SupportedLocale } from 'helpers/locale';
-import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
-import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
 import { getHasDesktopSidebar, getIsInviteJoinRoute, getPreferredModeRoute } from 'helpers/routes';
 import { SITE_PATHS } from 'helpers/sitePaths';
 import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
@@ -18,13 +13,10 @@ import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
-import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
 import { NavButton, UnstyledButton } from 'components/NavButton';
 
 import { DevMenu } from './DevMenu';
-import { LandingMobileMenu } from './header/LandingMobileMenu';
-import { LandingNav } from './header/LandingNav';
 import { SignInEntry } from './modals/auth-modal';
 import { HeaderNav } from './nav-bars/HeaderNav';
 
@@ -42,38 +34,18 @@ const Header = () => {
     const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const location = useLocation();
-    const { t, i18n } = useTranslation();
-    const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? DEFAULT_LOCALE;
-
-    const currentPublicRoute = getPublicRoute(location.pathname);
-    const getPublicLanguageHref = (locale: SupportedLocale) =>
-        currentPublicRoute ? getPublicPath(currentPublicRoute.page, locale) : SITE_PATHS.home();
-    const onLandingLanguageChange = (locale: SupportedLocale) => {
-        if (!currentPublicRoute) {
-            return;
-        }
-        suppressPublicLocaleSuggestion();
-        const nextPath = getPublicPath(currentPublicRoute.page, locale);
-        if (location.pathname !== nextPath) {
-            window.location.assign(nextPath);
-        }
-    };
+    const { t } = useTranslation();
 
     if (!isAuthResolved) {
         return null;
     }
 
-    const isLandingPage = !isLoggedIn && currentPublicRoute?.page === 'home';
-    const isPublicLegalPage = currentPublicRoute && currentPublicRoute.page !== 'home';
     const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
     // Signed in, a phone gets its navigation from the bottom bar, so the header hides below `sm`.
     // The join pages have no bottom bar: there the header is the way back to the app (#971).
-    const isHeaderHiddenOnPhone =
-        isLoggedIn && !isPublicLegalPage && !getIsInviteJoinRoute(location.pathname);
+    const isHeaderHiddenOnPhone = isLoggedIn && !getIsInviteJoinRoute(location.pathname);
     // Signed out, the logo leads to the site: a plain link, never a router navigation (§2.1).
-    const siteHomeHref = currentPublicRoute
-        ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
-        : SITE_PATHS.home();
+    const siteHomeHref = SITE_PATHS.home();
     const logo = (
         <ModeLogotype isSoloMode={isLoggedIn && isSoloMode} isModeBadgeVisible={isLoggedIn} />
     );
@@ -112,41 +84,10 @@ const Header = () => {
                     )}
 
                     {isLoggedIn && <HeaderNav />}
-                    {isLandingPage && (
-                        <LandingNav
-                            value={landingLocale}
-                            onChange={onLandingLanguageChange}
-                            getHref={getPublicLanguageHref}
-                        />
-                    )}
 
                     <Flex gap="4" align="center">
                         {isLoggedIn && canShowDevMenu && <DevMenu />}
-                        {!isLoggedIn && isLandingPage && (
-                            <Flex align="center" gap="2">
-                                <SignInEntry>
-                                    <Button size="3" variant="soft" color="green" radius="full">
-                                        {t('header.signIn')}
-                                        <ArrowRightIcon size={16} />
-                                    </Button>
-                                </SignInEntry>
-                                <Box display={{ initial: 'block', md: 'none' }}>
-                                    <LandingMobileMenu
-                                        value={landingLocale}
-                                        onChange={onLandingLanguageChange}
-                                    />
-                                </Box>
-                            </Flex>
-                        )}
-                        {isPublicLegalPage && (
-                            <LanguageSelector
-                                value={landingLocale}
-                                variant="compact"
-                                getHref={getPublicLanguageHref}
-                                onChange={onLandingLanguageChange}
-                            />
-                        )}
-                        {!isLoggedIn && !isLandingPage && !isLoginPage && (
+                        {!isLoggedIn && !isLoginPage && (
                             <SignInEntry>
                                 <Button
                                     size={{

@@ -39,6 +39,11 @@ The author checks this before review; the reviewer checks the same list (`AGENTS
 - [ ] Amounts, loading, empty, error and form states follow their pattern
       ([money](patterns/money.md), [states](patterns/states.md), [forms](patterns/forms.md)).
 - [ ] User-facing text and `aria-*` go through i18n in every locale.
+- [ ] The PR body has the `Design:` line copied from the Issue (the Issue has `design-approved`; CI
+      checks the Issue, the reviewer checks the PR line), or the PR has the owner's
+      `no-design-needed` label.
+- [ ] Before/after screenshots match the approved mockup (after only for a new screen; none with
+      `no-design-needed`).
 
 ## Changing a rule
 
@@ -57,9 +62,33 @@ as text is a recommendation, not a law: reviewers may point to it, but it fails 
 
 ## Mockups and design review
 
-Code is the source of truth. Mockups (Pencil `.pen` files, Claude Design) are for discussion before
-a screen changes and are disposable; they never become a token source (D17, D33). Design review of
-a component happens in Claude Design; there is no gallery in the repository.
+UI work is design-first (D35, `AGENTS.md` rule 21). An Issue that adds or changes UI follows this
+flow:
+
+1. **Design.** The screen is designed in Claude Design on the
+   [ChipIn design system](https://claude.ai/artifact/AtzC72Gji4PkXbfpt8Qwov), with its `--cp-*`
+   tokens and component cards. Pencil is no longer the mockup tool.
+2. **Approval.** The owner reviews the mockup and approves it by adding the label `design-approved`
+   to the Issue and a line `Design: <https link to the approved artifact>` to the Issue body. Only
+   then does implementation start.
+3. **Implementation** follows the mockup.
+4. **PR.** The PR body has the `Design:` line copied from the Issue and before/after screenshots
+   (desktop and phone, light and dark where relevant; after only for a new screen; none with
+   `no-design-needed`); the reviewer checks that they match the mockup.
+5. **After merge** the ChipIn screens artifact is refreshed.
+
+For an approved design the mockup is the spec for screen layout, content and states. For token
+values, and for already-built screens without a newer approved design, code wins and the artifacts
+are refreshed from code. A mockup never becomes a token source: a new token lands in
+[`tokens.css`](../../packages/tokens/tokens.css) first and is then shown in the design system (D17,
+D35).
+
+The CI check `design-gate` ([`scripts/design-gate.mjs`](../../scripts/design-gate.mjs)) fails a PR
+that changes UI files (`apps/app/src/**/*.tsx`, CSS and `styled.ts` files, `apps/site/src/**`,
+locale files in `apps/*/src/i18n` and `packages/i18n-content`) when its Task identity Issue lacks
+`design-approved` or the `Design:` line. A change that touches UI files but changes nothing visible
+gets the PR label `no-design-needed`. Only the owner adds or removes `design-approved` and
+`no-design-needed`. An Issue change does not retrigger the check: re-run it or push a commit.
 
 Two Claude Design artifacts hold the review material:
 
@@ -71,9 +100,8 @@ Two Claude Design artifacts hold the review material:
   light and dark, desktop and phone, taken from a `master` Preview with staging data. Sign-in is not
   there yet: it needs a signed-out browser.
 
-Both are refreshed from code (each names the `master` commit it was made from) and never lead it:
-when they disagree with the code, the code wins and the artifact is refreshed. They are private to
-the owner until the owner shares them.
+Both name the `master` commit they were refreshed from. They are private to the owner until the
+owner shares them.
 
 ## Designer onboarding plan
 

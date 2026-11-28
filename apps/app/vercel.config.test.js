@@ -241,10 +241,9 @@ describe('Vercel redirects for removed public locales (#609)', () => {
     });
 });
 
-// 04-4a1 (spec 04 §2.11 option (a)): `dist` has no file at `/sw.js`, so a rewrite serves the app
-// worker `/sw-app.js` there. All routes (redirects, then rewrites after `handle: filesystem`)
-// come from `getTransformedRoutes`; a route applies when its `has` host condition holds. Routes
-// with `continue` (headers) do not end the match. The first matching route wins.
+// All routes (redirects, then rewrites after `handle: filesystem`) come from `getTransformedRoutes`;
+// a route applies when its `has` host condition holds. Routes with `continue` (headers) do not end
+// the match. The first matching route wins.
 const compileRoutes = vercelConfig => {
     const { routes, error } = getTransformedRoutes({
         redirects: vercelConfig.redirects ?? [],
@@ -301,33 +300,17 @@ const APP_HOSTS = ['app.chipin.one', 'app-dev.chipin.one'];
 const PREVIEW_HOSTS = ['chipin-git-feature-123.vercel.app', 'chipin-frontend.vercel.app'];
 const APP_WORKER_HOSTS = [...APP_HOSTS, ...PREVIEW_HOSTS, 'localhost'];
 
-describe('Vercel /sw.js (04-4a1)', () => {
-    test.each(APP_WORKER_HOSTS)('serves the app worker /sw-app.js at /sw.js on %s', host => {
-        expect(resolveRoute(host, '/sw.js')).toEqual({ rewrite: '/sw-app.js' });
+// 04-5b (spec 04 §2.11): the worker is `dist/sw.js` again, served at `/sw.js` from the
+// filesystem; no route rewrites or redirects it, and the catch-all never sends it the shell.
+describe('Vercel /sw.js (04-5b)', () => {
+    test.each(APP_WORKER_HOSTS)('leaves /sw.js on %s to the filesystem', host => {
+        expect(resolveRoute(host, '/sw.js')).toBeUndefined();
     });
 
-    test.each(APP_WORKER_HOSTS)(
-        'leaves the worker file on %s to the filesystem (no redirect, no SPA rewrite)',
-        host => {
-            expect(resolveRoute(host, '/sw-app.js')).toBeUndefined();
-        },
-    );
-
-    test('has one /sw.js rewrite, after the last /api rewrite and before the SPA rewrites', () => {
-        const indexes = config.rewrites.map((rewrite, index) => ({ ...rewrite, index }));
-        const lastApiIndex = Math.max(
-            ...indexes.filter(rewrite => rewrite.source === API_SOURCE).map(({ index }) => index),
-        );
-        const swRewrites = indexes.filter(rewrite => rewrite.source === '/sw.js');
-        const firstSpaIndex = Math.min(
-            ...indexes
-                .filter(rewrite => rewrite.destination === '/index.html')
-                .map(({ index }) => index),
-        );
-
-        expect(swRewrites.map(({ destination }) => destination)).toEqual(['/sw-app.js']);
-        expect(swRewrites.every(({ index }) => index > lastApiIndex && index < firstSpaIndex)).toBe(
-            true,
+    test('has no /sw.js rewrite or redirect', () => {
+        expect(config.rewrites.filter(rewrite => rewrite.source === '/sw.js')).toEqual([]);
+        expect((config.redirects ?? []).filter(redirect => redirect.source === '/sw.js')).toEqual(
+            [],
         );
     });
 });
@@ -372,7 +355,6 @@ const NEVER_REDIRECTED_PATHS = [
     '/api/stats',
     '/assets/index-abc123.js',
     '/sw.js',
-    '/sw-app.js',
     '/favicon.ico',
     '/pwa-192x192.png',
     '/apple-touch-icon-180x180.png',
@@ -582,7 +564,6 @@ const NOT_SHELL_PATHS = [
     '/.well-known/assetlinks.json',
     '/.well-known/other',
     '/sw.js',
-    '/sw-app.js',
     '/manifest.webmanifest',
     '/pwa-192x192.png',
     '/robots.txt',
@@ -875,11 +856,12 @@ test('assetlinks.json lists the site and the app hosts (04-4a2)', () => {
     ).toEqual(ASSET_LINK_SITES);
 });
 
-// Runs against a built `dist` only (`swAppPlugin` fails a build without `dist/sw.js` to rename).
-describe.runIf(existsSync(resolve(DIST, 'index.html')))('built dist worker files (04-4a1)', () => {
-    test('has sw-app.js and no sw.js', () => {
-        expect(existsSync(resolve(DIST, 'sw-app.js'))).toBe(true);
-        expect(existsSync(resolve(DIST, 'sw.js'))).toBe(false);
+// Runs against a built `dist` only.
+describe.runIf(existsSync(resolve(DIST, 'index.html')))('built dist worker files (04-5b)', () => {
+    test('has the worker at sw.js and no robots.txt or sitemap.xml (the site serves them)', () => {
+        expect(existsSync(resolve(DIST, 'sw.js'))).toBe(true);
+        expect(existsSync(resolve(DIST, 'robots.txt'))).toBe(false);
+        expect(existsSync(resolve(DIST, 'sitemap.xml'))).toBe(false);
     });
 
     test('has the manifest', () => {

@@ -142,8 +142,8 @@ export const projectImports = ({ appDir = '.', styledAllowlist = readStyledAllow
     },
     {
         // spec 05 §6: svgr (`?react`) only for the brand marks logo.svg and google-icon.svg (used
-        // by Footer.tsx, AuthButtons.tsx and mode-logotype). Allowlisted by the imported asset, not
-        // the importing file: no scope left for an ignore glob.
+        // by mode-logotype and AuthButtons.tsx). Allowlisted by the imported asset, not the
+        // importing file: no scope left for an ignore glob.
         id: 'svgr-react',
         pattern: {
             regex: '^(?!(?:@chipin/tokens/assets/logo|assets/google-icon)\\.svg\\?react$).*\\.svg\\?react$',
@@ -390,7 +390,7 @@ export const projectRules = ({ appDir }) => [
         ].join(', '),
         ignores: [appGlob(appDir, 'src/entities/*/api/queries.ts')],
         message:
-            'Build query keys with the entity key factory (`statsKeys.all`, `groupKeys.detail(id)`) from entities/<entity>/api/queries.ts.',
+            'Build query keys with the entity key factory (`dashboardKeys.all`, `groupsKeys.list()`) from entities/<entity>/api/queries.ts.',
     },
     {
         // #669 (docs/engineering/rules/50-api-data.md §Query Functions): a query function reads its

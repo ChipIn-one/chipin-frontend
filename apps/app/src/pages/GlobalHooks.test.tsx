@@ -16,10 +16,6 @@ vi.mock('hooks/useCheckSignIn', () => ({
     useCheckSignIn: vi.fn(),
 }));
 
-vi.mock('hooks/useRoutesMeta', () => ({
-    useRoutesMeta: vi.fn(),
-}));
-
 vi.mock('hooks/useSyncAppMode', () => ({
     useSyncAppMode: vi.fn(),
 }));

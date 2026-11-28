@@ -1,0 +1,1921 @@
+{
+    "version": 1,
+    "themes": ["light", "dark"],
+    "widths": [390, 1440],
+    "scenarios": [
+        {
+            "id": "new-user",
+            "description": "One fresh user: no friends, no groups, no activity",
+            "provisioning": ["A = register('E2E A')"]
+        },
+        {
+            "id": "friends-pair",
+            "description": "Two users who are friends, no group and no expense",
+            "provisioning": ["A = register('E2E A')", "B = register('E2E B')", "makeFriends(A, B)"]
+        },
+        {
+            "id": "solo-group",
+            "description": "One user who owns a group without other members",
+            "provisioning": ["A = register('E2E A')", "groupId = createGroup(A, 'E2E Trip', [])"]
+        },
+        {
+            "id": "group-pair",
+            "description": "Two friends in one group owned by A, no expense",
+            "provisioning": [
+                "A = register('E2E A')",
+                "B = register('E2E B')",
+                "makeFriends(A, B)",
+                "groupId = createGroup(A, 'E2E Trip', [B])"
+            ]
+        },
+        {
+            "id": "group-no-friend",
+            "description": "Two users who are not friends, in one group owned by A",
+            "provisioning": [
+                "A = register('E2E A')",
+                "B = register('E2E B')",
+                "groupId = createGroup(A, 'E2E Trip', [B])"
+            ]
+        },
+        {
+            "id": "group-with-expense",
+            "description": "group-pair plus one 30 USD expense paid by A, split equally: B owes A 15 USD",
+            "provisioning": [
+                "A = register('E2E A')",
+                "B = register('E2E B')",
+                "makeFriends(A, B)",
+                "groupId = createGroup(A, 'E2E Trip', [B])",
+                "addEqualGroupExpense({ groupId, payer: A, participants: [A, B], amount: 30, description: 'E2E dinner' })"
+            ]
+        },
+        {
+            "id": "long-content",
+            "description": "Long names, many members and items, large amounts",
+            "provisioning": [
+                "A = register('E2E Alexandria Konstantinopolskaya-Wolfeschlegel')",
+                "M1..M8 = register('E2E Member <n> with a rather long display name')",
+                "makeFriends(A, Mn) for each member",
+                "groupId = createGroup(A, 'E2E Weekend in the mountains with the whole extended family 2026', [M1..M8])",
+                "addEqualGroupExpense({ groupId, payer: A, participants: [A, M1..M8], amount: 9999999.99, description: 'E2E very long expense description that does not fit on one line at phone width' })",
+                "addEqualGroupExpense(...) x 25 more, small amounts (more than one feed page)"
+            ]
+        },
+        {
+            "id": "group-invite",
+            "description": "A owns a group without other members; C is not a member; the group invite token",
+            "provisioning": [
+                "A = register('E2E A')",
+                "C = register('E2E C')",
+                "groupId = createGroup(A, 'E2E Trip', [])",
+                "inviteToken = getGroupInviteToken(A, groupId)"
+            ]
+        },
+        {
+            "id": "friend-invite",
+            "description": "Two users who are not friends, and A's friend invite token",
+            "provisioning": [
+                "A = register('E2E A')",
+                "C = register('E2E C')",
+                "inviteToken = token of POST /users/invite-link as A: the call makeFriends makes, not exposed by the client yet"
+            ]
+        }
+    ],
+    "screens": [
+        {
+            "id": "login",
+            "app": "app",
+            "routeId": "login",
+            "path": "/login",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            }
+        },
+        {
+            "id": "login.return-to",
+            "app": "app",
+            "routeId": "login",
+            "path": "/login?returnTo=%2Fsettings",
+            "kind": "state",
+            "parent": "login",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page",
+                "steps": ["goto('/settings') signed out: redirects here"]
+            }
+        },
+        {
+            "id": "login.in-app-browser",
+            "app": "app",
+            "routeId": "login",
+            "path": "/login",
+            "kind": "state",
+            "parent": "login",
+            "auth": "anonymous",
+            "widths": [390],
+            "setup": {
+                "fixture": "browser.newContext({ userAgent })",
+                "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36 Instagram 350.0.0.0"
+            },
+            "notes": "InAppBrowserNotice above the Google button (helpers/inAppBrowser.ts)"
+        },
+        {
+            "id": "oauth-callback.signing-in",
+            "app": "app",
+            "routeId": "oauthCallback",
+            "path": "/oauth/callback?code=e2e-fake-code",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page",
+                "mocks": [
+                    {
+                        "method": "POST",
+                        "url": "**/auth/oauth/google/exchange",
+                        "action": "hang"
+                    }
+                ]
+            },
+            "notes": "Transit screen: the PageLoader with 'Signing you in…'. A fake code only; the exchange never answers"
+        },
+        {
+            "id": "dashboard",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)"
+            }
+        },
+        {
+            "id": "dashboard.welcome",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            },
+            "notes": "First run: DashboardOnboarding (Create group, Invite a friend), no side groups section"
+        },
+        {
+            "id": "dashboard.empty",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friends-pair",
+                "fixture": "signIn(A)"
+            },
+            "notes": "Has a friend, so not the welcome: NoActivityEmptyState and NoGroupsEmptyState. Unconfirmed whether makeFriends writes an activity event"
+        },
+        {
+            "id": "dashboard.loading",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/known-users",
+                        "action": "hang"
+                    },
+                    {
+                        "method": "GET",
+                        "url": "**/groups*",
+                        "action": "hang"
+                    }
+                ]
+            },
+            "notes": "ActivityFeedSkeleton; a fresh context has no persisted cache"
+        },
+        {
+            "id": "dashboard.error",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/known-users",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ]
+            },
+            "notes": "Inline load error with Retry; /health stays up, so this is not the backend-down screen"
+        },
+        {
+            "id": "dashboard.refresh-error",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/currency-rates*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ]
+            },
+            "notes": "Data on screen plus the small 'could not load' row with Retry"
+        },
+        {
+            "id": "dashboard.offline",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["wait for the balances to render"],
+                "offline": true
+            },
+            "notes": "OfflineBanner over the cached data; online-only buttons disabled (specs/money/offline.spec.ts)"
+        },
+        {
+            "id": "dashboard.offline-no-data",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "capture": "manual",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "offline": true
+            },
+            "notes": "OfflineLoadError (NET-008): a cold start offline with nothing saved on the device. Needs the app shell from the service worker (playwright.sw.config.ts build); not confirmed with the dev server"
+        },
+        {
+            "id": "dashboard.long-content",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)"
+            }
+        },
+        {
+            "id": "dashboard.groups-no-match",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["click Search groups", "type 'zzz no match'"]
+            },
+            "notes": "NoMatchingGroupsEmptyState in the side groups section"
+        },
+        {
+            "id": "group",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupWithGroupsList(page, groupId)"]
+            },
+            "notes": "Expenses tab"
+        },
+        {
+            "id": "group.balances",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(B)",
+                "steps": ["openGroupTab(page, groupId, 'Balances')"]
+            },
+            "notes": "As B, the debtor: the row has Settle up"
+        },
+        {
+            "id": "group.balances.settled",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group.balances",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupTab(page, groupId, 'Balances')"]
+            },
+            "notes": "Everyone settled up (expectSettledUp)"
+        },
+        {
+            "id": "group.settings",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupTab(page, groupId, 'Settings')"]
+            },
+            "notes": "As the owner: invite rows, members with Kick, Delete group"
+        },
+        {
+            "id": "group.solo",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "solo-group",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupWithGroupsList(page, groupId)"]
+            },
+            "notes": "Only member: GroupInviteEmptyState (invite onboarding) instead of the expenses empty state"
+        },
+        {
+            "id": "group.empty",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupWithGroupsList(page, groupId)"]
+            },
+            "notes": "NoGroupExpensesEmptyState with Add expense"
+        },
+        {
+            "id": "group.loading",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/groups/*",
+                        "action": "hang"
+                    },
+                    {
+                        "method": "GET",
+                        "url": "**/groups*",
+                        "action": "hang"
+                    }
+                ]
+            },
+            "notes": "Cover and side skeletons of an unlisted group"
+        },
+        {
+            "id": "group.error",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/groups/*",
+                        "action": "fulfill",
+                        "status": 500
+                    },
+                    {
+                        "method": "GET",
+                        "url": "**/groups*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ]
+            },
+            "notes": "Load error with Retry, never 'not found'"
+        },
+        {
+            "id": "group.not-found",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/00000000-0000-4000-8000-000000000000",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            },
+            "notes": "GroupNotFound: the API denies an unknown group (403/404)"
+        },
+        {
+            "id": "group.invalid-id",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/not-a-uuid",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            },
+            "notes": "validateUuidParam throws 404: RouteErrorView renders Page404 inside the layout"
+        },
+        {
+            "id": "group.offline",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupWithGroupsList(page, groupId)"],
+                "offline": true
+            },
+            "notes": "Banner over cached data; Settle up and Add expense stay visible and disabled"
+        },
+        {
+            "id": "group.next-page-error",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/groups/*/activity-previews?*cursor=*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ],
+                "steps": [
+                    "openGroupWithGroupsList(page, groupId)",
+                    "scroll to the end of the expenses feed"
+                ]
+            },
+            "notes": "The loaded list stays, a soft Retry below it (GroupTabsContent)"
+        },
+        {
+            "id": "group.long-content",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "state",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupWithGroupsList(page, groupId)"]
+            }
+        },
+        {
+            "id": "group-join",
+            "app": "app",
+            "routeId": "groupJoin",
+            "path": "/group/join/:inviteToken",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-invite",
+                "fixture": "signIn(C)"
+            },
+            "notes": "InviteJoinConfirmation, status ready (specs/money/group-invite.spec.ts). The token is dead after the run purge"
+        },
+        {
+            "id": "group-join.joining",
+            "app": "app",
+            "routeId": "groupJoin",
+            "path": "/group/join/:inviteToken",
+            "kind": "state",
+            "parent": "group-join",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-invite",
+                "fixture": "signIn(C)",
+                "mocks": [
+                    {
+                        "method": "POST",
+                        "url": "**/groups/invite/*",
+                        "action": "hang"
+                    }
+                ],
+                "steps": ["click Join"]
+            }
+        },
+        {
+            "id": "group-join.invalid",
+            "app": "app",
+            "routeId": "groupJoin",
+            "path": "/group/join/e2eUnknownInviteToken0000",
+            "kind": "state",
+            "parent": "group-join",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "POST",
+                        "url": "**/groups/invite/*",
+                        "action": "fulfill",
+                        "status": 404
+                    }
+                ],
+                "steps": ["click Join"]
+            },
+            "notes": "Invalid or expired invite: 'This invite link is not valid' and Go to home. Which error codes map to invalid is in hooks/useInviteConfirmation.ts"
+        },
+        {
+            "id": "group-join.error",
+            "app": "app",
+            "routeId": "groupJoin",
+            "path": "/group/join/:inviteToken",
+            "kind": "state",
+            "parent": "group-join",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-invite",
+                "fixture": "signIn(C)",
+                "mocks": [
+                    {
+                        "method": "POST",
+                        "url": "**/groups/invite/*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ],
+                "steps": ["click Join"]
+            },
+            "notes": "Error message with Retry"
+        },
+        {
+            "id": "friend-join",
+            "app": "app",
+            "routeId": "friendJoin",
+            "path": "/friends/join/:inviteToken",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friend-invite",
+                "fixture": "signIn(C)"
+            },
+            "capture": "manual",
+            "notes": "Manual until the provisioning client exposes the friend invite token (POST /users/invite-link, which makeFriends already calls)"
+        },
+        {
+            "id": "friend-join.joining",
+            "app": "app",
+            "routeId": "friendJoin",
+            "path": "/friends/join/:inviteToken",
+            "kind": "state",
+            "parent": "friend-join",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friend-invite",
+                "fixture": "signIn(C)",
+                "mocks": [
+                    {
+                        "method": "POST",
+                        "url": "**/users/invite/*",
+                        "action": "hang"
+                    }
+                ],
+                "steps": ["click Accept"]
+            },
+            "capture": "manual"
+        },
+        {
+            "id": "friend-join.invalid",
+            "app": "app",
+            "routeId": "friendJoin",
+            "path": "/friends/join/e2eUnknownInviteToken0000",
+            "kind": "state",
+            "parent": "friend-join",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "POST",
+                        "url": "**/users/invite/*",
+                        "action": "fulfill",
+                        "status": 404
+                    }
+                ],
+                "steps": ["click Accept"]
+            },
+            "notes": "'This invite link is not valid' and Go to home"
+        },
+        {
+            "id": "friend-join.error",
+            "app": "app",
+            "routeId": "friendJoin",
+            "path": "/friends/join/:inviteToken",
+            "kind": "state",
+            "parent": "friend-join",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friend-invite",
+                "fixture": "signIn(C)",
+                "mocks": [
+                    {
+                        "method": "POST",
+                        "url": "**/users/invite/*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ],
+                "steps": ["click Accept"]
+            },
+            "capture": "manual"
+        },
+        {
+            "id": "activity",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)"
+            }
+        },
+        {
+            "id": "activity.empty",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            },
+            "notes": "NoActivityEmptyState with Add expense"
+        },
+        {
+            "id": "activity.filtered-empty",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["select the Settlements filter"]
+            },
+            "notes": "NoFilteredActivityEmptyState with Show all (EXP-066)"
+        },
+        {
+            "id": "activity.loading",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/self/activities*",
+                        "action": "hang"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "activity.error",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/self/activities*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ]
+            }
+        },
+        {
+            "id": "activity.offline",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["wait for the feed"],
+                "offline": true
+            },
+            "notes": "OfflineBanner over the cached feed"
+        },
+        {
+            "id": "activity.offline-no-data",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": [
+                    "goto('/dashboard') and wait for the feed",
+                    "context.setOffline(true)",
+                    "click the Activity navigation link"
+                ]
+            },
+            "notes": "Offline EmptyState: the full feed was never cached. Unconfirmed that the previews cache does not fill it"
+        },
+        {
+            "id": "activity.next-page-error",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/self/activities?*cursor=*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ],
+                "steps": ["scroll to the end of the feed"]
+            },
+            "notes": "The loaded list stays, a soft Retry below it"
+        },
+        {
+            "id": "activity.long-content",
+            "app": "app",
+            "routeId": "activity",
+            "path": "/activity",
+            "kind": "state",
+            "parent": "activity",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)"
+            }
+        },
+        {
+            "id": "activity-details",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["goto('/activity')", "click the 'E2E dinner' row"]
+            },
+            "notes": "An expense with Edit and Delete"
+        },
+        {
+            "id": "activity-details.settlement",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "state",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(B)",
+                "steps": [
+                    "record a partial settlement in the UI as specs/money/settle-up.spec.ts does",
+                    "goto('/activity')",
+                    "click the settlement row"
+                ]
+            },
+            "notes": "The provisioning client has no settlement helper yet"
+        },
+        {
+            "id": "activity-details.loading",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "state",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/self/activities/*/children*",
+                        "action": "hang"
+                    }
+                ],
+                "steps": [
+                    "read parentActivityId as in activity-details, then goto the details URL in a fresh context"
+                ]
+            }
+        },
+        {
+            "id": "activity-details.error",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "state",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/self/activities/*/children*",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ],
+                "steps": [
+                    "read parentActivityId as in activity-details, then goto the details URL in a fresh context"
+                ]
+            },
+            "notes": "Load error with Retry (ActivitySubeventsFeed), never 'no history'"
+        },
+        {
+            "id": "activity-details.offline",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "state",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["open activity-details and wait for the history"],
+                "offline": true
+            },
+            "notes": "OfflineBanner over the cached history"
+        },
+        {
+            "id": "activity-details.unavailable",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/00000000-0000-4000-8000-000000000000",
+            "kind": "state",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            },
+            "notes": "A deleted or unknown entry: the unavailable EmptyState"
+        },
+        {
+            "id": "activity-details.invalid-id",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/not-a-uuid",
+            "kind": "state",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            },
+            "notes": "RouteErrorView NotFound"
+        },
+        {
+            "id": "activity-details.long-content",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "state",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)",
+                "steps": ["goto('/activity')", "click the long-description expense row"]
+            },
+            "notes": "Long description, nine participants, a large amount"
+        },
+        {
+            "id": "friends",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)"
+            },
+            "notes": "A friend with a debt, per-currency card"
+        },
+        {
+            "id": "friends.empty",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            },
+            "notes": "FriendInviteEmptyState with the invite rows"
+        },
+        {
+            "id": "friends.settled",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friends-pair",
+                "fixture": "signIn(A)"
+            },
+            "notes": "Friends without debts: SettledUpCard"
+        },
+        {
+            "id": "friends.loading",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friends-pair",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/known-users",
+                        "action": "hang"
+                    }
+                ]
+            },
+            "notes": "FriendsPageSkeleton"
+        },
+        {
+            "id": "friends.error",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friends-pair",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/known-users",
+                        "action": "fulfill",
+                        "status": 500
+                    }
+                ]
+            },
+            "notes": "LoadErrorEmptyState with Retry"
+        },
+        {
+            "id": "friends.offline",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["wait for the friends list"],
+                "offline": true
+            }
+        },
+        {
+            "id": "friends.offline-no-data",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "capture": "manual",
+            "setup": {
+                "scenario": "friends-pair",
+                "fixture": "signIn(A)",
+                "offline": true
+            },
+            "notes": "OfflineEmptyState (FriendsList): known users never cached. The shell reads them on every page (useAddExpenseAvailability), so only a cold start offline reaches it; needs the service-worker build"
+        },
+        {
+            "id": "friends.long-content",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)"
+            }
+        },
+        {
+            "id": "settings",
+            "app": "app",
+            "routeId": "settings",
+            "path": "/settings",
+            "kind": "screen",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            }
+        },
+        {
+            "id": "settings.loading",
+            "app": "app",
+            "routeId": "settings",
+            "path": "/settings",
+            "kind": "state",
+            "parent": "settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/self",
+                        "action": "hang"
+                    }
+                ]
+            },
+            "notes": "Section skeletons. Unconfirmed: signIn may seed the self user, then the page is never in loading"
+        },
+        {
+            "id": "settings.offline",
+            "app": "app",
+            "routeId": "settings",
+            "path": "/settings",
+            "kind": "state",
+            "parent": "settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "steps": ["wait for the account section"],
+                "offline": true
+            },
+            "notes": "Log out other devices disabled with its online-only reason"
+        },
+        {
+            "id": "settings.long-content",
+            "app": "app",
+            "routeId": "settings",
+            "path": "/settings",
+            "kind": "state",
+            "parent": "settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)"
+            },
+            "notes": "The long display name in the account section"
+        },
+        {
+            "id": "not-found",
+            "app": "app",
+            "routeId": "notFound",
+            "path": "/not-found",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            },
+            "notes": "Any unknown path (/e2e-missing) redirects here (the * route)"
+        },
+        {
+            "id": "not-found.signed-in",
+            "app": "app",
+            "routeId": "notFound",
+            "path": "/not-found",
+            "kind": "state",
+            "parent": "not-found",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)"
+            }
+        },
+        {
+            "id": "app.backend-unavailable",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/health",
+                        "action": "fulfill",
+                        "status": 503
+                    },
+                    {
+                        "method": "ANY",
+                        "url": "**/users/self*",
+                        "action": "fulfill",
+                        "status": 503
+                    }
+                ]
+            },
+            "notes": "BackendUnavailableGate: the only full-screen block for an outage"
+        },
+        {
+            "id": "app.update-required",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "state",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "mocks": [
+                    {
+                        "method": "GET",
+                        "url": "**/users/self",
+                        "action": "fulfill",
+                        "status": 426,
+                        "body": {
+                            "code": "CLIENT.OUTDATED"
+                        }
+                    }
+                ]
+            },
+            "notes": "UpdateRequiredScreen (app/pwa). The exact 426 body shape is in shared/api/interceptors.ts"
+        },
+        {
+            "id": "app.route-error",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "state",
+            "parent": "friends",
+            "auth": "signed-in",
+            "capture": "manual",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "steps": [
+                    "goto('/dashboard')",
+                    "page.route on the friends route chunk: abort",
+                    "click the Friends navigation link"
+                ]
+            },
+            "notes": "RouteErrorView for a failed lazy chunk (new-version or offline variant). The chunk URL is hashed per build, so the mock needs a build-specific pattern"
+        },
+        {
+            "id": "modal.session-expired",
+            "app": "app",
+            "routeId": "settings",
+            "path": "/settings",
+            "kind": "modal",
+            "parent": "settings",
+            "auth": "session-expired",
+            "capture": "manual",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "steps": [
+                    "wait for the page",
+                    "page.route POST **/auth/refresh: fulfill 401, and the next API read: 401",
+                    "trigger a refetch (window focus)"
+                ]
+            },
+            "notes": "AuthModal over the hidden page (AuthLayout). Not confirmed which 401 sequence ends the session without a full logout"
+        },
+        {
+            "id": "modal.sign-in",
+            "app": "app",
+            "routeId": "notFound",
+            "path": "/not-found",
+            "kind": "modal",
+            "parent": "not-found",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page",
+                "steps": ["click Sign in in the header"]
+            },
+            "notes": "AuthModal through SignInEntry; the Google button never completes"
+        },
+        {
+            "id": "modal.early-supporter-promo",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "modal",
+            "parent": "dashboard.welcome",
+            "auth": "signed-in",
+            "capture": "manual",
+            "setup": {
+                "scenario": "new-user",
+                "steps": [
+                    "goto('/oauth/callback?code=e2e-fake-code') with POST **/auth/oauth/google/exchange fulfilled by A's token and is_new_user: true",
+                    "GET **/users/premium-promo fulfilled with a remaining count"
+                ]
+            },
+            "notes": "Shown once for a new user's first sign-in with subscriptionUntil set. The exchange mock must carry A's provisioned token; unconfirmed end to end"
+        },
+        {
+            "id": "modal.create-group",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "modal",
+            "parent": "dashboard.welcome",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "steps": ["click Create group"]
+            }
+        },
+        {
+            "id": "modal.create-group.validation",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "modal",
+            "parent": "modal.create-group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "steps": ["click Create group", "submit the form with an empty name"]
+            }
+        },
+        {
+            "id": "modal.edit-group",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": [
+                    "openGroupWithGroupsList(page, groupId)",
+                    "click the Edit group button on the cover"
+                ]
+            },
+            "notes": "CreateUpdateGroupModal type update, with the cover picker"
+        },
+        {
+            "id": "modal.add-expense",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "modal",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["click Add expense"]
+            },
+            "notes": "Dialog 'Add an expense' with the group picker"
+        },
+        {
+            "id": "modal.add-expense.group",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupWithGroupsList(page, groupId)", "click Add expense"]
+            },
+            "notes": "Group preset (expectExpenseDialogGroup, expectExpenseDialogMembers)"
+        },
+        {
+            "id": "modal.add-expense.split-amounts",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "modal.add-expense.group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "long-content",
+                "fixture": "signIn(A)",
+                "steps": [
+                    "openGroupWithGroupsList(page, groupId)",
+                    "click Add expense",
+                    "choose the Amounts split (specs/money/split.spec.ts)"
+                ]
+            },
+            "notes": "Many participants: the split control and participant list at 390 (#494 items 9)"
+        },
+        {
+            "id": "modal.add-expense.validation",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "modal.add-expense.group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": [
+                    "openGroupWithGroupsList(page, groupId)",
+                    "click Add expense",
+                    "submit with no amount"
+                ]
+            }
+        },
+        {
+            "id": "modal.add-expense.no-friend",
+            "app": "app",
+            "routeId": "dashboard",
+            "path": "/dashboard",
+            "kind": "modal",
+            "parent": "dashboard",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-no-friend",
+                "fixture": "signIn(A)",
+                "steps": ["click Add expense", "switch the target to Friends"]
+            },
+            "notes": "NoDirectFriendEmptyState (EXP-067) with the switch-to-group action. Not on the welcome view: useAddExpenseAvailability hides Add expense without a target. Unconfirmed that the API adds a non-friend to a group and that a group co-member is not a known user",
+            "capture": "manual"
+        },
+        {
+            "id": "modal.add-expense.offline",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "modal.add-expense.group",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupWithGroupsList(page, groupId)", "click Add expense"],
+                "offline": true
+            },
+            "notes": "OfflineStatus badge above the dialog; submit disabled (offline writes are off)"
+        },
+        {
+            "id": "modal.edit-expense",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "modal",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["open activity-details", "click Update"]
+            },
+            "notes": "Dialog 'Edit expense' (specs/money/edit-delete-expense.spec.ts)"
+        },
+        {
+            "id": "modal.delete-expense",
+            "app": "app",
+            "routeId": "activityDetails",
+            "path": "/activity/:parentActivityId",
+            "kind": "modal",
+            "parent": "activity-details",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(A)",
+                "steps": ["open activity-details", "click Delete"]
+            },
+            "notes": "RemoveLedgerEntryAlertDialog 'Delete entry?' with the 'Delete entry' action"
+        },
+        {
+            "id": "modal.settle-up.choose-debt",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group.balances",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(B)",
+                "steps": ["openGroupTab(page, groupId, 'Balances')", "click Settle up"]
+            },
+            "notes": "Dialog 'Choose a debt' (specs/money/settle-up.spec.ts)"
+        },
+        {
+            "id": "modal.settle-up.record-payment",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "modal.settle-up.choose-debt",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(B)",
+                "steps": [
+                    "openGroupTab(page, groupId, 'Balances')",
+                    "click Settle up",
+                    "choose the debt to A"
+                ]
+            },
+            "notes": "Dialog 'Record payment' with the amount field"
+        },
+        {
+            "id": "modal.settle-up.friend",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "modal",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-with-expense",
+                "fixture": "signIn(B)",
+                "steps": ["open the 'More actions for E2E A' menu", "click Settle up"]
+            },
+            "notes": "SettleUpModal source friend"
+        },
+        {
+            "id": "modal.invite-qr.group",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group.settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupTab(page, groupId, 'Settings')", "click Show QR code"]
+            },
+            "notes": "The QR encodes a real but run-scoped invite token: blur or crop it in shared captures"
+        },
+        {
+            "id": "modal.invite-qr.friend",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "modal",
+            "parent": "friends.empty",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "steps": ["click Show QR code"]
+            },
+            "notes": "Run-scoped friend invite token in the QR: blur it in shared captures"
+        },
+        {
+            "id": "modal.remove-friend",
+            "app": "app",
+            "routeId": "friends",
+            "path": "/friends",
+            "kind": "modal",
+            "parent": "friends",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "friends-pair",
+                "fixture": "signIn(A)",
+                "steps": ["open the 'More actions for E2E B' menu", "click Remove friend"]
+            }
+        },
+        {
+            "id": "modal.kick-member",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group.settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupTab(page, groupId, 'Settings')", "click Kick on E2E B"]
+            }
+        },
+        {
+            "id": "modal.leave-group",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group.settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(B)",
+                "steps": ["openGroupTab(page, groupId, 'Settings')", "click Leave group"]
+            }
+        },
+        {
+            "id": "modal.leave-group.owner",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group.settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupTab(page, groupId, 'Settings')", "click Leave group"]
+            },
+            "notes": "As the owner: 'You are the owner. Please transfer ownership before leaving.' and the Select new owner field"
+        },
+        {
+            "id": "modal.delete-group",
+            "app": "app",
+            "routeId": "group",
+            "path": "/group/:groupId",
+            "kind": "modal",
+            "parent": "group.settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "group-pair",
+                "fixture": "signIn(A)",
+                "steps": ["openGroupTab(page, groupId, 'Settings')", "click Remove group"]
+            },
+            "notes": "Destructive confirm; never confirm it in a capture"
+        },
+        {
+            "id": "modal.user-avatar",
+            "app": "app",
+            "routeId": "settings",
+            "path": "/settings",
+            "kind": "modal",
+            "parent": "settings",
+            "auth": "signed-in",
+            "setup": {
+                "scenario": "new-user",
+                "fixture": "signIn(A)",
+                "steps": ["click Change photo"]
+            }
+        },
+        {
+            "id": "site.home",
+            "app": "site",
+            "sitePage": "index.astro",
+            "path": "/",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            }
+        },
+        {
+            "id": "site.home.ru",
+            "app": "site",
+            "sitePage": "[locale]/index.astro",
+            "path": "/ru/",
+            "kind": "state",
+            "parent": "site.home",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            },
+            "notes": "One row per NON_DEFAULT_LOCALES entry (today only ru)"
+        },
+        {
+            "id": "site.privacy",
+            "app": "site",
+            "sitePage": "privacy.astro",
+            "path": "/privacy",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            },
+            "notes": "Long content: the whole policy"
+        },
+        {
+            "id": "site.privacy.ru",
+            "app": "site",
+            "sitePage": "[locale]/privacy.astro",
+            "path": "/ru/privacy",
+            "kind": "state",
+            "parent": "site.privacy",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            }
+        },
+        {
+            "id": "site.terms",
+            "app": "site",
+            "sitePage": "terms.astro",
+            "path": "/terms",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            }
+        },
+        {
+            "id": "site.terms.ru",
+            "app": "site",
+            "sitePage": "[locale]/terms.astro",
+            "path": "/ru/terms",
+            "kind": "state",
+            "parent": "site.terms",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            }
+        },
+        {
+            "id": "site.not-found",
+            "app": "site",
+            "sitePage": "404.astro",
+            "path": "/e2e-missing-page",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            }
+        },
+        {
+            "id": "site.join-friend",
+            "app": "site",
+            "sitePage": "join/friend.astro",
+            "path": "/join/friend/e2eFakeInviteToken0001",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            },
+            "notes": "A format-valid fake token: the page never calls the API, it only links to the app. Needs the vercel.json rewrite of /join/<kind>/<token>: capture against a deployment, not astro preview"
+        },
+        {
+            "id": "site.join-friend.invalid",
+            "app": "site",
+            "sitePage": "join/friend.astro",
+            "path": "/join/friend/x",
+            "kind": "state",
+            "parent": "site.join-friend",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            },
+            "notes": "'The link is broken' (token fails INVITE_TOKEN_PATTERN). Needs the vercel.json rewrite (a deployment, not astro preview)"
+        },
+        {
+            "id": "site.join-group",
+            "app": "site",
+            "sitePage": "join/group.astro",
+            "path": "/join/group/e2eFakeInviteToken0001",
+            "kind": "screen",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            },
+            "notes": "Needs the vercel.json rewrite of /join/<kind>/<token>: capture against a deployment, not astro preview"
+        },
+        {
+            "id": "site.join-group.invalid",
+            "app": "site",
+            "sitePage": "join/group.astro",
+            "path": "/join/group/x",
+            "kind": "state",
+            "parent": "site.join-group",
+            "auth": "anonymous",
+            "setup": {
+                "fixture": "page"
+            },
+            "notes": "Needs the vercel.json rewrite (a deployment, not astro preview)"
+        }
+    ],
+    "excluded": [
+        {
+            "routeId": "home",
+            "reason": "Index route with no page: its loader redirects to /dashboard (or Solo); only the shared PageLoader shows while it waits"
+        },
+        {
+            "routeId": "solo",
+            "reason": "Unreachable: IS_SOLO_MODE_RELEASED is false and Solo needs an admin role, so SoloGuardLayout redirects to /dashboard"
+        },
+        {
+            "routePath": "*",
+            "reason": "Catch-all redirect to /not-found, covered by the not-found row"
+        },
+        {
+            "component": "OutboxSheet",
+            "reason": "Behind VITE_FEATURE_OFFLINE_WRITES, which is off until 03-17"
+        },
+        {
+            "component": "AccountSwitchDialog",
+            "reason": "Only with the offline-writes flag (isUnsentOpsConfirmOn); off in every deployed build"
+        },
+        {
+            "component": "useSignOutConfirm dialog",
+            "reason": "Only with the offline-writes flag; with it off sign-out runs at once"
+        },
+        {
+            "component": "ConflictDraftNotice",
+            "reason": "Outbox conflicts exist only with the offline-writes flag"
+        },
+        {
+            "component": "ServiceWorkerManager update toast",
+            "reason": "A toast, not a screen; needs a waiting service worker (playwright.sw.config.ts), covered by e2e/sw.spec.ts"
+        },
+        {
+            "component": "GlobalErrorBoundary",
+            "reason": "A crash outside the router; no user path reaches it without injecting a render error (unit tests cover it)"
+        },
+        {
+            "component": "RootErrorBoundary",
+            "reason": "A crash of the root layout itself; no user path reaches it without injecting a render error (unit tests cover it)"
+        }
+    ],
+    "flows": [
+        {
+            "id": "sign-up-onboarding",
+            "title": "Sign up and onboarding",
+            "steps": [
+                "site.home",
+                "login",
+                "oauth-callback.signing-in",
+                "dashboard.welcome",
+                "modal.early-supporter-promo",
+                "modal.create-group",
+                "group.solo",
+                "modal.invite-qr.group"
+            ]
+        },
+        {
+            "id": "first-group",
+            "title": "First group",
+            "steps": ["dashboard.welcome", "modal.create-group", "group.solo"]
+        },
+        {
+            "id": "first-expense",
+            "title": "First expense",
+            "steps": ["group.empty", "modal.add-expense.group", "group", "group.balances"]
+        },
+        {
+            "id": "settle-up",
+            "title": "Settle up",
+            "steps": [
+                "group.balances",
+                "modal.settle-up.choose-debt",
+                "modal.settle-up.record-payment",
+                "group.balances.settled",
+                "activity"
+            ]
+        },
+        {
+            "id": "invite-friend",
+            "title": "Invite a friend and join by invite",
+            "steps": [
+                "friends.empty",
+                "modal.invite-qr.friend",
+                "site.join-friend",
+                "friend-join",
+                "friends.settled"
+            ]
+        },
+        {
+            "id": "invite-group",
+            "title": "Invite to a group and join by invite",
+            "steps": [
+                "group.settings",
+                "modal.invite-qr.group",
+                "site.join-group",
+                "group-join",
+                "group.empty"
+            ]
+        },
+        {
+            "id": "sign-in-sign-out",
+            "title": "Sign in and sign out",
+            "steps": [
+                "site.home",
+                "login",
+                "oauth-callback.signing-in",
+                "dashboard",
+                "settings",
+                "site.home"
+            ]
+        }
+    ]
+}

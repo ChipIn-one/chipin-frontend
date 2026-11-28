@@ -10,7 +10,6 @@ import {
     type LS_KEY_THEME,
     LS_KEY_USER,
     type SS_KEY_EXPENSE_DRAFT,
-    type SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN,
     type SS_KEY_ROUTE_CHUNK_RELOAD,
 } from 'constants/localstorage';
 
@@ -153,10 +152,7 @@ const LocalStorage = {
     },
 };
 
-type SessionStorageKey =
-    | typeof SS_KEY_EXPENSE_DRAFT
-    | typeof SS_KEY_PUBLIC_LOCALE_SUGGESTION_SHOWN
-    | typeof SS_KEY_ROUTE_CHUNK_RELOAD;
+type SessionStorageKey = typeof SS_KEY_EXPENSE_DRAFT | typeof SS_KEY_ROUTE_CHUNK_RELOAD;
 
 // sessionStorage holds raw text only: its readers decode and validate it themselves (the expense
 // draft restore: bigint codec + zod; the flags compare with '1'). Blocked or full storage is

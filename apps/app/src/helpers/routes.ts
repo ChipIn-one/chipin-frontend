@@ -1,6 +1,11 @@
 import { matchPath } from 'react-router-dom';
 
-import { ROUTE_META, ROUTES } from 'constants/routes';
+import { ROUTES } from 'constants/routes';
+
+// The pages with a breadcrumb back to their parent page.
+const BREADCRUMB_PARENTS = [
+    { path: `${ROUTES.ACTIVITY}/:parentActivityId`, parentPath: ROUTES.ACTIVITY },
+] as const;
 
 const getPreferredModeRoute = (isSoloModeByDefault: boolean): string =>
     isSoloModeByDefault ? ROUTES.SOLO : ROUTES.DASHBOARD;
@@ -37,13 +42,9 @@ const getHasDesktopSidebar = (pathname: string): boolean => {
 };
 
 const getBreadcrumbParentPath = (pathname: string): string | null => {
-    for (const routeMeta of ROUTE_META) {
-        if (routeMeta.breadcrumb && matchPath({ path: routeMeta.path, end: true }, pathname)) {
-            return routeMeta.breadcrumb.parentPath;
-        }
-    }
+    const match = BREADCRUMB_PARENTS.find(({ path }) => matchPath({ path, end: true }, pathname));
 
-    return null;
+    return match?.parentPath ?? null;
 };
 
 export {
