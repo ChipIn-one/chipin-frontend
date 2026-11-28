@@ -222,9 +222,14 @@ users) removed every move-era rule instead of switching it to `301`:
 - `apps/app/vercel.json` has no rule for `chipin.one` or `dev.chipin.one`: no
   step-1 or `/join/*` compat redirects, no `/api` rewrites, no
   `/manifest.webmanifest` redirect and no `/sw.js` kill-switch rewrite. The
-  app keeps the `/sw.js` → `/sw-app.js` rewrite, the `/api` rewrites of the app
-  hosts and previews, the host-scoped catch-all to the shell, the locale `301`
-  rows and its headers. The app code has no legacy-host gate, handoff or notice.
+  app keeps the `/api` rewrites of the app hosts and previews, the host-scoped
+  catch-all to the shell, the locale `301` rows and its headers. The app code
+  has no legacy-host gate, handoff or notice.
+- 04-5b: the app worker is `dist/sw.js` again, served at `/sw.js` from the
+  filesystem (no rename to `sw-app.js`, no rewrite; the registration URL never
+  changed, so no worker re-registers); `/sw.js` keeps `Cache-Control: no-cache`.
+  The app no longer ships `robots.txt` or `sitemap.xml` (the site serves them;
+  the app host stays `noindex` by `X-Robots-Tag` and `<meta name="robots">`).
 - `apps/site/vercel.json` no longer redirects old app URLs (`/dashboard`,
   `/oauth/callback`, …) to the app host, nor `/group/join/<t>` and
   `/friends/join/<t>` to the invite landing, nor `/app.html` to `/`: the old app

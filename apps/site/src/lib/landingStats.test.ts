@@ -10,7 +10,7 @@ import {
 } from './landingStats';
 
 // Spec 04 §3.4, §4.1 (row 04-3b1): the landing statistics of the site home. The response shape is
-// KB STAT-001/STAT-008; the number format is the app's `Amount type="summary"`.
+// KB STAT-001/STAT-008; the number format is the one of the app's `Amount type="summary"`.
 const VALID = {
     expensesCount: 25_300_000,
     debtsTrackedUsd: 1_250_000.5,
@@ -45,17 +45,6 @@ describe('parseLandingStats', () => {
     });
 });
 
-/** The part of the app's `getNumberData` (helpers/numbers.ts) the comparison uses. */
-type NumberDataFormatter = (args: {
-    value: number;
-    precision?: number;
-    isKMB: boolean;
-    isExternal: boolean;
-}) => { numberFormatted: string; isValueTooSmall: boolean };
-
-const isNumberDataFormatter = (value: unknown): value is NumberDataFormatter =>
-    typeof value === 'function';
-
 describe('formatSummary (the app summary format)', () => {
     test.each([
         [0, '0'],
@@ -79,37 +68,22 @@ describe('formatSummary (the app summary format)', () => {
         expect(formatSummary(value)).toBe(text);
     });
 
-    // The app formatter itself, loaded at run time: helpers/numbers.ts relies on the app's global
-    // types, so a static import would pull it into the site type check. 04-5a removes the app
-    // landing and must rework this comparison with it.
-    test('matches the app getNumberData for the landing values', async () => {
-        const appModule: unknown = await import(
-            /* @vite-ignore */ new URL('../../../app/src/helpers/numbers.ts', import.meta.url).href
-        );
-        const getNumberData =
-            typeof appModule === 'object' && appModule !== null && 'getNumberData' in appModule
-                ? appModule.getNumberData
-                : undefined;
-
-        expect(isNumberDataFormatter(getNumberData)).toBe(true);
-        if (!isNumberDataFormatter(getNumberData)) {
-            return;
-        }
-        const appSummary = (value: number, precision?: number): string => {
-            const data = getNumberData({ value, precision, isKMB: true, isExternal: true });
-
-            return `${data.isValueTooSmall ? '< ' : ''}${data.numberFormatted}`;
-        };
-        const values = [
-            0, 0.004, 0.005, 0.5, 5, 12.5, 12.345, 99.999, 999, 999.994, 999.996, 1000, 1004.9,
-            1005, 1234.5, 999_999, 1_250_000.5, 25_300_000, 123_456_789.1234, 3e9, 4.5e12, 2e15,
-        ];
-
-        for (const value of values) {
-            expect([value, formatSummary(value)]).toEqual([value, appSummary(value)]);
-            expect([value, formatSummary(value, 0)]).toEqual([value, appSummary(value, 0)]);
-            expect([value, formatSummary(value, 2)]).toEqual([value, appSummary(value, 2)]);
-        }
+    // Rounding edges in the default, 0 and 2 decimals. The values were taken from the app's
+    // `getNumberData` (helpers/numbers.ts) before 04-5b removed the app landing; the site keeps them.
+    test.each([
+        [0.005, ['< 0.01', '< 1', '< 0.01']],
+        [0.5, ['0.5', '< 1', '0.5']],
+        [99.999, ['100', '100', '100']],
+        [999.994, ['999.99', '1.00K', '999.99']],
+        [1004.9, ['1.01K', '1.01K', '1.00K']],
+        [1005, ['1.01K', '1.01K', '1.01K']],
+        [123_456_789.1234, ['123.46M', '123.46M', '123.46M']],
+    ] as const)('%s keeps the summary rounding at each precision', (value, [auto, zero, two]) => {
+        expect([formatSummary(value), formatSummary(value, 0), formatSummary(value, 2)]).toEqual([
+            auto,
+            zero,
+            two,
+        ]);
     });
 
     test('takes an explicit precision', () => {

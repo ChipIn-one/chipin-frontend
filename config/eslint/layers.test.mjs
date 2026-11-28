@@ -76,7 +76,7 @@ describe('layer boundaries (config/eslint/layers.js)', () => {
 
     test('a features slice cannot import the internals of another slice', async () => {
         const errors = await layerErrors(
-            'apps/app/src/features/landing/hero-section/HeroSection.tsx',
+            'apps/app/src/features/add-expense/AddExpenseModal.tsx',
             "import { getDailyExpenseSummary } from 'features/activity/internal/selectors';\n" +
                 'export const x = getDailyExpenseSummary;\n',
         );
@@ -97,7 +97,7 @@ describe('layer boundaries (config/eslint/layers.js)', () => {
 
     test('a features slice may import another slice through its index', async () => {
         const errors = await layerErrors(
-            'apps/app/src/features/landing/hero-section/HeroSection.tsx',
+            'apps/app/src/features/add-expense/AddExpenseModal.tsx',
             "import { ActivityList } from 'features/activity';\nexport const x = ActivityList;\n",
         );
 
@@ -116,7 +116,7 @@ describe('layer boundaries (config/eslint/layers.js)', () => {
     test('a flat page file cannot import another flat page file', async () => {
         const errors = await layerErrors(
             'apps/app/src/pages/DashboardPage.tsx',
-            "import HomePage from './HomePage';\nexport const x = HomePage;\n",
+            "import ActivityPage from './ActivityPage';\nexport const x = ActivityPage;\n",
         );
 
         expect(errors).toEqual(['boundaries/dependencies']);

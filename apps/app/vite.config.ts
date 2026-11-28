@@ -9,7 +9,6 @@ import { resolveAppVersionInfo } from '../../scripts/version-resolver.mjs';
 import { buildPwaOptions } from './pwa.config.ts';
 import { brandPlugin, themeInitPlugin } from './scripts/brand-plugin.ts';
 import { shouldUploadSourcemaps } from './scripts/sentry-sourcemaps.ts';
-import { swAppPlugin } from './scripts/sw-app-plugin.ts';
 
 // https://vite.dev/config/
 
@@ -148,8 +147,6 @@ export default defineConfig(({ command, mode }) => {
             // favicon.svg from @chipin/tokens at /favicon.svg, <meta name="theme-color"> (05-2b).
             brandPlugin(),
             VitePWA(buildPwaOptions({ appName: pwaAppName })),
-            // After VitePWA: renames dist/sw.js to dist/sw-app.js once the worker is written (04-4a1).
-            swAppPlugin(),
             ...(sentryUploadConfig
                 ? [
                       sentryVitePlugin({

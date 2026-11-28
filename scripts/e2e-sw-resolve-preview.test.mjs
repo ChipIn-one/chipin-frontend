@@ -567,7 +567,6 @@ describe('e2e-sw workflow', () => {
             'apps/app/pwa.config.ts',
             'apps/app/vercel.json',
             'apps/app/vite.config.ts',
-            'apps/app/scripts/sw-app-plugin.ts',
             'apps/app/scripts/private-spa-navigation.ts',
             'apps/app/index.html',
             'apps/app/src/helpers/appUpdate.ts',
