@@ -19,18 +19,19 @@ const ModeLogotype = ({ isSoloMode, isModeBadgeVisible = true }: Props) => {
     return (
         <Flex gap="4" align="center">
             <Logotype className={styles.root} data-mode={isSoloMode ? 'solo' : 'group'} />
-            <Box display={{ initial: 'none', sm: 'block' }}>
-                <Flex align="center" gap="2">
+            {/* Below `sm` only the name hides: the mode badge stays next to the logo (#971). */}
+            <Flex align="center" gap="2">
+                <Box display={{ initial: 'none', sm: 'block' }}>
                     <Text size="6" weight="bold" color={activeColor}>
                         {PROJECT_NAME}
                     </Text>
-                    {isModeBadgeVisible && (
-                        <Badge size="1" variant="soft" color={activeColor}>
-                            {t(modeBadgeKey)}
-                        </Badge>
-                    )}
-                </Flex>
-            </Box>
+                </Box>
+                {isModeBadgeVisible && (
+                    <Badge size="1" variant="soft" color={activeColor}>
+                        {t(modeBadgeKey)}
+                    </Badge>
+                )}
+            </Flex>
         </Flex>
     );
 };

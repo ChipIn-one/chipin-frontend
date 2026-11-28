@@ -13,6 +13,13 @@ const getPreferredModeRoute = (isSoloModeByDefault: boolean): string =>
 const isNavigationRouteActive = (pathname: string, href: string): boolean =>
     pathname === href || pathname.startsWith(`${href}/`);
 
+/** The invite join pages (group and friend): a bare layout without the bottom bar (#971). */
+const getIsInviteJoinRoute = (pathname: string): boolean =>
+    Boolean(
+        matchPath({ path: `${ROUTES.GROUP_JOIN}/:inviteToken`, end: true }, pathname) ||
+        matchPath({ path: `${ROUTES.FRIENDS_JOIN}/:inviteToken`, end: true }, pathname),
+    );
+
 const getHasDesktopSidebar = (pathname: string): boolean => {
     if (
         matchPath({ path: ROUTES.DASHBOARD, end: true }, pathname) ||
@@ -30,7 +37,7 @@ const getHasDesktopSidebar = (pathname: string): boolean => {
 
     return Boolean(
         matchPath({ path: `${ROUTES.GROUP}/:groupId`, end: true }, pathname) &&
-        !matchPath({ path: `${ROUTES.GROUP_JOIN}/:inviteToken`, end: true }, pathname),
+        !getIsInviteJoinRoute(pathname),
     );
 };
 
@@ -43,6 +50,7 @@ const getBreadcrumbParentPath = (pathname: string): string | null => {
 export {
     getBreadcrumbParentPath,
     getHasDesktopSidebar,
+    getIsInviteJoinRoute,
     getPreferredModeRoute,
     isNavigationRouteActive,
 };

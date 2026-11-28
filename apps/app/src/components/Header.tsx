@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
-import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
+import { getHasDesktopSidebar, getIsInviteJoinRoute, getPreferredModeRoute } from 'helpers/routes';
 import { SITE_PATHS } from 'helpers/sitePaths';
 import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
@@ -41,6 +41,9 @@ const Header = () => {
     }
 
     const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
+    // Signed in, a phone gets its navigation from the bottom bar, so the header hides below `sm`.
+    // The join pages have no bottom bar: there the header is the way back to the app (#971).
+    const isHeaderHiddenOnPhone = isLoggedIn && !getIsInviteJoinRoute(location.pathname);
     // Signed out, the logo leads to the site: a plain link, never a router navigation (§2.1).
     const siteHomeHref = SITE_PATHS.home();
     const logo = (
@@ -53,7 +56,7 @@ const Header = () => {
         <Box
             className={styles.root}
             display={
-                isLoggedIn
+                isHeaderHiddenOnPhone
                     ? {
                           initial: 'none',
                           sm: 'block',

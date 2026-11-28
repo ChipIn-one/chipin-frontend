@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useJoinInviteLink } from 'hooks/useJoinInviteLink';
 
-import InviteJoinConfirmation from 'components/invite/InviteJoinConfirmation';
+import { InviteJoinConfirmation } from 'components/invite/InviteJoinConfirmation';
 
 const GroupJoinPage = () => {
     const { t } = useTranslation('group');
@@ -10,6 +10,7 @@ const GroupJoinPage = () => {
 
     return (
         <InviteJoinConfirmation
+            variant="group"
             status={status}
             errorMessage={errorMessage}
             title={t('join.title')}
@@ -18,6 +19,7 @@ const GroupJoinPage = () => {
             cancelLabel={t('join.cancel')}
             retryLabel={t('join.retry')}
             invalidTitle={t('join.invalidTitle')}
+            invalidDescription={t('join.invalidDescription')}
             goHomeLabel={t('join.goHome')}
             onConfirm={confirm}
             onCancel={cancel}
@@ -25,4 +27,4 @@ const GroupJoinPage = () => {
     );
 };
 
-export default GroupJoinPage;
+export { GroupJoinPage };

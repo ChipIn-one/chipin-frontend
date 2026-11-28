@@ -9,7 +9,7 @@ The ChipIn logo with the product name and a group/solo mode badge, colored by mo
 ## When to use
 
 - The app header and the desktop sidebar (today: `Header`, `DesktopSidebar`).
-- The plain logo on public pages (footer, landing) does not need the mode: use the logo asset
+- The plain logo on the site (`apps/site`) does not need the mode: use the logo asset
   `@chipin/tokens/assets/logo.svg` as there.
 - Switching mode: `ViewModeSwitch`; this component only shows it.
 
@@ -33,9 +33,9 @@ in `ModeLogotype.module.css`; in group mode it keeps its built-in brand colors.
 
 ## Accessibility and i18n
 
-- The logo SVG has no title or `aria-label`. The name (`PROJECT_NAME`) and badge are hidden below
-  the `sm` breakpoint, so on mobile the logo alone has no accessible name: the link or button
-  around it must have an `aria-label` (`Header` passes `aria-label={PROJECT_NAME}`).
+- The logo SVG has no title or `aria-label`. The name (`PROJECT_NAME`) is hidden below the `sm`
+  breakpoint (the mode badge stays), so on mobile the logo has no accessible name of its own: the
+  link or button around it must have an `aria-label` (`Header` passes `aria-label={PROJECT_NAME}`).
 - i18n: namespace `common`, keys `modes.solo`, `modes.group`. `PROJECT_NAME` is a constant, not
   translated.
 

@@ -57,6 +57,7 @@
         "cancel": "Cancel",
         "retry": "Try again",
         "invalidTitle": "This invite link is not valid",
+        "invalidDescription": "Ask the person who shared it for a new link.",
         "goHome": "Go to home",
         "sessionLoadError": "We couldn't load your account. Try again."
     }

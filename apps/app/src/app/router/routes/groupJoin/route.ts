@@ -1,1 +1,1 @@
-export { default as Component } from 'pages/GroupJoinPage';
+export { GroupJoinPage as Component } from 'pages/GroupJoinPage';

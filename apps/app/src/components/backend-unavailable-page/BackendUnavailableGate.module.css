@@ -1,3 +1,12 @@
+/* The app shell column: the header, then the page area that grows into the rest of the screen
+   (#971: the join pages fill it on a phone). `svh` keeps it inside the visible phone viewport. */
+.root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100svh;
+}
+
 .root[data-unavailable='true'] {
     pointer-events: none;
     user-select: none;
