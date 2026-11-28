@@ -1,8 +1,9 @@
 # ChipIn design system
 
 One code-first system for every UI change in this repository (the PWA in `apps/app` and the site
-in `apps/site`). Code is the source of truth; these docs explain how to use it. Read this file
-first, then only the files your task needs.
+in `apps/site`). Code is the source of truth (for tokens and built components; an owner-approved
+mockup is the spec for screen layout, content and states, D35); these docs explain how to use it.
+Read this file first, then only the files your task needs.
 
 ## Three layers
 

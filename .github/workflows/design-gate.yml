@@ -1,0 +1,53 @@
+# Design gate (D35, chipin-frontend#995): a PR that changes UI files needs the owner's `design-approved` label and a
+# `Design: <https link>` line on its Task identity Issue, or the owner's `no-design-needed` label on the PR. Logic and
+# messages: scripts/design-gate.mjs.
+# `pull_request_target`: the workflow file and the script both come from master (the checkout is the base branch tip),
+# no PR code is checked out or run, the token is read-only and no secrets are used. So a PR cannot weaken its own
+# gate, fork PRs are gated too, and the PR that adds the gate does not run it (master has no workflow yet).
+# A PR opened before the gate landed on master is exempt (the script reads the date of the first master commit of
+# scripts/design-gate.mjs).
+# A label or body change on the Issue does not retrigger this workflow: re-run the check or push a commit. PR label
+# and body changes do retrigger it (labeled, unlabeled, edited).
+name: Design gate
+
+on:
+  pull_request_target:
+    branches: [master]
+    types: [opened, reopened, edited, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: design-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  design-gate:
+    name: design-gate
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout master (trusted code, never the PR head)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Check the approved design
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -f scripts/design-gate.mjs ]; then
+            node scripts/design-gate.mjs
+          else
+            echo "scripts/design-gate.mjs is not on master; the design gate passes."
+          fi

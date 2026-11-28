@@ -27,6 +27,7 @@ These invariants hold on `master` today (lint, `check:file-layout`, CI, or the e
 18. A change to the domain, API or visible behavior starts in the KB (`chipin-knowledge-base/common/glossary.md`, `common/specs/<capability>.md`) through a linked PR; tests are named by requirement IDs. A conflict with an ADR in `common/adr/` means stop and ask the owner.
 19. Take the KB from `../chipin-knowledge-base`, otherwise `git clone` it there, otherwise read it through GitHub; if it is unavailable both locally and through GitHub, the task is BLOCKED.
 20. UI follows the design system: before a UI task read [`docs/design-system/README.md`](docs/design-system/README.md) and [`30-ui.md`](docs/engineering/rules/30-ui.md), then only the files the README names. New and touched UI code takes colors only from `@chipin/tokens`: `var(--cp-*)` in CSS Modules (stylelint; ESLint `no-raw-colors` in TS/TSX) and `PROP_COLOR` for Radix `color` props (not linted yet). A touched styled-components file moves to a CSS Module (D34 touch rule); `themeColor()` files move when a design-system task touches them ([`tokens.md`](docs/design-system/tokens.md)).
+21. UI work is design-first (D35). Do not start implementing an Issue that changes UI (`apps/app/src/**/*.tsx`, CSS and `styled.ts` files, `apps/site/src/**`, locale files in `apps/*/src/i18n` and `packages/i18n-content`) unless the Issue has the `design-approved` label and a `Design:` line with the approved Claude Design link; otherwise stop and ask the owner for a design. The PR follows the mockup, copies the Issue's `Design:` line into its body and shows before/after screenshots (after only for a new screen; none with `no-design-needed`). Only the owner adds `design-approved` and `no-design-needed` (a change that touches UI files but changes nothing visible); agents never add or remove them. CI check `design-gate` (`scripts/design-gate.mjs`) enforces it; flow: [`process.md` §Mockups and design review](docs/design-system/process.md#mockups-and-design-review).
 
 ## Target (refactor in progress)
 
@@ -64,7 +65,7 @@ The release process owns releases: the owner runs Promote to Production for a ch
 
 ## Review
 
-An independent reviewer checks the "Applies now" invariants and that changed logic has regression tests. In a UI change it also checks that a new ChipIn component has a card and a registry row ([`process.md`](docs/design-system/process.md)) and that a screen has one primary action. The reviewer does not comment on style, formatting, import order, or anything CI catches.
+An independent reviewer checks the "Applies now" invariants and that changed logic has regression tests. In a UI change it also checks that a new ChipIn component has a card and a registry row ([`process.md`](docs/design-system/process.md)), that a screen has one primary action, and that the PR body has the `Design:` line copied from the Issue (CI checks the Issue, the reviewer checks the PR line) and before/after screenshots that match the approved mockup. The reviewer does not comment on style, formatting, import order, or anything CI catches.
 Mandatory review focus: auth/session/refresh and tokens, interceptors and permissions, routing and auth composition, request races and cancellation, service worker/PWA, CI, security (CSP), and dependency updates.
 
 <!-- ai-workflow:agents-routing:start -->
