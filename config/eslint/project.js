@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
 import pluginQuery from '@tanstack/eslint-plugin-query';
 import importX from 'eslint-plugin-import-x';
 
@@ -24,8 +21,8 @@ import { TEST_FILES } from './layers.js';
 // match the Astro template, which astro-eslint-parser parses as JSX).
 export const PENDING_IDS = Symbol.for('chipin.eslint.pendingIds');
 
-// 2^n block pairs per rule. 7 since 05-5: `no-restricted-imports` had 6 layer/money scopes and the
-// styled-components allowlist needs its own one.
+// 2^n block pairs per rule. 7 since 05-5: `no-restricted-imports` has 6 layer/money scopes; the
+// seventh was the styled-components allowlist, removed with styled-components in #901.
 const MAX_SCOPES = 7;
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -119,26 +116,14 @@ export const restrictedImports = entries =>
         return [{ paths, patterns }];
     });
 
-/** Repository-relative paths of the files that may still import styled-components (spec 05 §3). */
-export const STYLED_ALLOWLIST_PATH = 'config/eslint/styled-components-allowlist.json';
-
-const readStyledAllowlist = () =>
-    JSON.parse(readFileSync(resolve(import.meta.dirname, '../..', STYLED_ALLOWLIST_PATH), 'utf8'));
-
-/** One glob for a list of paths: a single scope of the restricted-entry helpers. */
-export const pathsGlob = paths => (paths.length === 1 ? paths[0] : `{${paths.join(',')}}`);
-
 /** ChipIn `no-restricted-imports` entries that are not layer boundaries. */
-export const projectImports = ({ appDir = '.', styledAllowlist = readStyledAllowlist() } = {}) => [
+export const projectImports = ({ appDir = '.' } = {}) => [
     {
-        // spec 05 §3: no new styled-components; the allowlisted files only leave the list
-        // (scripts/check-styled-allowlist.mjs). No `files` glob: the scope limit; outside
-        // apps/app/src nothing imports it either.
+        // spec 05 §3: styled-components was removed in #901; the import is banned everywhere.
         id: 'styled-components',
-        path: 'styled-components',
-        ...(styledAllowlist.length > 0 ? { ignores: [pathsGlob(styledAllowlist)] } : {}),
+        pattern: { regex: '^styled-components(?:/|$)' },
         message:
-            'No new styled-components: style with Radix props, then a CSS Module (`Component.module.css`, `var(--cp-*)`).',
+            'styled-components was removed: style with Radix props, then a CSS Module (`Component.module.css`, `var(--cp-*)`).',
     },
     {
         // spec 05 §3: `@radix-ui/colors` is a phantom (transitive) dependency; its only importer,

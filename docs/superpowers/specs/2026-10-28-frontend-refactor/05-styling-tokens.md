@@ -1,6 +1,8 @@
 # Spec 05: styles, tokens, dark theme, assets
 
 > ds-gallery was removed by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830); design review moves to Claude Design. Every ds-gallery mention below is history and is withdrawn.
+>
+> Status (ChipIn-one/chipin-frontend#901): styled-components is removed from `apps/app` and the lock file, and importing it is banned through `no-restricted-imports` (`[styled-components]`). The allowlist, `styled-touch-exempt.json`, `check-styled-allowlist.mjs` and `generate-styled-allowlist.mjs` are deleted. The allowlist and touch-rule text below (§3 "The rule 'no new styled-components'", Risks) is history.
 
 Owner decisions: D14 (styles), D16 (assets, vendor regex), D7 (`packages/tokens`), D8 (the Astro site uses tokens), D23, D31 (plan cuts: a hand-written `tokens.css`, no DTCG `tokens.json`/generator; no separate themeColor codemod PR).
 Based on DS v1: `docs/superpowers/specs/2026-10-22-design-system-v1-design.md` (on master since 01312ea).
@@ -170,7 +172,7 @@ The scales come before `base.css`, as in Radix's own `tokens/index.css`: the oli
   - the styled-components `<ThemeProvider>` in `main.tsx` and `PublicApp.tsx` (if still present; the `ds-gallery/gallery.tsx` one is withdrawn by D33, 2026-11-21);
   - and adds the phantom `@radix-ui/colors` to `no-restricted-imports` (registry row in spec 02 §D0).
 
-**The rule "no new styled-components".**
+**The rule "no new styled-components".** History: done in #901 (styled-components removed; the import is banned, the allowlist, touch rule and check script are deleted).
 
 - `config/eslint/styled-components-allowlist.json` is generated once by the script `scripts/generate-styled-allowlist.mjs` from the current importers (55 non-test files + tests that import `styled-components`).
 - `no-restricted-imports` for `styled-components` applies to `src/**` (`ds-gallery/**` withdrawn by D33, 2026-11-21), and is turned off for files in the allowlist.

@@ -207,10 +207,6 @@ export default defineConfig(({ command, mode }) => {
                                 test: /node_modules[\\/]@sentry[\\/]react[\\/]/,
                             },
                             {
-                                name: 'vendor-styled',
-                                test: /node_modules[\\/]styled-components[\\/]/,
-                            },
-                            {
                                 name: 'vendor-i18n',
                                 test: /node_modules[\\/](?:i18next|react-i18next)[\\/]/,
                             },

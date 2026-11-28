@@ -147,7 +147,7 @@ shrink.
 | A `--cp-*` name that is not in `tokens.css` (typos)                                     | stylelint `csstools/value-no-unknown-custom-properties`                                     |
 | `.rt-*` selectors outside `apps/app/src/styles/radixStylesOverwrite.css`                | stylelint `selector-disallowed-list`                                                        |
 | `style={{}}` with ordinary properties; only custom properties (`{ '--x': v }`)          | ESLint `inline-style` (`config/eslint/project.js`)                                          |
-| New styled-components files                                                             | ESLint `no-restricted-imports` + `scripts/check-styled-allowlist.mjs`                       |
+| `styled-components` imports (removed in #901)                                           | ESLint `no-restricted-imports` `[styled-components]` (`config/eslint/project.js`)           |
 | `@radix-ui/colors` imports                                                              | ESLint `no-restricted-imports` `[radix-colors]` (`config/eslint/project.js`)                |
 
 Exceptions, exactly as configured:
@@ -163,16 +163,10 @@ Exceptions, exactly as configured:
 
 ## styled-components: frozen, then gone
 
-- `config/eslint/styled-components-allowlist.json` lists the files that may still import
-  styled-components. The list only shrinks: an entry not in the list at the base commit fails, and
-  an entry whose file no longer imports styled-components must be removed.
-- Touch rule (D34): changing a listed file moves it to a CSS Module (`Component.module.css`,
-  `var(--cp-*)`) and off the list. A change counts as a touch when the file is a `styled.ts`, or
-  the added lines write styles (`styled.`/`styled(`, `` css` ``, `` keyframes` ``,
-  `createGlobalStyle`). For a `styled.ts`, only an `import`/`export`-only change is not a touch;
-  for any other listed file, a change with no style code (logic only) is not a touch.
-- The only escape is an entry `{ path, reason, issue }` in
-  `config/eslint/styled-touch-exempt.json` added in the same change (empty today).
+styled-components was removed in #901: the dependency is gone and importing it is a lint error
+(`no-restricted-imports` `[styled-components]`). The allowlist, the touch rule (D34) and its
+exempt list were deleted with it. Style with Radix props, then a CSS Module
+(`Component.module.css`, `var(--cp-*)`).
 
 ## Removed: `themeColor()`
 

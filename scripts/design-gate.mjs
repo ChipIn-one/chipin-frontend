@@ -36,7 +36,7 @@ const NOT_UI_PATTERNS = [
     /^apps\/app\/src\/test\//u, // test support (render helpers, fixtures)
 ];
 
-// True for a path whose change can alter what a user sees: app TSX and CSS, CSS Modules, styled-components files,
+// True for a path whose change can alter what a user sees: app TSX and CSS, CSS Modules, legacy styled.ts files,
 // site sources, locale files. Tests, test support and stories are not UI.
 export function isUiFile(path) {
     if (typeof path !== 'string' || path.length === 0) return false;

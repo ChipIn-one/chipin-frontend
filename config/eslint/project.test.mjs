@@ -726,15 +726,11 @@ describe('styled-components, @radix-ui/colors and svgr imports (spec 05 §3, §6
             files: ['**/*.{ts,tsx}'],
             languageOptions: { parser: tseslint.parser },
         },
-        ...restrictedImports(
-            projectImports({
-                appDir: '.',
-                styledAllowlist: ['src/a/styled.ts', 'src/b/B.test.tsx'],
-            }),
-        ),
+        ...restrictedImports(projectImports({ appDir: '.' })),
     ];
     const source = [
         "import styled from 'styled-components';",
+        "import 'styled-components/macro';",
         "import { grass } from '@radix-ui/colors';",
         "import '@radix-ui/colors/grass.css';",
         "import Logo from '@chipin/tokens/assets/logo.svg?react';",
@@ -745,33 +741,31 @@ describe('styled-components, @radix-ui/colors and svgr imports (spec 05 §3, §6
         'export { Google, grass, Logo, Other, split, styled, url };',
     ].join('\n');
 
-    test.each([
-        [
-            'src/components/New.tsx',
-            [
+    // styled-components was removed (#901): no allowlist, the import is reported in every file.
+    test.each(['src/components/New.tsx', 'src/a/styled.ts', 'src/b/B.test.tsx'])(
+        '%s reports styled-components and the other entries',
+        async file => {
+            const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+            const [result] = await eslint.lintText(source, { filePath: file });
+
+            expect(
+                result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
+            ).toEqual([
+                'styled-components',
                 'styled-components',
                 'radix-colors',
                 'radix-colors',
                 'svgr-react',
                 'money-deep-import',
-            ],
-        ],
-        ['src/a/styled.ts', ['radix-colors', 'radix-colors', 'svgr-react', 'money-deep-import']],
-        ['src/b/B.test.tsx', ['radix-colors', 'radix-colors', 'svgr-react', 'money-deep-import']],
-    ])('%s reports exactly %j', async (file, ids) => {
-        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
-        const [result] = await eslint.lintText(source, { filePath: file });
+            ]);
+        },
+    );
 
-        expect(
-            result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
-        ).toEqual(ids);
-    });
+    test('the styled-components entry is a plain ban without ignores', () => {
+        const entry = projectImports().find(({ id }) => id === 'styled-components');
 
-    test('the allowlist is one glob (one scope)', () => {
-        const [entry] = projectImports({ styledAllowlist: ['a.ts', 'b.ts'] });
-
-        expect(entry.ignores).toEqual(['{a.ts,b.ts}']);
-        expect(projectImports({ styledAllowlist: ['a.ts'] })[0].ignores).toEqual(['a.ts']);
-        expect(projectImports({ styledAllowlist: [] })[0].ignores).toBeUndefined();
+        expect(entry).toMatchObject({ pattern: { regex: '^styled-components(?:/|$)' } });
+        expect(entry.files).toBeUndefined();
+        expect(entry.ignores).toBeUndefined();
     });
 });
