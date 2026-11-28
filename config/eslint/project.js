@@ -400,7 +400,7 @@ export const projectRules = ({ appDir }) => [
     },
     {
         // spec 03 §1.3: query keys come only from the entity key factories.
-        // Its ignore glob is the 6th of MAX_SCOPES (6/6) of `no-restricted-syntax`: a new scoped
+        // Its ignore glob is the 6th of MAX_SCOPES (7) of `no-restricted-syntax`: a new scoped
         // entry must reuse an existing glob.
         id: 'query-key-literal',
         // `queryKey: [...]` (also `as const` / `satisfies`), `queryKey: c ? [...] : k` (a literal
@@ -459,11 +459,13 @@ export const projectRules = ({ appDir }) => [
         // `PROP_COLOR` role from @chipin/tokens/theme, never a palette name. Caught: a JSX
         // attribute (`color="red"`, `color={on ? 'green' : 'gray'}`, `color={x ?? 'gray'}`), an
         // object field (`color: 'red' as const`), a default (`color = 'mint'`), a variable or
-        // assignment (`const activeColor = 'green'`, `getIconColor` returning `'red'`), a TS type
+        // assignment (`const activeColor = 'green'`, a `const getIconColor = () => 'red'` arrow), a TS type
         // (`color: 'green' | 'red'`, `type ShareColor = 'jade'`), as a string or a one-part
         // template literal. App sources, tests included. Only the category palette,
         // constants/category-ui.ts, holds palette names (its ignore glob is the 7th of
-        // MAX_SCOPES, 7/7). Not caught: a palette name passed through a helper argument.
+        // MAX_SCOPES, 7/7). Not caught (review): a helper argument, a `function` declaration
+        // returning a palette name, maps not named `*Color`, string keys (`'color': 'red'`),
+        // `useState('red')` and generic type arguments, type aliases not named `*Color`.
         id: 'prop-color-roles',
         selector: PROP_COLOR_SELECTOR,
         files: [appGlob(appDir, 'src/**/*.{ts,tsx}')],

@@ -42,7 +42,7 @@ Use these; a new field type is added here first:
   status, which keeps every other blocker. Because it is visible from open, it sits in an
   always-mounted `aria-live="polite"` `aria-atomic` region, not `role="alert"`: an alert would be
   announced assertively as the dialog mounts and again with the autofocused input.
-- `SettlementAmountField` passes the literal `red` and has no `role="alert"`; fix when touched.
+- `SettlementAmountField` has no `role="alert"`; fix when touched.
 
 - Required fields pass `isRequired` to the basic, which sets `required` and checks for an empty
   value.

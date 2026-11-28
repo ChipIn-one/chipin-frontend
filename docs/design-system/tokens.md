@@ -104,7 +104,9 @@ attribute (`color="red"`, `color={on ? 'green' : 'gray'}`), an object field (`co
 default (`color = 'mint'`), a `<x>Color` variable or assignment, a TS type (`color: 'green' |
 'red'`, `type ShareColor = 'jade'`), as a string or a one-part template literal. Only the category
 palette, `constants/category-ui.ts`, may hold palette names (its ignore glob); its consumers pass
-`color={item.color}`. Not linted (review): a palette name passed through a helper argument.
+`color={item.color}`. Not linted (review): a palette name passed through a helper argument, returned by a `function`
+declaration, held in a map not named `*Color` or under a string key, passed to `useState` or a
+generic type argument, or in a type alias not named `*Color`.
 
 ## Shipped scales
 
