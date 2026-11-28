@@ -5,10 +5,8 @@ import type { QueryClient } from '@tanstack/react-query';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import type { ActivityEvent, SelfActivityEventsData } from 'entities/activity';
 import { activityKeys } from 'entities/activity';
 import { currencyCode, fromUnits } from 'shared/money';
@@ -67,19 +65,17 @@ const renderActivityPage = (items: ActivityEvent[]) => {
     });
 
     return renderWithQueryClient(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <MemoryRouter initialEntries={['/activity']}>
-                    <Routes>
-                        <Route
-                            path="/activity"
-                            element={<ActivityList activeFilter="all" onShowAll={vi.fn()} />}
-                        />
-                        <Route path="/activity/:parentActivityId" element={<HistoryProbe />} />
-                    </Routes>
-                </MemoryRouter>
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <MemoryRouter initialEntries={['/activity']}>
+                <Routes>
+                    <Route
+                        path="/activity"
+                        element={<ActivityList activeFilter="all" onShowAll={vi.fn()} />}
+                    />
+                    <Route path="/activity/:parentActivityId" element={<HistoryProbe />} />
+                </Routes>
+            </MemoryRouter>
+        </Theme>,
         client,
     );
 };

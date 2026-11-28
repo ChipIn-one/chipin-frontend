@@ -1,11 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
@@ -45,10 +43,8 @@ test.each([
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <HeaderNav />
-                <LocationPath />
-            </ThemeProvider>
+            <HeaderNav />
+            <LocationPath />
         </MemoryRouter>,
     );
 
@@ -62,9 +58,7 @@ test('marks the active link with aria-current, not by color alone', () => {
 
     render(
         <MemoryRouter initialEntries={['/activity']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <HeaderNav />
-            </ThemeProvider>
+            <HeaderNav />
         </MemoryRouter>,
     );
 

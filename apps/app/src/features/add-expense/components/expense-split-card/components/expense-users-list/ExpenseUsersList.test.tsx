@@ -1,9 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { ExpenseUsersList } from './ExpenseUsersList';
@@ -38,11 +36,7 @@ beforeEach(() => {
 });
 
 test('renders the calculated amount with the participant identity', () => {
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <ExpenseUsersList />
-        </ThemeProvider>,
-    );
+    render(<ExpenseUsersList />);
 
     const participantDetails = screen.getByText('Alex').parentElement;
 
@@ -53,11 +47,7 @@ test('renders the calculated amount with the participant identity', () => {
 test('rerenders only the participant whose split value changed', () => {
     useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.PERCENT);
 
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <ExpenseUsersList />
-        </ThemeProvider>,
-    );
+    render(<ExpenseUsersList />);
 
     expect(stepperRender).toHaveBeenCalledTimes(2);
 

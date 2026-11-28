@@ -1,9 +1,6 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
-
-import { lightThemeStyled } from 'constants/styled-themes';
 
 import SummaryDebtCards from './SummaryDebtCards';
 
@@ -11,18 +8,16 @@ import 'i18n/index';
 
 const renderSummaryDebtCards = (showSettledEmptyState?: boolean) =>
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <SummaryDebtCards
-                    owedToYouTotal={0}
-                    youOweTotal={0}
-                    owedEntries={[]}
-                    oweEntries={[]}
-                    defaultCurrency="USD"
-                    showSettledEmptyState={showSettledEmptyState}
-                />
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <SummaryDebtCards
+                owedToYouTotal={0}
+                youOweTotal={0}
+                owedEntries={[]}
+                oweEntries={[]}
+                defaultCurrency="USD"
+                showSettledEmptyState={showSettledEmptyState}
+            />
+        </Theme>,
     );
 
 test('preserves All settled by default for the GroupSummary consumer', () => {

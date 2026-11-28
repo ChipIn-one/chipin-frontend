@@ -5,11 +5,9 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { IMAGE_FILE_ACCEPT } from 'helpers/imageFile';
 import { useAuthStore } from 'store/authStore';
 import { toTestGroup } from 'test/groupFixtures';
@@ -84,16 +82,14 @@ const renderModal = (type: 'create' | 'update', editedGroup: Group = group) => {
 
     return render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                {type === 'create' ? (
-                    <CreateUpdateGroupModal type="create">{trigger}</CreateUpdateGroupModal>
-                ) : (
-                    <CreateUpdateGroupModal type="update" group={toTestGroup(editedGroup)}>
-                        {trigger}
-                    </CreateUpdateGroupModal>
-                )}
-                <LocationProbe />
-            </ThemeProvider>
+            {type === 'create' ? (
+                <CreateUpdateGroupModal type="create">{trigger}</CreateUpdateGroupModal>
+            ) : (
+                <CreateUpdateGroupModal type="update" group={toTestGroup(editedGroup)}>
+                    {trigger}
+                </CreateUpdateGroupModal>
+            )}
+            <LocationProbe />
         </MemoryRouter>,
     );
 };
@@ -657,13 +653,11 @@ test('NET-006: flag off, offline: the cover picker is disabled with the hint; ba
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <CreateUpdateGroupModal type="create">
-                        <button type="button">{OPEN_MODAL_LABEL}</button>
-                    </CreateUpdateGroupModal>
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <CreateUpdateGroupModal type="create">
+                    <button type="button">{OPEN_MODAL_LABEL}</button>
+                </CreateUpdateGroupModal>
+            </Theme>
         </MemoryRouter>,
     );
     await interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }));

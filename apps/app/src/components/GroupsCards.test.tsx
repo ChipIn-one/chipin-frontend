@@ -2,13 +2,11 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys } from 'entities/currency-rates';
 import type { Group } from 'entities/groups';
 import { groupsKeys } from 'entities/groups';
@@ -150,9 +148,7 @@ const renderGroups = (groups: Group[], selectedGroupId?: string) => {
     });
     return renderWithQueryClient(
         <MemoryRouter>
-            <ThemeProvider theme={lightThemeStyled}>
-                <GroupsCards groups={groups} label="Groups" selectedGroupId={selectedGroupId} />
-            </ThemeProvider>
+            <GroupsCards groups={groups} label="Groups" selectedGroupId={selectedGroupId} />
         </MemoryRouter>,
         client,
     );
@@ -603,9 +599,7 @@ test('shows the skeleton while the first load of the groups list is pending', ()
 
     renderWithQueryClient(
         <MemoryRouter>
-            <ThemeProvider theme={lightThemeStyled}>
-                <GroupsCards groups={[]} label="Groups" />
-            </ThemeProvider>
+            <GroupsCards groups={[]} label="Groups" />
         </MemoryRouter>,
         client,
     );

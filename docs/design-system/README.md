@@ -15,8 +15,7 @@ tokens      packages/tokens (tokens.css, src/theme.ts)
 
 Each layer uses only the layer below it. Docs never name a value that is not in
 `packages/tokens/tokens.css`; new component code uses colors only as `var(--cp-*)`, and Radix `color` props only through
-`PROP_COLOR` (legacy
-`themeColor()` callers are migrated file by file, see [tokens.md](tokens.md)).
+`PROP_COLOR` (see [tokens.md](tokens.md)).
 
 ## Files
 

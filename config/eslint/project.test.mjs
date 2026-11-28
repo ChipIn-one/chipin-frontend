@@ -720,7 +720,7 @@ describe('no-raw-colors and inline-style (spec 05 §3, 05-5)', () => {
     });
 });
 
-describe('styled-components and svgr imports (spec 05 §3, §6) keep the other import entries', () => {
+describe('styled-components, @radix-ui/colors and svgr imports (spec 05 §3, §6) keep the other import entries', () => {
     const config = [
         {
             files: ['**/*.{ts,tsx}'],
@@ -735,18 +735,29 @@ describe('styled-components and svgr imports (spec 05 §3, §6) keep the other i
     ];
     const source = [
         "import styled from 'styled-components';",
+        "import { grass } from '@radix-ui/colors';",
+        "import '@radix-ui/colors/grass.css';",
         "import Logo from '@chipin/tokens/assets/logo.svg?react';",
         "import Google from 'assets/google-icon.svg?react';",
         "import Other from 'assets/other.svg?react';",
         "import url from 'assets/other.svg?url';",
         "import { split } from 'shared/money/split';",
-        'export { Google, Logo, Other, split, styled, url };',
+        'export { Google, grass, Logo, Other, split, styled, url };',
     ].join('\n');
 
     test.each([
-        ['src/components/New.tsx', ['styled-components', 'svgr-react', 'money-deep-import']],
-        ['src/a/styled.ts', ['svgr-react', 'money-deep-import']],
-        ['src/b/B.test.tsx', ['svgr-react', 'money-deep-import']],
+        [
+            'src/components/New.tsx',
+            [
+                'styled-components',
+                'radix-colors',
+                'radix-colors',
+                'svgr-react',
+                'money-deep-import',
+            ],
+        ],
+        ['src/a/styled.ts', ['radix-colors', 'radix-colors', 'svgr-react', 'money-deep-import']],
+        ['src/b/B.test.tsx', ['radix-colors', 'radix-colors', 'svgr-react', 'money-deep-import']],
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const [result] = await eslint.lintText(source, { filePath: file });

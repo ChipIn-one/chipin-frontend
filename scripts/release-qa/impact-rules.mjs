@@ -68,7 +68,6 @@ export const SMOKE_SHORT = {
         'apps/app/index.html',
         // theme switching
         'apps/app/src/helpers/theme.ts',
-        'apps/app/src/constants/styled-themes.ts',
         'apps/app/src/constants/localstorage.ts',
         // Vercel routing and headers
         'apps/app/vercel.json',

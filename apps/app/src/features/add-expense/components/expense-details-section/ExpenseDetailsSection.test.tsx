@@ -1,8 +1,6 @@
 import { screen } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
@@ -29,13 +27,7 @@ beforeEach(() => {
     useExpenseModalStore.getState().reset();
 });
 
-const renderSection = () =>
-    renderWithQueryClient(
-        <ThemeProvider theme={lightThemeStyled}>
-            <ExpenseDetailsSection />
-        </ThemeProvider>,
-        ratesClient(),
-    );
+const renderSection = () => renderWithQueryClient(<ExpenseDetailsSection />, ratesClient());
 
 test('hides the business date field when creating an expense', () => {
     useExpenseModalStore.getState().initialize({

@@ -1,10 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import { type SelfUser, usersKeys } from 'entities/users';
 import { setupMswServer } from 'test/mswServer';
 import { serveSelfUpdates, signInWithSelf } from 'test/selfUser';
@@ -51,11 +49,7 @@ const selfInCache = () => client.getQueryData<SelfUser>(usersKeys.self());
 test('saves gender immediately without a page-level save action', () => {
     const interaction = userEvent.setup();
 
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <AccountSection isLoading={false} />
-        </ThemeProvider>,
-    );
+    render(<AccountSection isLoading={false} />);
 
     const maleRadio = screen.getByRole('radio', { name: 'Male' });
     const femaleRadio = screen.getByRole('radio', { name: 'Female' });
@@ -75,11 +69,7 @@ test('saves gender immediately without a page-level save action', () => {
 test('starts with the current display name and saves it on blur', () => {
     const interaction = userEvent.setup();
 
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <AccountSection isLoading={false} />
-        </ThemeProvider>,
-    );
+    render(<AccountSection isLoading={false} />);
 
     const displayNameInput = screen.getByRole<HTMLInputElement>('textbox', {
         name: 'Display name',
@@ -106,11 +96,7 @@ test('starts with the current display name and saves it on blur', () => {
 test('does not save a whitespace-only display name on blur', () => {
     const interaction = userEvent.setup();
 
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <AccountSection isLoading={false} />
-        </ThemeProvider>,
-    );
+    render(<AccountSection isLoading={false} />);
 
     const displayNameInput = screen.getByRole('textbox', { name: 'Display name' });
 
@@ -128,21 +114,13 @@ test('does not save a whitespace-only display name on blur', () => {
 test('initializes the display name draft when the user fetch completes', () => {
     client.removeQueries({ queryKey: usersKeys.self() });
 
-    const view = render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <AccountSection isLoading />
-        </ThemeProvider>,
-    );
+    const view = render(<AccountSection isLoading />);
 
     act(() => {
         client.setQueryData(usersKeys.self(), user);
     });
 
-    view.rerender(
-        <ThemeProvider theme={lightThemeStyled}>
-            <AccountSection isLoading={false} />
-        </ThemeProvider>,
-    );
+    view.rerender(<AccountSection isLoading={false} />);
 
     return waitFor(() => {
         const input = screen.getByRole<HTMLInputElement>('textbox');
@@ -153,11 +131,7 @@ test('initializes the display name draft when the user fetch completes', () => {
 test('opens the avatar upload modal from the change photo action', () => {
     const interaction = userEvent.setup();
 
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <AccountSection isLoading={false} />
-        </ThemeProvider>,
-    );
+    render(<AccountSection isLoading={false} />);
 
     return interaction.click(screen.getByRole('button', { name: 'Change photo' })).then(() => {
         expect(screen.getByRole('dialog', { name: 'Update profile photo' })).toBeTruthy();

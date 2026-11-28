@@ -1,11 +1,9 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { seedSelfUser } from 'test/selfUserSeed';
 
@@ -41,11 +39,9 @@ const signOut = useAuthStore.getState().signOut;
 
 const renderProfileActions = (isSoloMode = false) => {
     return render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <ProfileActions isSoloMode={isSoloMode} />
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <ProfileActions isSoloMode={isSoloMode} />
+        </Theme>,
     );
 };
 

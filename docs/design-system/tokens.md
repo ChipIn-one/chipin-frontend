@@ -83,6 +83,7 @@ shrink.
 | `.rt-*` selectors outside `apps/app/src/styles/radixStylesOverwrite.css`                | stylelint `selector-disallowed-list`                                                        |
 | `style={{}}` with ordinary properties; only custom properties (`{ '--x': v }`)          | ESLint `inline-style` (`config/eslint/project.js`)                                          |
 | New styled-components files                                                             | ESLint `no-restricted-imports` + `scripts/check-styled-allowlist.mjs`                       |
+| `@radix-ui/colors` imports                                                              | ESLint `no-restricted-imports` `[radix-colors]` (`config/eslint/project.js`)                |
 
 Exceptions, exactly as configured:
 
@@ -108,10 +109,7 @@ Exceptions, exactly as configured:
 - The only escape is an entry `{ path, reason, issue }` in
   `config/eslint/styled-touch-exempt.json` added in the same change (empty today).
 
-## Legacy `themeColor()`
+## Removed: `themeColor()`
 
-About 20 files in `apps/app/src` still call `themeColor()` from `helpers/colors.ts`
-(`grep -rln themeColor apps/app/src`). They move to
-`var(--cp-*)` file by file when a design-system task touches them (D31, spec 05 §3); a missing
-token is added to `tokens.css` in the same PR. `themeColor()` is being removed, not extended (spec 05 "Changes relative to DS v1"): add no new
-calls.
+`themeColor()` (`helpers/colors.ts`), `constants/styled-themes.ts` and the styled `ThemeProvider`
+were removed in #899. Colors come only from `@chipin/tokens` (`var(--cp-*)`, `PROP_COLOR`).

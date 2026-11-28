@@ -4,11 +4,9 @@ import { onlineManager } from '@tanstack/react-query';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import type { ActivityPreview } from 'entities/activity';
 import { activityKeys } from 'entities/activity';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
@@ -929,11 +927,9 @@ test('DSH-007 a loaded groups list shows the real group cards, not their skeleto
 
     renderWithQueryClient(
         <MemoryRouter>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DashboardPage />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DashboardPage />
+            </Theme>
         </MemoryRouter>,
         client,
     );

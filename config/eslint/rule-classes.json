@@ -92,6 +92,7 @@
     "no-restricted-imports#money-legacy-bridge": "b",
     "no-restricted-imports#money-wire-conversion": "b",
     "no-restricted-imports#money-deep-import": "b",
+    "no-restricted-imports#radix-colors": "b",
     "no-restricted-imports#runtime-api-in-numbers": "b",
     "no-restricted-imports#runtime-api-in-ui": "b",
     "no-restricted-imports#styled-components": "b",

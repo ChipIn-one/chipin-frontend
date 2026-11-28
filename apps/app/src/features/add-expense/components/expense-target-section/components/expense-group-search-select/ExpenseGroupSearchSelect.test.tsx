@@ -1,9 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { seedGroupsList } from 'test/groupsList';
@@ -59,11 +57,7 @@ afterEach(() => {
 });
 
 test('shows the selected group cover as its avatar', () => {
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <ExpenseGroupSearchSelect />
-        </ThemeProvider>,
-    );
+    render(<ExpenseGroupSearchSelect />);
 
     return screen.findByRole('img', { name: group.name }).then(avatar => {
         expect(avatar).toHaveProperty('src', group.coverUrl);

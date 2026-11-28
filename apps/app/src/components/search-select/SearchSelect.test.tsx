@@ -1,10 +1,8 @@
 import { Button, Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import { getOrThrow } from 'test/getOrThrow';
 
 import type { SearchSelectProps } from './SearchSelect';
@@ -14,18 +12,16 @@ const ITEMS = [{ value: 'one', label: 'One' }];
 
 const renderSelect = (props: Partial<SearchSelectProps> = {}) => {
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <SearchSelect
-                    items={ITEMS}
-                    value="one"
-                    searchPlaceholder="Search"
-                    emptyText="Nothing found"
-                    triggerElement={<Button>{getOrThrow(ITEMS, 0).label}</Button>}
-                    {...props}
-                />
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <SearchSelect
+                items={ITEMS}
+                value="one"
+                searchPlaceholder="Search"
+                emptyText="Nothing found"
+                triggerElement={<Button>{getOrThrow(ITEMS, 0).label}</Button>}
+                {...props}
+            />
+        </Theme>,
     );
 };
 

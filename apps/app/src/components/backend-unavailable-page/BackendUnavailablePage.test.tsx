@@ -1,9 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useConnectivityStore } from 'store/connectivityStore';
 
 const healthMocks = vi.hoisted(() => ({
@@ -24,11 +22,7 @@ vi.mock('react-i18next', () => ({
 import { BackendUnavailablePage } from './index';
 
 const renderPage = () => {
-    return render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <BackendUnavailablePage />
-        </ThemeProvider>,
-    );
+    return render(<BackendUnavailablePage />);
 };
 
 beforeEach(() => {

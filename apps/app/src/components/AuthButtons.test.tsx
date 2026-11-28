@@ -1,9 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import { copyTextToClipboard } from 'helpers/clipboard';
 import { buildAndroidChromeIntentUrl } from 'helpers/inAppBrowser';
 import { checkIsPwaInstalled } from 'helpers/pwa';
@@ -27,12 +25,7 @@ afterEach(() => {
     window.history.replaceState(null, '', '/');
 });
 
-const renderAuthButtons = () =>
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <AuthButtons />
-        </ThemeProvider>,
-    );
+const renderAuthButtons = () => render(<AuthButtons />);
 
 test('keeps Google sign-in and hides the unfinished Apple sign-in button', () => {
     renderAuthButtons();

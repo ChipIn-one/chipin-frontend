@@ -1,10 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 
 import { GroupCoverSection } from './GroupCoverSection';
 
@@ -53,11 +51,9 @@ const group = {
 
 test('opens group editing from a pencil action', () => {
     const { container } = render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <MemoryRouter>
-                <GroupCoverSection group={group} isLoading={false} />
-            </MemoryRouter>
-        </ThemeProvider>,
+        <MemoryRouter>
+            <GroupCoverSection group={group} isLoading={false} />
+        </MemoryRouter>,
     );
 
     expect(screen.getByRole('button', { name: 'modal.titleEdit' })).toBeTruthy();
@@ -67,11 +63,9 @@ test('opens group editing from a pencil action', () => {
 
 test('keeps the group title readable over a cover in the light theme', () => {
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <MemoryRouter>
-                <GroupCoverSection group={group} isLoading={false} />
-            </MemoryRouter>
-        </ThemeProvider>,
+        <MemoryRouter>
+            <GroupCoverSection group={group} isLoading={false} />
+        </MemoryRouter>,
     );
 
     // The heading sits in the cover wrapper marked as having a cover, which sets the
@@ -83,11 +77,9 @@ test('keeps the group title readable over a cover in the light theme', () => {
 
 test('keeps group details without member actions inside the hero', () => {
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <MemoryRouter>
-                <GroupCoverSection group={group} isLoading={false} />
-            </MemoryRouter>
-        </ThemeProvider>,
+        <MemoryRouter>
+            <GroupCoverSection group={group} isLoading={false} />
+        </MemoryRouter>,
     );
 
     expect(screen.getByText(group.description)).toBeTruthy();
@@ -101,11 +93,9 @@ test('keeps group details without member actions inside the hero', () => {
 
 test('uses the shared image fallback when cover is missing', () => {
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <MemoryRouter>
-                <GroupCoverSection group={{ ...group, coverUrl: null }} isLoading={false} />
-            </MemoryRouter>
-        </ThemeProvider>,
+        <MemoryRouter>
+            <GroupCoverSection group={{ ...group, coverUrl: null }} isLoading={false} />
+        </MemoryRouter>,
     );
 
     expect(screen.queryByAltText('page.coverAlt')).toBeNull();
@@ -120,11 +110,9 @@ test('uses the shared image fallback when cover is missing', () => {
 
 test('shows a skeleton cover, not the image fallback, while no group is loaded yet', () => {
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <MemoryRouter>
-                <GroupCoverSection group={null} isLoading />
-            </MemoryRouter>
-        </ThemeProvider>,
+        <MemoryRouter>
+            <GroupCoverSection group={null} isLoading />
+        </MemoryRouter>,
     );
 
     expect(screen.queryByText('media.noImage')).toBeNull();

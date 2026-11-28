@@ -215,11 +215,6 @@
       "count": 1
     }
   },
-  "apps/app/src/constants/styled-themes.ts": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
   "apps/app/src/features/activity/ActivitySidebar.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -296,11 +291,6 @@
   "apps/app/src/helpers/authSession.ts": {
     "boundaries/dependencies": {
       "count": 3
-    }
-  },
-  "apps/app/src/helpers/colors.ts": {
-    "no-restricted-syntax": {
-      "count": 1
     }
   },
   "apps/app/src/helpers/currencies.ts": {

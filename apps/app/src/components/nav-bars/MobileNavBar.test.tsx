@@ -2,11 +2,9 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { Group, SelfUser, UserSettings } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { seedGroupsList } from 'test/groupsList';
@@ -93,12 +91,10 @@ test.each([
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <MobileNavBar />
-                    <LocationPath />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <MobileNavBar />
+                <LocationPath />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -118,11 +114,9 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <MobileNavBar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <MobileNavBar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -139,11 +133,9 @@ test('EXP-062 keeps four mobile items with only a one-member group', () => {
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <MobileNavBar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <MobileNavBar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -158,11 +150,9 @@ test('EXP-062 keeps the center action during a confirmed friend refresh', () => 
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <MobileNavBar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <MobileNavBar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -177,11 +167,9 @@ test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <MobileNavBar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <MobileNavBar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -203,11 +191,9 @@ test('marks the active item with aria-current, not by color alone', () => {
 
     render(
         <MemoryRouter initialEntries={['/activity']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <MobileNavBar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <MobileNavBar />
+            </Theme>
         </MemoryRouter>,
     );
 

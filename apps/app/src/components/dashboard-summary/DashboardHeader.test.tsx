@@ -2,11 +2,9 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { clearSeededSelfUser, seedSelfUser } from 'test/selfUserSeed';
 
@@ -46,11 +44,9 @@ beforeEach(() => {
 test('keeps the developer menu available in the mobile dashboard header for an admin', () => {
     render(
         <MemoryRouter>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DashboardHeader />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DashboardHeader />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -66,12 +62,10 @@ const CurrentRoute = () => {
 const renderDashboardHeader = () =>
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DashboardHeader />
-                    <CurrentRoute />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DashboardHeader />
+                <CurrentRoute />
+            </Theme>
         </MemoryRouter>,
     );
 
