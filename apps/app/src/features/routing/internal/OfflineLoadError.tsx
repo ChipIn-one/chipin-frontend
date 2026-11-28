@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Container, Flex } from '@radix-ui/themes';
 import { WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -57,7 +58,7 @@ const OfflineLoadError = () => {
                 <div role="alert">
                     <EmptyState
                         icon={<WifiOffIcon size={20} aria-hidden="true" />}
-                        iconColor="amber"
+                        iconColor={PROP_COLOR.warning}
                         title={t('network.offlineLoadErrorTitle')}
                         description={t(
                             hasRetryFailed

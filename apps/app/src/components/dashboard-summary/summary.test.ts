@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { expect, test } from 'vitest';
 
 import type { CurrencyRates } from 'entities/currency-rates';
@@ -27,10 +28,10 @@ test('DSH-001 converts the totals into the default currency and sorts the badges
         owedTotalInBase: 30,
         owingTotalInBase: 10,
         owedBadgeItems: [
-            { tokenCode: 'USD', value: 20, color: 'grass' },
-            { tokenCode: 'GBP', value: 5, color: 'grass' },
+            { tokenCode: 'USD', value: 20, color: PROP_COLOR.debtOwed },
+            { tokenCode: 'GBP', value: 5, color: PROP_COLOR.debtOwed },
         ],
-        oweBadgeItems: [{ tokenCode: 'EUR', value: 9, color: 'tomato' }],
+        oweBadgeItems: [{ tokenCode: 'EUR', value: 9, color: PROP_COLOR.debtOwing }],
     });
 });
 
@@ -41,8 +42,12 @@ test('keeps a debt below one minor unit and drops an exact zero', () => {
         'USD',
     );
 
-    expect(summary.owedBadgeItems).toEqual([{ tokenCode: 'CHF', value: 0.004, color: 'grass' }]);
-    expect(summary.oweBadgeItems).toEqual([{ tokenCode: 'USD', value: 20.5, color: 'tomato' }]);
+    expect(summary.owedBadgeItems).toEqual([
+        { tokenCode: 'CHF', value: 0.004, color: PROP_COLOR.debtOwed },
+    ]);
+    expect(summary.oweBadgeItems).toEqual([
+        { tokenCode: 'USD', value: 20.5, color: PROP_COLOR.debtOwing },
+    ]);
 });
 
 test('leaves out a currency without a usable rate and an invalid default currency', () => {

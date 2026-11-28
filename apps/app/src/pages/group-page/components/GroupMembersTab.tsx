@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Badge, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -41,12 +42,16 @@ const GroupMembersTab = ({ group }: Props) => {
                                         </Text>
                                         <GroupRoleBadge isOwner={isOwner} />
                                         {isCurrentUser && (
-                                            <Badge size="1" color="teal" variant="soft">
+                                            <Badge
+                                                size="1"
+                                                color={PROP_COLOR.accent}
+                                                variant="soft"
+                                            >
                                                 {t('page.membersTab.you')}
                                             </Badge>
                                         )}
                                     </Flex>
-                                    <Text size="1" color="gray" truncate>
+                                    <Text size="1" color={PROP_COLOR.neutral} truncate>
                                         {member.user.email}
                                     </Text>
                                 </Flex>
@@ -57,7 +62,7 @@ const GroupMembersTab = ({ group }: Props) => {
             })}
 
             {inviteLink && (
-                <Button variant="ghost" color="gray" size="2" mt="2" asChild>
+                <Button variant="ghost" color={PROP_COLOR.neutral} size="2" mt="2" asChild>
                     <a href={inviteLink} target="_blank" rel="noreferrer">
                         <UserPlusIcon size={16} />
                         {t('page.membersTab.invitePeople')}

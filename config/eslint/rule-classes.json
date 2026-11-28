@@ -110,6 +110,7 @@
     "no-restricted-syntax#money-parse-float": "b",
     "no-restricted-syntax#money-to-fixed": "b",
     "no-restricted-syntax#no-raw-colors": "b",
+    "no-restricted-syntax#prop-color-roles": "b",
     "no-restricted-syntax#pure-query-fn": "b",
     "no-restricted-syntax#query-key-literal": "b",
     "no-restricted-syntax#site-paths": "b",

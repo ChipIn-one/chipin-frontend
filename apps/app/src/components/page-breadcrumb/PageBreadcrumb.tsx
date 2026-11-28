@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Flex, IconButton, Text } from '@radix-ui/themes';
 import { ChevronLeftIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -27,7 +28,7 @@ const PageBreadcrumb = ({ title, subtitle, action }: Props) => {
                 <IconButton
                     asChild
                     variant="soft"
-                    color="gray"
+                    color={PROP_COLOR.neutral}
                     size="2"
                     aria-label={t('buttons.back')}
                 >
@@ -42,7 +43,7 @@ const PageBreadcrumb = ({ title, subtitle, action }: Props) => {
                     {title}
                 </Text>
                 {subtitle !== undefined && subtitle !== null ? (
-                    <Text size="2" color="gray" truncate>
+                    <Text size="2" color={PROP_COLOR.neutral} truncate>
                         {subtitle}
                     </Text>
                 ) : null}

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -15,7 +16,7 @@ const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotalInBase, defaultC
     return (
         <Card size="1">
             <Flex direction="column" gap="1">
-                <Text size="4" weight="medium" color="gray" as="span">
+                <Text size="4" weight="medium" color={PROP_COLOR.neutral} as="span">
                     <Skeleton loading={isLoading}>{t('summary.totalBalance')}</Skeleton>
                 </Text>
 
@@ -28,7 +29,7 @@ const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotalInBase, defaultC
                     weight="bold"
                 />
 
-                <Text size="2" color="gray" as="span">
+                <Text size="2" color={PROP_COLOR.neutral} as="span">
                     <Skeleton loading={isLoading}>
                         {t('summary.totalAcrossGroupsAndFriends')}
                     </Skeleton>

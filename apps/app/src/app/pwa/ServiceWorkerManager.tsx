@@ -5,6 +5,7 @@
 // Mounted once per page, above the per-user router (`root.tsx`); the app shell reports its route
 // changes and safe points (`ServiceWorkerSafePoints`).
 import { useEffect, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -40,10 +41,20 @@ const UpdateAvailableToast = ({ onUpdate, onLater }: UpdateAvailableToastProps) 
                         {t('update.available')}
                     </Text>
                     <Flex gap="4" align="center">
-                        <Button variant="ghost" color="gray" size="1" onClick={onLater}>
+                        <Button
+                            variant="ghost"
+                            color={PROP_COLOR.neutral}
+                            size="1"
+                            onClick={onLater}
+                        >
                             {t('update.later')}
                         </Button>
-                        <Button variant="soft" color="jade" size="1" onClick={onUpdate}>
+                        <Button
+                            variant="soft"
+                            color={PROP_COLOR.accent}
+                            size="1"
+                            onClick={onUpdate}
+                        >
                             <RefreshCwIcon size={14} aria-hidden="true" />
                             {t('update.action')}
                         </Button>

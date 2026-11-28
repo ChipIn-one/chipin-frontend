@@ -1,3 +1,5 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
+
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import {
     legacyAmountFromMoney,
@@ -44,12 +46,12 @@ export const summarizeDashboard = (
         owedBadgeItems: sorted(owed).map<BadgeItem>(entry => ({
             tokenCode: entry.currency,
             value: entry.netBalance,
-            color: 'grass',
+            color: PROP_COLOR.debtOwed,
         })),
         oweBadgeItems: sorted(owe).map<BadgeItem>(entry => ({
             tokenCode: entry.currency,
             value: Math.abs(entry.netBalance),
-            color: 'tomato',
+            color: PROP_COLOR.debtOwing,
         })),
     };
 };

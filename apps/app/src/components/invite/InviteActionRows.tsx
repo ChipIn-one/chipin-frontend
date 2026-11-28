@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { CheckIcon, Link2Icon, QrCodeIcon, Share2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -46,14 +47,14 @@ const InviteActionRows = ({ invite }: Props) => {
                             size="3"
                             radius="medium"
                             variant="soft"
-                            color="indigo"
+                            color={PROP_COLOR.neutral}
                             fallback={primaryIcon}
                         />
                         <Flex direction="column" gap="1">
                             <Text size="2" weight="medium">
                                 {primaryLabel}
                             </Text>
-                            <Text size="1" color="gray">
+                            <Text size="1" color={PROP_COLOR.neutral}>
                                 {t('group:page.shareWarning')}
                             </Text>
                         </Flex>
@@ -73,7 +74,7 @@ const InviteActionRows = ({ invite }: Props) => {
                                 size="3"
                                 radius="medium"
                                 variant="soft"
-                                color="indigo"
+                                color={PROP_COLOR.neutral}
                                 fallback={
                                     isCopied ? <CheckIcon size={16} /> : <Link2Icon size={16} />
                                 }
@@ -84,7 +85,7 @@ const InviteActionRows = ({ invite }: Props) => {
                                         ? t('common:copy.copied')
                                         : t('group:page.settings.copyLinkTitle')}
                                 </Text>
-                                <Text size="1" color="gray">
+                                <Text size="1" color={PROP_COLOR.neutral}>
                                     {t('group:page.shareWarning')}
                                 </Text>
                             </Flex>
@@ -101,14 +102,14 @@ const InviteActionRows = ({ invite }: Props) => {
                                 size="3"
                                 radius="medium"
                                 variant="soft"
-                                color="violet"
+                                color={PROP_COLOR.neutral}
                                 fallback={<QrCodeIcon size={16} />}
                             />
                             <Flex direction="column" gap="1">
                                 <Text size="2" weight="medium">
                                     {t('group:page.settings.showQRTitle')}
                                 </Text>
-                                <Text size="1" color="gray">
+                                <Text size="1" color={PROP_COLOR.neutral}>
                                     {qr.subtitle}
                                 </Text>
                             </Flex>

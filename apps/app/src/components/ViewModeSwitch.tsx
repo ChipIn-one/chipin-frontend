@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Flex, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -34,7 +35,7 @@ const ViewModeSwitch = () => {
                     size="2"
                     weight="medium"
                     align={{ initial: 'right', lg: 'left' }}
-                    color={!isSoloMode ? 'green' : 'violet'}
+                    color={!isSoloMode ? PROP_COLOR.accent : PROP_COLOR.solo}
                 >
                     <Skeleton loading={isUserLoading}>
                         {!isSoloMode ? t('modes.groupMode') : t('modes.soloMode')}
@@ -46,7 +47,7 @@ const ViewModeSwitch = () => {
                 <Skeleton loading={isUserLoading}>
                     <Switch
                         size={{ initial: '2', sm: '3' }}
-                        color={!isSoloMode ? 'green' : 'violet'}
+                        color={!isSoloMode ? PROP_COLOR.accent : PROP_COLOR.solo}
                         checked={!isSoloMode}
                         onCheckedChange={onModeChange}
                         aria-label={t('modes.groupMode')}

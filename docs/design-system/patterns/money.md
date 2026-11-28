@@ -31,19 +31,15 @@ The three debt roles exist once, in [`tokens.css`](../../../packages/tokens/toke
 - The direction comes from `getBalanceDirection` (`helpers/currencies`), not from a local
   `> 0` check.
 
-Today only `DebtAmount` meets both rules, and no lint checks them. `BalanceSummaryText` and
-`OwedStatusText` take their colors from `PROP_COLOR` (ChipIn-one/chipin-frontend#947), but
-not their direction: `BalanceSummaryText` gets it from the caller's `legacyPartitionEntries`
-split. The rest:
+Every money color in `apps/app/src` comes from `PROP_COLOR` since ChipIn-one/chipin-frontend#1007
+(a palette literal in a JSX `color` attribute is the lint error `[prop-color-roles]`); only
+`DebtAmount` also takes its direction from `getBalanceDirection`. The rest still decides the
+direction locally:
 
-- Radix literals: `GroupCard` uses `green`/`red`/`gray`; `EventExpense` (`features/activity`)
-  uses `green`/`red`;
-  `DashboardSummary`, `dashboard-summary/summary.ts` (the `BalanceBadges` items), `OwedToYouCard`
-  and `YouOweCard` use `grass`/`tomato`.
-- Local sign checks: `OwedStatusText` (`value >= 0`), `GroupCard`, `EventExpense`. Only
-  `DebtAmount` calls `getBalanceDirection`.
+- Local sign checks: `OwedStatusText` (`value >= 0`), `GroupCard`, `EventExpense`;
+  `BalanceSummaryText` gets it from the caller's `legacyPartitionEntries` split.
 
-They move to `PROP_COLOR` and `getBalanceDirection` when a design-system task touches them.
+They move to `getBalanceDirection` when a design-system task touches them.
 
 ## Direction in words and color together
 

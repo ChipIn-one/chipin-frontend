@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPenIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +27,7 @@ const EventGroupUpdated = ({ event }: Props) => {
                         <Avatar
                             size="4"
                             variant="soft"
-                            color="blue"
+                            color={PROP_COLOR.info}
                             fallback={<UserPenIcon size={20} />}
                         />
                     </EventIcon>
@@ -37,7 +38,7 @@ const EventGroupUpdated = ({ event }: Props) => {
                             <Text size="3" as="span" weight="medium">
                                 {event.actorSnapshot.displayName}
                             </Text>{' '}
-                            <Text size="3" as="span" color="gray">
+                            <Text size="3" as="span" color={PROP_COLOR.neutral}>
                                 {t('event.groupUpdatedMiddleText')}
                             </Text>{' '}
                             <Text size="3" as="span" weight="medium">

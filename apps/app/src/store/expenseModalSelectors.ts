@@ -1,3 +1,5 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
+
 import {
     EXPENSE_SPLIT_MODES,
     EXPENSE_SPLIT_STATUSES,
@@ -31,7 +33,7 @@ import { resolveExpenseModalCurrency } from './expenseModalCurrency';
 import type { ExpenseModalState, ExpenseParticipant } from './expenseModalTypes';
 import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
-type ShareColor = 'gray' | 'jade' | 'red';
+type ShareColor = (typeof PROP_COLOR)['debtSettled' | 'debtOwed' | 'debtOwing'];
 
 export interface ExpenseSubmitFeedback {
     reason: ExpenseSubmitBlocker;
@@ -520,10 +522,10 @@ export const selectYourShareColor = (state: ExpenseModalState): ShareColor => {
     const payerId = selectPayerId(state);
 
     if (!currentUserId || !payerId) {
-        return 'gray';
+        return PROP_COLOR.debtSettled;
     }
 
-    return payerId === currentUserId ? 'jade' : 'red';
+    return payerId === currentUserId ? PROP_COLOR.debtOwed : PROP_COLOR.debtOwing;
 };
 
 const isDirectExpenseValid = (

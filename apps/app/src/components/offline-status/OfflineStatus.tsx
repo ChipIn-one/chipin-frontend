@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge } from '@radix-ui/themes';
 import { WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +20,7 @@ const OfflineStatusPill = () => {
 
     return (
         <div className={styles.root} role="status">
-            <Badge color="amber" size="2" variant="solid" radius="full">
+            <Badge color={PROP_COLOR.warning} size="2" variant="solid" radius="full">
                 <WifiOffIcon size={14} aria-hidden="true" />
                 {t('network.offlineStatus')}
             </Badge>

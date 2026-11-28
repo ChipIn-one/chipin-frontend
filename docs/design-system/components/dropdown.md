@@ -38,7 +38,7 @@ Source: [`basics/Dropdown.tsx`](../../../apps/app/src/basics/Dropdown.tsx).
 `RadioGroup`.
 
 Selection: when `value`, `defaultValue` or `onValueChange` is set, the active item is colored
-`PROP_COLOR.success` (green; not `accent`); otherwise items use their own `color`.
+`PROP_COLOR.accent` (grass: selection is the accent, #1007); otherwise items use their own `color`.
 
 ## States
 
@@ -55,6 +55,7 @@ Selection: when `value`, `defaultValue` or `onValueChange` is set, the active it
 ## Example
 
 ```tsx
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { IconButton } from '@radix-ui/themes';
 import { MoreVerticalIcon } from 'lucide-react';
 
@@ -68,7 +69,7 @@ import { Dropdown } from 'basics/Dropdown';
     }
     items={[
         { value: 'edit', label: editLabel, onSelect: onEdit },
-        { value: 'leave', label: leaveLabel, color: 'red', onSelect: onLeave },
+        { value: 'leave', label: leaveLabel, color: PROP_COLOR.danger, onSelect: onLeave },
     ]}
 />;
 ```

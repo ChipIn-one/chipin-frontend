@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Button, Callout, Dialog, Flex, Text } from '@radix-ui/themes';
 import { CircleAlertIcon, ImageUpIcon } from 'lucide-react';
 import type { ChangeEvent, DragEvent, ReactNode } from 'react';
@@ -177,14 +178,14 @@ const UserAvatarModal = ({ children }: Props) => {
                                         size="3"
                                         radius="full"
                                         variant="soft"
-                                        color="grass"
+                                        color={PROP_COLOR.accent}
                                         fallback={<ImageUpIcon size={20} />}
                                     />
                                     <Flex direction="column" gap="1" minWidth="0">
                                         <Text weight="medium" truncate>
                                             {selectedFile?.name ?? t('avatarModal.pickerTitle')}
                                         </Text>
-                                        <Text id={pickerHintId} size="2" color="gray">
+                                        <Text id={pickerHintId} size="2" color={PROP_COLOR.neutral}>
                                             {t('avatarModal.pickerHint')}
                                         </Text>
                                     </Flex>
@@ -193,7 +194,7 @@ const UserAvatarModal = ({ children }: Props) => {
 
                             {validationError && (
                                 <Box width="100%">
-                                    <Callout.Root color="red" role="alert" size="1">
+                                    <Callout.Root color={PROP_COLOR.danger} role="alert" size="1">
                                         <Callout.Icon>
                                             <CircleAlertIcon />
                                         </Callout.Icon>
@@ -210,7 +211,7 @@ const UserAvatarModal = ({ children }: Props) => {
                                         <Text size="2" weight="medium">
                                             {t('avatarModal.uploading')}
                                         </Text>
-                                        <Text size="2" color="gray">
+                                        <Text size="2" color={PROP_COLOR.neutral}>
                                             {t('avatarModal.progress', {
                                                 progress: uploadProgress,
                                             })}
@@ -229,7 +230,12 @@ const UserAvatarModal = ({ children }: Props) => {
                     <OverlayFooter
                         cancelAction={
                             <Dialog.Close>
-                                <Button size="3" variant="soft" color="gray" disabled={isUploading}>
+                                <Button
+                                    size="3"
+                                    variant="soft"
+                                    color={PROP_COLOR.neutral}
+                                    disabled={isUploading}
+                                >
                                     {t('common:buttons.cancel')}
                                 </Button>
                             </Dialog.Close>

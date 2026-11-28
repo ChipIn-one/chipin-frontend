@@ -4,6 +4,7 @@ import {
     forwardRef,
     type ReactNode,
 } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 
@@ -27,7 +28,7 @@ const ExpenseSearchSelectContent = forwardRef<ComponentRef<typeof Button>, Props
                 className={cx(styles.root, className)}
                 type="button"
                 variant="surface"
-                color="gray"
+                color={PROP_COLOR.neutral}
                 size="3"
                 radius="large"
                 loading={isLoading}
@@ -36,7 +37,13 @@ const ExpenseSearchSelectContent = forwardRef<ComponentRef<typeof Button>, Props
                     {icon}
 
                     <Flex direction="column" align="start" minWidth="0" flexGrow="1">
-                        <Text as="span" size="2" weight="medium" color="gray" truncate>
+                        <Text
+                            as="span"
+                            size="2"
+                            weight="medium"
+                            color={PROP_COLOR.neutral}
+                            truncate
+                        >
                             {title}
                         </Text>
                         <Text as="span" size="3" weight="bold" truncate>

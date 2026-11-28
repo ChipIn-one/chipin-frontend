@@ -42,8 +42,9 @@ Every screen does one job. Its title answers "what am I doing here".
 | Mutation (creates, saves, sends) | A button                                                            |
 
 `BaseAlertDialog` ([`components/modals/base-alert-dialog`](../../../apps/app/src/components/modals/base-alert-dialog/BaseAlertDialog.tsx))
-is the confirmation for every destructive action: the remove/delete dialogs pass
-`actionColor="red"`. Leave-group and kick-member dialogs use `orange` today.
+is the confirmation for every destructive action, and every one passes
+`actionColor={PROP_COLOR.danger}`: remove/delete, and also leave-group and kick-member. Their
+`orange` was dropped by the approved #1007 proposal (destructive = danger; orange has no role).
 
 ## Audit checklist
 

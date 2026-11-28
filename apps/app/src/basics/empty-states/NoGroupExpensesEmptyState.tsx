@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { ReceiptIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +15,7 @@ const NoGroupExpensesEmptyState = ({ action }: Props) => {
     return (
         <EmptyState
             icon={<ReceiptIcon size={20} />}
-            iconColor="jade"
+            iconColor={PROP_COLOR.accent}
             title={t('page.expenses.emptyTitle')}
             description={t('page.expenses.emptyDescription')}
             action={action}

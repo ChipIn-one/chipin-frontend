@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -60,7 +61,7 @@ const AccountSection = ({ isLoading }: Props) => {
                                 type="button"
                                 size="2"
                                 variant="outline"
-                                color="gray"
+                                color={PROP_COLOR.neutral}
                                 disabled={isLoading}
                             >
                                 <Skeleton loading={isLoading}>
@@ -78,7 +79,7 @@ const AccountSection = ({ isLoading }: Props) => {
                         <Text size="2" weight="medium">
                             <Skeleton loading={isLoading}>{t('account.genderTitle')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>
                                 {t('account.genderDescription')}
                             </Skeleton>
@@ -89,7 +90,7 @@ const AccountSection = ({ isLoading }: Props) => {
                         aria-label={t('account.genderTitle')}
                         name="sex"
                         size="1"
-                        color="jade"
+                        color={PROP_COLOR.accent}
                         variant="surface"
                         columns={{ initial: '1', xs: '2' }}
                         value={sex}

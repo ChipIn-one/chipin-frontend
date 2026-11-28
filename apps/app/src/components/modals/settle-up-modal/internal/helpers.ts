@@ -1,3 +1,5 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
+
 // The settle-up form on `Money` (spec 03 §4.5): `owed` is the exact `abs(balance.net)`, the field
 // is parsed in currency minor units, and `resolveSettleAmount` decides what is sent.
 import type { FriendUser } from 'api/chipin.types';
@@ -46,7 +48,7 @@ export interface SettlementViewModel {
     isAboveDebt: boolean;
     /** The exact debt when the input differs from it by less than one minor unit, else `null`. */
     fullSettlementAmount: Money | null;
-    debtColor: 'green' | 'red';
+    debtColor: typeof PROP_COLOR.debtOwed | typeof PROP_COLOR.debtOwing;
     summaryUser: SettlementUser;
 }
 
@@ -104,7 +106,7 @@ export const getSettlementViewModel = ({
         isAmountInvalid: amount.trim() !== '' && input === null,
         isAboveDebt: input !== null && resolved === null && compare(input, owed) > 0,
         fullSettlementAmount: isDebtSettled && input && compare(input, owed) !== 0 ? owed : null,
-        debtColor: isFriendPayer ? 'green' : 'red',
+        debtColor: isFriendPayer ? PROP_COLOR.debtOwed : PROP_COLOR.debtOwing,
         summaryUser: isFriendPayer ? friend : user,
     };
 };

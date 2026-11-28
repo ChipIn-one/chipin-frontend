@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Skeleton } from '@radix-ui/themes';
 import { UserIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
@@ -34,7 +35,7 @@ const UserAvatar = ({
     alt,
     src = user?.picture || '',
     variant = 'soft',
-    color = 'mint',
+    color = PROP_COLOR.accent,
     radius = 'full',
     ...avatarProps
 }: Props) => {

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Callout, Flex, VisuallyHidden } from '@radix-ui/themes';
 import { CloudUploadIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +18,7 @@ const OutboxView = ({ overlay }: { overlay: OutboxOverlay }) => {
     return (
         <>
             {restore === 'failed' && (
-                <Callout.Root color="amber" size="1" mb="3" role="status">
+                <Callout.Root color={PROP_COLOR.warning} size="1" mb="3" role="status">
                     <Callout.Icon>
                         <TriangleAlertIcon size={16} aria-hidden="true" />
                     </Callout.Icon>
@@ -30,7 +31,7 @@ const OutboxView = ({ overlay }: { overlay: OutboxOverlay }) => {
                         type="button"
                         size="1"
                         variant="soft"
-                        color="amber"
+                        color={PROP_COLOR.warning}
                         onClick={() => {
                             setIsOpen(true);
                         }}

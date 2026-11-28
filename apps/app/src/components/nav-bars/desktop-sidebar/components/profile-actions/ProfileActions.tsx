@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex } from '@radix-ui/themes';
 import { ChevronDownIcon, LogOutIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +20,7 @@ const ProfileActions = ({ isSoloMode }: Props) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const { requestSignOut, dialog: signOutDialog } = useSignOutConfirm();
     const { user, isLoading: isUserLoading } = useSelfUserState();
-    const activeColor = isSoloMode ? 'violet' : 'green';
+    const activeColor = isSoloMode ? PROP_COLOR.solo : PROP_COLOR.accent;
 
     const onToggle = () => {
         setIsExpanded(expanded => !expanded);
@@ -55,7 +56,7 @@ const ProfileActions = ({ isSoloMode }: Props) => {
                         disabled={!isExpanded}
                         tabIndex={isExpanded ? 0 : -1}
                         variant="soft"
-                        color="gray"
+                        color={PROP_COLOR.neutral}
                         size="3"
                     >
                         <LogOutIcon size={18} />

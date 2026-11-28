@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { UserPlusIcon, UsersRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -72,7 +73,7 @@ const DashboardOnboarding = () => {
                         <Text
                             as="p"
                             size={{ initial: '2', sm: '3' }}
-                            color="gray"
+                            color={PROP_COLOR.neutral}
                             align={{ initial: 'center', md: 'left' }}
                         >
                             {t('onboarding.welcome.description')}

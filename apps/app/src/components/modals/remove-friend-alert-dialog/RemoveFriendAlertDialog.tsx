@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { HeartCrackIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +38,7 @@ const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
             title={t('friends:removeModal.title')}
             description={t('friends:removeModal.confirm')}
             actionLabel={t('friends:actions.removeFriend')}
-            actionColor="red"
+            actionColor={PROP_COLOR.danger}
             isActionLoading={isRemovingFriend}
             onAction={onRemoveFriend}
             content={
@@ -48,7 +49,7 @@ const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
                                 <UserAvatar user={friend} size="4" decorative />
 
                                 <Flex direction="column" minWidth="0">
-                                    <Text size="1" color="gray">
+                                    <Text size="1" color={PROP_COLOR.neutral}>
                                         {t('friends:removeModal.friendLabel')}
                                     </Text>
                                     <Text size="4" weight="medium" truncate>
@@ -61,13 +62,13 @@ const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
                                 size="4"
                                 radius="medium"
                                 variant="soft"
-                                color="red"
+                                color={PROP_COLOR.danger}
                                 fallback={<HeartCrackIcon size={20} />}
                             />
                         </Flex>
                     </Card>
 
-                    <Text size="2" color="gray">
+                    <Text size="2" color={PROP_COLOR.neutral}>
                         {t('friends:removeModal.description')}
                     </Text>
                 </>

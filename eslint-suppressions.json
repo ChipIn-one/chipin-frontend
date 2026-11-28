@@ -338,11 +338,6 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/404-page/components/Icon404.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/ActivityPage.tsx": {
     "import-x/no-default-export": {
       "count": 1

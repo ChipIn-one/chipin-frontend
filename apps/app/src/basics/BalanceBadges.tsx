@@ -1,4 +1,5 @@
 import { type ComponentProps, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge, Button, Flex } from '@radix-ui/themes';
 import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +28,7 @@ const BalanceBadges: React.FC<Props> = ({
     items,
     isLoading = false,
     maxVisible = DEFAULT_MAX_VISIBLE,
-    overflowColor = 'gray',
+    overflowColor = PROP_COLOR.neutral,
 }) => {
     const { t } = useTranslation('common');
     const [isExpanded, setIsExpanded] = useState(false);

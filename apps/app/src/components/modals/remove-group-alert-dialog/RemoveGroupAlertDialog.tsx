@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Callout } from '@radix-ui/themes';
 import { OctagonAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -46,11 +47,11 @@ const RemoveGroupAlertDialog = ({ children, group }: Props) => {
             title={t('group:removeModal.title')}
             description={t('group:removeModal.confirm')}
             actionLabel={t('common:buttons.delete')}
-            actionColor="red"
+            actionColor={PROP_COLOR.danger}
             isActionLoading={isRemovingGroup}
             onAction={onRemoveGroup}
             content={
-                <Callout.Root color="red" size="2">
+                <Callout.Root color={PROP_COLOR.danger} size="2">
                     <Callout.Icon>
                         <OctagonAlertIcon size={20} />
                     </Callout.Icon>

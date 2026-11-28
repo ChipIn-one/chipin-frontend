@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -14,7 +15,7 @@ const RelativeTime = ({ createdAt, isTime24H }: Props) => {
     const locale = i18n.resolvedLanguage ?? i18n.language;
 
     return (
-        <Text size="2" color="gray" as="span" align="right" wrap="nowrap">
+        <Text size="2" color={PROP_COLOR.neutral} as="span" align="right" wrap="nowrap">
             {formatRelativeTime(createdAt, locale, isTime24H)}
         </Text>
     );

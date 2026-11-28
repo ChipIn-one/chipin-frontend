@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Dialog, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -116,7 +117,12 @@ const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
             <OverlayFooter
                 cancelAction={
                     <Dialog.Close>
-                        <Button size="3" variant="soft" color="gray" disabled={isSaving}>
+                        <Button
+                            size="3"
+                            variant="soft"
+                            color={PROP_COLOR.neutral}
+                            disabled={isSaving}
+                        >
                             {t('common:buttons.cancel')}
                         </Button>
                     </Dialog.Close>

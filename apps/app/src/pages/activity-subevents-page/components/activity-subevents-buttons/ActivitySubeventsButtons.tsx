@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex } from '@radix-ui/themes';
 import { useQueryClient } from '@tanstack/react-query';
 import { PencilIcon, Trash2Icon } from 'lucide-react';
@@ -220,7 +221,7 @@ const ActivitySubeventsButtons = ({
         <Button
             size="1"
             variant="soft"
-            color="red"
+            color={PROP_COLOR.danger}
             disabled={!parentEntryId || isRemoving || !isChangeable}
         >
             <Trash2Icon size={14} />

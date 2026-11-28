@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { IconButton } from '@radix-ui/themes';
 import {
     ArrowLeftRightIcon,
@@ -66,7 +67,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                           value: 'settleUp',
                           label: t('common:buttons.settleUp'),
                           icon: <ArrowLeftRightIcon size={16} />,
-                          color: 'green' as const,
+                          color: PROP_COLOR.success,
                           isDisabled: isSettleUpBlocked,
                           hint: isSettleUpBlocked ? onlineRequired : undefined,
                           onSelect: () => {
@@ -79,7 +80,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 value: 'removeFriend',
                 label: t('friends:actions.removeFriend'),
                 icon: <UserXIcon size={16} />,
-                color: 'red' as const,
+                color: PROP_COLOR.danger,
                 isDisabled: isRemoveDisabled,
                 hint: isRemoveBlocked ? onlineRequired : undefined,
                 onSelect: () => {
@@ -107,7 +108,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     <IconButton
                         variant="ghost"
                         size="2"
-                        color="gray"
+                        color={PROP_COLOR.neutral}
                         aria-label={t('friends:actions.moreFor', {
                             name: friend.user.displayName,
                         })}

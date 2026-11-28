@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { UsersIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +15,7 @@ const NoGroupsEmptyState = ({ action }: Props) => {
     return (
         <EmptyState
             icon={<UsersIcon size={20} />}
-            iconColor="indigo"
+            iconColor={PROP_COLOR.accent}
             title={t('groups.emptyTitle')}
             description={t('groups.emptyDescription')}
             action={action}

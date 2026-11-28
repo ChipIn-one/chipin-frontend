@@ -80,14 +80,14 @@ const TextInput = ({
                         {label}
                     </Text>
                     {description && (
-                        <Text id={descriptionId} size="2" color="gray">
+                        <Text id={descriptionId} size="2" color={PROP_COLOR.neutral}>
                             {description}
                         </Text>
                     )}
                 </Flex>
 
                 {characterCounter && (
-                    <Text size="1" color="gray" align="right" as="span">
+                    <Text size="1" color={PROP_COLOR.neutral} align="right" as="span">
                         {characterCounter}
                     </Text>
                 )}

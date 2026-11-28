@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
@@ -95,7 +96,7 @@ test('builds a partial payment that sends the input and leaves the rest of the e
         isFriendPayer: false,
         isDebtSettled: false,
         fullSettlementAmount: null,
-        debtColor: 'red',
+        debtColor: PROP_COLOR.debtOwing,
         summaryUser: currentUser,
     });
 });
@@ -110,7 +111,7 @@ test('builds a full settlement when the friend owes', () => {
         isFriendPayer: true,
         isDebtSettled: true,
         fullSettlementAmount: null,
-        debtColor: 'green',
+        debtColor: PROP_COLOR.debtOwed,
         summaryUser: friend,
     });
 });

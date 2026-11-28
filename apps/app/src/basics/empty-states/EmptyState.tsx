@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Card, Flex, Text } from '@radix-ui/themes';
 import type { ComponentProps, ReactNode } from 'react';
 
@@ -12,7 +13,7 @@ interface Props {
 
 const EmptyState = ({
     icon,
-    iconColor = 'gray',
+    iconColor = PROP_COLOR.neutral,
     title,
     description,
     action,
@@ -38,7 +39,7 @@ const EmptyState = ({
                         </Text>
 
                         {description && (
-                            <Text size="1" color="gray" as="p">
+                            <Text size="1" color={PROP_COLOR.neutral} as="p">
                                 {description}
                             </Text>
                         )}

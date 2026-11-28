@@ -24,31 +24,31 @@ without data.
 
 Source: [`basics/empty-states/EmptyState.tsx`](../../../apps/app/src/basics/empty-states/EmptyState.tsx).
 
-| Prop             | Type                     | Default    | Description                                       |
-| ---------------- | ------------------------ | ---------- | ------------------------------------------------- |
-| `icon`           | `NonNullable<ReactNode>` | required   | Icon in a soft size-4 `Avatar`                    |
-| `iconColor`      | Radix `Avatar` `color`   | `'gray'`   | Icon avatar color                                 |
-| `title`          | `string`                 | required   | Bold title (`Text size="3"`)                      |
-| `description`    | `string`                 | —          | Gray `Text size="1"` under the title              |
-| `action`         | `ReactNode`              | —          | The one action (a `Button`)                       |
-| `actionPosition` | `'inline' \| 'below'`    | `'inline'` | Action at the right, or full width below the text |
+| Prop             | Type                     | Default              | Description                                       |
+| ---------------- | ------------------------ | -------------------- | ------------------------------------------------- |
+| `icon`           | `NonNullable<ReactNode>` | required             | Icon in a soft size-4 `Avatar`                    |
+| `iconColor`      | Radix `Avatar` `color`   | `PROP_COLOR.neutral` | Icon avatar color                                 |
+| `title`          | `string`                 | required             | Bold title (`Text size="3"`)                      |
+| `description`    | `string`                 | —                    | Gray `Text size="1"` under the title              |
+| `action`         | `ReactNode`              | —                    | The one action (a `Button`)                       |
+| `actionPosition` | `'inline' \| 'below'`    | `'inline'`           | Action at the right, or full width below the text |
 
 ### Variants
 
 Each variant takes `action?: ReactNode`.
 
-| Variant                        | Namespace: title / description keys                                                                         | Icon, `iconColor`                       |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `NoActivityEmptyState`         | `activity`: `emptyTitle` / `emptyDescription`                                                               | `ClipboardListIcon`, gray               |
-| `NoDebtsEmptyState`            | `common`: `noDebtsTitle` / `noDebtsDescription`                                                             | `BanknoteXIcon`, gray                   |
-| `NoDirectFriendEmptyState`     | `group`: `expenses.modal.directNoFriend.title` / `expenses.modal.directNoFriend.description`                | `UserPlusIcon`, `PROP_COLOR.info`       |
-| `NoFilteredActivityEmptyState` | `activity`: `filteredEmptyTitle` / `filteredEmptyDescription`                                               | `ClipboardListIcon`, gray               |
-| `NoFriendsEmptyState`          | `friends`: `emptyTitle` / `emptyDescription`                                                                | `UserPlusIcon`, cyan                    |
-| `NoGroupExpensesEmptyState`    | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription`                                      | `ReceiptIcon`, jade                     |
-| `NoGroupMembersEmptyState`     | `group`: `page.balances.empty` / none                                                                       | `UserPlusIcon`, teal                    |
-| `NoGroupsEmptyState`           | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`                                                | `UsersIcon`, indigo                     |
-| `NoMatchingGroupsEmptyState`   | `dashboard`: `groups.filterEmptyTitle` / `groups.filterEmptyDescription` or `groups.searchEmptyDescription` | `FilterXIcon`, gray                     |
-| `SoloInDevelopmentEmptyState`  | `dashboard`: `solo.summaryTitle` or `solo.activityTitle` / `solo.inDevelopment`                             | `WalletCardsIcon` or `ListIcon`, violet |
+| Variant                        | Namespace: title / description keys                                                                         | Icon, `iconColor`                                  |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `NoActivityEmptyState`         | `activity`: `emptyTitle` / `emptyDescription`                                                               | `ClipboardListIcon`, `PROP_COLOR.neutral`          |
+| `NoDebtsEmptyState`            | `common`: `noDebtsTitle` / `noDebtsDescription`                                                             | `BanknoteXIcon`, `PROP_COLOR.neutral`              |
+| `NoDirectFriendEmptyState`     | `group`: `expenses.modal.directNoFriend.title` / `expenses.modal.directNoFriend.description`                | `UserPlusIcon`, `PROP_COLOR.info`                  |
+| `NoFilteredActivityEmptyState` | `activity`: `filteredEmptyTitle` / `filteredEmptyDescription`                                               | `ClipboardListIcon`, `PROP_COLOR.neutral`          |
+| `NoFriendsEmptyState`          | `friends`: `emptyTitle` / `emptyDescription`                                                                | `UserPlusIcon`, `PROP_COLOR.accent`                |
+| `NoGroupExpensesEmptyState`    | `group`: `page.expenses.emptyTitle` / `page.expenses.emptyDescription`                                      | `ReceiptIcon`, `PROP_COLOR.accent`                 |
+| `NoGroupMembersEmptyState`     | `group`: `page.balances.empty` / none                                                                       | `UserPlusIcon`, `PROP_COLOR.accent`                |
+| `NoGroupsEmptyState`           | `dashboard`: `groups.emptyTitle` / `groups.emptyDescription`                                                | `UsersIcon`, `PROP_COLOR.accent`                   |
+| `NoMatchingGroupsEmptyState`   | `dashboard`: `groups.filterEmptyTitle` / `groups.filterEmptyDescription` or `groups.searchEmptyDescription` | `FilterXIcon`, `PROP_COLOR.neutral`                |
+| `SoloInDevelopmentEmptyState`  | `dashboard`: `solo.summaryTitle` or `solo.activityTitle` / `solo.inDevelopment`                             | `WalletCardsIcon` or `ListIcon`, `PROP_COLOR.solo` |
 
 `NoGroupsEmptyState` and `NoDirectFriendEmptyState` set `actionPosition="below"` when they have an
 action. `NoDirectFriendEmptyState` is the Add Expense editor's direct target with no mutual known

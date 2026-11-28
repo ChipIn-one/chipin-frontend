@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +41,7 @@ const LanguageSelector = ({ value, onChange, isLoading = false }: Props) => {
                 <Button
                     type="button"
                     variant="surface"
-                    color="gray"
+                    color={PROP_COLOR.neutral}
                     size="3"
                     radius="large"
                     loading={isLoading}

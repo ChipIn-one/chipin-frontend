@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -69,7 +70,7 @@ const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
                         <UsersRow members={members} max={5} size="2" />
                         <IconButton
                             size="2"
-                            color="gray"
+                            color={PROP_COLOR.neutral}
                             variant="outline"
                             radius="full"
                             aria-label={t('common:buttons.invitePeople')}
@@ -133,10 +134,10 @@ const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
 
                                         {isEndOfFeed && (
                                             <Flex justify="center" align="center" gap="2" py="4">
-                                                <Text as="span" color="gray">
+                                                <Text as="span" color={PROP_COLOR.neutral}>
                                                     <ChevronsDownIcon size={14} />
                                                 </Text>
-                                                <Text size="1" color="gray">
+                                                <Text size="1" color={PROP_COLOR.neutral}>
                                                     {t('activity:endOfFeed')}
                                                 </Text>
                                             </Flex>

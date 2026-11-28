@@ -21,7 +21,7 @@ Source: [`basics/GroupRoleBadge.tsx`](../../../apps/app/src/basics/GroupRoleBadg
 | --------- | --------- | -------- | --------------------------------- |
 | `isOwner` | `boolean` | required | Render the badge only when `true` |
 
-Renders a Radix `Badge size="1" color="amber" variant="soft"`.
+Renders a Radix `Badge size="1" color={PROP_COLOR.warning} variant="soft"`.
 
 ## States
 

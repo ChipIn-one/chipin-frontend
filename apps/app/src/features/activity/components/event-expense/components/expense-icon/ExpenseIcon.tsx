@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar } from '@radix-ui/themes';
 import { BanknoteArrowDownIcon, BanknoteArrowUpIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -25,14 +26,14 @@ const getIconColor = (
     isCurrentUserPayer: boolean,
 ) => {
     if (isReversed) {
-        return 'red';
+        return PROP_COLOR.danger;
     }
 
     if (!hasCurrentUser) {
-        return 'gray';
+        return PROP_COLOR.neutral;
     }
 
-    return isCurrentUserPayer ? 'green' : 'red';
+    return isCurrentUserPayer ? PROP_COLOR.debtOwed : PROP_COLOR.debtOwing;
 };
 
 const getExpenseIcon = (isReversed: boolean, isCurrentUserPayer: boolean) => {

@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Text, TextField } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -18,7 +19,7 @@ const ExpenseDateField = () => {
 
     return (
         <Flex direction="column" gap="1">
-            <Text as="label" htmlFor={inputId} size="2" weight="bold" color="gray">
+            <Text as="label" htmlFor={inputId} size="2" weight="bold" color={PROP_COLOR.neutral}>
                 {t('common:fields.date')}
             </Text>
             <TextField.Root

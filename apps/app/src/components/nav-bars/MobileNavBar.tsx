@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -18,7 +19,7 @@ const MobileNavBar = () => {
     const { isSoloMode, isVisible: isAddExpenseVisible } = useAddExpenseAvailability(
         location.pathname,
     );
-    const activeColor = isSoloMode ? 'violet' : 'green';
+    const activeColor = isSoloMode ? PROP_COLOR.solo : PROP_COLOR.accent;
     const navElements = getNavElements(getPreferredModeRoute(isSoloMode));
 
     const renderNavItem = ({ labelKey, href, Icon }: NavElement) => {
@@ -30,13 +31,13 @@ const MobileNavBar = () => {
                     className={styles.item}
                     to={href}
                     aria-current={isActive ? 'page' : undefined}
-                    color={isActive ? activeColor : 'gray'}
+                    color={isActive ? activeColor : PROP_COLOR.neutral}
                     radius="none"
                     variant={isActive ? 'solid' : 'surface'}
                 >
                     <Flex direction="column" align="center" justify="center" gap="1" py="1">
                         <Icon size={20} />
-                        <Text size="1" {...(!isActive && { color: 'gray' })}>
+                        <Text size="1" {...(!isActive && { color: PROP_COLOR.neutral })}>
                             {t(labelKey)}
                         </Text>
                     </Flex>

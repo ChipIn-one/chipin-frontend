@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -50,7 +51,7 @@ const ExpenseScopeContext = () => {
     return (
         <Card>
             <Flex direction="column" gap="1">
-                <Text size="2" weight="bold" color="gray">
+                <Text size="2" weight="bold" color={PROP_COLOR.neutral}>
                     {scope === 'group'
                         ? t('expenses.modal.scope.group', { groupName })
                         : t('expenses.modal.scope.friends', { users: usersLabel })}

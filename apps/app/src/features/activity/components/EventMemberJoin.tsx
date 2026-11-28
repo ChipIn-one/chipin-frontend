@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +31,7 @@ const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
                         <Avatar
                             size="4"
                             variant="soft"
-                            color="cyan"
+                            color={PROP_COLOR.success}
                             fallback={<UserPlusIcon size={20} />}
                         />
                     </EventIcon>
@@ -41,7 +42,7 @@ const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
                             <Text size="3" as="span" weight="medium">
                                 {targetUserDisplayName}
                             </Text>{' '}
-                            <Text size="3" as="span" color="gray">
+                            <Text size="3" as="span" color={PROP_COLOR.neutral}>
                                 {t('event.memberJoinedMiddleText')}
                             </Text>{' '}
                             <Text size="3" as="span" weight="medium">

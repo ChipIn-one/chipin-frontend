@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Callout, Flex } from '@radix-ui/themes';
 import { WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,7 @@ const OfflineNotice = () => {
     };
 
     return (
-        <Callout.Root color="amber" size="1" mb="3" role="status" aria-live="polite">
+        <Callout.Root color={PROP_COLOR.warning} size="1" mb="3" role="status" aria-live="polite">
             <Callout.Icon>
                 <WifiOffIcon size={16} aria-hidden="true" />
             </Callout.Icon>
@@ -64,7 +65,7 @@ const OfflineNotice = () => {
                     type="button"
                     size="1"
                     variant="soft"
-                    color="amber"
+                    color={PROP_COLOR.warning}
                     loading={isChecking}
                     disabled={isChecking}
                     onClick={onRetry}

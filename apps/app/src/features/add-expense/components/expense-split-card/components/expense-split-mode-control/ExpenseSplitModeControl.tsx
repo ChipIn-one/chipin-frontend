@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -55,20 +56,20 @@ const ExpenseSplitModeControl = () => {
     return (
         <Flex direction="column" gap="2" width="100%">
             <Flex justify="between" align="center" gap="3">
-                <Text size="2" weight="bold" color="gray">
+                <Text size="2" weight="bold" color={PROP_COLOR.neutral}>
                     {t('expenses.modal.split.title')}
                 </Text>
                 <Flex align="center" gap="1">
-                    <Text size="2" color="gray">
+                    <Text size="2" color={PROP_COLOR.neutral}>
                         {t('expenses.modal.split.total')}
                     </Text>
                     <Text size="2" weight="bold" color={statusColor}>
                         <Amount value={assignedAmount} tokenCode={currency} precision={precision} />
                     </Text>
-                    <Text size="2" color="gray">
+                    <Text size="2" color={PROP_COLOR.neutral}>
                         {SPLIT_SUMMARY_SEPARATOR}
                     </Text>
-                    <Text size="2" weight="bold" color="gray">
+                    <Text size="2" weight="bold" color={PROP_COLOR.neutral}>
                         <Amount value={totalAmount} tokenCode={currency} precision={precision} />
                     </Text>
                 </Flex>

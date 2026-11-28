@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -16,7 +17,7 @@ const HeaderNav = () => {
     const canAccessSolo = useCanAccessSolo();
     const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
-    const activeColor = isSoloMode ? 'violet' : 'green';
+    const activeColor = isSoloMode ? PROP_COLOR.solo : PROP_COLOR.accent;
     const navElements = getNavElements(getPreferredModeRoute(isSoloMode));
 
     return (
@@ -32,7 +33,7 @@ const HeaderNav = () => {
                             aria-current={isActive ? 'page' : undefined}
                             variant="ghost"
                             size="3"
-                            color={isActive ? activeColor : 'gray'}
+                            color={isActive ? activeColor : PROP_COLOR.neutral}
                         >
                             <Icon size={24} />
                             <Text size="2" weight="bold">

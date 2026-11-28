@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -19,7 +20,7 @@ const SettlementParticipants = ({ fromDisplayName, toDisplayName, isReversed }: 
                 {fromDisplayName}
             </Text>
 
-            <Text size="2" color="gray" truncate className={reversedClassName}>
+            <Text size="2" color={PROP_COLOR.neutral} truncate className={reversedClassName}>
                 {t('event.paidTo')}
             </Text>
 
