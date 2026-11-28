@@ -27,6 +27,7 @@ import {
     clearLocalUserRole,
     getKeptOutboxUsers,
     getLocalUser,
+    pickDisplaySettings,
     removeKeptOutboxUsers,
     saveLocalUser,
     SessionStorage,
@@ -96,12 +97,14 @@ const resetAuthScopedStores = () => {
     resetSessionSelfLoad();
 };
 
-// `LS_KEY_USER` of the next user (`{ id, settings }`), or `{ settings }` without one.
+// `LS_KEY_USER` of the next user (`{ id, settings }`), or `{ settings }` without one. Only the
+// language and theme carry over (invariant 12): until the next user's `users/self` loads, the
+// readers get the defaults for the other settings, not the previous user's.
 const moveLocalUser = (nextUserId: string | null): void => {
     const settings = getLocalUser()?.settings;
 
     if (nextUserId !== null && settings) {
-        saveLocalUser({ id: nextUserId, settings });
+        saveLocalUser({ id: nextUserId, settings: pickDisplaySettings(settings) });
     } else {
         clearLocalUserIdentity();
     }
@@ -184,8 +187,8 @@ const settledWithin = (work: Promise<unknown>, ms: number): Promise<void> =>
 // and fills no store, and its 401 retry does not expire the new session. No store reset aborts a
 // request: a write still in flight also tells that it is stale by its client, which
 // `clearUserData` drops (`isUserCacheClient`). The previous user's data goes (§1.5 account
-// switch) and `LS_KEY_USER` = `{ id: Y, settings }`; a draft of another user is reset. Returns
-// whether it switched. With offline writes on, the sign-in asks first (`askAccountSwitch`) and a
+// switch) and `LS_KEY_USER` = `{ id: Y, settings }` (only X's language and theme); a draft of
+// another user is reset. Returns whether it switched. With offline writes on, the sign-in asks first (`askAccountSwitch`) and a
 // refresh may keep X's data (`onAccessTokenRefreshed`).
 const dropOtherUserData = (
     nextUserId: string | null,
