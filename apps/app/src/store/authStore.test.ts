@@ -374,15 +374,23 @@ describe('authStore', () => {
         });
     });
 
+    // Invariant 12: a sign-out keeps only the language and theme; the reader fills the defaults.
+    const signedOutSettings = {
+        ...user.settings,
+        defaultCategory: 'other',
+        timeFormat: '12h',
+        soloModeByDefault: false,
+    } satisfies SelfUser['settings'];
+
     test.each([
-        ['signOut', () => useAuthStore.getState().signOut()],
-        ['expireSession', () => useAuthStore.getState().expireSession()],
-    ])('%s drops the cached role but keeps cached settings', (_name, onReset) => {
+        ['signOut', () => void useAuthStore.getState().signOut(), signedOutSettings],
+        ['expireSession', () => useAuthStore.getState().expireSession(), user.settings],
+    ])('%s drops the cached role', (_name, onReset, expectedSettings) => {
         saveLocalUser({ role: 'ADMIN', settings: user.settings });
 
         onReset();
 
-        expect(getLocalUser()).toEqual({ settings: user.settings });
+        expect(getLocalUser()).toEqual({ settings: expectedSettings });
         // Signed out, the UI reads the role from the cached user.
         expect(isAdminRole(getLocalUser()?.role)).toBe(false);
     });
@@ -395,12 +403,12 @@ describe('authStore', () => {
             'remote logout (signed_out)',
             () => useAuthStore.getState().setUnauthenticated('signed_out'),
         ],
-    ])('%s drops the cached id and role, keeps settings', (_name, onSignOut) => {
+    ])('%s drops the cached id and role, keeps only language and theme', (_name, onSignOut) => {
         saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
 
         onSignOut();
 
-        expect(getLocalUser()).toEqual({ settings: user.settings });
+        expect(getLocalUser()).toEqual({ settings: signedOutSettings });
         expect(getTabUserId()).toBeUndefined();
     });
 
