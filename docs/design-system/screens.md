@@ -35,10 +35,12 @@ staging test data, and the main user flows as ordered screen ids. The data is
 - Error states mock the failing read with status 500 while `/health` stays up (a 5xx with a healthy
   `/health` is a request error, not an outage); `app.backend-unavailable` mocks `/health` too.
   Loading states mock the read with `hang` in a fresh context (no persisted cache).
-- Invite tokens are run-scoped and die with the purge. QR modals show them: blur or crop the QR in
-  any capture that leaves CI. Site join pages need no real token (they only check its format),
-  but `/join/<kind>/<token>` reaches them only through the `vercel.json` rewrite: capture the
-  `site.join-*` rows against a deployment, not `astro preview`.
+- Invite tokens are run-scoped and die with the purge. QR modals show them: the capture masks every
+  QR code (`canvas`), invite link and token and email in the PNGs that leave CI, and shows fixed
+  texts for dates and times.
+  Site join pages need no real token (they only check its format), but `/join/<kind>/<token>`
+  reaches them only through the `vercel.json` rewrite: `astro preview` lacks it, so the capture
+  answers those URLs with the page of their kind and keeps the URL, as the rewrite does.
 - Not rows: toasts (they report an action, [states.md](patterns/states.md#toasts)) and dropdown
   menus (part of their screen).
 
@@ -264,15 +266,42 @@ One section per `APP_ROUTES` id (`apps/app/src/app/router/routeManifest.ts`).
 
 ## How the manifest is used
 
-- **#998, captures after every `master` merge.** A Playwright project reads the manifest
-  (`readFileSync(SCREEN_MANIFEST_URL)` + `parseScreenManifest`; `SCREEN_MANIFEST_FILE` is the same
-  file relative to the repository root), provisions each scenario once,
-  and for every `auto` row and each `screenVariants(manifest, row)` variant opens `path`, applies
-  the mocks, steps and offline switch, and saves `<id>.<theme>.<width>.png`. Rows with
-  `capture: "manual"` are skipped until their setup lands. Flows give the order of a flow strip.
+- **#998, captures after every `master` merge.** `apps/app/playwright.capture.config.ts` (CI only,
+  [`docs/e2e-tests.md`](../e2e-tests.md#screen-captures)) reads the manifest
+  (`readFileSync(SCREEN_MANIFEST_URL)` + `parseScreenManifest`), provisions each `auto` row's
+  scenario (once per row: a user's session is not shared), applies its mocks, runs its recipe
+  (`apps/app/e2e/capture/recipes.ts`: the prose steps as code) once per variant, with its width
+  and colour scheme set first, sets offline if
+  asked, and saves one full-page PNG per `screenVariants(manifest, row)` variant. Rows with
+  `capture: "manual"` are listed, not taken, until their setup lands. A row without a recipe fails
+  the run by name (and `e2e/capture/recipes.test.ts` in the unit tests). Flows give the order of a
+  flow strip.
 - **#999, the Claude Design screens canvas.** A sync job maps each id to a canvas frame (one frame
   per id, the variants as its four views) and each flow to a row of frames; a new id adds a frame,
   a removed id archives its frame. Ids are the join key, so they never change silently.
+
+## Capture artifact
+
+Every capture run uploads one artifact named `screen-captures`; #999 and pull requests read the one
+of the latest successful `push` run on `master` of `.github/workflows/screen-capture.yml`. It holds
+`png/<id>__<theme>__<width>.png` and `index.json`, built by `buildCaptureIndex`
+(`apps/app/e2e/capture/captureModel.ts`, type `CaptureIndex`), schema version 1:
+
+| Field               | Value                                                                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `schemaVersion`     | `1`                                                                                                                                                                                                                |
+| `commit`, `ref`     | the captured commit (full SHA; a pull request's head) and its ref (`refs/heads/master`, or the pull request branch)                                                                                                |
+| `runId`             | the GitHub Actions run id                                                                                                                                                                                          |
+| `generatedAt`       | ISO time of the index                                                                                                                                                                                              |
+| `manifestVersion`   | the manifest's `version`                                                                                                                                                                                           |
+| `playwrightVersion` | the pinned `@playwright/test` (its Chromium renders and encodes the PNGs)                                                                                                                                          |
+| `flows[]`           | `id`, `title`, `screens[]` in flow order (a row may repeat)                                                                                                                                                        |
+| `ungrouped[]`       | the rows in no flow, in manifest order                                                                                                                                                                             |
+| screen entry        | `id`, `app`, `kind`, `parent` (or `null`), `path` (the manifest pattern, no run values), `capture` (`auto`/`manual`), `captures[]` of `{ theme, width, file }` in variant order (empty for a manual or failed row) |
+| `manual[]`          | `id`, `note` (the row's `notes`)                                                                                                                                                                                   |
+| `missing[]`         | `id`, `variant` (`{ theme, width }`, or `null` for a recipe without a row), `reason` (one sanitized line: no token, id or run id). Non-empty fails the run, so a baseline has none                                 |
+
+The index has no display titles for screens: #999 derives frame names from the ids.
 
 ## Keeping it complete
 

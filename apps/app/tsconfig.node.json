@@ -19,6 +19,7 @@
         "contract-tests/**/*.ts",
         "playwright.config.ts",
         "playwright.sw.config.ts",
+        "playwright.capture.config.ts",
         "e2e/**/*.ts"
     ]
 }
