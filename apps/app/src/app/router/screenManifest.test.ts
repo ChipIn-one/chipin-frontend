@@ -5,6 +5,8 @@ import { getOrThrow } from 'test/getOrThrow';
 import { createTestQueryClient } from 'test/renderWithQueryClient';
 import {
     parseScreenManifest,
+    SCREEN_MANIFEST_FILE,
+    SCREEN_MANIFEST_URL,
     type ScreenManifest,
     screenManifestSchema,
 } from 'test/screenManifest';
@@ -19,8 +21,10 @@ const MANIFEST_FILES = import.meta.glob<unknown>(
     '../../../../../docs/design-system/screens.manifest.json',
     { eager: true, import: 'default' },
 );
-// Keys only: the `.astro` modules are never loaded.
-const SITE_PAGE_FILES = import.meta.glob('../../../../site/src/pages/**/*.astro');
+// Keys only: the modules are never loaded. Every extension Astro routes from `src/pages`.
+const SITE_PAGE_FILES = import.meta.glob(
+    '../../../../site/src/pages/**/*.{astro,md,mdx,html,ts,js}',
+);
 const SITE_PAGES_PREFIX = '../../../../site/src/pages/';
 
 const readManifestJson = (): unknown => {
@@ -122,6 +126,12 @@ describe('screen manifest', () => {
             manifest.excluded.flatMap(entry => ('routePath' in entry ? [entry.routePath] : [])),
         );
 
+        const leafPaths = new Set(leaves.map(leaf => leaf.path.replace(/^\//, '')));
+
+        // A stale exclusion: the router has no such path any more.
+        for (const path of excludedPaths) {
+            expect(leafPaths.has(path), `excluded routePath ${path}`).toBe(true);
+        }
         for (const leaf of leaves) {
             if (leaf.id === undefined || !manifestPaths.has(leaf.id)) {
                 // A router leaf outside APP_ROUTES (the `*` redirect) needs its own exclusion.
@@ -164,5 +174,30 @@ describe('screen manifest', () => {
         expect(issuesOf(withUnknownParent)).toContain('e2e.orphan: unknown parent e2e.missing');
         expect(issuesOf(withUnknownStep)).toContain('flow broken: unknown step e2e.missing');
         expect(issuesOf({ ...valid, version: 2 })).not.toEqual([]);
+    });
+
+    it('rejects parent cycles and a route both mapped and excluded', () => {
+        const valid = parseScreenManifest(readManifestJson());
+        const withCycle = {
+            ...valid,
+            screens: [
+                ...valid.screens,
+                { ...getOrThrow(valid.screens, 0), id: 'e2e.a', kind: 'state', parent: 'e2e.b' },
+                { ...getOrThrow(valid.screens, 0), id: 'e2e.b', kind: 'state', parent: 'e2e.a' },
+            ],
+        };
+        const withOverlap = {
+            ...valid,
+            excluded: [...valid.excluded, { routeId: 'login', reason: 'stale' }],
+        };
+
+        expect(issuesOf(withCycle)).toContain('e2e.a: parent cycle through e2e.a');
+        expect(issuesOf(withOverlap)).toContain('excluded login also has a row');
+    });
+
+    it('resolves the manifest URL from the module to the repository file', () => {
+        expect(SCREEN_MANIFEST_URL.protocol).toBe('file:');
+        expect(SCREEN_MANIFEST_URL.pathname.endsWith(`/${SCREEN_MANIFEST_FILE}`)).toBe(true);
+        expect(SCREEN_MANIFEST_URL.pathname).not.toContain('/apps/app/');
     });
 });

@@ -5,8 +5,18 @@
 // path aliases, no Node or browser globals, so both tsconfig projects can type-check it.
 import { z } from 'zod';
 
-/** Repository-relative path of the manifest data (read it with `readFileSync` in Node). */
+/**
+ * Path of the manifest data relative to the repository root (not to the working directory or this
+ * module): resolve it against the root, or use {@link SCREEN_MANIFEST_URL}.
+ */
 export const SCREEN_MANIFEST_FILE = 'docs/design-system/screens.manifest.json';
+
+// From `apps/app/src/test/` up to the repository root. A variable, not a literal: Vite rewrites
+// `new URL('<literal>', import.meta.url)` into an asset import.
+const FROM_MODULE_TO_MANIFEST = `../../../../${SCREEN_MANIFEST_FILE}`;
+
+/** The manifest data as a `file:` URL resolved from this module: `readFileSync(SCREEN_MANIFEST_URL)`. */
+export const SCREEN_MANIFEST_URL = new URL(FROM_MODULE_TO_MANIFEST, import.meta.url);
 
 /** `group`, `group.empty`, `modal.add-expense.default`: kebab-case segments joined by dots. */
 export const SCREEN_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
@@ -37,7 +47,11 @@ const setupSchema = z.strictObject({
     offline: z.boolean().optional(),
     /** A browser context user agent (the in-app browser notice). */
     userAgent: z.string().optional(),
-    /** UI steps after `goto(path)`, in order. */
+    /**
+     * UI steps after `goto(path)`, in order: prose that names an e2e helper
+     * (`openGroupTab(page, groupId, 'Settings')`) or a visible label (`click Remove group`, as in
+     * the `en` locale). The capture (#998) maps each one to a helper or a locator.
+     */
     steps: z.array(z.string().min(1)).optional(),
 });
 
@@ -65,16 +79,22 @@ const screenSchema = z
     })
     .superRefine((screen, context) => {
         if (screen.app === 'app' && (screen.routeId === undefined || screen.sitePage)) {
-            context.addIssue({ code: 'custom', message: `${screen.id}: an app row has a routeId` });
+            context.addIssue({
+                code: 'custom',
+                message: `${screen.id}: an app row needs a routeId and no sitePage`,
+            });
         }
         if (screen.app === 'site' && (screen.sitePage === undefined || screen.routeId)) {
             context.addIssue({
                 code: 'custom',
-                message: `${screen.id}: a site row has a sitePage`,
+                message: `${screen.id}: a site row needs a sitePage and no routeId`,
             });
         }
         if (screen.kind === 'screen' && screen.parent !== undefined) {
-            context.addIssue({ code: 'custom', message: `${screen.id}: a screen has no parent` });
+            context.addIssue({
+                code: 'custom',
+                message: `${screen.id}: a screen must not have a parent`,
+            });
         }
         if (screen.kind !== 'screen' && screen.parent === undefined) {
             context.addIssue({
@@ -138,12 +158,33 @@ export const screenManifestSchema = z
             if (screen.parent !== undefined && !known.has(screen.parent)) {
                 fail(`${screen.id}: unknown parent ${screen.parent}`);
             }
-            if (screen.parent === screen.id) {
-                fail(`${screen.id}: its own parent`);
-            }
             const { scenario } = screen.setup;
             if (scenario !== undefined && !scenarios.has(scenario)) {
                 fail(`${screen.id}: unknown scenario ${scenario}`);
+            }
+        }
+        // Walking up from every row must end at a screen: a parent chain never loops.
+        const parentOf = new Map(manifest.screens.map(screen => [screen.id, screen.parent]));
+        for (const id of ids) {
+            const seen = new Set<string>();
+            let current: string | undefined = id;
+            while (current !== undefined && !seen.has(current)) {
+                seen.add(current);
+                current = parentOf.get(current);
+            }
+            if (current !== undefined) {
+                fail(`${id}: parent cycle through ${current}`);
+            }
+        }
+        // A route or page is either mapped or excluded, never both (a stale exclusion).
+        const rowTargets = new Set(
+            manifest.screens.flatMap(screen => [screen.routeId, screen.sitePage]),
+        );
+        for (const entry of manifest.excluded) {
+            const target =
+                'routeId' in entry ? entry.routeId : 'sitePage' in entry ? entry.sitePage : null;
+            if (target !== null && rowTargets.has(target)) {
+                fail(`excluded ${target} also has a row`);
             }
         }
         for (const flow of manifest.flows) {
