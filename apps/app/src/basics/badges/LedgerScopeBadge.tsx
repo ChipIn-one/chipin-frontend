@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -20,7 +21,7 @@ const LedgerScopeBadge = ({ groupId, groupName, currentGroupId }: Props) => {
     const isGroupEvent = groupId !== null && Boolean(groupName);
 
     return (
-        <Badge className={styles.root} size="1" variant="soft" color="gray">
+        <Badge className={styles.root} size="1" variant="soft" color={PROP_COLOR.neutral}>
             {isGroupEvent ? (
                 <Text as="span" truncate>
                     {groupName}

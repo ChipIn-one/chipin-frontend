@@ -21,8 +21,9 @@ import { TEST_FILES } from './layers.js';
 // match the Astro template, which astro-eslint-parser parses as JSX).
 export const PENDING_IDS = Symbol.for('chipin.eslint.pendingIds');
 
-// 2^n block pairs per rule. 7 since 05-5: `no-restricted-imports` has 6 layer/money scopes; the
-// seventh was the styled-components allowlist, removed with styled-components in #901.
+// 2^n block pairs per rule. 7 since 05-5: `no-restricted-syntax` uses all 7 (`prop-color-roles`
+// is the 7th); `no-restricted-imports` has 6 layer/money scopes (its 7th, the styled-components
+// allowlist, went with styled-components in #901).
 const MAX_SCOPES = 7;
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -313,6 +314,29 @@ const QUERY_CACHE_METHODS = [
     'ensureInfiniteQueryData',
 ].join('|');
 
+// A Radix color prop (`prop-color-roles`): `color` and any `<x>Color` (`iconColor`, `actionColor`).
+const COLOR_PROP = '/^(?:color|[a-z][A-Za-z]*Color)$/';
+// Every Radix Themes color name (the accent scales and the grays).
+const RADIX_PALETTE_NAME =
+    '/^(?:gray|mauve|slate|sage|olive|sand|gold|bronze|brown|yellow|amber|orange|tomato|red|ruby|crimson|pink|plum|purple|violet|iris|indigo|blue|cyan|teal|jade|green|grass|lime|mint|sky)$/';
+
+// Where a color value sits: [context, combinator to the value]. ` ` reaches the value anywhere
+// inside (ternaries, `??`, `as const`), ` > ` only as the direct child.
+const COLOR_CONTEXTS = [
+    [`JSXAttribute[name.name=${COLOR_PROP}]`, ' > '],
+    [`JSXAttribute[name.name=${COLOR_PROP}] > JSXExpressionContainer`, ' '],
+    [`Property[key.name=${COLOR_PROP}]`, ' '],
+    [`AssignmentPattern[left.name=${COLOR_PROP}]`, ' > '],
+    [`VariableDeclarator[id.name=${COLOR_PROP}]`, ' '],
+    [`AssignmentExpression[left.name=${COLOR_PROP}]`, ' '],
+    [`TSPropertySignature[key.name=${COLOR_PROP}] TSLiteralType`, ' > '],
+    ['TSTypeAliasDeclaration[id.name=/Color$/] TSLiteralType', ' > '],
+];
+const PROP_COLOR_SELECTOR = COLOR_CONTEXTS.flatMap(([context, combinator]) => [
+    `${context}${combinator}Literal[value=${RADIX_PALETTE_NAME}]`,
+    `${context}${combinator}TemplateLiteral[quasis.length=1] > TemplateElement[value.raw=${RADIX_PALETTE_NAME}]`,
+]).join(', ');
+
 /**
  * ChipIn project `no-restricted-syntax` entries (spec 02 §D0 "project"; 02-C12): images only
  * through basics/Image, Zustand reads only by a selector, an object selector only with useShallow
@@ -362,7 +386,7 @@ export const projectRules = ({ appDir }) => [
     },
     {
         // spec 03 §1.3: query keys come only from the entity key factories.
-        // Its ignore glob is the 6th of MAX_SCOPES (6/6) of `no-restricted-syntax`: a new scoped
+        // Its ignore glob is the 6th of MAX_SCOPES (7) of `no-restricted-syntax`: a new scoped
         // entry must reuse an existing glob.
         id: 'query-key-literal',
         // `queryKey: [...]` (also `as const` / `satisfies`), `queryKey: c ? [...] : k` (a literal
@@ -415,6 +439,26 @@ export const projectRules = ({ appDir }) => [
         ].join(', '),
         ignores: ['packages/tokens/**'],
         message: 'use var(--cp-*) from @chipin/tokens',
+    },
+    {
+        // spec 05 §3 (#1007): a Radix color value (`color`, `iconColor`, `actionColor`, …) is a
+        // `PROP_COLOR` role from @chipin/tokens/theme, never a palette name. Caught: a JSX
+        // attribute (`color="red"`, `color={on ? 'green' : 'gray'}`, `color={x ?? 'gray'}`), an
+        // object field (`color: 'red' as const`), a default (`color = 'mint'`), a variable or
+        // assignment (`const activeColor = 'green'`, a `const getIconColor = () => 'red'` arrow), a TS type
+        // (`color: 'green' | 'red'`, `type ShareColor = 'jade'`), as a string or a one-part
+        // template literal. App sources, tests included. Only the category palette,
+        // constants/category-ui.ts, holds palette names (its ignore glob is the 7th of
+        // MAX_SCOPES, 7/7). Not caught (review): a helper argument, a `function` declaration
+        // returning a palette name, maps not named `*Color`, string keys (`'color': 'red'`),
+        // `useState('red')` and generic type arguments, type aliases not named `*Color`.
+        id: 'prop-color-roles',
+        selector: PROP_COLOR_SELECTOR,
+        files: [appGlob(appDir, 'src/**/*.{ts,tsx}')],
+        ignores: [appGlob(appDir, 'src/constants/category-ui.ts')],
+        astro: false,
+        message:
+            'A Radix color prop takes a role: `color={PROP_COLOR.danger}` from @chipin/tokens/theme, not a palette name (docs/design-system/tokens.md).',
     },
     {
         // spec 05 §3: `style={{…}}` only for custom properties (`style={{ '--cover-url': url }}`).

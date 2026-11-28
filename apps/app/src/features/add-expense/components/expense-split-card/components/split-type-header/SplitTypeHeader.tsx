@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex, Text } from '@radix-ui/themes';
 import { CheckIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +51,7 @@ const SplitTypeHeader = () => {
                     type="button"
                     size="2"
                     variant="soft"
-                    color="gray"
+                    color={PROP_COLOR.neutral}
                     onClick={toggleAllParticipants}
                 >
                     <Icon size={14} />
@@ -58,7 +59,7 @@ const SplitTypeHeader = () => {
                 </Button>
             )}
             <Flex align="center" gap="1">
-                <Text size="2" color="gray">
+                <Text size="2" color={PROP_COLOR.neutral}>
                     {yourShareTitle}
                 </Text>
                 <Text size="2" weight="bold" color={yourShareTone}>

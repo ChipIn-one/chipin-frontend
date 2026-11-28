@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Button, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { GlobeIcon, RotateCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +50,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                         <Avatar
                             variant="soft"
                             size="3"
-                            color="mint"
+                            color={PROP_COLOR.neutral}
                             fallback={<GlobeIcon size={20} />}
                         />
                     </Skeleton>
@@ -57,7 +58,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('regional.title')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>{t('regional.description')}</Skeleton>
                         </Text>
                     </Flex>
@@ -78,7 +79,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                                     {t('regional.autoTimezone')}
                                 </Skeleton>
                             </Text>
-                            <Text size="2" color="gray">
+                            <Text size="2" color={PROP_COLOR.neutral}>
                                 <Skeleton loading={isLoading}>
                                     {t('regional.autoTimezoneHint')}
                                 </Skeleton>
@@ -91,7 +92,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                                     {utcOffset}
                                 </Text>
                                 <Separator orientation="vertical" size="2" />
-                                <Text size="2" color="gray">
+                                <Text size="2" color={PROP_COLOR.neutral}>
                                     {detectedTimezone}
                                 </Text>
                             </Flex>
@@ -112,7 +113,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                                     {t('regional.timeFormatTitle')}
                                 </Skeleton>
                             </Text>
-                            <Text size="2" color="gray">
+                            <Text size="2" color={PROP_COLOR.neutral}>
                                 <Skeleton loading={isLoading}>
                                     {t('regional.timeFormatDescription')}
                                 </Skeleton>
@@ -154,7 +155,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                             <Button
                                 type="button"
                                 variant="soft"
-                                color="gray"
+                                color={PROP_COLOR.neutral}
                                 size="3"
                                 disabled={isLoading}
                                 onClick={onUseSystemLanguage}

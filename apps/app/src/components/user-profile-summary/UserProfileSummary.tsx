@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Flex, Skeleton, Text } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +31,7 @@ const UserProfileSummary = ({ avatarSize = '5', isLoading = false, user }: Props
                             : user?.displayName || t('fields.displayName')}
                     </Skeleton>
                 </Text>
-                <Text size="2" color="gray" truncate>
+                <Text size="2" color={PROP_COLOR.neutral} truncate>
                     <Skeleton loading={isLoading}>
                         {isLoading ? tSkeletons('account.email') : user?.email}
                     </Skeleton>

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Container, Flex, Heading, Text } from '@radix-ui/themes';
 import { ShieldLockIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +32,7 @@ const LoginPage = () => {
     if (!isAuthResolved) {
         return (
             <PageLoader>
-                <Text role="status" size="2" color="gray" align="center">
+                <Text role="status" size="2" color={PROP_COLOR.neutral} align="center">
                     {t('signingIn')}
                 </Text>
             </PageLoader>
@@ -46,17 +47,17 @@ const LoginPage = () => {
             <Flex direction="column" align="center" gap="6">
                 <Heading as="h1" size={{ initial: '7', sm: '8' }} align="center">
                     {t('modal.headlinePrimary')} <br />
-                    <Text as="span" color="grass">
+                    <Text as="span" color={PROP_COLOR.accent}>
                         {t('modal.headlineAccent')}
                     </Text>
                 </Heading>
                 <Flex direction="column" gap="3" width="100%" maxWidth="360px">
                     <AuthButtons returnTo={returnTo} locale={searchParams.get('locale')} />
                     <Flex align="center" justify="center" gap="2">
-                        <Text color="gray">
+                        <Text color={PROP_COLOR.neutral}>
                             <ShieldLockIcon size={14} />
                         </Text>
-                        <Text size="1" color="gray" align="center">
+                        <Text size="1" color={PROP_COLOR.neutral} align="center">
                             {t('modal.trust')}
                         </Text>
                     </Flex>

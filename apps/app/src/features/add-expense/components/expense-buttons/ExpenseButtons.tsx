@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Button, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -60,7 +61,7 @@ const ExpenseButtons = ({ onClose }: Props) => {
                     aria-live="polite"
                     aria-atomic="true"
                     size="2"
-                    color="gray"
+                    color={PROP_COLOR.neutral}
                     m="0"
                     wrap="pretty"
                 >
@@ -71,7 +72,7 @@ const ExpenseButtons = ({ onClose }: Props) => {
             </Box>
             <OverlayFooter
                 cancelAction={
-                    <Button size="3" variant="soft" color="gray" onClick={onClose}>
+                    <Button size="3" variant="soft" color={PROP_COLOR.neutral} onClick={onClose}>
                         {t('common:buttons.cancel')}
                     </Button>
                 }

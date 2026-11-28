@@ -33,11 +33,11 @@ interface IconTile {
     color: ComponentProps<typeof Avatar>['color'];
 }
 
-// Decorative tiles. Green and neutral go through `PROP_COLOR`; cyan has no role there and comes
-// from the approved #971 design, matching the DS EmptyState tile of friends (`NoFriendsEmptyState`).
+// Decorative tiles through `PROP_COLOR`; the friend tile is the accent, matching the DS EmptyState
+// tile of friends (`NoFriendsEmptyState`).
 const ICON_TILES: Record<InviteJoinVariant | 'invalid', IconTile> = {
     group: { Icon: UsersIcon, color: PROP_COLOR.success },
-    friend: { Icon: UserPlusIcon, color: 'cyan' },
+    friend: { Icon: UserPlusIcon, color: PROP_COLOR.accent },
     invalid: { Icon: CircleAlertIcon, color: PROP_COLOR.neutral },
 };
 
@@ -78,7 +78,7 @@ const InviteJoinConfirmation = ({
             <Heading as="h1" size={isMobile ? '6' : '5'}>
                 {isInvalid ? invalidTitle : title}
             </Heading>
-            <Text as="p" size={isMobile ? '3' : '2'} color="gray">
+            <Text as="p" size={isMobile ? '3' : '2'} color={PROP_COLOR.neutral}>
                 {isInvalid ? invalidDescription : description}
             </Text>
             {isError && (
@@ -109,7 +109,7 @@ const InviteJoinConfirmation = ({
                         type="button"
                         size={buttonSize}
                         variant="soft"
-                        color="gray"
+                        color={PROP_COLOR.neutral}
                         onClick={onCancel}
                     >
                         {isError ? goHomeLabel : cancelLabel}

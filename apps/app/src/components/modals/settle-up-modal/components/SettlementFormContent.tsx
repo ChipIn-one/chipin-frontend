@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Callout } from '@radix-ui/themes';
 import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -134,7 +135,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                         color={settlement.debtColor}
                     />
 
-                    <Callout.Root color="grass" size="2">
+                    <Callout.Root color={PROP_COLOR.accent} size="2">
                         <Callout.Icon>
                             <InfoIcon size={18} />
                         </Callout.Icon>
@@ -145,7 +146,13 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
 
             <OverlayFooter
                 cancelAction={
-                    <Button type="button" size="4" variant="soft" color="gray" onClick={onClose}>
+                    <Button
+                        type="button"
+                        size="4"
+                        variant="soft"
+                        color={PROP_COLOR.neutral}
+                        onClick={onClose}
+                    >
                         {t('common:buttons.cancel')}
                     </Button>
                 }
@@ -153,7 +160,7 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                     <Button
                         type="button"
                         size="4"
-                        color="grass"
+                        color={PROP_COLOR.accent}
                         disabled={!draft || isSubmitting || isSubmitPending}
                         loading={isSubmitting || isSubmitPending}
                         onClick={onFormSubmit}

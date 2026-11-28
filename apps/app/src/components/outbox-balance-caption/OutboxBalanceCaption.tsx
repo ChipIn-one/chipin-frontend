@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex, Text, VisuallyHidden } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -19,14 +20,14 @@ export const OutboxBalanceCaption = () => {
     }
     return (
         <Flex align="center" gap="2" wrap="wrap">
-            <Text size="1" color="gray">
+            <Text size="1" color={PROP_COLOR.neutral}>
                 {t('outbox.balanceExcludesPending')}
             </Text>
             <Button
                 type="button"
                 size="1"
                 variant="soft"
-                color="amber"
+                color={PROP_COLOR.warning}
                 onClick={() => {
                     setIsOpen(true);
                 }}

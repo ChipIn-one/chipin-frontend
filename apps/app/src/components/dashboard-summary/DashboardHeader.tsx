@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -47,7 +48,7 @@ const DashboardHeader: React.FC = () => {
                                   })}
                         </Skeleton>
                     </Heading>
-                    <Text size={{ initial: '2', sm: '3' }} color="gray" as="span">
+                    <Text size={{ initial: '2', sm: '3' }} color={PROP_COLOR.neutral} as="span">
                         <Skeleton loading={isUserLoading}>
                             {isUserLoading
                                 ? tSkeletons('dashboardHeader.overview')

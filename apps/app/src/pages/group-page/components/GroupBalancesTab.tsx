@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +35,7 @@ const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
         return (
             <NoGroupMembersEmptyState
                 action={
-                    <Button size="2" variant="soft" color="teal" asChild>
+                    <Button size="2" variant="soft" color={PROP_COLOR.accent} asChild>
                         <a href={inviteLink} target="_blank" rel="noreferrer">
                             <UserPlusIcon size={14} />
                             {t('page.membersTab.invitePeople')}

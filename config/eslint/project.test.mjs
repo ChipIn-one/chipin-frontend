@@ -720,6 +720,104 @@ describe('no-raw-colors and inline-style (spec 05 §3, 05-5)', () => {
     });
 });
 
+describe('prop-color-roles (#1007): Radix color props take PROP_COLOR roles', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: {
+                parser: tseslint.parser,
+                parserOptions: { ecmaFeatures: { jsx: true } },
+            },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax(),
+        ]),
+    ];
+    const lintIds = async (source, file) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        return result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]);
+    };
+    const source = [
+        'export const A = () => <Text color="tomato" />;',
+        "export const B = ({ on }) => <Text color={on ? 'green' : 'gray'} />;",
+        'export const C = () => <EmptyState iconColor="cyan" />;',
+        // Fine: a role, a value from data (the category palette), a CSS variable, other props.
+        'export const D = () => <Text color={PROP_COLOR.danger} />;',
+        'export const E = ({ item }) => <Badge color={item.color} variant="soft" />;',
+        'export const F = () => <SearchIcon color="var(--cp-text-muted)" />;',
+        'export const G = ({ on }) => <Badge color={on ? PROP_COLOR.accent : PROP_COLOR.neutral} />;',
+    ].join('\n');
+    const RULE = Array(4).fill('prop-color-roles');
+
+    test.each([
+        ['src/components/A.tsx', RULE],
+        ['src/components/A.test.tsx', RULE],
+        // Only the app sources: config, scripts and packages are not checked.
+        ['scripts/a.tsx', []],
+    ])('%s reports exactly %j', async (file, ids) => {
+        expect(await lintIds(source, file)).toEqual(ids);
+    });
+
+    test.each([
+        // JSX attribute values.
+        ["<Text color={'red'} />", 1],
+        ["<Text color={x ?? 'gray'} />", 1],
+        ["<Text color={'red' as const} />", 1],
+        ['<Text color={`red`} />', 1],
+        // An object field, also asserted, conditional or a template literal.
+        ["const item = { color: 'red' as const };", 1],
+        ["const item = { iconColor: on ? 'green' : 'violet' };", 2],
+        ['const item = { color: `tomato` };', 1],
+        // A default parameter.
+        ["const Avatar = ({ color = 'mint' }) => color;", 1],
+        // A variable, a reassignment and a `get<X>Color` helper.
+        ["const activeColor = isSolo ? 'violet' : 'green';", 2],
+        ["let amountColor; amountColor = 'red';", 1],
+        ["const getIconColor = on => (on ? 'green' : 'red');", 2],
+        // TS types: a property signature (with a union) and a `<X>Color` type alias.
+        ["interface P { color: 'green' | 'red'; }", 2],
+        ["type ShareColor = 'gray' | 'jade';", 2],
+        // Fine: roles, non-palette strings, a palette name outside a color context.
+        ['const item = { color: PROP_COLOR.danger };', 0],
+        ['const activeColor = isSolo ? PROP_COLOR.solo : PROP_COLOR.accent;', 0],
+        ["const item = { variant: 'soft', tone: 'red' };", 0],
+        ["const direction = 'owed'; const textColor = direction === 'owed' ? x : y;", 0],
+        ["interface P { color: (typeof PROP_COLOR)['debtOwed']; }", 0],
+    ])('%s reports %i', async (code, count) => {
+        expect(await lintIds(code, 'src/components/A.tsx')).toEqual(
+            Array(count).fill('prop-color-roles'),
+        );
+    });
+
+    test('only the category palette file may hold palette names (its ignore glob)', async () => {
+        const categoryUi =
+            "export const CATEGORY_UI = { food: { icon: 'utensils', color: 'teal' } };";
+
+        expect(await lintIds(categoryUi, 'src/constants/category-ui.ts')).toEqual([]);
+        expect(await lintIds(categoryUi, 'src/constants/other-ui.ts')).toEqual([
+            'prop-color-roles',
+        ]);
+    });
+
+    test('the message names the fix and the site `.astro` files are not checked', async () => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText('export const A = () => <Text color="red" />;', {
+            filePath: 'src/A.tsx',
+        });
+
+        expect(result.messages[0].message).toBe(
+            '[prop-color-roles] A Radix color prop takes a role: `color={PROP_COLOR.danger}` from @chipin/tokens/theme, not a palette name (docs/design-system/tokens.md).',
+        );
+        expect(
+            await resolvedIds(config, 'src/pages/a.astro', 'no-restricted-syntax'),
+        ).not.toContain('prop-color-roles');
+    });
+});
+
 describe('styled-components, @radix-ui/colors and svgr imports (spec 05 §3, §6) keep the other import entries', () => {
     const config = [
         {

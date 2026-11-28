@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Card, Flex, Grid, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { ReceiptTextIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +51,7 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
                         <Avatar
                             variant="soft"
                             size="3"
-                            color="mint"
+                            color={PROP_COLOR.neutral}
                             fallback={<ReceiptTextIcon size={20} />}
                         />
                     </Skeleton>
@@ -58,7 +59,7 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('expense.title')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>{t('expense.description')}</Skeleton>
                         </Text>
                     </Flex>
@@ -104,7 +105,7 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
                     <Flex justify="between" align="center" gap="3">
                         <Flex direction="column">
                             <Text weight="medium">{t('expense.skipCategoryTitle')}</Text>
-                            <Text size="2" color="gray">
+                            <Text size="2" color={PROP_COLOR.neutral}>
                                 {t('expense.skipCategoryDescription')}
                             </Text>
                         </Flex>
@@ -123,7 +124,7 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
                 <Flex justify="between" align="center" gap="3">
                     <Flex direction="column">
                         <Text weight="medium">{t('expense.simplifyDebtsTitle')}</Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             {t('expense.simplifyDebtsDescription')}
                         </Text>
                     </Flex>

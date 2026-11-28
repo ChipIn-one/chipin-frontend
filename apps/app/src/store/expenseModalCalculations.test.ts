@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { beforeEach, expect, test } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
@@ -125,9 +126,9 @@ test('returns zero amount for an excluded user', () => {
 test('colors your share based on the payer', () => {
     initializeGroup();
 
-    expect(selectYourShareColor(useExpenseModalStore.getState())).toBe('jade');
+    expect(selectYourShareColor(useExpenseModalStore.getState())).toBe(PROP_COLOR.debtOwed);
 
     useExpenseModalStore.getState().setPaidById(friend.id);
 
-    expect(selectYourShareColor(useExpenseModalStore.getState())).toBe('red');
+    expect(selectYourShareColor(useExpenseModalStore.getState())).toBe(PROP_COLOR.debtOwing);
 });

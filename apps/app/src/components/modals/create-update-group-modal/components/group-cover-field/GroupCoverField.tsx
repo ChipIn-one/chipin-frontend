@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Callout, Flex, Text } from '@radix-ui/themes';
 import { CircleAlertIcon } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -53,7 +54,7 @@ const GroupCoverField = ({
             )}
 
             {coverValidationError && (
-                <Callout.Root color="red" role="alert" size="1">
+                <Callout.Root color={PROP_COLOR.danger} role="alert" size="1">
                     <Callout.Icon>
                         <CircleAlertIcon />
                     </Callout.Icon>
@@ -67,7 +68,7 @@ const GroupCoverField = ({
                         <Text size="2" weight="medium">
                             {t('modal.cover.uploading')}
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             {t('modal.cover.progress', { progress: uploadProgress })}
                         </Text>
                     </Flex>

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { ChartBarIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +28,7 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
                 <Skeleton loading={isLoading}>
                     <Avatar
                         size={{ initial: '4', sm: '5' }}
-                        color="cyan"
+                        color={PROP_COLOR.neutral}
                         fallback={<ChartBarIcon size={32} />}
                     />
                 </Skeleton>
@@ -37,7 +38,7 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
                         <Skeleton loading={isLoading}>{t('title')}</Skeleton>
                     </Text>
 
-                    <Text size="2" color="gray">
+                    <Text size="2" color={PROP_COLOR.neutral}>
                         <Skeleton loading={isLoading}>{t('subtitle')}</Skeleton>
                     </Text>
                 </Flex>

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar } from '@radix-ui/themes';
 import { UsersIcon } from 'lucide-react';
 
@@ -10,7 +11,7 @@ interface Props {
     color?: React.ComponentProps<typeof Avatar>['color'];
 }
 
-const GroupAvatar = ({ group, variant = 'soft', size = '4', color = 'green' }: Props) => {
+const GroupAvatar = ({ group, variant = 'soft', size = '4', color = PROP_COLOR.accent }: Props) => {
     return (
         <Avatar
             variant={variant}

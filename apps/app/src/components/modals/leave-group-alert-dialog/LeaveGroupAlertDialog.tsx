@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Callout, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -80,14 +81,14 @@ const LeaveGroupAlertDialog = ({ children, group }: Props) => {
             title={t('common:buttons.leaveGroup')}
             description={t('group:leaveModal.confirm')}
             actionLabel={t('common:buttons.leaveGroup')}
-            actionColor="orange"
+            actionColor={PROP_COLOR.danger}
             isActionDisabled={!canConfirm}
             isActionLoading={isLeavingGroup}
             onAction={onLeaveGroup}
             content={
                 mustTransfer ? (
                     <Flex direction="column" gap="4">
-                        <Callout.Root color="amber" size="2">
+                        <Callout.Root color={PROP_COLOR.warning} size="2">
                             <Callout.Text>{t('group:leaveModal.ownerWarning')}</Callout.Text>
                         </Callout.Root>
 

@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Callout, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -33,13 +34,13 @@ export const OutboxSheet = ({ overlay }: Props) => {
             content={
                 <Flex direction="column" gap="4">
                     {isStorageNotPersisted && (
-                        <Callout.Root color="amber" size="1">
+                        <Callout.Root color={PROP_COLOR.warning} size="1">
                             <Callout.Text>{t('outbox.storageNotPersisted')}</Callout.Text>
                         </Callout.Root>
                     )}
                     {unreadableCount > 0 && (
                         <Card size="1">
-                            <Text size="1" color="gray">
+                            <Text size="1" color={PROP_COLOR.neutral}>
                                 {t('outbox.unreadable', { count: unreadableCount })}
                             </Text>
                         </Card>
@@ -47,7 +48,9 @@ export const OutboxSheet = ({ overlay }: Props) => {
                     {pending.length === 0 &&
                         failed.length === 0 &&
                         conflictDrafts.length === 0 &&
-                        unreadableCount === 0 && <Text color="gray">{t('outbox.empty')}</Text>}
+                        unreadableCount === 0 && (
+                            <Text color={PROP_COLOR.neutral}>{t('outbox.empty')}</Text>
+                        )}
                     {conflictDrafts.length > 0 && (
                         <Flex direction="column" gap="2" asChild>
                             <section aria-label={t('outbox.conflictDraftsTitle')}>

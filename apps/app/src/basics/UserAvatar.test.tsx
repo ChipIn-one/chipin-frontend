@@ -1,5 +1,6 @@
 // Issue #946: the avatar always has a text alternative (the user's name, photo or fallback), or is
 // explicitly decorative next to a visible name.
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 
@@ -31,7 +32,7 @@ test('names the avatar with the user display name when the photo loads', () => {
     // `asChild` keeps the Radix styling root on the named span.
     expect(avatar.className).toContain('rt-AvatarRoot');
     expect(avatar.className).toContain('rt-r-size-3');
-    expect(avatar.dataset.accentColor).toBe('mint');
+    expect(avatar.dataset.accentColor).toBe(PROP_COLOR.accent);
     // The photo sits inside the named root and adds no second name.
     expect(container.querySelector('img')?.getAttribute('src')).toBe(misha.picture);
     expect(container.querySelector('img')?.getAttribute('alt')).toBe('');

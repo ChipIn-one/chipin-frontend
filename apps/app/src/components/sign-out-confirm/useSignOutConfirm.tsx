@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -71,7 +72,7 @@ export const useSignOutConfirm = (): SignOutConfirm => {
                     : t('outbox.signOutDescription', { count: confirm.count })
             }
             actionLabel={t('buttons.signOut')}
-            actionColor="red"
+            actionColor={PROP_COLOR.danger}
             onAction={() => (isSignOutUserCurrent(confirm.userId) ? signOut() : Promise.resolve())}
         />
     ) : null;

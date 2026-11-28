@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Callout, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { BellIcon, InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +18,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         <Avatar
                             variant="soft"
                             size="3"
-                            color="mint"
+                            color={PROP_COLOR.neutral}
                             fallback={<BellIcon size={20} />}
                         />
                     </Skeleton>
@@ -25,7 +26,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('notifications.title')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>
                                 {t('notifications.description')}
                             </Skeleton>
@@ -33,7 +34,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                     </Flex>
                 </Flex>
 
-                <Callout.Root color="blue" size="2">
+                <Callout.Root color={PROP_COLOR.info} size="2">
                     <Callout.Icon>
                         <InfoIcon size={16} />
                     </Callout.Icon>
@@ -47,7 +48,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('notifications.pushTitle')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>
                                 {t('notifications.pushDescription')}
                             </Skeleton>
@@ -65,7 +66,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('notifications.emailTitle')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>
                                 {t('notifications.emailDescription')}
                             </Skeleton>
@@ -85,7 +86,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                                 {t('notifications.expenseRemindersTitle')}
                             </Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>
                                 {t('notifications.expenseRemindersDescription')}
                             </Skeleton>
@@ -109,7 +110,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                                 {t('notifications.weeklySummaryTitle')}
                             </Skeleton>
                         </Text>
-                        <Text size="2" color="gray">
+                        <Text size="2" color={PROP_COLOR.neutral}>
                             <Skeleton loading={isLoading}>
                                 {t('notifications.weeklySummaryDescription')}
                             </Skeleton>

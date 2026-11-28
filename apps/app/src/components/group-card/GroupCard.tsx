@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Badge, Card, Flex, Text, VisuallyHidden } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -23,12 +24,13 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
     const { t: tCommon } = useTranslation('common');
     const { group } = model;
 
-    let amountColor: 'green' | 'red' | 'gray' = 'gray';
+    let amountColor: (typeof PROP_COLOR)['debtOwed' | 'debtOwing' | 'debtSettled'] =
+        PROP_COLOR.debtSettled;
 
     if (model.netAmount !== null && model.netAmount > 0) {
-        amountColor = 'green';
+        amountColor = PROP_COLOR.debtOwed;
     } else if (model.netAmount !== null && model.netAmount < 0) {
-        amountColor = 'red';
+        amountColor = PROP_COLOR.debtOwing;
     }
 
     const directionAmount =
@@ -50,7 +52,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
         model.sourceCurrencyBalance.currency !== model.netCurrency
     ) {
         secondaryBadge = (
-            <Badge color="gray" size="1" variant="soft">
+            <Badge color={PROP_COLOR.neutral} size="1" variant="soft">
                 <Amount
                     value={model.sourceCurrencyBalance.netBalance}
                     tokenCode={model.sourceCurrencyBalance.currency}
@@ -61,7 +63,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
         );
     } else if (!model.isSettled && model.activeCurrencyCount > 1) {
         secondaryBadge = (
-            <Badge color="gray" size="1" variant="soft">
+            <Badge color={PROP_COLOR.neutral} size="1" variant="soft">
                 {t('groupsCard.currencies', { count: model.activeCurrencyCount })}
             </Badge>
         );
@@ -85,13 +87,13 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
                         <Text size="3" weight="bold" truncate>
                             {group.name}
                         </Text>
-                        <Text size="1" color="gray" truncate>
+                        <Text size="1" color={PROP_COLOR.neutral} truncate>
                             {t('groupsCard.members', { count: group.members.length })}
                         </Text>
                     </Flex>
                     <Flex direction="column" align="end" gap="1" flexShrink="0" maxWidth="48%">
                         {model.isSettled ? (
-                            <Badge color="gray" size="1" variant="soft">
+                            <Badge color={PROP_COLOR.neutral} size="1" variant="soft">
                                 {t('groupsCard.settled')}
                             </Badge>
                         ) : (

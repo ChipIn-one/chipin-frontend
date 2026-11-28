@@ -269,8 +269,8 @@ In PR 05-6, the 3 unchecked buttons from the audit are checked against these ite
 
 - `@radix-ui/themes/styles.css` is replaced by the 4 imports from item 1.
 - `packages/tokens/src/radix-colors.css` imports 22 scales — all that occur in the code, including the category colors from `constants/category-ui.ts`:
-  `amber blue brown crimson cyan gold grass gray green indigo jade mint olive orange pink purple red sky teal tomato violet yellow` (`@import '@radix-ui/themes/tokens/colors/<name>.css';`).
-- 9 are not imported: `bronze iris lime mauve plum ruby sage sand slate`. Measured in the 05-1 production build: total CSS 686,324 → 661,558 B, −24.8 KB raw (minified), about −9 KB gzip. The earlier "about 44 KB" was the unminified source size.
+  `amber blue brown crimson cyan gold grass gray green indigo jade mint olive orange pink purple red sky teal tomato violet yellow` (`@import '@radix-ui/themes/tokens/colors/<name>.css';`). (tomato removed in #1007; 21 scales)
+- 9 are not imported: `bronze iris lime mauve plum ruby sage sand slate` (tomato is the 10th since #1007). Measured in the 05-1 production build: total CSS 686,324 → 661,558 B, −24.8 KB raw (minified), about −9 KB gzip. The earlier "about 44 KB" was the unminified source size.
 - Radix CSS is inlined into the root CSS through the single entry, so the `vendor-radix` CSS chunk no longer exists (owner decision 2026-11-16). Trade-off: any app CSS change re-hashes the whole file; revisit with 05-2b (`tokens.css` joins the file) / 02-B1 (owner of the vendor regex).
 - CSS reached statically from `root.tsx` now precedes Radix in the production file, so app CSS (05-5 CSS Modules) must win by specificity, not by order.
 - A correction to the audit. The estimate of 120–140 KB was based on 8 palettes and did not account for the categories, which use 17 palettes. `base.css` (47 KB) contains the accent mapping for all 31 colors, and it can be trimmed only by a fork — we do not do this.

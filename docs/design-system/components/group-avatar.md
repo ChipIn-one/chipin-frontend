@@ -15,12 +15,12 @@ A group's cover image in a Radix `Avatar`, with a `UsersIcon` fallback.
 
 Source: [`components/GroupAvatar.tsx`](../../../apps/app/src/components/GroupAvatar.tsx).
 
-| Prop      | Type                                | Default   | Description                   |
-| --------- | ----------------------------------- | --------- | ----------------------------- |
-| `group`   | `Pick<Group, 'coverUrl' \| 'name'>` | required  | Cover URL and name of a group |
-| `variant` | Radix `Avatar` `variant`            | `'soft'`  | Fallback style                |
-| `size`    | Radix `Avatar` `size`               | `'4'`     | Avatar size                   |
-| `color`   | Radix `Avatar` `color`              | `'green'` | Fallback color                |
+| Prop      | Type                                | Default             | Description                   |
+| --------- | ----------------------------------- | ------------------- | ----------------------------- |
+| `group`   | `Pick<Group, 'coverUrl' \| 'name'>` | required            | Cover URL and name of a group |
+| `variant` | Radix `Avatar` `variant`            | `'soft'`            | Fallback style                |
+| `size`    | Radix `Avatar` `size`               | `'4'`               | Avatar size                   |
+| `color`   | Radix `Avatar` `color`              | `PROP_COLOR.accent` | Fallback color                |
 
 `Group` is the type from `entities/groups` (type-only import; no store access).
 

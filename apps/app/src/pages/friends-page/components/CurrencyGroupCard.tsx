@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +13,12 @@ import { FriendListItem } from './FriendListItem';
 const CurrencyGroupCard = ({ currency, net, friends }: FriendCurrencyGroup) => {
     const { t } = useTranslation('common');
     const direction = balanceDirection(net);
-    const color = direction === 'settled' ? 'gray' : direction === 'owed' ? 'green' : 'red';
+    const color =
+        direction === 'settled'
+            ? PROP_COLOR.debtSettled
+            : direction === 'owed'
+              ? PROP_COLOR.debtOwed
+              : PROP_COLOR.debtOwing;
     const directionLabel =
         direction === 'settled'
             ? t('balances.settledUp')
@@ -25,7 +31,7 @@ const CurrencyGroupCard = ({ currency, net, friends }: FriendCurrencyGroup) => {
                     <Text weight="bold" size="3" color={color}>
                         {currency}
                     </Text>
-                    <Text size="2" color="gray">
+                    <Text size="2" color={PROP_COLOR.neutral}>
                         {directionLabel}
                     </Text>
                 </Flex>

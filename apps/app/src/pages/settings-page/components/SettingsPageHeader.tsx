@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { SettingsIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,7 @@ const SettingsPageHeader = ({ isLoading }: Props) => {
                 <Skeleton loading={isLoading}>
                     <Avatar
                         size={{ initial: '4', sm: '5' }}
-                        color="cyan"
+                        color={PROP_COLOR.neutral}
                         fallback={<SettingsIcon size={32} />}
                     />
                 </Skeleton>
@@ -23,7 +24,7 @@ const SettingsPageHeader = ({ isLoading }: Props) => {
                     <Heading size={{ initial: '5', sm: '6' }}>
                         <Skeleton loading={isLoading}>{t('title')}</Skeleton>
                     </Heading>
-                    <Text size="2" color="gray">
+                    <Text size="2" color={PROP_COLOR.neutral}>
                         <Skeleton loading={isLoading}>{t('subtitle')}</Skeleton>
                     </Text>
                 </Box>

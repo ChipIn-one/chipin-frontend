@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Box, Button, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { UserPlusIcon, UsersIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +35,7 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                 <Skeleton loading={isLoading}>
                     <Avatar
                         size={{ initial: '4', sm: '5' }}
-                        color="cyan"
+                        color={PROP_COLOR.neutral}
                         fallback={<UsersIcon size={32} />}
                     />
                 </Skeleton>
@@ -42,7 +43,7 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                     <Heading size={{ initial: '5', sm: '6' }}>
                         <Skeleton loading={isLoading}>{t('friends:title')}</Skeleton>
                     </Heading>
-                    <Text size="2" color="gray">
+                    <Text size="2" color={PROP_COLOR.neutral}>
                         <Skeleton loading={isLoading}>{t('friends:yourConnections')}</Skeleton>
                     </Text>
                 </Box>

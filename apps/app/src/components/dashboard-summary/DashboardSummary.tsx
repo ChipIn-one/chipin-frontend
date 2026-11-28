@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -45,7 +46,7 @@ const DashboardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
     const summaryContent = (
         <Flex align="center" justify="between" gap="3" width="100%" minWidth="0">
             <Flex direction="column" gap="1" minWidth="0">
-                <Text size="4" weight="medium" color="gray" as="span">
+                <Text size="4" weight="medium" color={PROP_COLOR.neutral} as="span">
                     {t('summary.totalBalance')}
                 </Text>
 
@@ -61,7 +62,7 @@ const DashboardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
             <Flex align="center" gap="2" flexShrink="0">
                 <Flex direction="column" gap="1" align="end">
                     {hasOwed && (
-                        <Text color="grass" size="2" weight="bold">
+                        <Text color={PROP_COLOR.debtOwed} size="2" weight="bold">
                             <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
                             <Amount
                                 type="summary"
@@ -73,7 +74,7 @@ const DashboardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
                     )}
 
                     {hasOwing && (
-                        <Text color="tomato" size="2" weight="bold">
+                        <Text color={PROP_COLOR.debtOwing} size="2" weight="bold">
                             <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
                             <Amount
                                 type="summary"
@@ -100,7 +101,7 @@ const DashboardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
             <Flex id={SUMMARY_DETAILS_ID} direction="column" gap="3">
                 {hasOwing && (
                     <Flex direction="column" gap="1" minWidth="0">
-                        <Text color="tomato" size="3" weight="bold">
+                        <Text color={PROP_COLOR.debtOwing} size="3" weight="bold">
                             {t('summary.youOwe')}
                         </Text>
                         <BalanceBadges items={oweBadgeItems} />
@@ -109,7 +110,7 @@ const DashboardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
 
                 {hasOwed && (
                     <Flex direction="column" gap="1" minWidth="0">
-                        <Text color="grass" size="3" weight="bold">
+                        <Text color={PROP_COLOR.debtOwed} size="3" weight="bold">
                             {t('summary.owedToYou')}
                         </Text>
                         <BalanceBadges items={owedBadgeItems} />

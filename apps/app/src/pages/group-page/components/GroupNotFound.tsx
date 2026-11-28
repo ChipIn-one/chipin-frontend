@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Container, Flex, Heading, Text } from '@radix-ui/themes';
 import { HouseIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,7 @@ const GroupNotFound = () => {
                 <Heading as="h1" size="5" align="center">
                     {t('group:page.notFoundTitle')}
                 </Heading>
-                <Text color="gray" align="center">
+                <Text color={PROP_COLOR.neutral} align="center">
                     {t('group:page.notFoundDescription')}
                 </Text>
                 <Button asChild mt="2">

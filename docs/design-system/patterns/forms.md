@@ -42,7 +42,7 @@ Use these; a new field type is added here first:
   status, which keeps every other blocker. Because it is visible from open, it sits in an
   always-mounted `aria-live="polite"` `aria-atomic` region, not `role="alert"`: an alert would be
   announced assertively as the dialog mounts and again with the autofocused input.
-- `SettlementAmountField` passes the literal `red` and has no `role="alert"`; fix when touched.
+- `SettlementAmountField` has no `role="alert"`; fix when touched.
 
 - Required fields pass `isRequired` to the basic, which sets `required` and checks for an empty
   value.
@@ -55,7 +55,7 @@ only a placeholder; fix them when touched.
 
 - One primary button per form: Radix `Button` `variant="solid"`, the verb of the result
   ("Create group", "Save", "Settle up"). Cancel is `variant="soft"` with
-  `color={PROP_COLOR.neutral}` (code today passes the literal `"gray"`).
+  `color={PROP_COLOR.neutral}`.
   [principles.md](../principles.md) 3 applies inside modals too.
 - The primary button shows progress with `loading` and is `disabled` while the form is invalid or
   saving. Do not hide it.
@@ -83,9 +83,8 @@ only a placeholder; fix them when touched.
   new one on `BaseAlertDialog`. Most live in `components/modals`; `useSignOutConfirm`,
   `AccountSwitchDialog` (`pages/oauth-callback-page`) and `OutboxItemRow` (`features/offline-queue`)
   use it in place.
-- The action button says what happens ("Remove group"), with `actionColor={PROP_COLOR.danger}`
-  (code today passes the literal `"red"`; leave and kick use `orange`, which has no role yet, see
-  [hierarchy.md](hierarchy.md#button---outcome-map)). Radix
+- The action button says what happens ("Remove group"), with `actionColor={PROP_COLOR.danger}`;
+  leave and kick use it too ([hierarchy.md](hierarchy.md#button---outcome-map)). Radix
   `AlertDialog` focuses Cancel on open; keep it that way.
 
 ## Mobile first

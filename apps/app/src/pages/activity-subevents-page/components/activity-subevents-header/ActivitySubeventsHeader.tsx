@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Box } from '@radix-ui/themes';
 import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +23,7 @@ const ActivitySubeventsHeader = ({ parentEvent, isLoading, isUnavailable = false
             <Box mb="4">
                 <EmptyState
                     icon={<InfoIcon size={20} />}
-                    iconColor="gray"
+                    iconColor={PROP_COLOR.neutral}
                     title={t('subeventsParentUnavailableTitle')}
                     description={t('subeventsParentUnavailableDescription')}
                 />

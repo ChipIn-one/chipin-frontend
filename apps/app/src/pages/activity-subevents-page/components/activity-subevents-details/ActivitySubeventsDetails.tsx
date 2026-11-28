@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Card, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { ArrowRightIcon, ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -114,19 +115,19 @@ const ActivitySubeventsDetails = ({
 
             <Flex direction="column" gap="2">
                 <Flex className={styles.detailRow} gap="3" pt="2">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsPayer')}
                     </Text>
                     <Text size="2">{expenseEvent.metadata.payerDisplayName}</Text>
                 </Flex>
                 <Flex className={styles.detailRow} gap="3" pt="2">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsCreatedAt')}
                     </Text>
                     <Text size="2">{createdAt}</Text>
                 </Flex>
                 <Flex className={styles.detailRow} gap="3" pt="2" align="center">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsScope')}
                     </Text>
                     <LedgerScopeBadge
@@ -136,7 +137,7 @@ const ActivitySubeventsDetails = ({
                     />
                 </Flex>
                 <Flex className={styles.detailRow} gap="3" pt="2">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsCategory')}
                     </Text>
                     <Text size="2">
@@ -147,7 +148,7 @@ const ActivitySubeventsDetails = ({
                 </Flex>
                 {expenseEvent.metadata.subcategory ? (
                     <Flex className={styles.detailRow} gap="3" pt="2">
-                        <Text className={styles.detailLabel} size="1" color="gray">
+                        <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                             {t('subeventsSubcategory')}
                         </Text>
                         <Text size="2">
@@ -158,7 +159,7 @@ const ActivitySubeventsDetails = ({
                     </Flex>
                 ) : null}
                 <Flex className={styles.detailRow} gap="3" pt="2">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsSharingMode')}
                     </Text>
                     <Text size="2">
@@ -168,7 +169,7 @@ const ActivitySubeventsDetails = ({
             </Flex>
 
             <Flex direction="column" gap="1">
-                <Text size="1" color="gray" weight="medium">
+                <Text size="1" color={PROP_COLOR.neutral} weight="medium">
                     {t('subeventsParticipants')}
                 </Text>
                 {expenseEvent.metadata.shares?.map(share => (
@@ -209,25 +210,25 @@ const ActivitySubeventsDetails = ({
             </Text>
             <Flex direction="column" gap="2">
                 <Flex className={styles.detailRow} gap="3" pt="2">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsFrom')}
                     </Text>
                     <Text size="2">{settlementEvent.metadata.fromDisplayName}</Text>
                 </Flex>
                 <Flex className={styles.detailRow} gap="3" pt="2">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsTo')}
                     </Text>
                     <Text size="2">{settlementEvent.metadata.toDisplayName}</Text>
                 </Flex>
                 <Flex className={styles.detailRow} gap="3" pt="2">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsCreatedAt')}
                     </Text>
                     <Text size="2">{createdAt}</Text>
                 </Flex>
                 <Flex className={styles.detailRow} gap="3" pt="2" align="center">
-                    <Text className={styles.detailLabel} size="1" color="gray">
+                    <Text className={styles.detailLabel} size="1" color={PROP_COLOR.neutral}>
                         {t('subeventsScope')}
                     </Text>
                     <LedgerScopeBadge
@@ -266,10 +267,10 @@ const ActivitySubeventsDetails = ({
                     />
                 </Text>
             </Flex>
-            <Text size="1" color="gray">
+            <Text size="1" color={PROP_COLOR.neutral}>
                 {expenseEvent.metadata.payerDisplayName}
             </Text>
-            <Text size="1" color="gray">
+            <Text size="1" color={PROP_COLOR.neutral}>
                 {t('subeventsParticipantCount', {
                     count: expenseEvent.metadata.shares?.length ?? 0,
                 })}
@@ -295,7 +296,7 @@ const ActivitySubeventsDetails = ({
                     />
                 </Text>
             </Flex>
-            <Text size="1" color="gray">
+            <Text size="1" color={PROP_COLOR.neutral}>
                 {createdAt}
             </Text>
         </Flex>

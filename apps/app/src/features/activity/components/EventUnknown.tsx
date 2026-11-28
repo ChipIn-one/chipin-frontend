@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { AlertTriangleIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +28,7 @@ const EventUnknown = ({ event }: EventUnknownProps) => {
                         <Avatar
                             size="4"
                             variant="soft"
-                            color="amber"
+                            color={PROP_COLOR.warning}
                             fallback={<AlertTriangleIcon size={20} />}
                         />
                     </EventIcon>
@@ -35,7 +36,7 @@ const EventUnknown = ({ event }: EventUnknownProps) => {
                         <Text size="3" as="span" weight="medium">
                             {eventType}
                         </Text>
-                        <Text size="2" as="span" color="gray">
+                        <Text size="2" as="span" color={PROP_COLOR.neutral}>
                             {t('event.unknownDescription')}
                         </Text>
                     </Flex>

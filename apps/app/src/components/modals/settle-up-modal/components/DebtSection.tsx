@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Flex, Text } from '@radix-ui/themes';
 import {
     ArrowDownLeftIcon,
@@ -36,7 +37,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
     const visibleDebts = isExpanded ? debts : debts.slice(0, COLLAPSED_DEBT_COUNT);
     const hiddenDebtCount = debts.length - visibleDebts.length;
     const hasCollapsibleDebts = debts.length > COLLAPSED_DEBT_COUNT;
-    const color = isUserOwing ? 'red' : 'green';
+    const color = isUserOwing ? PROP_COLOR.debtOwing : PROP_COLOR.debtOwed;
     const DirectionIcon = isUserOwing ? ArrowUpRightIcon : ArrowDownLeftIcon;
 
     return (
@@ -61,7 +62,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                     type="button"
                     size="3"
                     variant="soft"
-                    color="gray"
+                    color={PROP_COLOR.neutral}
                     onClick={() => onSelect(debt)}
                 >
                     <Flex align="center" justify="between" gap="3" width="100%">

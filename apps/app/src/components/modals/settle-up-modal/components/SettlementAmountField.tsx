@@ -1,4 +1,5 @@
 import { useId, useRef } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { Button, Card, Flex, Text, TextField } from '@radix-ui/themes';
 import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -91,12 +92,12 @@ const SettlementAmountField = ({
                         maxFractionDigits={maxFractionDigits}
                         aria-invalid={isAmountInvalid || Boolean(error)}
                         aria-describedby={describedBy || undefined}
-                        color="jade"
+                        color={PROP_COLOR.accent}
                         size="3"
                         variant="surface"
                         autoFocus
                     >
-                        <TextField.Slot side="right" color="gray">
+                        <TextField.Slot side="right" color={PROP_COLOR.neutral}>
                             <PencilIcon size={18} aria-hidden />
                         </TextField.Slot>
                     </AmountInput>
@@ -122,22 +123,34 @@ const SettlementAmountField = ({
             </Flex>
 
             {hint && (
-                <Text id={hintId} size="2" color="gray">
+                <Text id={hintId} size="2" color={PROP_COLOR.neutral}>
                     {hint}
                 </Text>
             )}
 
             {error && (
-                <Text id={errorId} size="2" color="red">
+                <Text id={errorId} size="2" color={PROP_COLOR.danger}>
                     {error}
                 </Text>
             )}
 
             <Flex gap="2">
-                <Button type="button" size="2" variant="soft" color="gray" onClick={onUseFullDebt}>
+                <Button
+                    type="button"
+                    size="2"
+                    variant="soft"
+                    color={PROP_COLOR.neutral}
+                    onClick={onUseFullDebt}
+                >
                     {t('friends:settleUp.fullDebt')}
                 </Button>
-                <Button type="button" size="2" variant="soft" color="gray" onClick={onUseHalfDebt}>
+                <Button
+                    type="button"
+                    size="2"
+                    variant="soft"
+                    color={PROP_COLOR.neutral}
+                    onClick={onUseHalfDebt}
+                >
                     {t('friends:settleUp.half')}
                 </Button>
             </Flex>

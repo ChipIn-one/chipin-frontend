@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
@@ -38,7 +39,7 @@ const AlertDialogHarness = ({ onAction }: HarnessProps) => {
             title="Remove item"
             description="This action cannot be undone."
             actionLabel="Remove"
-            actionColor="red"
+            actionColor={PROP_COLOR.danger}
             onAction={onAction}
         />
     );
