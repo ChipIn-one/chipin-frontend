@@ -144,7 +144,7 @@ export const projectImports = ({ appDir = '.', styledAllowlist = readStyledAllow
         // spec 05 §3: `@radix-ui/colors` is a phantom (transitive) dependency; its only importer,
         // constants/styled-themes.ts, is gone. Colors come only from @chipin/tokens.
         id: 'radix-colors',
-        path: '@radix-ui/colors',
+        pattern: { regex: '^@radix-ui/colors(?:/|$)' },
         message:
             'Do not import @radix-ui/colors: use a `var(--cp-*)` token from @chipin/tokens, or `PROP_COLOR` for a Radix `color` prop.',
     },

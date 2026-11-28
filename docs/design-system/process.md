@@ -30,8 +30,7 @@ The author checks this before review; the reviewer checks the same list (`AGENTS
 - [ ] Existing components reused; nothing in [components.md](components.md) already did the job.
 - [ ] A new ChipIn-specific component has a card and a registry row; a changed one has its card
       updated.
-- [ ] Colors only through `var(--cp-*)` and `PROP_COLOR`; no raw colors, palette variables or new
-      `themeColor()` calls.
+- [ ] Colors only through `var(--cp-*)` and `PROP_COLOR`; no raw colors or palette variables.
 - [ ] A styled-components file touched as defined in tokens.md moved to a CSS Module and left the allowlist
       ([tokens.md](tokens.md#styled-components-frozen-then-gone)).
 - [ ] A screen has one primary action and a title that says what the screen is for

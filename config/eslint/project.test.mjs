@@ -736,6 +736,7 @@ describe('styled-components, @radix-ui/colors and svgr imports (spec 05 §3, §6
     const source = [
         "import styled from 'styled-components';",
         "import { grass } from '@radix-ui/colors';",
+        "import '@radix-ui/colors/grass.css';",
         "import Logo from '@chipin/tokens/assets/logo.svg?react';",
         "import Google from 'assets/google-icon.svg?react';",
         "import Other from 'assets/other.svg?react';",
@@ -747,10 +748,16 @@ describe('styled-components, @radix-ui/colors and svgr imports (spec 05 §3, §6
     test.each([
         [
             'src/components/New.tsx',
-            ['styled-components', 'radix-colors', 'svgr-react', 'money-deep-import'],
+            [
+                'styled-components',
+                'radix-colors',
+                'radix-colors',
+                'svgr-react',
+                'money-deep-import',
+            ],
         ],
-        ['src/a/styled.ts', ['radix-colors', 'svgr-react', 'money-deep-import']],
-        ['src/b/B.test.tsx', ['radix-colors', 'svgr-react', 'money-deep-import']],
+        ['src/a/styled.ts', ['radix-colors', 'radix-colors', 'svgr-react', 'money-deep-import']],
+        ['src/b/B.test.tsx', ['radix-colors', 'radix-colors', 'svgr-react', 'money-deep-import']],
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const [result] = await eslint.lintText(source, { filePath: file });
