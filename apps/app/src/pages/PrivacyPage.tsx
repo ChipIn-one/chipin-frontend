@@ -14,6 +14,7 @@ const PRIVACY_SECTIONS = [
     'googleSignIn',
     'expenseData',
     'sessions',
+    'storage',
     'sharing',
     'operations',
     'retention',
