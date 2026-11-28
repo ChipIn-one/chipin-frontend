@@ -13,14 +13,14 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background-color: var(--cp-selection-solid);
+    background-color: var(--cp-accent-solid);
     content: '';
     opacity: 0;
 }
 
 /* The Radix radio card item carries the checked state. */
 [data-state='checked'] .marker {
-    border-color: var(--cp-selection-solid);
+    border-color: var(--cp-accent-solid);
 }
 
 [data-state='checked'] .marker::after {

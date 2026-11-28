@@ -1,6 +1,7 @@
 /*
  * The Radix color scales ChipIn uses (spec 05 §5). The list equals RADIX_PALETTES in
- * src/theme.ts (tokens.test.ts checks it). Not imported: bronze iris lime mauve plum ruby
+ * src/theme.ts: the role scales, the expense category palette and the legacy palettes
+ * (tokens.test.ts checks it). Not imported: bronze iris lime mauve plum ruby
  * sage sand slate. Same order as in the full Radix styles.css: gray scales, then accents.
  * Import before '@radix-ui/themes/tokens/base.css' (see the app's styles/index.css).
  */

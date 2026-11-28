@@ -4,7 +4,7 @@
     gap: var(--cp-space-2);
     min-width: 0;
     padding: var(--cp-space-4);
-    border: 2px solid var(--cp-selection-border);
+    border: 2px solid var(--cp-accent-border);
     border-radius: var(--cp-radius-5);
 }
 
