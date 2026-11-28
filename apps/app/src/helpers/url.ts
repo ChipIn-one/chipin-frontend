@@ -1,8 +1,7 @@
 import type { AuthService } from 'constants/auth.types';
 import { ROUTES } from 'constants/routes';
 import { SITE_PAGE_PATHS } from 'constants/sitePaths';
-import { isSupportedLocale } from 'helpers/locale';
-import { resolveRegistrationLocale } from 'helpers/publicRoutes';
+import { isSupportedLocale, resolveBrowserLocale } from 'helpers/locale';
 
 import { getChipInApiUrl, getSiteOrigin } from './env';
 
@@ -114,8 +113,8 @@ export const getSocialAuthUrl = (provider: AuthService, options: SocialAuthOptio
 
     const { origin, pathname, search, hash } = window.location;
 
-    // A sign-in from the in-app landing (the root path of this origin) goes to the dashboard. A
-    // relative path check: the absolute `SITE_PATHS` of `helpers/sitePaths` never equal a pathname.
+    // A sign-in from the root path of this origin goes to the dashboard. A relative path check: the
+    // absolute `SITE_PATHS` of `helpers/sitePaths` never equal a pathname.
     const returnTo =
         options.returnTo ??
         (pathname === SITE_PAGE_PATHS.home ? DEFAULT_RETURN_TO : `${pathname}${search}${hash}`);
@@ -125,12 +124,9 @@ export const getSocialAuthUrl = (provider: AuthService, options: SocialAuthOptio
     const query = new URLSearchParams({ redirect_to: callbackUrl.toString() });
     if (provider === 'google') {
         // Spec 04 §2.10: `?locale` of `/login` (from the site) is taken only if it is a supported
-        // locale code; otherwise the locale of the public page, then the browser languages.
+        // locale code; otherwise the browser languages (the app URL has no locale prefix).
         const requested = options.locale ?? '';
-        query.set(
-            'locale',
-            isSupportedLocale(requested) ? requested : resolveRegistrationLocale(pathname),
-        );
+        query.set('locale', isSupportedLocale(requested) ? requested : resolveBrowserLocale());
     }
 
     return `${apiUrl}auth/login/${provider}?${query.toString()}`;

@@ -53,10 +53,6 @@
             "destination": "https://api-dev.chipin.one/:path*"
         },
         {
-            "source": "/sw.js",
-            "destination": "/sw-app.js"
-        },
-        {
             "source": "/.well-known/assetlinks.json",
             "destination": "/.well-known/assetlinks.json"
         },

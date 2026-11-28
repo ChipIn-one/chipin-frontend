@@ -41,9 +41,8 @@ export const SMOKE_SHORT = {
     files: new Set([
         // routing
         'apps/app/src/constants/routes.ts',
-        'apps/app/src/constants/publicRoutes.ts',
-        'apps/app/src/constants/publicRouteManifest.ts',
-        'apps/app/src/helpers/publicRoutes.ts',
+        'apps/app/src/constants/sitePaths.ts',
+        'apps/app/src/helpers/sitePaths.ts', // site links and the sign-out landing path
         'apps/app/scripts/private-spa-navigation.ts',
         // auth/session
         'apps/app/src/store/authStore.ts',
@@ -62,7 +61,6 @@ export const SMOKE_SHORT = {
         // service worker / PWA
         'apps/app/src/helpers/pwa.ts',
         'apps/app/src/helpers/appUpdate.ts',
-        'apps/app/scripts/sw-app-plugin.ts',
         'apps/app/src/hooks/pwaHooks.tsx',
         'apps/app/vite.config.ts',
         'apps/app/pwa.config.ts',

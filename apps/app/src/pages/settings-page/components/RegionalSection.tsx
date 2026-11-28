@@ -9,7 +9,7 @@ import { useUserSetting } from 'hooks/useSelfUser';
 import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import { SegmentedControl } from 'basics/SegmentedControl';
-import LanguageSelector from 'components/LanguageSelector';
+import { LanguageSelector } from 'components/LanguageSelector';
 
 interface Props {
     isLoading: boolean;

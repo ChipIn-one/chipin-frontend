@@ -429,10 +429,10 @@ describe('query-key-literal (spec 03 §1.3)', () => {
     ].join('\n');
 
     test.each([
-        ['src/features/landing/A.tsx', Array(9).fill('query-key-literal')],
-        ['src/entities/stats/A.test.tsx', Array(9).fill('query-key-literal')],
+        ['src/features/activity/A.tsx', Array(9).fill('query-key-literal')],
+        ['src/entities/dashboard/A.test.tsx', Array(9).fill('query-key-literal')],
         // The key factories themselves.
-        ['src/entities/stats/api/queries.ts', []],
+        ['src/entities/dashboard/api/queries.ts', []],
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const [result] = await eslint.lintText(source, { filePath: file });
@@ -627,7 +627,7 @@ describe('storage boundary (#675): storage only through helpers/localStorage.ts'
     ];
 
     test.each(access)('rejects %s in app code and in shared/offline', async code => {
-        expect(await lint(code, 'src/helpers/publicLocaleSuggestion.ts')).toHaveLength(1);
+        expect(await lint(code, 'src/helpers/locale.ts')).toHaveLength(1);
         expect(await lint(code, 'src/shared/offline/network.ts')).toHaveLength(1);
     });
 

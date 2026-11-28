@@ -31,9 +31,9 @@ const getRouteMeta = (handle: unknown): AppRouteDef['meta'] | undefined => {
 
 /**
  * `document.title` of the app routes (spec 04 §2.6): the last match with `handle.meta`, its
- * `titleKey`, or `entityTitleKey` with the group name once the group is known. Routes without
- * `handle.meta` (the transitional public ones) are left to `useRoutesMeta`. The description is not
- * set: the whole app host is served noindex.
+ * `titleKey`, or `entityTitleKey` with the group name once the group is known. A route without
+ * `handle.meta` keeps the current title. The app sets no description, canonical or Open Graph tags:
+ * the whole app host is noindex (`<meta name="robots">` in `index.html`, `X-Robots-Tag`).
  */
 const useDocumentTitle = (): void => {
     const matches = useMatches();
