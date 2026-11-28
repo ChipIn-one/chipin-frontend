@@ -34,7 +34,8 @@ inline-size containment gives it zero intrinsic width in a shrink-to-fit parent.
 ## States
 
 - Default: mandatory; one segment selected (controlled `value` or `defaultValue`).
-- Disabled: n/a; the component has no disabled prop for items.
+- Disabled: Radix `disabled` on the root (passed through the rest props) disables the whole control;
+  single items cannot be disabled.
 - Loading, empty, error: n/a; do not render it with no items.
 
 ## Accessibility and i18n

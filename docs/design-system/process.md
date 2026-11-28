@@ -75,6 +75,10 @@ Both are refreshed from code (each names the `master` commit it was made from) a
 when they disagree with the code, the code wins and the artifact is refreshed. They are private to
 the owner until the owner shares them.
 
+The design system artifact was refreshed from `master` commit `aeb838eb` with the card fixes of
+ChipIn-one/chipin-frontend#996 (2026-11-28) and shows every component card with its variants, sizes
+and states in light and dark.
+
 ## Designer onboarding plan
 
 Future work, recorded here and not executed in v1. Each step is a separate owner decision.

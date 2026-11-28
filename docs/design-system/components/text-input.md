@@ -38,7 +38,8 @@ root props except `aria-describedby`, `aria-invalid`, `defaultValue`, `id`, `onC
 - Error: `aria-invalid` follows validity from the first render. `validationMessage` shows only
   when the built-in check (`isRequired` or `maxLength`) fails, after the field is first blurred:
   below the field (`${id}-error`, `size="2"`, `PROP_COLOR.danger`, `role="alert"`); it goes away
-  once the value is valid. There is no prop for an outside error.
+  once the value is valid. There is no prop for an outside error. The field itself has no red
+  border: Radix and the app do not style `aria-invalid`, so only the message shows the error.
 - Disabled: through Radix `disabled`; optional.
 - Loading, empty: n/a.
 
