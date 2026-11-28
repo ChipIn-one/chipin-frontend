@@ -313,3 +313,28 @@ test('04-2f login: the sign-in page has no header sign-in button', () => {
 
     expect(screen.queryByRole('button', { name: i18n.t('header.signIn') })).toBeNull();
 });
+
+// #971: signed in, a phone gets its navigation from the bottom bar, so the header hides below
+// `sm`. The join pages have no bottom bar: there the header (logo link and mode badge) stays.
+test.each([
+    ['/group/join/AbCdEfGhIjKlMnOpQrStUvWxYz012345', false],
+    ['/friends/join/AbCdEfGhIjKlMnOpQrStUvWxYz012345', false],
+    ['/settings', true],
+])('#971 signed in on %s the header hides below sm: %s', (path, isHiddenOnPhone) => {
+    saveLocalUser({ role: 'USER', settings });
+
+    render(
+        <MemoryRouter initialEntries={[path]}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    const logo = screen.getByRole('link', { name: PROJECT_NAME });
+    expect(logo.closest('.rt-r-display-none') !== null).toBe(isHiddenOnPhone);
+    expect(logo.getAttribute('href')).toBe('/dashboard');
+    expect(screen.getByText('Group')).toBeTruthy();
+});

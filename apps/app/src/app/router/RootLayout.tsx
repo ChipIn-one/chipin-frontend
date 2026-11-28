@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Box } from '@radix-ui/themes';
+import { Flex } from '@radix-ui/themes';
 import { Outlet, ScrollRestoration } from 'react-router-dom';
 
 import { RestoreGate } from 'app/providers/RestoreGate';
@@ -37,11 +37,13 @@ const RootLayout = () => {
                 <Header />
                 <RestoreGate>
                     <GlobalHooks />
-                    <Box px="4">
+                    {/* Grows below the header in the shell column; with the `AuthLayout` root
+                        (also a flex column) it lets `BareLayout` fill the height (#971). */}
+                    <Flex direction="column" flexGrow="1" px="4">
                         <Suspense fallback={<PageLoader />}>
                             <Outlet />
                         </Suspense>
-                    </Box>
+                    </Flex>
                     <DocumentTitle />
                     <AddExpenseButton />
                     <AddExpenseModal />

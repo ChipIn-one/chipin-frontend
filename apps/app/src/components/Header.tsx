@@ -11,7 +11,7 @@ import { ROUTES } from 'constants/routes';
 import { matchLocale, type SupportedLocale } from 'helpers/locale';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
-import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
+import { getHasDesktopSidebar, getIsInviteJoinRoute, getPreferredModeRoute } from 'helpers/routes';
 import { SITE_PATHS } from 'helpers/sitePaths';
 import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
@@ -66,6 +66,10 @@ const Header = () => {
     const isLandingPage = !isLoggedIn && currentPublicRoute?.page === 'home';
     const isPublicLegalPage = currentPublicRoute && currentPublicRoute.page !== 'home';
     const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
+    // Signed in, a phone gets its navigation from the bottom bar, so the header hides below `sm`.
+    // The join pages have no bottom bar: there the header is the way back to the app (#971).
+    const isHeaderHiddenOnPhone =
+        isLoggedIn && !isPublicLegalPage && !getIsInviteJoinRoute(location.pathname);
     // Signed out, the logo leads to the site: a plain link, never a router navigation (§2.1).
     const siteHomeHref = currentPublicRoute
         ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
@@ -80,7 +84,7 @@ const Header = () => {
         <Box
             className={styles.root}
             display={
-                isLoggedIn && !isPublicLegalPage
+                isHeaderHiddenOnPhone
                     ? {
                           initial: 'none',
                           sm: 'block',

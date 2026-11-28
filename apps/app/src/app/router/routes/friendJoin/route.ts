@@ -1,1 +1,1 @@
-export { default as Component } from 'pages/FriendJoinPage';
+export { FriendJoinPage as Component } from 'pages/FriendJoinPage';

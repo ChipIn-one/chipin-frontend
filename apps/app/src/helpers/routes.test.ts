@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 import {
     getBreadcrumbParentPath,
     getHasDesktopSidebar,
+    getIsInviteJoinRoute,
     getPreferredModeRoute,
     isNavigationRouteActive,
 } from './routes';
@@ -39,6 +40,18 @@ test.each([
     ['/not-found', false],
 ] as const)('returns desktop sidebar availability for %s', (pathname, expected) => {
     expect(getHasDesktopSidebar(pathname)).toBe(expected);
+});
+
+test.each([
+    ['/group/join/invite-token', true],
+    ['/friends/join/invite-token', true],
+    ['/group/join', false],
+    ['/group/join/invite-token/extra', false],
+    ['/group/group-1', false],
+    ['/friends', false],
+    ['/dashboard', false],
+] as const)('#971 recognises the invite join route for %s', (pathname, expected) => {
+    expect(getIsInviteJoinRoute(pathname)).toBe(expected);
 });
 
 test.each([

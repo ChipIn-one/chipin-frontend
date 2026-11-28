@@ -114,11 +114,6 @@
       "count": 1
     }
   },
-  "apps/app/src/components/invite/InviteJoinConfirmation.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/components/invite/InviteQRModal.tsx": {
     "import-x/no-default-export": {
       "count": 1
@@ -428,18 +423,8 @@
       "count": 1
     }
   },
-  "apps/app/src/pages/FriendJoinPage.tsx": {
-    "import-x/no-default-export": {
-      "count": 1
-    }
-  },
   "apps/app/src/pages/GlobalHooks.test.tsx": {
     "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "apps/app/src/pages/GroupJoinPage.tsx": {
-    "import-x/no-default-export": {
       "count": 1
     }
   },

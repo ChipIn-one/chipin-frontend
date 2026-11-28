@@ -19,8 +19,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
 import { i18n } from 'i18n';
-import FriendJoinPage from 'pages/FriendJoinPage';
-import GroupJoinPage from 'pages/GroupJoinPage';
+import { FriendJoinPage } from 'pages/FriendJoinPage';
+import { GroupJoinPage } from 'pages/GroupJoinPage';
 import { LoginPage } from 'pages/login-page';
 import { OAuthCallbackPage } from 'pages/oauth-callback-page';
 import { useAuthStore } from 'store/authStore';

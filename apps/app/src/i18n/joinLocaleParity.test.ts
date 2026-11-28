@@ -10,6 +10,7 @@ const JOIN_KEYS = [
     'confirm',
     'description',
     'goHome',
+    'invalidDescription',
     'invalidTitle',
     'retry',
     'sessionLoadError',

@@ -1,9 +1,14 @@
-/* Spec 04 §2.3 (C3-09): the page under the modal of an expired session keeps its state, but the
-   finances are not visible or reachable for whoever holds the device now. */
+/* A link in the app shell column (#971): grows below the header so `BareLayout` and the phone join
+   page can fill the screen. Not `display: contents`: this element carries `inert`/`aria-hidden`. */
 .root {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
     visibility: visible;
 }
 
+/* Spec 04 §2.3 (C3-09): the page under the modal of an expired session keeps its state, but the
+   finances are not visible or reachable for whoever holds the device now. */
 .root[data-hidden='true'] {
     visibility: hidden;
 }

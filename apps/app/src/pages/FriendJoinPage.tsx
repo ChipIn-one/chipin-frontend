@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useFriendInviteLink } from 'hooks/useFriendInviteLink';
 
-import InviteJoinConfirmation from 'components/invite/InviteJoinConfirmation';
+import { InviteJoinConfirmation } from 'components/invite/InviteJoinConfirmation';
 
 const FriendJoinPage = () => {
     const { t } = useTranslation('friends');
@@ -10,6 +10,7 @@ const FriendJoinPage = () => {
 
     return (
         <InviteJoinConfirmation
+            variant="friend"
             status={status}
             errorMessage={errorMessage}
             title={t('join.title')}
@@ -18,6 +19,7 @@ const FriendJoinPage = () => {
             cancelLabel={t('join.cancel')}
             retryLabel={t('join.retry')}
             invalidTitle={t('join.invalidTitle')}
+            invalidDescription={t('join.invalidDescription')}
             goHomeLabel={t('join.goHome')}
             onConfirm={confirm}
             onCancel={cancel}
@@ -25,4 +27,4 @@ const FriendJoinPage = () => {
     );
 };
 
-export default FriendJoinPage;
+export { FriendJoinPage };

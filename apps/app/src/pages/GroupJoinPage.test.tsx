@@ -18,7 +18,7 @@ import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
-import GroupJoinPage from './GroupJoinPage';
+import { GroupJoinPage } from './GroupJoinPage';
 
 const mocks = vi.hoisted(() => ({
     authSessionVersion: 1,
@@ -212,6 +212,7 @@ test('shows the invalid screen for a malformed token without calling the API', (
     renderPage('short');
 
     expect(screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') })).toBeTruthy();
+    expect(screen.getByText(i18n.t('group:join.invalidDescription'))).toBeTruthy();
     expect(screen.queryByRole('button', { name: i18n.t('group:join.confirm') })).toBeNull();
 
     return user

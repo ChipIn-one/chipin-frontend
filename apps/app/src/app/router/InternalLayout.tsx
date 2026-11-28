@@ -28,18 +28,25 @@ const InternalLayout = () => (
 
 /**
  * The protected pages without navigation (the join pages): the paddings and the inline offline
- * banner (NET-001), as `InternalPageLayout` mounts it for the internal pages. The banner takes the
- * width of the centred join card.
+ * banner (NET-001), as `InternalPageLayout` mounts it for the internal pages. A flex column that
+ * fills the height below the header (through the `RootLayout` content and the `AuthLayout` root,
+ * both flex columns), so a phone page can grow into what is left after the banner (#971). The
+ * banner takes the width of the join content: the full phone width, the centred card from `sm`.
  */
 const BareLayout = () => (
-    <ProtectedPagePadding>
-        <Flex justify="center" px="4">
-            <Box width="100%" maxWidth="480px">
+    <Flex
+        direction="column"
+        flexGrow="1"
+        pt={{ initial: '4', sm: '6' }}
+        pb={{ initial: '4', sm: '6' }}
+    >
+        <Flex justify="center" px={{ initial: '0', sm: '4' }}>
+            <Box width="100%" maxWidth={{ sm: '480px' }}>
                 <OfflineBanner />
             </Box>
         </Flex>
         <Outlet />
-    </ProtectedPagePadding>
+    </Flex>
 );
 
 export { BareLayout, InternalLayout };

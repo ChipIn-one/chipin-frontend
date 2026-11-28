@@ -33,9 +33,9 @@ in `ModeLogotype.module.css`; in group mode it keeps its built-in brand colors.
 
 ## Accessibility and i18n
 
-- The logo SVG has no title or `aria-label`. The name (`PROJECT_NAME`) and badge are hidden below
-  the `sm` breakpoint, so on mobile the logo alone has no accessible name: the link or button
-  around it must have an `aria-label` (`Header` passes `aria-label={PROJECT_NAME}`).
+- The logo SVG has no title or `aria-label`. The name (`PROJECT_NAME`) is hidden below the `sm`
+  breakpoint (the mode badge stays), so on mobile the logo has no accessible name of its own: the
+  link or button around it must have an `aria-label` (`Header` passes `aria-label={PROJECT_NAME}`).
 - i18n: namespace `common`, keys `modes.solo`, `modes.group`. `PROJECT_NAME` is a constant, not
   translated.
 
