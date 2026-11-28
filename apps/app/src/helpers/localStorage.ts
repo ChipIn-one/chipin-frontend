@@ -20,6 +20,22 @@ export interface LocalUser {
     settings: UserSettings;
 }
 
+/** The settings that outlive a sign-out or an account switch (invariant 12). */
+type DisplaySettings = Pick<UserSettings, 'language' | 'theme'>;
+
+/**
+ * What `LS_KEY_USER` holds: a signed-in user's full settings, or only `DisplaySettings` after a
+ * sign-out or an account switch. `getLocalUser` fills the missing settings with their defaults.
+ */
+interface StoredLocalUser extends Omit<LocalUser, 'settings'> {
+    settings: UserSettings | DisplaySettings;
+}
+
+const pickDisplaySettings = ({ language, theme }: DisplaySettings): DisplaySettings => ({
+    language,
+    theme,
+});
+
 // The stored user is validated on read (invariant 6) by a hand-written reader, not zod: this
 // module is on the landing path (theme, language), and zod would add ~15 KB gz (zod/mini) to
 // ~23 KB gz (zod) to what the landing loads. Lenient per field: a user stored by an older build
@@ -78,7 +94,7 @@ const parseLocalUser = (value: unknown): LocalUser | null => {
 
 type StorageSchema = {
     [LS_KEY_AUTH_SESSION_HINT]: boolean;
-    [LS_KEY_USER]: LocalUser;
+    [LS_KEY_USER]: StoredLocalUser;
     [LS_KEY_LOCALE]: string;
     [LS_KEY_THEME]: ThemeName;
     [LS_KEY_SW_UPDATE_DISMISSED_AT]: number;
@@ -255,7 +271,7 @@ const resetTabUserId = (): void => {
 };
 
 /** Writes the cached user; its `id` becomes this tab's user. */
-const saveLocalUser = (user: LocalUser) => {
+const saveLocalUser = (user: StoredLocalUser) => {
     LocalStorage.set(LS_KEY_USER, user);
     setTabUserId(user.id);
 };
@@ -275,13 +291,14 @@ const clearLocalUserRole = () => {
     }
 };
 
-// Sign-out (spec 03 §1.5, invariant 12): only `{ settings }` remains, the landing language/theme.
-// This tab has no user from now on.
+// Sign-out (spec 03 §1.5, invariant 12): only `{ settings: { language, theme } }` remains, the
+// landing language/theme; a signed-out reader gets the defaults for the rest. This tab has no user
+// from now on.
 const clearLocalUserIdentity = () => {
     const localUser = getLocalUser();
 
     if (localUser) {
-        LocalStorage.set(LS_KEY_USER, { settings: localUser.settings });
+        LocalStorage.set(LS_KEY_USER, { settings: pickDisplaySettings(localUser.settings) });
     }
     setTabUserId(undefined);
 };
@@ -359,6 +376,7 @@ export {
     getTabUserId,
     hasAuthSessionHint,
     LocalStorage,
+    pickDisplaySettings,
     removeKeptOutboxUsers,
     resetTabUserId,
     saveLocalUser,
@@ -367,4 +385,4 @@ export {
     subscribeTabUserId,
     toLocalUser,
 };
-export type { SessionStorageKey, StorageKey, StorageSchema };
+export type { DisplaySettings, SessionStorageKey, StorageKey, StorageSchema, StoredLocalUser };

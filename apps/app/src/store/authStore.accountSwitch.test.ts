@@ -315,6 +315,11 @@ describe('flag on: the session changes while the question is open (M1), X as ask
 
         await waitForQuestion();
         onAccessTokenRefreshed(fakeAccessToken(USER_Y));
+        // Only X's language and theme carry over to Y (invariant 12).
+        expect(JSON.parse(window.localStorage.getItem(LS_KEY_USER) ?? 'null')).toEqual({
+            id: USER_Y,
+            settings: { language: settings.language, theme: settings.theme },
+        });
         useAccountSwitchConfirmStore.getState().answer(true);
         await signIn;
         await settleIdb();
@@ -358,11 +363,42 @@ describe('flag on: the session changes while the question is open (M1), X as ask
         const signIn = signInY();
 
         await waitForQuestion();
-        saveLocalUser({ id: 'someone-else', settings });
+        // Every setting of the other user differs from X's and from the defaults.
+        saveLocalUser({
+            id: 'someone-else',
+            settings: {
+                defaultCurrency: 'EUR',
+                defaultCategory: 'food',
+                timeFormat: '24h',
+                language: 'en',
+                theme: 'light',
+                simplifyDebts: false,
+                skipCategory: true,
+                soloModeByDefault: true,
+                saveGroupExpensesToSolo: true,
+                sex: 'female',
+            },
+        });
         useAccountSwitchConfirmStore.getState().answer(false);
         await signIn;
 
-        expect(getLocalUser()).toEqual({ id: USER_X, settings });
+        // Only that user's language and theme carry over (invariant 12); the rest read as the
+        // defaults until X's `users/self` loads.
+        expect(getLocalUser()).toEqual({
+            id: USER_X,
+            settings: {
+                defaultCurrency: 'USD',
+                defaultCategory: 'other',
+                timeFormat: '12h',
+                language: 'en',
+                theme: 'light',
+                simplifyDebts: true,
+                skipCategory: false,
+                soloModeByDefault: false,
+                saveGroupExpensesToSolo: false,
+                sex: 'male',
+            },
+        });
         expect(await storedXKeys()).toEqual(xKeys);
     });
 

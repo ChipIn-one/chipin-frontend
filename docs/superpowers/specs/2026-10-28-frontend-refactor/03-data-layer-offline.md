@@ -287,7 +287,8 @@ is silently lost. Therefore:
   `groupsStore`/`users-store`/`dashboardStore` and send X's draft); (3) `del` the query key, `chipin:outbox:<userId>`,
   `chipin:outbox-failed:<userId>` (the two outbox keys under the write lock, §2.3); (4) unmount the provider (change `key`).
   Otherwise a throttled query-cache write (1 s) or an outbox write after `del` brings back X's data. In `LS_KEY_USER` only
-  `{ settings }` remains (no `id`/`role` — like `clearLocalUserRole` from 01-1: the landing language/theme after logout are read from `settings`).
+  `{ settings: { language, theme } }` remains (no `id`/`role`, no other setting — invariant 12: the landing language/theme after
+  logout are read from `settings`; the other settings read as their defaults until the user's profile loads).
 - `resetAuthScopedStores()` (`store/authStore.ts:46-53`) **stays** until the end of the migration and is still called on
   **any** transition to `unauthenticated` (as today: `setUnauthenticated`, `expireSession`, OAuth exchange error) —
   legacy stores hold data in memory and are reloaded after sign-in. Each store-migration PR (03-8…03-12, 03-18)
@@ -300,14 +301,14 @@ The "reason → what is deleted" table (C3-08; real constants `store/authConstan
 
 | Transition (code today) | `unauthReason` | Query cache (IDB) | Outbox / failed / conflict drafts | Draft | `LS_KEY_USER` |
 |---|---|---|---|---|---|
-| `signOut()` in this tab (`authStore.ts:164`) | `signed_out` | `clearUserData` | delete; non-empty outbox → confirm "N unsent operations will be deleted" (N counts pending, failed and conflict drafts) | reset | `{ settings }` |
-| remote logout via BroadcastChannel (`useCheckSignIn.tsx:41-52`) | `signed_out` | `clearUserData` | delete (the confirm was in the initiating tab) | reset | `{ settings }` |
+| `signOut()` in this tab (`authStore.ts:164`) | `signed_out` | `clearUserData` | delete; non-empty outbox → confirm "N unsent operations will be deleted" (N counts pending, failed and conflict drafts) | reset | `{ settings: { language, theme } }` |
+| remote logout via BroadcastChannel (`useCheckSignIn.tsx:41-52`) | `signed_out` | `clearUserData` | delete (the confirm was in the initiating tab) | reset | `{ settings: { language, theme } }` |
 | `expireSession()` (refresh 401: `authStore.ts:69,128`, `bootstrap/initializeApi.ts:6`); `logoutOtherDevices` → 401 (`authStore.ts:155`) | `expired` | keep | keep, the `auth` gate is closed | keep | delete only `role` (`clearLocalUserRole`, 01-1) |
 | `invalid` (reserved, `useAuthToasts.tsx:23`) | `invalid` | keep | keep, the `auth` gate | keep | delete only `role` |
 | cold start without a session hint (`useCheckSignIn.tsx:64`) | `missing` | keep (not restored without sign-in) | keep | keep | unchanged |
 | refresh at startup failed with non-401 (`useCheckSignIn.tsx:89`); OAuth exchange error (`authStore.ts:100-122`, `OAuthCallbackPage.tsx:37`) | `error` / `persistence_error` | keep | keep | keep | unchanged |
-| sign-in of Y when `LocalUser.id === X ≠ Y` or the token `sub` ≠ the outbox owner (§2.3) | — (after sign-in) | `clearUserData(X)` | delete; non-empty → dialog (N as in the `signOut()` row) "This device has N unsent operations of account X. Delete and sign in?"; "Cancel" → `signOut()` Y, X's data stays | reset | `{ id: Y, settings }` |
-| token of Y by a refresh in another tab while X's outbox is non-empty or unreadable (03-16a part C, offline writes on) | — (stays authenticated, now Y) | X detached at once (writes blocked, client cleared and forgotten, outbox stopped in this tab); X's key deleted only if X's outbox is empty, otherwise kept | kept; X recorded in `LS_KEY_KEPT_OUTBOX_USERS`; the next sign-out or account switch counts and deletes them (a sign-in of X takes X off the list, its queue continues) | reset | `{ id: Y, settings }` |
+| sign-in of Y when `LocalUser.id === X ≠ Y` or the token `sub` ≠ the outbox owner (§2.3) | — (after sign-in) | `clearUserData(X)` | delete; non-empty → dialog (N as in the `signOut()` row) "This device has N unsent operations of account X. Delete and sign in?"; "Cancel" → `signOut()` Y, X's data stays | reset | `{ id: Y, settings: { language, theme } }` (X's language/theme) |
+| token of Y by a refresh in another tab while X's outbox is non-empty or unreadable (03-16a part C, offline writes on) | — (stays authenticated, now Y) | X detached at once (writes blocked, client cleared and forgotten, outbox stopped in this tab); X's key deleted only if X's outbox is empty, otherwise kept | kept; X recorded in `LS_KEY_KEPT_OUTBOX_USERS`; the next sign-out or account switch counts and deletes them (a sign-in of X takes X off the list, its queue continues) | reset | `{ id: Y, settings: { language, theme } }` (X's language/theme) |
 
 - **Account switch by a refresh** (#641; another tab signed Y in, offline writes on or off): a refreshed token
   whose `sub` ≠ the cached user bumps `authSessionVersion` (`markAuthSessionAccountSwitched`) **before** the stores are
@@ -925,7 +926,7 @@ through `requestAccountSwitchConfirm` (a UI store; the dialog is rendered by `OA
 copy says "another account" instead of naming X (no personal data in the dialog). "Delete and sign in" establishes Y,
 drops the captured X and deletes the kept users (other than Y). Cancel signs Y out without ever establishing it:
 `startAuthLogout({ broadcast: false })` logs Y's refresh cookie out (a broadcast would make the tabs still on X run the
-remote logout and delete X's data), the hint stays false, `LS_KEY_USER` is X again if it changed, nothing is cleared,
+remote logout and delete X's data), the hint stays false, `LS_KEY_USER` is X again if it changed (only the language and theme of the record it replaces; the rest read as defaults), nothing is cleared,
 the status is `unauthenticated`/`signed_out` and the exchange resolves, so the callback page navigates as after a
 sign-out. The session version is captured when asking: any session change while the question is open (a remote
 logout, an expiry) answers it Cancel, and an answer after a change signs nothing in. A newer question answers an older

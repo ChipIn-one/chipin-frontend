@@ -4,10 +4,14 @@ import type { UserSettings } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 
 import {
+    clearLocalUserIdentity,
     clearLocalUserRole,
     getLocalUser,
+    getTabUserId,
     hasAuthSessionHint,
     LocalStorage,
+    pickDisplaySettings,
+    resetTabUserId,
     saveLocalUser,
     setAuthSessionHint,
 } from './localStorage';
@@ -127,6 +131,70 @@ describe('clearLocalUserRole', () => {
         clearLocalUserRole();
 
         expect(getLocalUser()).toBeNull();
+    });
+});
+
+describe('clearLocalUserIdentity (sign-out, invariant 12)', () => {
+    // Every setting differs from its reader default, so a value that survives is visible.
+    const settings = {
+        defaultCurrency: 'EUR',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'ru',
+        theme: 'dark',
+        simplifyDebts: false,
+        skipCategory: true,
+        soloModeByDefault: true,
+        saveGroupExpensesToSolo: true,
+        sex: 'female',
+    } satisfies UserSettings;
+
+    beforeEach(() => {
+        vi.unstubAllGlobals();
+        LocalStorage.remove(LS_KEY_USER);
+        resetTabUserId();
+    });
+
+    test('leaves only the language and theme in storage', () => {
+        saveLocalUser({ id: 'user-1', role: 'ADMIN', settings });
+
+        clearLocalUserIdentity();
+
+        expect(JSON.parse(window.localStorage.getItem(LS_KEY_USER) ?? 'null')).toEqual({
+            settings: { language: 'ru', theme: 'dark' },
+        });
+        expect(getTabUserId()).toBeUndefined();
+    });
+
+    test('a signed-out reader gets the defaults for the other settings', () => {
+        saveLocalUser({ id: 'user-1', role: 'USER', settings });
+
+        clearLocalUserIdentity();
+
+        expect(getLocalUser()).toEqual({
+            settings: {
+                defaultCurrency: 'USD',
+                defaultCategory: 'other',
+                timeFormat: '12h',
+                language: 'ru',
+                theme: 'dark',
+                simplifyDebts: true,
+                skipCategory: false,
+                soloModeByDefault: false,
+                saveGroupExpensesToSolo: false,
+                sex: 'male',
+            },
+        });
+    });
+
+    test('does nothing to storage when no user is cached', () => {
+        clearLocalUserIdentity();
+
+        expect(window.localStorage.getItem(LS_KEY_USER)).toBeNull();
+    });
+
+    test('pickDisplaySettings keeps only the language and theme', () => {
+        expect(pickDisplaySettings(settings)).toEqual({ language: 'ru', theme: 'dark' });
     });
 });
 

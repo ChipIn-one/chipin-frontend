@@ -19,10 +19,12 @@ import {
     getLocalUser,
     getTabUserId,
     LocalStorage,
+    pickDisplaySettings,
     saveLocalUser,
     SessionStorage,
 } from 'helpers/localStorage';
 import { outboxKeys, queryCacheKey } from 'shared/offline/constants';
+import { useUiPrefsStore } from 'store/ui-prefs/uiPrefsStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 
 import { onAccessTokenRefreshed, useAuthStore } from './authStore';
@@ -70,6 +72,21 @@ const settings = {
     saveGroupExpensesToSolo: false,
     sex: 'male',
 } satisfies SelfUser['settings'];
+
+// Invariant 12: after a sign-out only the language and theme stay; the reader fills the defaults.
+const DEFAULT_SETTINGS = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'other',
+    timeFormat: '12h',
+    language: '',
+    theme: 'system',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} satisfies SelfUser['settings'];
+const signedOutSettings = { ...DEFAULT_SETTINGS, ...pickDisplaySettings(settings) };
 
 const selfUser = (id: string): SelfUser => ({
     id,
@@ -162,15 +179,15 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
         expect(await storedKeys(USER_X)).toEqual([]);
         expectDraftReset();
         expect(getTabUserId()).toBeUndefined();
-        expect(getLocalUser()).toEqual({ settings });
+        expect(getLocalUser()).toEqual({ settings: signedOutSettings });
         expect(useAuthStore.getState().unauthReason).toBe('signed_out');
     });
 
     test('remote logout (signed_out): clearUserData of the in-memory user, draft reset', async () => {
         await signInX();
-        // The initiating tab has already left only `{ settings }` in the shared localStorage (a
-        // write of another tab: this tab's user stays X).
-        LocalStorage.set(LS_KEY_USER, { settings });
+        // The initiating tab has already left only `{ settings }` (language and theme) in the shared
+        // localStorage (a write of another tab: this tab's user stays X).
+        LocalStorage.set(LS_KEY_USER, { settings: pickDisplaySettings(settings) });
 
         useAuthStore.getState().setUnauthenticated('signed_out');
         await settleIdb();
@@ -178,7 +195,7 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
         expect(await storedKeys(USER_X)).toEqual([]);
         expectDraftReset();
         expect(getTabUserId()).toBeUndefined();
-        expect(getLocalUser()).toEqual({ settings });
+        expect(getLocalUser()).toEqual({ settings: signedOutSettings });
     });
 
     test.each([
@@ -283,6 +300,74 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
     });
 });
 
+describe('invariant 12: only the language and theme outlive the user', () => {
+    // Every setting of X differs from its default, so a value carried over is visible.
+    const xSettings = {
+        defaultCurrency: 'EUR',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'ru',
+        theme: 'dark',
+        simplifyDebts: false,
+        skipCategory: true,
+        soloModeByDefault: true,
+        saveGroupExpensesToSolo: true,
+        sex: 'female',
+    } satisfies SelfUser['settings'];
+
+    const rawLocalUser = (): unknown =>
+        JSON.parse(window.localStorage.getItem(LS_KEY_USER) ?? 'null');
+
+    test('signOut() leaves only { settings: { language, theme } } in LS_KEY_USER', async () => {
+        await signInX();
+        saveLocalUser({ id: USER_X, role: 'ADMIN', settings: xSettings });
+
+        await useAuthStore.getState().signOut();
+
+        expect(rawLocalUser()).toEqual({ settings: { language: 'ru', theme: 'dark' } });
+        expect(getLocalUser()).toEqual({
+            settings: { ...DEFAULT_SETTINGS, language: 'ru', theme: 'dark' },
+        });
+    });
+
+    test('an account switch carries only the language and theme to Y', async () => {
+        await signInX();
+        saveLocalUser({ id: USER_X, role: 'ADMIN', settings: xSettings });
+        useAuthStore.getState().expireSession();
+        let rawBeforeProfile: unknown;
+        let localUserBeforeProfile: unknown;
+        let appModeBeforeProfile: unknown;
+
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: fakeAccessToken(USER_Y),
+            is_new_user: false,
+        });
+        vi.mocked(loadKnownUsersForSession).mockResolvedValue();
+        vi.mocked(loadSelfUserForSession).mockImplementation(() => {
+            // What the switch left, before Y's `users/self` writes Y's own settings.
+            rawBeforeProfile = rawLocalUser();
+            localUserBeforeProfile = getLocalUser();
+            appModeBeforeProfile = useUiPrefsStore.getState().appMode;
+            saveLocalUser({ id: USER_Y, role: 'USER', settings });
+            return Promise.resolve(selfUser(USER_Y));
+        });
+
+        await useAuthStore.getState().exchangeGoogleOAuthCode('display-only-switch');
+
+        expect(rawBeforeProfile).toEqual({
+            id: USER_Y,
+            settings: { language: 'ru', theme: 'dark' },
+        });
+        expect(localUserBeforeProfile).toEqual({
+            id: USER_Y,
+            settings: { ...DEFAULT_SETTINGS, language: 'ru', theme: 'dark' },
+        });
+        // The app-mode reset reads the defaults, not X's Solo default.
+        expect(appModeBeforeProfile).toBe('group');
+        expect(getLocalUser()).toEqual({ id: USER_Y, role: 'USER', settings });
+    });
+});
+
 describe('03-16a part B R1 N2: OutboxSheet does not stay open for the next user', () => {
     test('signOut() closes it', async () => {
         await signInX();
@@ -331,7 +416,7 @@ describe('a hanging IndexedDB delete holds neither sign-in nor sign-out', () => 
         await useAuthStore.getState().signOut();
 
         expectDraftReset();
-        expect(getLocalUser()).toEqual({ settings });
+        expect(getLocalUser()).toEqual({ settings: signedOutSettings });
     });
 });
 
