@@ -65,8 +65,9 @@ UI work is design-first (D35, `AGENTS.md` rule 21). An Issue that adds or change
 flow:
 
 1. **Design.** The screen is designed in Claude Design on the
-   [ChipIn design system](https://claude.ai/artifact/AtzC72Gji4PkXbfpt8Qwov), with its `--cp-*`
-   tokens and component cards. Pencil is no longer the mockup tool.
+   [ChipIn design system v5](https://claude.ai/artifact/JqkfMT6zk9RvEBKVMGG6qw), with its `--cp-*`
+   tokens (tokens v2) and its L0 foundation, L1 base component and L2 domain widget cards. Pencil is
+   no longer the mockup tool.
 2. **Approval.** The owner reviews the mockup and approves it by adding the label `design-approved`
    to the Issue and a line `Design: <https link to the approved artifact>` to the Issue body. Only
    then does implementation start.
@@ -91,9 +92,14 @@ gets the PR label `no-design-needed`. Only the owner adds or removes `design-app
 
 Two Claude Design artifacts hold the review material:
 
-- [ChipIn design system](https://claude.ai/artifact/AtzC72Gji4PkXbfpt8Qwov): the `--cp-*` tokens in
-  light and dark, spacing, radius, type, shadows, the component cards from
-  [`components/`](components/) with previews, the [patterns](patterns/), logos and icons.
+- [ChipIn design system v5](https://claude.ai/artifact/JqkfMT6zk9RvEBKVMGG6qw): the `--cp-*` tokens
+  (tokens v2) in light and dark, L0 foundations, L1 base component and L2 domain widget cards (the
+  cards in [`components/`](components/) among them) with their states in a light and a dark panel,
+  the [patterns](patterns/), logos and icons.
+  Its _Design artifacts_ section is the index of every ChipIn design artifact: which one is current,
+  which one is superseded, and where new mockups go (one new Claude Design artifact per UI Issue,
+  built on v5). The [v4 artifact](https://claude.ai/artifact/AtzC72Gji4PkXbfpt8Qwov) is
+  superseded by v5 (ChipIn-one/chipin-frontend#1006) and kept for history; do not build on it.
 - [ChipIn screens](https://claude.ai/artifact/WNBRd6Z4QhcDoatv97mYSB): screenshots of the key
   screens (dashboard, group, add expense, settle up, friends, activity, settings, invite join) in
   light and dark, desktop and phone, taken from a `master` Preview with staging data. Sign-in is not
@@ -102,9 +108,11 @@ Two Claude Design artifacts hold the review material:
 Both name the `master` commit they were refreshed from. They are private to the owner until the
 owner shares them.
 
-The design system artifact was refreshed from `master` commit `aeb838eb` with the card fixes of
-ChipIn-one/chipin-frontend#996 (2026-11-28) and shows every component card with its variants, sizes
-and states in light and dark.
+The design system artifact (v5, ChipIn-one/chipin-frontend#1006, approved by the owner
+2026-11-29) was generated from `master` commit `49f92e12` and shows the L0, L1 and L2 cards with
+the variants, sizes and states the code has, in light and dark. The cards are static HTML
+renditions from the tokens,
+not the React components; the running app wins when they differ.
 
 ## Designer onboarding plan
 

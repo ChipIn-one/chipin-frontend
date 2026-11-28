@@ -33,6 +33,14 @@ Each layer uses only the layer below it. Docs never name a value that is not in
 | [process.md](process.md)                       | Adding or changing a component, UI PR checklist, rule changes         |
 | [screens.md](screens.md)                       | Every screen, modal and state, how to reach it, user flows (manifest) |
 
+## Design artifacts
+
+Mockups are built in Claude Design on the
+[ChipIn design system artifact v5](https://claude.ai/artifact/JqkfMT6zk9RvEBKVMGG6qw). Its
+_Design artifacts_ section lists every design artifact and which one is current; the
+[v4 artifact](https://claude.ai/artifact/AtzC72Gji4PkXbfpt8Qwov) is superseded. The flow is in
+[process.md §Mockups and design review](process.md#mockups-and-design-review).
+
 ## If you do X, read Y
 
 - Any UI task: [principles.md](principles.md).
