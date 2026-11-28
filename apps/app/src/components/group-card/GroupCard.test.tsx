@@ -1,11 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
 import { GROUP_CARD_FILTER_BUCKETS, GROUP_NET_CONVERSION_STATES } from 'constants/groups';
-import { lightThemeStyled } from 'constants/styled-themes';
 import type { GroupCardViewModel } from 'store/groupsSelectors';
 
 import { GroupCard } from './GroupCard';
@@ -80,9 +78,7 @@ const createModel = (overrides: Partial<GroupCardViewModel> = {}): GroupCardView
 const renderCard = (model: GroupCardViewModel = createModel(), isSelected = false) =>
     render(
         <MemoryRouter>
-            <ThemeProvider theme={lightThemeStyled}>
-                <GroupCard model={model} isSelected={isSelected} />
-            </ThemeProvider>
+            <GroupCard model={model} isSelected={isSelected} />
         </MemoryRouter>,
     );
 

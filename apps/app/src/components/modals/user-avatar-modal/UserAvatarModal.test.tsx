@@ -1,11 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { setupMswServer } from 'test/mswServer';
@@ -54,11 +52,9 @@ let uploads = 0;
 
 const renderModal = () => {
     return render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <UserAvatarModal>
-                <button type="button">{OPEN_MODAL_LABEL}</button>
-            </UserAvatarModal>
-        </ThemeProvider>,
+        <UserAvatarModal>
+            <button type="button">{OPEN_MODAL_LABEL}</button>
+        </UserAvatarModal>,
     );
 };
 

@@ -4,12 +4,10 @@ import { render, screen } from '@testing-library/react';
 import axios, { type AxiosAdapter } from 'axios';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 
 import { InvalidPathSegmentError } from 'api/apiPath';
 import { apiInstance } from 'api/chipin.instance';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { i18n } from 'i18n';
 import { api } from 'shared/api/client';
 import { startCacheRestore } from 'shared/offline/restore';
@@ -84,11 +82,9 @@ test('a crafted group invite link never reaches the API and never hits /kick', (
 
     routers.push(router);
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <RouterProvider router={router} />
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <RouterProvider router={router} />
+        </Theme>,
     );
 
     return screen.findByRole('heading', { name: i18n.t('group:join.invalidTitle') }).then(() => {

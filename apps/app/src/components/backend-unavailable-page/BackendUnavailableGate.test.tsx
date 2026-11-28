@@ -1,9 +1,7 @@
 import { Dialog, Theme } from '@radix-ui/themes';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
@@ -27,11 +25,9 @@ test('keeps existing app content and session state mounted while showing the fal
     useConnectivityStore.setState({ mode: 'backend-down' });
 
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <BackendUnavailableGate>
-                <div>{CONFIRMED_CLIENT_STATE}</div>
-            </BackendUnavailableGate>
-        </ThemeProvider>,
+        <BackendUnavailableGate>
+            <div>{CONFIRMED_CLIENT_STATE}</div>
+        </BackendUnavailableGate>,
     );
 
     expect(screen.getByText(CONFIRMED_CLIENT_STATE)).toBeTruthy();
@@ -43,11 +39,9 @@ test('makes the preserved app subtree inert while unavailable and interactive af
     useConnectivityStore.setState({ mode: 'backend-down' });
 
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <BackendUnavailableGate>
-                <button type="button">{PRESERVED_ACTION_LABEL}</button>
-            </BackendUnavailableGate>
-        </ThemeProvider>,
+        <BackendUnavailableGate>
+            <button type="button">{PRESERVED_ACTION_LABEL}</button>
+        </BackendUnavailableGate>,
     );
 
     const appContent = screen.getByText(PRESERVED_ACTION_LABEL).parentElement;
@@ -65,11 +59,9 @@ test('does not block the app while offline', () => {
     useConnectivityStore.setState({ mode: 'offline' });
 
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <BackendUnavailableGate>
-                <button type="button">{PRESERVED_ACTION_LABEL}</button>
-            </BackendUnavailableGate>
-        </ThemeProvider>,
+        <BackendUnavailableGate>
+            <button type="button">{PRESERVED_ACTION_LABEL}</button>
+        </BackendUnavailableGate>,
     );
 
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -80,18 +72,16 @@ test('does not block the app while offline', () => {
 
 test('NET-005 keeps the backend-unavailable screen on top of an open dialog', async () => {
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <BackendUnavailableGate>
-                    <Dialog.Root defaultOpen>
-                        <Dialog.Content aria-describedby={undefined}>
-                            <Dialog.Title>{PAGE_DIALOG_TITLE}</Dialog.Title>
-                            <button type="button">{PRESERVED_ACTION_LABEL}</button>
-                        </Dialog.Content>
-                    </Dialog.Root>
-                </BackendUnavailableGate>
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <BackendUnavailableGate>
+                <Dialog.Root defaultOpen>
+                    <Dialog.Content aria-describedby={undefined}>
+                        <Dialog.Title>{PAGE_DIALOG_TITLE}</Dialog.Title>
+                        <button type="button">{PRESERVED_ACTION_LABEL}</button>
+                    </Dialog.Content>
+                </Dialog.Root>
+            </BackendUnavailableGate>
+        </Theme>,
     );
     const pageDialog = screen.getByRole('dialog', { name: PAGE_DIALOG_TITLE });
     await waitFor(() => expect(pageDialog.contains(document.activeElement)).toBe(true));

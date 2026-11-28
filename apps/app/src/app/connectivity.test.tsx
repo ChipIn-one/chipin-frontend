@@ -4,7 +4,6 @@ import { onlineManager } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { requireSession } from 'app/auth/requireSession';
@@ -12,7 +11,6 @@ import { AUTH_READY_TIMEOUT_MS } from 'app/auth/session';
 import { AuthLayout } from 'app/router/AuthLayout';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { GuardLoader } from 'features/routing';
 import { invalidateAuthSession } from 'helpers/authSession';
 import { LocalStorage, resetTabUserId } from 'helpers/localStorage';
@@ -69,13 +67,11 @@ const answer = (stats: () => Response, health: () => Response) => {
 
 const renderApp = () =>
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <BackendUnavailableGate>
-                <InternalPageLayout>
-                    <p>{PAGE_CONTENT}</p>
-                </InternalPageLayout>
-            </BackendUnavailableGate>
-        </ThemeProvider>,
+        <BackendUnavailableGate>
+            <InternalPageLayout>
+                <p>{PAGE_CONTENT}</p>
+            </InternalPageLayout>
+        </BackendUnavailableGate>,
     );
 
 const requestStats = () => act(() => publicApi('get', '/stats').then(() => undefined));
@@ -236,11 +232,7 @@ describe('offline cold start through /auth/refresh', () => {
             ],
             { initialEntries: ['/dashboard'] },
         );
-        render(
-            <ThemeProvider theme={lightThemeStyled}>
-                <RouterProvider router={router} />
-            </ThemeProvider>,
-        );
+        render(<RouterProvider router={router} />);
     };
 
     let refreshRequests = 0;
@@ -330,11 +322,7 @@ describe('offline cold start through /auth/refresh', () => {
                 ],
                 { initialEntries: ['/dashboard'] },
             );
-            render(
-                <ThemeProvider theme={lightThemeStyled}>
-                    <RouterProvider router={router} />
-                </ThemeProvider>,
-            );
+            render(<RouterProvider router={router} />);
 
             // The 5 s of the probe sent with the refresh, plus a margin.
             await act(() => vi.advanceTimersByTimeAsync(AUTH_READY_TIMEOUT_MS + 100));

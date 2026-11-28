@@ -1,10 +1,8 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { i18n } from 'i18n';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
@@ -40,10 +38,10 @@ const initializeDirectExpense = (skipCategory: boolean) => {
 
 const renderSplitCard = () =>
     render(
-        <ThemeProvider theme={lightThemeStyled}>
+        <>
             <ExpenseSplitCard />
             <ExpenseButtons onClose={vi.fn()} />
-        </ThemeProvider>,
+        </>,
     );
 
 beforeEach(() => {
@@ -76,11 +74,7 @@ test('EXP-064 announces the self-only blocker once beside submit when category i
 test('EXP-064 reports only the first cause even when the payer control is visible', () => {
     initializeDirectExpense(false);
     renderSplitCard();
-    render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <ExpensePayerSearchSelect />
-        </ThemeProvider>,
-    );
+    render(<ExpensePayerSearchSelect />);
 
     expect(screen.getAllByRole('status')).toHaveLength(1);
     expect(screen.getAllByText(i18n.t('group:expenses.modal.submitFeedback.noDebt'))).toHaveLength(

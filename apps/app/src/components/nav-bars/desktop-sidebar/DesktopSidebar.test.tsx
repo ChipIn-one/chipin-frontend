@@ -1,12 +1,10 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
@@ -59,11 +57,9 @@ test('shows the Add expense action on Settings when a valid target exists', () =
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DesktopSidebar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DesktopSidebar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -73,11 +69,9 @@ test('shows the Add expense action on Settings when a valid target exists', () =
 test('shows the authenticated navigation and profile actions', () => {
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DesktopSidebar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DesktopSidebar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -105,11 +99,9 @@ test('shows Group branding when Solo mode is stale for an admin', () => {
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DesktopSidebar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DesktopSidebar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -121,11 +113,9 @@ test('renders Group branding for a non-admin with stale Solo state', () => {
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DesktopSidebar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DesktopSidebar />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -138,11 +128,9 @@ test('shows the developer menu for an admin', () => {
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DesktopSidebar />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <DesktopSidebar />
+            </Theme>
         </MemoryRouter>,
     );
 

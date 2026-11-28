@@ -1,9 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
 
 import type { UserSummary } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 
 import { UserProfileSummary } from './UserProfileSummary';
 
@@ -21,11 +19,7 @@ const user = {
 } satisfies UserSummary;
 
 test('shows the current user identity', () => {
-    const { container } = render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <UserProfileSummary user={user} />
-        </ThemeProvider>,
-    );
+    const { container } = render(<UserProfileSummary user={user} />);
 
     expect(screen.getByText('Alex')).toBeTruthy();
     expect(screen.getByText('user@example.com')).toBeTruthy();
@@ -33,11 +27,7 @@ test('shows the current user identity', () => {
 });
 
 test('uses the requested avatar size', () => {
-    const { container } = render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <UserProfileSummary user={user} avatarSize="4" />
-        </ThemeProvider>,
-    );
+    const { container } = render(<UserProfileSummary user={user} avatarSize="4" />);
 
     expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-4')).toBe(true);
 });

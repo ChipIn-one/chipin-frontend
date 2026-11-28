@@ -1,10 +1,8 @@
 import { Theme } from '@radix-ui/themes';
 import { fireEvent, screen } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys } from 'entities/currency-rates';
 import type { DashboardBalances } from 'entities/dashboard';
 import { dashboardKeys } from 'entities/dashboard';
@@ -47,11 +45,9 @@ const renderSummary = (isLoading = false, hasExpenseHistory = false) => {
         rates,
     });
     return renderWithQueryClient(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <DashboardSummary isLoading={isLoading} hasExpenseHistory={hasExpenseHistory} />
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <DashboardSummary isLoading={isLoading} hasExpenseHistory={hasExpenseHistory} />
+        </Theme>,
         client,
     );
 };

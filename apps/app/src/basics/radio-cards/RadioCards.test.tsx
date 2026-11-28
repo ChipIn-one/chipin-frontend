@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
-
-import { lightThemeStyled } from 'constants/styled-themes';
 
 import { RadioCards } from './RadioCards';
 
@@ -12,17 +9,15 @@ const RadioCardsHarness = () => {
     const [value, setValue] = useState('male');
 
     return (
-        <ThemeProvider theme={lightThemeStyled}>
-            <RadioCards
-                value={value}
-                items={[
-                    { value: 'male', label: 'Male' },
-                    { value: 'female', label: 'Female' },
-                    { value: 'hidden', label: 'Unavailable', isDisabled: true },
-                ]}
-                onValueChange={setValue}
-            />
-        </ThemeProvider>
+        <RadioCards
+            value={value}
+            items={[
+                { value: 'male', label: 'Male' },
+                { value: 'female', label: 'Female' },
+                { value: 'hidden', label: 'Unavailable', isDisabled: true },
+            ]}
+            onValueChange={setValue}
+        />
     );
 };
 

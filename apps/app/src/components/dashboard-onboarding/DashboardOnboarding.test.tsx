@@ -1,10 +1,7 @@
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
-
-import { lightThemeStyled } from 'constants/styled-themes';
 
 import { DashboardOnboarding } from './DashboardOnboarding';
 
@@ -51,11 +48,9 @@ vi.mock('hooks/useSelfUser', () => ({
 
 const renderOnboarding = () =>
     render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <DashboardOnboarding />
-            </Theme>
-        </ThemeProvider>,
+        <Theme>
+            <DashboardOnboarding />
+        </Theme>,
     );
 
 beforeEach(() => {

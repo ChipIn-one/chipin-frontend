@@ -1,12 +1,10 @@
 import { Theme } from '@radix-ui/themes';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
@@ -96,11 +94,9 @@ const readyGroup = {
 const renderButton = (pathname: string, type: 'mobile' | 'desktop' | 'sidebar' = 'mobile') => {
     return render(
         <MemoryRouter initialEntries={[pathname]}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <AddExpenseButton type={type} />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <AddExpenseButton type={type} />
+            </Theme>
         </MemoryRouter>,
     );
 };

@@ -1,11 +1,9 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import type { SelfUser as DomainSelfUser } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
@@ -92,9 +90,7 @@ beforeEach(() => {
 test('does not render a single-member notice in the modal', () => {
     renderWithQueryClient(
         <MemoryRouter initialEntries={['/group/group-1']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <AddExpenseModal />
-            </ThemeProvider>
+            <AddExpenseModal />
         </MemoryRouter>,
         ratesClient(),
     );
@@ -117,9 +113,7 @@ test('uses the edit title and Save action in edit mode', () => {
 
     renderWithQueryClient(
         <MemoryRouter initialEntries={['/activity']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <AddExpenseModal />
-            </ThemeProvider>
+            <AddExpenseModal />
         </MemoryRouter>,
         ratesClient(),
     );
@@ -135,9 +129,7 @@ test('EXP-064 the edit form shows no date field: the date of an expense is read-
 
     renderWithQueryClient(
         <MemoryRouter initialEntries={['/activity']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <AddExpenseModal />
-            </ThemeProvider>
+            <AddExpenseModal />
         </MemoryRouter>,
         ratesClient(),
     );
@@ -166,9 +158,7 @@ const newerGroup = { ...tripGroup, id: 'group-2', name: 'Flat', updatedAt: 2 } s
 const renderAt = (path: string) =>
     renderWithQueryClient(
         <MemoryRouter initialEntries={[path]}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <AddExpenseModal />
-            </ThemeProvider>
+            <AddExpenseModal />
         </MemoryRouter>,
         ratesClient(),
     );

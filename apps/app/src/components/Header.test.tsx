@@ -2,13 +2,11 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { LS_KEY_LOCALE } from 'constants/localstorage';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { i18n } from 'i18n';
 import { useAuthStore } from 'store/authStore';
@@ -59,12 +57,10 @@ test('opens the Group route when an authenticated user clicks the logo', () => {
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                    <LocationPath />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+                <LocationPath />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -80,12 +76,10 @@ test('opens the Group route for a user with stale Solo state', () => {
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                    <LocationPath />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+                <LocationPath />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -107,12 +101,10 @@ test('opens the Group route when the logo is clicked from another page with stal
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                    <LocationPath />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+                <LocationPath />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -126,11 +118,9 @@ test('hides the mode badge when signed out', () => {
 
     render(
         <MemoryRouter initialEntries={['/']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -144,11 +134,9 @@ test('hides the dev menu after authentication ends even with a cached admin role
 
     render(
         <MemoryRouter initialEntries={['/']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -158,11 +146,9 @@ test('hides the dev menu after authentication ends even with a cached admin role
 test('does not show a separate authenticated avatar shortcut in the global header', () => {
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -181,11 +167,9 @@ test.each([
 
     render(
         <MemoryRouter initialEntries={[path]}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -199,11 +183,9 @@ test('04-2f login: the sign-in page has no header sign-in button', () => {
 
     render(
         <MemoryRouter initialEntries={['/login']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -216,11 +198,9 @@ test('signed out off the sign-in page the header sign-in opens the auth modal', 
 
     render(
         <MemoryRouter initialEntries={['/not-found']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -242,11 +222,9 @@ test.each([
 
     render(
         <MemoryRouter initialEntries={[path]}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <Header />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <Header />
+            </Theme>
         </MemoryRouter>,
     );
 

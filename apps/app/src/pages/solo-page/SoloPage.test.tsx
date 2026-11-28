@@ -2,11 +2,9 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { getOrThrow } from 'test/getOrThrow';
@@ -34,11 +32,9 @@ test('renders the preserved Solo dashboard layout without release mode controls'
 
     render(
         <MemoryRouter initialEntries={['/solo']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <SoloPage />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <SoloPage />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -63,12 +59,10 @@ test('uses the shared profile shortcut to open Settings from Solo', () => {
 
     render(
         <MemoryRouter initialEntries={['/solo']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <SoloPage />
-                    <CurrentRoute />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <SoloPage />
+                <CurrentRoute />
+            </Theme>
         </MemoryRouter>,
     );
 
@@ -90,12 +84,10 @@ test('DSH-016: each Solo placeholder offers Go to dashboard, which switches to g
 
     render(
         <MemoryRouter initialEntries={['/solo']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <SoloPage />
-                    <CurrentRoute />
-                </Theme>
-            </ThemeProvider>
+            <Theme>
+                <SoloPage />
+                <CurrentRoute />
+            </Theme>
         </MemoryRouter>,
     );
 

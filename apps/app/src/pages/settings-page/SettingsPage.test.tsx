@@ -1,10 +1,8 @@
 import { screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { saveLocalUser } from 'helpers/localStorage';
 import { getOrThrow } from 'test/getOrThrow';
@@ -50,9 +48,7 @@ const settings = {
 const renderSettings = () => {
     renderWithQueryClient(
         <MemoryRouter>
-            <ThemeProvider theme={lightThemeStyled}>
-                <SettingsPage />
-            </ThemeProvider>
+            <SettingsPage />
         </MemoryRouter>,
         ratesClient(),
     );
