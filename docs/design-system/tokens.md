@@ -99,10 +99,12 @@ Radix `color` props do not accept CSS variables. `PROP_COLOR` in `theme.ts` give
 of each role, matching the scale of the `--cp-*` role of the same meaning: `accent`, `neutral`,
 `debtOwed`, `debtOwing`, `debtSettled`, `success`, `danger`, `warning`, `info`, `solo` (violet).
 Spec 05 §3 says `color` goes only through `PROP_COLOR`: in `apps/app/src` the ESLint entry
-`[prop-color-roles]` bans a Radix palette name in a `color` or `<x>Color` JSX attribute
-(`color="red"`, `color={on ? 'green' : 'gray'}`). A palette name in a variable or an object
-field is not linted (review). The category palette (`constants/category-ui.ts`) is data: its
-`color={item.color}` passes.
+`[prop-color-roles]` bans a Radix palette name as a color value: a `color`/`<x>Color` JSX
+attribute (`color="red"`, `color={on ? 'green' : 'gray'}`), an object field (`color: 'red'`), a
+default (`color = 'mint'`), a `<x>Color` variable or assignment, a TS type (`color: 'green' |
+'red'`, `type ShareColor = 'jade'`), as a string or a one-part template literal. Only the category
+palette, `constants/category-ui.ts`, may hold palette names (its ignore glob); its consumers pass
+`color={item.color}`. Not linted (review): a palette name passed through a helper argument.
 
 ## Shipped scales
 
@@ -144,17 +146,17 @@ category color.
 Each rule names its check. Existing ESLint violations sit in `eslint-suppressions.json` and only
 shrink.
 
-| Rule                                                                                    | Check                                                                                       |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Raw hex, `rgb()`/`hsl()` and friends, named colors in CSS                               | stylelint `color-no-hex`, `color-named`, `function-disallowed-list` (`stylelint.config.js`) |
-| Raw hex, `rgb(a)()`, `hsl(a)()` or `var(--<palette>-N)` in TS/TSX and Astro frontmatter | ESLint `no-raw-colors` (`config/eslint/project.js`)                                         |
-| A Radix palette name in a `color`/`<x>Color` JSX attribute in `apps/app/src`            | ESLint `prop-color-roles` (`config/eslint/project.js`)                                      |
-| Any `var(--x)` in CSS other than `--cp-*` or local `--_*`                               | stylelint `declaration-property-value-disallowed-list`                                      |
-| A `--cp-*` name that is not in `tokens.css` (typos)                                     | stylelint `csstools/value-no-unknown-custom-properties`                                     |
-| `.rt-*` selectors outside `apps/app/src/styles/radixStylesOverwrite.css`                | stylelint `selector-disallowed-list`                                                        |
-| `style={{}}` with ordinary properties; only custom properties (`{ '--x': v }`)          | ESLint `inline-style` (`config/eslint/project.js`)                                          |
-| New styled-components files                                                             | ESLint `no-restricted-imports` + `scripts/check-styled-allowlist.mjs`                       |
-| `@radix-ui/colors` imports                                                              | ESLint `no-restricted-imports` `[radix-colors]` (`config/eslint/project.js`)                |
+| Rule                                                                                          | Check                                                                                       |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Raw hex, `rgb()`/`hsl()` and friends, named colors in CSS                                     | stylelint `color-no-hex`, `color-named`, `function-disallowed-list` (`stylelint.config.js`) |
+| Raw hex, `rgb(a)()`, `hsl(a)()` or `var(--<palette>-N)` in TS/TSX and Astro frontmatter       | ESLint `no-raw-colors` (`config/eslint/project.js`)                                         |
+| A Radix palette name as a color value (JSX, field, default, variable, type) in `apps/app/src` | ESLint `prop-color-roles` (`config/eslint/project.js`)                                      |
+| Any `var(--x)` in CSS other than `--cp-*` or local `--_*`                                     | stylelint `declaration-property-value-disallowed-list`                                      |
+| A `--cp-*` name that is not in `tokens.css` (typos)                                           | stylelint `csstools/value-no-unknown-custom-properties`                                     |
+| `.rt-*` selectors outside `apps/app/src/styles/radixStylesOverwrite.css`                      | stylelint `selector-disallowed-list`                                                        |
+| `style={{}}` with ordinary properties; only custom properties (`{ '--x': v }`)                | ESLint `inline-style` (`config/eslint/project.js`)                                          |
+| New styled-components files                                                                   | ESLint `no-restricted-imports` + `scripts/check-styled-allowlist.mjs`                       |
+| `@radix-ui/colors` imports                                                                    | ESLint `no-restricted-imports` `[radix-colors]` (`config/eslint/project.js`)                |
 
 Exceptions, exactly as configured:
 

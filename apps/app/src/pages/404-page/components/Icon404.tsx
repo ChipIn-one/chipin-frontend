@@ -14,7 +14,7 @@ const Icon404 = () => (
         <SearchIcon
             size={64}
             strokeWidth={2}
-            color="var(--cp-brand-primary)"
+            color="var(--cp-accent-solid)"
             className={styles.search}
         />
     </div>

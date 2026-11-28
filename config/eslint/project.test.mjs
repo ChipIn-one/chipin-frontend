@@ -762,12 +762,45 @@ describe('prop-color-roles (#1007): Radix color props take PROP_COLOR roles', ()
         expect(await lintIds(source, file)).toEqual(ids);
     });
 
-    test('the category palette file passes: its palette names are data, not JSX attributes', async () => {
-        // Its consumers pass `color={item.color}` (source E above).
+    test.each([
+        // JSX attribute values.
+        ["<Text color={'red'} />", 1],
+        ["<Text color={x ?? 'gray'} />", 1],
+        ["<Text color={'red' as const} />", 1],
+        ['<Text color={`red`} />', 1],
+        // An object field, also asserted, conditional or a template literal.
+        ["const item = { color: 'red' as const };", 1],
+        ["const item = { iconColor: on ? 'green' : 'violet' };", 2],
+        ['const item = { color: `tomato` };', 1],
+        // A default parameter.
+        ["const Avatar = ({ color = 'mint' }) => color;", 1],
+        // A variable, a reassignment and a `get<X>Color` helper.
+        ["const activeColor = isSolo ? 'violet' : 'green';", 2],
+        ["let amountColor; amountColor = 'red';", 1],
+        ["const getIconColor = on => (on ? 'green' : 'red');", 2],
+        // TS types: a property signature (with a union) and a `<X>Color` type alias.
+        ["interface P { color: 'green' | 'red'; }", 2],
+        ["type ShareColor = 'gray' | 'jade';", 2],
+        // Fine: roles, non-palette strings, a palette name outside a color context.
+        ['const item = { color: PROP_COLOR.danger };', 0],
+        ['const activeColor = isSolo ? PROP_COLOR.solo : PROP_COLOR.accent;', 0],
+        ["const item = { variant: 'soft', tone: 'red' };", 0],
+        ["const direction = 'owed'; const textColor = direction === 'owed' ? x : y;", 0],
+        ["interface P { color: (typeof PROP_COLOR)['debtOwed']; }", 0],
+    ])('%s reports %i', async (code, count) => {
+        expect(await lintIds(code, 'src/components/A.tsx')).toEqual(
+            Array(count).fill('prop-color-roles'),
+        );
+    });
+
+    test('only the category palette file may hold palette names (its ignore glob)', async () => {
         const categoryUi =
             "export const CATEGORY_UI = { food: { icon: 'utensils', color: 'teal' } };";
 
         expect(await lintIds(categoryUi, 'src/constants/category-ui.ts')).toEqual([]);
+        expect(await lintIds(categoryUi, 'src/constants/other-ui.ts')).toEqual([
+            'prop-color-roles',
+        ]);
     });
 
     test('the message names the fix and the site `.astro` files are not checked', async () => {

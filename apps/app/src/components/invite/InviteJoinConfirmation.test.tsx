@@ -101,10 +101,10 @@ test('#971 from sm the screen keeps the card with Cancel, then Join at the end',
 });
 
 test.each([
-    ['group', 'ready', 'green'],
+    ['group', 'ready', PROP_COLOR.success],
     ['friend', 'ready', PROP_COLOR.accent],
-    ['group', 'invalid', 'gray'],
-    ['friend', 'invalid', 'gray'],
+    ['group', 'invalid', PROP_COLOR.neutral],
+    ['friend', 'invalid', PROP_COLOR.neutral],
 ] as const)(
     '#971 a %s invite in the %s state has a decorative %s icon tile',
     (variant, status, color) => {
@@ -174,6 +174,6 @@ test.each([
         expect(hasSize(screen.getByText(LABELS.description), sizes.text)).toBe(true);
         const error = screen.getByRole('alert');
         expect(hasSize(error, sizes.text)).toBe(true);
-        expect(error.getAttribute('data-accent-color')).toBe('red');
+        expect(error.getAttribute('data-accent-color')).toBe(PROP_COLOR.danger);
     },
 );

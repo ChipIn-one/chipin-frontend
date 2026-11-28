@@ -130,5 +130,5 @@ test('colors your share based on the payer', () => {
 
     useExpenseModalStore.getState().setPaidById(friend.id);
 
-    expect(selectYourShareColor(useExpenseModalStore.getState())).toBe('red');
+    expect(selectYourShareColor(useExpenseModalStore.getState())).toBe(PROP_COLOR.debtOwing);
 });

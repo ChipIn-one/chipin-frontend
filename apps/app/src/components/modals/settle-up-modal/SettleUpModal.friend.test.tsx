@@ -1,3 +1,4 @@
+import { PROP_COLOR } from '@chipin/tokens/theme';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
@@ -212,8 +213,8 @@ test('shows compact debt context and the remaining amount for a partial payment'
             const remainingLabel = screen.getByText('friends:settleUp.remainingDebt');
             const remainingAmount = remainingLabel.nextElementSibling;
 
-            expect(remainingLabel.getAttribute('data-accent-color')).toBe('gray');
-            expect(remainingAmount?.getAttribute('data-accent-color')).toBe('red');
+            expect(remainingLabel.getAttribute('data-accent-color')).toBe(PROP_COLOR.neutral);
+            expect(remainingAmount?.getAttribute('data-accent-color')).toBe(PROP_COLOR.debtOwing);
             expect(remainingAmount?.textContent).toContain('60 USD');
         });
 });
@@ -233,7 +234,7 @@ test('shows that the debt will be settled when the full amount is entered', () =
 
     const settledStatus = screen.getByText('friends:settleUp.debtWillBeSettled');
 
-    expect(settledStatus.getAttribute('data-accent-color')).toBe('green');
+    expect(settledStatus.getAttribute('data-accent-color')).toBe(PROP_COLOR.success);
     expect(settledStatus.parentElement?.querySelector('svg')).not.toBeNull();
 });
 

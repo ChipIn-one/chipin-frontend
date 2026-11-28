@@ -24,7 +24,7 @@ Source: [`components/UsersRow.tsx`](../../../apps/app/src/components/UsersRow.ts
 | `max`     | `number`              | `5`      | Avatars shown before the "+N" avatar   |
 | `size`    | Radix `Avatar` `size` | `'1'`    | Size of member avatars                 |
 
-The "+N" avatar is always `size="1"` and `color="cyan"`, whatever `size` is. Overlap uses
+The "+N" avatar is always `size="1"` and `color={PROP_COLOR.neutral}`, whatever `size` is. Overlap uses
 `mr="-1"` and a reversed flex order (`--_stack-order` in `UsersRow.module.css`), so DOM order and
 visual order both match `members`.
 
