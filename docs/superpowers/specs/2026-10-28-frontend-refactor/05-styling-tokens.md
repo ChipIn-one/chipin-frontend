@@ -74,7 +74,7 @@ packages/tokens/
 **Content of `tokens.css`** (the levels of DS v1 "Token levels", written as CSS custom properties):
 
 1. Primitives — `--cp-space-1..9` = 4, 8, 12, 16, 24, 32, 40, 48, 64 px (equal to Radix at scaling 100%); `--cp-radius-1..6` = 4.5, 6, 9, 12, 18, 24 px (Radix base × factor 1.5 for `radius="large"`) and `--cp-radius-pill` = 9999px; `--cp-font-sans` = the `--default-font-family` stack from Radix (system font, no webfont); `--cp-font-size-1..9` = 12, 14, 16, 18, 20, 24, 28, 35, 60 px; `--cp-font-weight-{regular,medium,bold}` = 400/500/700; `--cp-shadow-{card,popover}` from `olive-a*` and `rgba` (a literal is allowed only in `packages/tokens`); `--cp-z-{content,raised,floating}` = 0/1/2 (only these values in the app content; modal layers are set by Radix portals), and `--cp-z-toast` = 3, `--cp-z-blocking` = 4 for the top layer outside the root theme (#714: toasts above dialogs and the offline status; the blocking update-required screen above toasts). Radix dialog portals add no z-index of their own (their content is 1) and popper wrappers (popover, menu, tooltip, select) copy their content's z-index, `auto` in Themes 3.3.0, so small steps are enough and no magic large value is used; `packages/tokens/tokens.test.ts` checks the order; `--cp-duration-{fast,base}` = 120/160 ms, `--cp-easing-{standard,out}` (120/150/160 ms in the code today, 150 is folded into 160); `--cp-brand-loader` = `#80c837` (a literal from `basics/ChipInLoader.tsx:10`, preserves the look); `--cp-brand-primary: var(--grass-9)` (D23) — the only source of the main brand color.
-2. Semantic roles with light/dark: `--cp-text-*`, `--cp-surface-*`, `--cp-border-*`, `--cp-fill-*`, `--cp-accent-*`, `--cp-status-*`, `--cp-debt-{owed,owing,settled}`, `--cp-selection-*`, `--cp-focus-ring`, `--cp-media-*` (the roles in the migration table in "Details").
+2. Semantic roles with light/dark: `--cp-text-*`, `--cp-surface-*`, `--cp-border-*`, `--cp-fill-*`, `--cp-accent-*`, `--cp-status-*`, `--cp-debt-{owed,owing,settled}`, `--cp-selection-*` (merged into `--cp-accent-*` by D36), `--cp-focus-ring`, `--cp-media-*` (the roles in the migration table in "Details").
 3. Component tokens (`--cp-fab-border*`, `--cp-nav-highlight*`, `--cp-logo-mode-*`, `--cp-avatar-placeholder-*`, `--cp-landing-*`) are **not** in 05-2a: the design-phase PR that migrates the file adds the token it needs.
 
 Rules for `tokens.css`:
@@ -319,10 +319,10 @@ Withdrawn by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery
 | green2 / green5 | landing-cta-to / landing-cta-from | green-2 / 5 |
 | green4 | nav-highlight | green-4 |
 | green6 | border-brand (Header), landing-step-marker (how-it-works) | green-6 |
-| jade7 | selection-border-subtle; in the gradient `user-avatar-modal/styled.ts:10` — avatar-placeholder-from | jade-7 |
-| jade8 / jade9 | selection-border / selection-solid | jade-8 / 9 |
+| jade7 | selection-border-subtle (D36: `--cp-accent-*`); in the gradient `user-avatar-modal/styled.ts:10` — avatar-placeholder-from | jade-7 |
+| jade8 / jade9 | selection-border / selection-solid (D36: `--cp-accent-*`) | jade-8 / 9 |
 | jade11 | landing-preview-gradient-to | jade-11 |
-| jadeA2 / jadeA3 | selection-surface / selection-surface-hover | jade-a2 / a3 |
+| jadeA2 / jadeA3 | selection-surface / selection-surface-hover (D36: `--cp-accent-*`) | jade-a2 / a3 |
 | mint7 | avatar-placeholder-to | mint-7 |
 | violet4 / violet7 | nav-highlight-solo / fab-border-solo | violet-4 / 7 |
 | violet9 / violet11 | logo-mode-primary / logo-mode-secondary | violet-9 / 11 |
@@ -331,7 +331,7 @@ Withdrawn by D33 (owner, 2026-11-21; ChipIn-one/chipin-frontend#830): ds-gallery
 | amber11 / amberA3 | status-warning-text / status-warning-surface | amber-11 / a3 |
 | white / black | media-on (text over a cover) / media-scrim | `#ffffff` / `#000000`, both modes |
 
-In addition, a DS v1 requirement: `debt-owed` → green-11, `debt-owing` → red-11, `debt-settled` → olive-11, `status-success` → green-11, `status-info` → blue-11, `text-inverse` → olive-1. For props the same roles are in `PROP_COLOR`.
+In addition, a DS v1 requirement: `debt-owed` → green-11, `debt-owing` → red-11, `debt-settled` → olive-11, `status-success` → green-11 (D36: `status-success-text`), `status-info` → blue-11 (D36: `status-info-text`), `text-inverse` → olive-1. For props the same roles are in `PROP_COLOR`.
 
 `interactiveCardStyles.ts` changes the parameter types from `ThemeColorToken` to role names, and the calls in `group-card/styled.ts` and `activity-event/styled.ts` — to role names (when the design phase touches them).
 

@@ -16,9 +16,9 @@
     width: 100%;
     box-sizing: border-box;
     padding: var(--cp-space-4);
-    border: 1px dashed var(--cp-selection-border-subtle);
+    border: 1px dashed var(--cp-accent-border-subtle);
     border-radius: var(--cp-radius-4);
-    background-color: var(--cp-selection-surface);
+    background-color: var(--cp-accent-surface-subtle);
     cursor: pointer;
 }
 
@@ -29,8 +29,8 @@
 }
 
 .dropZone:focus-within {
-    border-color: var(--cp-selection-solid);
-    background-color: var(--cp-selection-surface-hover);
+    border-color: var(--cp-accent-solid);
+    background-color: var(--cp-accent-surface-subtle-hover);
 }
 
 .dropZone[data-disabled='true'] {

@@ -9,7 +9,9 @@
  *   `--cp-brand-loader`, `--cp-media-on`, `--cp-media-scrim`.
  * - Light/dark comes from the scales themselves (they switch on `.dark`/`.dark-theme`), so
  *   there is no dark override block; add one only for a value that differs by more than that.
- * - Component tokens are added by the design-phase PR that migrates their file.
+ * - Two rule blocks with the same selector list: primitives and roles first, then component
+ *   tokens. A component token references a role when its value equals one; new ones are added
+ *   by the design-phase PR that migrates their file.
  *
  * The selector list recomputes the tokens in a nested theme, e.g. `<Theme appearance="dark">`
  * inside a light page.
@@ -38,6 +40,10 @@
     --cp-radius-5: 18px;
     --cp-radius-6: 24px;
     --cp-radius-pill: 9999px;
+    /* Radius roles */
+    --cp-radius-control: var(--cp-radius-3);
+    --cp-radius-card: var(--cp-radius-4);
+    --cp-radius-sheet: var(--cp-radius-5);
 
     /* Typography: the Radix system font stack, no webfont */
     --cp-font-sans:
@@ -52,13 +58,70 @@
     --cp-font-size-7: 28px;
     --cp-font-size-8: 35px;
     --cp-font-size-9: 60px;
+    /* Line heights: Radix, step N pairs with --cp-font-size-N */
+    --cp-line-height-1: 16px;
+    --cp-line-height-2: 20px;
+    --cp-line-height-3: 24px;
+    --cp-line-height-4: 26px;
+    --cp-line-height-5: 28px;
+    --cp-line-height-6: 30px;
+    --cp-line-height-7: 36px;
+    --cp-line-height-8: 40px;
+    --cp-line-height-9: 60px;
     --cp-font-weight-regular: 400;
     --cp-font-weight-medium: 500;
     --cp-font-weight-bold: 700;
+    --cp-font-numeric-tabular: tabular-nums;
 
-    /* Shadows: the values used by the app today, on the olive alpha scale */
+    /* Type roles: `font: var(--cp-type-<role>)`; TYPE_ROLES in theme.ts for Radix Text */
+    /* Display: site/landing only, with letter-spacing: var(--cp-type-display-tracking) */
+    --cp-type-display: var(--cp-font-weight-bold) var(--cp-font-size-8) / var(--cp-line-height-8)
+        var(--cp-font-sans);
+    --cp-type-display-tracking: -0.02em;
+    /* Amount hero: font-variant-numeric: var(--cp-font-numeric-tabular) goes after the `font`
+       shorthand, which resets it */
+    --cp-type-amount-hero: var(--cp-font-weight-bold) var(--cp-font-size-7) /
+        var(--cp-line-height-7) var(--cp-font-sans);
+    --cp-type-title-1: var(--cp-font-weight-bold) var(--cp-font-size-6) / var(--cp-line-height-6)
+        var(--cp-font-sans);
+    --cp-type-title-2: var(--cp-font-weight-bold) var(--cp-font-size-5) / var(--cp-line-height-5)
+        var(--cp-font-sans);
+    --cp-type-title-3: var(--cp-font-weight-bold) var(--cp-font-size-3) / var(--cp-line-height-3)
+        var(--cp-font-sans);
+    --cp-type-body: var(--cp-font-weight-regular) var(--cp-font-size-3) / var(--cp-line-height-3)
+        var(--cp-font-sans);
+    --cp-type-body-sm: var(--cp-font-weight-regular) var(--cp-font-size-2) / var(--cp-line-height-2)
+        var(--cp-font-sans);
+    --cp-type-label: var(--cp-font-weight-medium) var(--cp-font-size-2) / var(--cp-line-height-2)
+        var(--cp-font-sans);
+    --cp-type-caption: var(--cp-font-weight-regular) var(--cp-font-size-1) / var(--cp-line-height-1)
+        var(--cp-font-sans);
+
+    /* Layout: the gutter grows from sm (BREAKPOINTS.sm, the media block below) */
+    --cp-gutter: 16px;
+    --cp-width-narrow: 360px;
+    --cp-width-form: 480px;
+    --cp-width-content: 560px;
+    /* Desktop shell: the 280px sidebar + Radix Container size 4 (1136px) + space-6 */
+    --cp-width-shell: calc(280px + 1136px + var(--cp-space-6));
+    --cp-touch-target: 44px;
+
+    /* Icon sizes: ICON_SIZE in theme.ts for the lucide `size` prop */
+    --cp-icon-sm: 16px;
+    --cp-icon-md: 20px;
+    --cp-icon-lg: 24px;
+    --cp-icon-tile: 32px;
+    --cp-icon-hero: 48px;
+
+    /* Elevation 0-3 on the olive alpha scale: 0 flat (cards and lists use a border),
+       1 raised (sticky bar, hovered card), 2 popover, 3 modal (sheets, dialogs, toasts) */
+    --cp-elevation-0: none;
+    --cp-elevation-1: 0 1px 2px var(--olive-a3), 0 2px 8px var(--olive-a4);
+    --cp-elevation-2: 0 32px 80px -24px var(--olive-a9), 0 16px 36px -24px var(--olive-a8);
+    --cp-elevation-3: 0 40px 96px -24px var(--olive-a10), 0 20px 44px -20px var(--olive-a9);
+    /* Shadows: --cp-shadow-card is deprecated (removed by the Card merge) */
     --cp-shadow-card: 0 18px 56px var(--olive-a6);
-    --cp-shadow-popover: 0 32px 80px -24px var(--olive-a9), 0 16px 36px -24px var(--olive-a8);
+    --cp-shadow-popover: var(--cp-elevation-2);
 
     /* Layers: only the values in the code; modal layers come from Radix portals */
     --cp-z-content: 0;
@@ -72,8 +135,11 @@
     /* Motion: 120/150/160 ms in the code today, 150 folded into 160 */
     --cp-duration-fast: 120ms;
     --cp-duration-base: 160ms;
+    --cp-duration-slow: 240ms;
     --cp-easing-standard: ease;
     --cp-easing-out: ease-out;
+    --cp-easing-enter: cubic-bezier(0.2, 0, 0, 1);
+    --cp-easing-exit: cubic-bezier(0.4, 0, 1, 1);
 
     /* Brand */
     --cp-brand-primary: var(--grass-9);
@@ -102,53 +168,88 @@
     --cp-fill-pressed: var(--olive-a3);
     --cp-fill-scrim: var(--olive-a9);
 
-    /* Accent */
-    --cp-accent-surface: var(--grass-3);
+    /* Accent (also selected items: jade selection merged into grass) */
     --cp-accent-solid: var(--grass-9);
+    --cp-accent-solid-hover: var(--grass-10);
+    --cp-accent-text: var(--grass-11);
+    --cp-accent-surface: var(--grass-3);
+    --cp-accent-surface-strong: var(--grass-4);
+    --cp-accent-surface-subtle: var(--grass-a2);
+    --cp-accent-surface-subtle-hover: var(--grass-a3);
+    --cp-accent-border: var(--grass-8);
+    --cp-accent-border-subtle: var(--grass-7);
+
+    /* States */
     --cp-focus-ring: var(--grass-a8);
+    --cp-focus-ring-width: 2px;
+    --cp-focus-ring-offset: 2px;
+    --cp-field-invalid-border: var(--red-8);
 
     /* Status */
-    --cp-status-success: var(--green-11);
-    --cp-status-info: var(--blue-11);
-    --cp-status-danger-border: var(--red-8);
+    --cp-status-success-text: var(--green-11);
+    --cp-status-success-surface: var(--green-a3);
+    --cp-status-success-border: var(--green-6);
+    --cp-status-danger-solid: var(--red-9);
+    --cp-status-danger-text: var(--red-11);
     --cp-status-danger-surface: var(--red-a2);
+    --cp-status-danger-border: var(--red-8);
     --cp-status-warning-text: var(--amber-11);
     --cp-status-warning-surface: var(--amber-a3);
+    --cp-status-warning-border: var(--amber-6);
+    --cp-status-info-text: var(--blue-11);
+    --cp-status-info-surface: var(--blue-a3);
+    --cp-status-info-border: var(--blue-6);
 
     /* Debts */
     --cp-debt-owed: var(--green-11);
     --cp-debt-owing: var(--red-11);
     --cp-debt-settled: var(--olive-11);
 
-    /* Selection */
-    --cp-selection-border-subtle: var(--jade-7);
-    --cp-selection-border: var(--jade-8);
-    --cp-selection-solid: var(--jade-9);
-    --cp-selection-surface: var(--jade-a2);
-    --cp-selection-surface-hover: var(--jade-a3);
+    /* Mode: solo (violet; PROP_COLOR.solo) */
+    --cp-mode-solo-solid: var(--violet-9);
+    --cp-mode-solo-text: var(--violet-11);
+    --cp-mode-solo-surface: var(--violet-3);
 
-    /* Components */
-    --cp-logo-mode-primary: var(--violet-9);
-    --cp-logo-mode-secondary: var(--violet-11);
+    /* Media: text over a cover and its scrim, the same in both modes */
+    --cp-media-on: #ffffff;
+    --cp-media-scrim: #000000;
+}
+
+/* Component tokens: one component each; a value equal to a role references the role */
+:root,
+.light,
+.light-theme,
+.dark,
+.dark-theme {
+    /* Mode logotype */
+    --cp-logo-mode-primary: var(--cp-mode-solo-solid);
+    --cp-logo-mode-secondary: var(--cp-mode-solo-text);
     /* Invite onboarding card glow */
     --cp-invite-glow: var(--green-a4);
     /* Activity sub-events details row divider */
     --cp-subevents-divider: var(--olive-a4);
 
-    /* component tokens: shell (#894) */
+    /* Shell (#894) */
     --cp-nav-highlight: var(--green-4);
     --cp-nav-highlight-solo: var(--violet-4);
-    --cp-fab-border: var(--grass-7);
+    --cp-fab-border: var(--cp-accent-border-subtle);
     --cp-fab-border-solo: var(--violet-7);
 
-    /* Media: text over a cover and its scrim, the same in both modes */
-    --cp-media-on: #ffffff;
-    --cp-media-scrim: #000000;
-
-    /* component tokens: modals (#897) */
+    /* Modals (#897) */
     --cp-avatar-placeholder-from: var(--jade-7);
     --cp-avatar-placeholder-to: var(--mint-7);
     --cp-auth-illustration-glow: var(--grass-a5);
+}
+
+/* From sm (BREAKPOINTS.sm) */
+@media (min-width: 768px) {
+    :root,
+    .light,
+    .light-theme,
+    .dark,
+    .dark-theme {
+        --cp-gutter: 24px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -159,5 +260,6 @@
     .dark-theme {
         --cp-duration-fast: 0ms;
         --cp-duration-base: 0ms;
+        --cp-duration-slow: 0ms;
     }
 }
