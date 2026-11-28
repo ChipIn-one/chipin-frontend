@@ -34,7 +34,7 @@ Source: [`basics/AmountInput.tsx`](../../../apps/app/src/basics/AmountInput.tsx)
   (`OnlineOnly`), not on the field.
 - Error: n/a inside the component; the composite passes `aria-invalid` and `aria-describedby`
   and shows the validation message below the field (`SettlementAmountField`,
-  `ExpenseAmountFields`).
+  `ExpenseAmountFields`). `aria-invalid` does not change the field's look.
 - Loading, empty: n/a. An empty value shows the placeholder.
 
 ## Accessibility and i18n

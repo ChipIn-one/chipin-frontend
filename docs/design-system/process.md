@@ -103,6 +103,10 @@ Two Claude Design artifacts hold the review material:
 Both name the `master` commit they were refreshed from. They are private to the owner until the
 owner shares them.
 
+The design system artifact was refreshed from `master` commit `aeb838eb` with the card fixes of
+ChipIn-one/chipin-frontend#996 (2026-11-28) and shows every component card with its variants, sizes
+and states in light and dark.
+
 ## Designer onboarding plan
 
 Future work, recorded here and not executed in v1. Each step is a separate owner decision.
